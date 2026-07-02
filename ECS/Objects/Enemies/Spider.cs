@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Systems;
@@ -13,9 +14,9 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
 public class Spider : EnemyBase
 {
   private int FearAmount = 2;
-  public Spider(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public Spider()
   {
-    Id = "spider";
+    Id = EnemyId.Spider;
     Name = "Spider";
     HP = 28;
 
@@ -27,14 +28,14 @@ public class Spider : EnemyBase
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
     var random = Random.Shared.Next(0, 100);
     if (random <= 65)
     {
-      return ["suffocating_silk"];
+      return [EnemyAttackId.SuffocatingSilk];
     }
-    return ["mandible_breaker"];
+    return [EnemyAttackId.MandibleBreaker];
   }
 }
 
@@ -43,7 +44,7 @@ public class SuffocatingSilk : EnemyAttackBase
   private int SlowAmount = 4;
   public SuffocatingSilk()
   {
-    Id = "suffocating_silk";
+    Id = EnemyAttackId.SuffocatingSilk;
     Name = "Suffocating Silk";
     Damage = 10;
     BlockRequiredToPreventEffect = Random.Shared.Next(0, 100) <= 50 ? 6 : 7;
@@ -61,7 +62,7 @@ public class MandibleBreaker : EnemyAttackBase
   private int FearAmount = 1;
   public MandibleBreaker()
   {
-    Id = "mandible_breaker";
+    Id = EnemyAttackId.MandibleBreaker;
     Name = "Mandible Breaker";
     Damage = 10;
     ConditionType = ConditionType.OnBlockedByAtLeast1Card;

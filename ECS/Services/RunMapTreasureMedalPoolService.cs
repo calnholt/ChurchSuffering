@@ -4,6 +4,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Factories;
 
 namespace Crusaders30XX.ECS.Services
@@ -21,9 +22,10 @@ namespace Crusaders30XX.ECS.Services
 			var pool = new List<string>();
 			foreach (var medalId in MedalFactory.GetAllMedals().Keys)
 			{
-				if (string.IsNullOrWhiteSpace(medalId)) continue;
-				if (excluded.Contains(medalId)) continue;
-				pool.Add(medalId);
+				var medalKey = medalId.ToKey();
+				if (string.IsNullOrWhiteSpace(medalKey)) continue;
+				if (excluded.Contains(medalKey)) continue;
+				pool.Add(medalKey);
 			}
 
 			return pool;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -11,9 +12,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 
 public class Sorcerer : EnemyBase
 {
-  public Sorcerer(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public Sorcerer()
   {
-    Id = "sorcerer";
+    Id = EnemyId.Sorcerer;
     Name = "Sorcerer";
     HP = 25;
 
@@ -31,9 +32,9 @@ public class Sorcerer : EnemyBase
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    return ArrayUtils.TakeRandomWithReplacement(new List<string> { "strange_force" }, 1);
+    return ArrayUtils.TakeRandomWithReplacement(new List<EnemyAttackId> { EnemyAttackId.StrangeForce }, 1);
   }
 
   public override void Dispose()
@@ -49,7 +50,7 @@ public class StrangeForce : EnemyAttackBase
 
   public StrangeForce()
   {
-    Id = "strange_force";
+    Id = EnemyAttackId.StrangeForce;
     Name = "Strange Force";
     Damage = 11;
     ConditionType = ConditionType.OnBlockedByAtLeast2DifferentColors;

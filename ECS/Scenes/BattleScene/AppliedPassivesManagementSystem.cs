@@ -2,6 +2,7 @@ using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Data.Ids;
 using Microsoft.Xna.Framework;
 using Crusaders30XX.Diagnostics;
 using System;
@@ -71,7 +72,7 @@ namespace Crusaders30XX.ECS.Systems
                 var enemyBase = enemy.GetComponent<Enemy>();
                 if (enemyBase != null && enemyBase.EnemyBase != null && enemyBase.EnemyBase.OnStartOfBattle != null)
                 {
-                    LoggingService.Append("AppliedPassivesManagementSystem.OnChangeBattlePhase.StartOfBattle", new System.Text.Json.Nodes.JsonObject { ["enemyId"] = enemyBase.EnemyBase.Id });
+                    LoggingService.Append("AppliedPassivesManagementSystem.OnChangeBattlePhase.StartOfBattle", new System.Text.Json.Nodes.JsonObject { ["enemyId"] = enemyBase.EnemyBase.Id.ToKey() });
                     EventManager.Publish(new StartDebuffAnimation { TargetIsPlayer = false });
                     enemyBase.EnemyBase.OnStartOfBattle(EntityManager);
                 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
@@ -38,14 +39,15 @@ namespace Crusaders30XX.ECS.Services
 			var pool = new List<string>();
 			foreach (var equipmentId in EquipmentFactory.GetAllEquipment().Keys)
 			{
-				if (string.IsNullOrWhiteSpace(equipmentId)) continue;
-				if (excludedIds.Contains(equipmentId)) continue;
+				var equipmentKey = equipmentId.ToKey();
+				if (string.IsNullOrWhiteSpace(equipmentKey)) continue;
+				if (excludedIds.Contains(equipmentKey)) continue;
 
 				var equipment = EquipmentFactory.Create(equipmentId);
 				if (equipment == null) continue;
 				if (excludedSlotSet.Contains(equipment.Slot)) continue;
 
-				pool.Add(equipmentId);
+				pool.Add(equipmentKey);
 			}
 
 			return pool;

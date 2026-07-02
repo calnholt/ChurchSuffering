@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -12,9 +13,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 
 public class Ninja : EnemyBase
 {
-  public Ninja(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public Ninja()
   {
-    Id = "ninja";
+    Id = EnemyId.Ninja;
     Name = "Ninja";
     HP = 22;
 
@@ -24,34 +25,34 @@ public class Ninja : EnemyBase
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
     var hasSliceAndDice = false;
-    var attacks = new List<string> { "slice" };
+    var attacks = new List<EnemyAttackId> { EnemyAttackId.Slice };
     int random = Random.Shared.Next(0, 100);
     if (random >= 90 || turnNumber == 1)
     {
-      return ["slice", "dice", "sharpen_blade", "nightveil_guillotine"];
+      return [EnemyAttackId.Slice, EnemyAttackId.Dice, EnemyAttackId.SharpenBlade, EnemyAttackId.NightveilGuillotine];
     }
     random = Random.Shared.Next(0, 100);
     if (random >= 50)
     {
-      attacks.Add("dice");
+      attacks.Add(EnemyAttackId.Dice);
       hasSliceAndDice = true;
     }
     // give shadow_step higher weight - maybe improve array util function?
-    var linkers = new List<string> { "dusk_flick", "cloaked_reaver", "silencing_stab", "sharpen_blade", "shadow_step", "shadow_step", "shadow_step" };
+    var linkers = new List<EnemyAttackId> { EnemyAttackId.DuskFlick, EnemyAttackId.CloakedReaver, EnemyAttackId.SilencingStab, EnemyAttackId.SharpenBlade, EnemyAttackId.ShadowStep, EnemyAttackId.ShadowStep, EnemyAttackId.ShadowStep };
     var count = (Random.Shared.Next(0, 100) >= 50 ? 1 : 0) + 2;
     attacks.AddRange(ArrayUtils.TakeRandomWithReplacement(linkers, count));
     var shuffledAttacks = ArrayUtils.Shuffled(attacks);
     random = Random.Shared.Next(0, 100);
     if (random >= 80 && hasSliceAndDice)
     {
-      return shuffledAttacks.Append("nightveil_guillotine");
+      return shuffledAttacks.Append(EnemyAttackId.NightveilGuillotine);
     }
     else if (random >= 60)
     {
-      return shuffledAttacks.Append("have_no_mercy");
+      return shuffledAttacks.Append(EnemyAttackId.HaveNoMercy);
     }
     else if (random >= 50)
     {
@@ -65,7 +66,7 @@ public class Slice : EnemyAttackBase
 {
   public Slice()
   {
-    Id = "slice";
+    Id = EnemyAttackId.Slice;
     Name = "Slice";
     Damage = 1;
   }
@@ -75,7 +76,7 @@ public class Dice : EnemyAttackBase
 {
   public Dice()
   {
-    Id = "dice";
+    Id = EnemyAttackId.Dice;
     Name = "Dice";
     Damage = 1;
   }
@@ -86,7 +87,7 @@ public class DuskFlick : EnemyAttackBase
   private int Wounded = 1;
   public DuskFlick()
   {
-    Id = "dusk_flick";
+    Id = EnemyAttackId.DuskFlick;
     Name = "Dusk Flick";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -103,7 +104,7 @@ public class CloakedReaver : EnemyAttackBase
 {
   public CloakedReaver()
   {
-    Id = "cloaked_reaver";
+    Id = EnemyAttackId.CloakedReaver;
     Name = "Cloaked Reaver";
     Damage = 3;
   }
@@ -114,7 +115,7 @@ public class SilencingStab : EnemyAttackBase
   private int Frozen = 3;
   public SilencingStab()
   {
-    Id = "silencing_stab";
+    Id = EnemyAttackId.SilencingStab;
     Name = "Silencing Stab";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -136,7 +137,7 @@ public class SharpenBlade : EnemyAttackBase
   private int Aggression = 3;
   public SharpenBlade()
   {
-    Id = "sharpen_blade";
+    Id = EnemyAttackId.SharpenBlade;
     Name = "Sharpen Blade";
     Damage = 2;
     ConditionType = ConditionType.OnHit;
@@ -154,7 +155,7 @@ public class ShadowStep : EnemyAttackBase
   private int Corrode = 2;
   public ShadowStep()
   {
-    Id = "shadow_step";
+    Id = EnemyAttackId.ShadowStep;
     Name = "Shadow Step";
     Damage = 3;
     Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Corrode, Corrode);
@@ -183,7 +184,7 @@ public class NightveilGuillotine : EnemyAttackBase
   private int DamageIncrease = 4;
   public NightveilGuillotine()
   {
-    Id = "nightveil_guillotine";
+    Id = EnemyAttackId.NightveilGuillotine;
     Name = "Nightveil Guillotine";
     Damage = 4;
     Text = $"If both Slice and Dice hit this turn, this gains +{DamageIncrease} damage.";
@@ -191,8 +192,8 @@ public class NightveilGuillotine : EnemyAttackBase
     OnAttackReveal = (entityManager) =>
     {
       var battleStateInfo = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault().GetComponent<BattleStateInfo>();
-      battleStateInfo.TurnTracking.TryGetValue("slice", out int sliceCount);
-      battleStateInfo.TurnTracking.TryGetValue("dice", out int diceCount);
+      battleStateInfo.TurnTracking.TryGetValue(EnemyAttackId.Slice.ToKey(), out int sliceCount);
+      battleStateInfo.TurnTracking.TryGetValue(EnemyAttackId.Dice.ToKey(), out int diceCount);
       Console.WriteLine($"[NightveilGuillotine]: slice: {sliceCount} // dice: {diceCount}");
       if (sliceCount > 0 && diceCount > 0)
       {

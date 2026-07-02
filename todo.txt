@@ -8,8 +8,6 @@ UX
 - make climb column buttons more thematic
 - recoil shader
 - intimidated shader (maybe change name)
-- maybe just have blocking cards be scaled down versions + number 
-- hold left trigger to view card without mods?
 
 bugs
 - curse need to apply before brittle
@@ -27,9 +25,6 @@ Gameplay
 cards
 - if you have dealt 10 or more damage this turn...
 - gain galvanize
-- cards that directly reference negative mods for bonuses
-- if a frozen card was discard to pay for this
-- additional cost, remove 2 frostbite - 
 - 
 
 medals
@@ -47,22 +42,13 @@ weapons
 
 tech debt
 - researching removing isclicked and ishovered from UIElement, handle through PlayerInputEvent + enity ids
-- removing enemy difficulty tiers
+- contextId
 
 
 persistent card states:
-- colorless
-- frozen
-- brittle
 - update sealed to reduce on block and other cards played, can be pledged
-- penance - becomes 3block free action prayer - Remove penance from this card. Keeps color.
-- vines - when this is discarded to pay for a cost, gain 1 scar
-- scorched - when this is pledged, 1damage
 
 keywords
 - indulgence for additional cost?
 - vigor reduction
 
-
-bugs
-- 

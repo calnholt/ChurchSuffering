@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Events;
@@ -176,7 +177,7 @@ namespace Crusaders30XX.ECS.Systems
 				return new PostVictoryAction { Kind = PostVictoryKind.AdvanceTutorial };
 			}
 
-			if (string.Equals(enemyId, "fallen_shepherd", StringComparison.OrdinalIgnoreCase))
+			if (enemyId == EnemyId.FallenShepherd)
 			{
 				return new PostVictoryAction
 				{
@@ -276,7 +277,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (GuidedTutorialService.GetState(EntityManager) != null) return false;
 
 			var enemyId = enemy?.GetComponent<Enemy>()?.EnemyBase?.Id;
-			if (string.Equals(enemyId, "fallen_shepherd", StringComparison.OrdinalIgnoreCase)) return false;
+			if (enemyId == EnemyId.FallenShepherd) return false;
 
 			var queued = EntityManager.GetEntity("QueuedEvents")?.GetComponent<QueuedEvents>();
 			return queued != null

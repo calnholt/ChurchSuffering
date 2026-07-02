@@ -1,6 +1,7 @@
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
@@ -319,9 +320,9 @@ public class GuidedTutorialDefinitionTests
 
 			var enemy = manager.CreateEntity("Enemy");
 			var intent = new AttackIntent();
-			intent.Planned.Add(new PlannedAttack { ContextId = "old-context", AttackId = "tutorial_gleeber_strike_6" });
+			intent.Planned.Add(new PlannedAttack { ContextId = "old-context", AttackId = EnemyAttackId.TutorialGleeberStrike6 });
 			var nextIntent = new NextTurnAttackIntent();
-			nextIntent.Planned.Add(new PlannedAttack { ContextId = "next-context", AttackId = "tutorial_gleeber_strike_8" });
+			nextIntent.Planned.Add(new PlannedAttack { ContextId = "next-context", AttackId = EnemyAttackId.TutorialGleeberStrike8 });
 			manager.AddComponent(enemy, intent);
 			manager.AddComponent(enemy, nextIntent);
 

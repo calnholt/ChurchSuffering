@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -11,9 +12,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies
   {
     private int WoundedAmount = 1;
     private int ShackledAmount = 5;
-    public Berserker(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public Berserker()
     {
-      Id = "berserker";
+      Id = EnemyId.Berserker;
       Name = "Berserker";
       HP = 31;
 
@@ -27,9 +28,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies
         }, AppliedPassivesManagementSystem.Duration);
       };
     }
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
-      return ["rage"];
+      return [EnemyAttackId.Rage];
     }
   }
 }
@@ -38,7 +39,7 @@ public class Rage : EnemyAttackBase
 {
   public Rage()
   {
-    Id = "rage";
+    Id = EnemyAttackId.Rage;
     Name = "Rage";
     Damage = 9;
   }

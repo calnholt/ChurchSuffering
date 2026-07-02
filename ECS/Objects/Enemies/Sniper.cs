@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 
@@ -13,9 +14,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 /// </summary>
 public class Sniper : EnemyBase
 {
-    public Sniper(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public Sniper()
     {
-        Id = "sniper";
+        Id = EnemyId.Sniper;
         Name = "Sniper";
         HP = 53;
 
@@ -30,9 +31,9 @@ public class Sniper : EnemyBase
         };
     }
 
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
-        return new[] { "sniper_shot" };
+        return new[] { EnemyAttackId.SniperShot };
     }
 
     public override void Dispose()
@@ -48,7 +49,7 @@ public class SniperShot : EnemyAttackBase
 {
     public SniperShot()
     {
-        Id = "sniper_shot";
+        Id = EnemyAttackId.SniperShot;
         Name = "Sniper Shot";
         Damage = 10;
     }

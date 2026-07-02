@@ -281,7 +281,6 @@ namespace Crusaders30XX.ECS.Systems
 						{
 							id = id,
 							type = "Enemy",
-							difficulty = EnemyDifficulty.Easy,
 						})
 						.ToList();
 					tribulations = new List<TribulationDefinition>();
@@ -466,27 +465,8 @@ namespace Crusaders30XX.ECS.Systems
 					int estimatedEnemyHeight = System.Math.Max(1, (int)System.Math.Round(80 * EnemyScale));
 					totalHeight += estimatedEnemyHeight;
 
-					// Add space for chevrons below enemies
-					int maxDiff = 0;
-					foreach (var ev in events)
-					{
-						int d = ev.difficulty switch
-						{
-							EnemyDifficulty.Easy => 1,
-							EnemyDifficulty.Medium => 2,
-							EnemyDifficulty.Hard => 3,
-							_ => 1
-						};
-						if (d > maxDiff) maxDiff = d;
-					}
-					if (maxDiff > 0)
-					{
-						float scaledHeight = ChevronHeight * ChevronScale;
-						int stackHeight = (int)System.Math.Ceiling((maxDiff * scaledHeight) + ((maxDiff - 1) * ChevronGap * ChevronScale));
-						totalHeight += ChevronTopMargin + stackHeight;
 					}
 				}
-			}
 			
 			// Tribulation section
 			if (tribulations != null && tribulations.Count > 0 && _chaliceTexture != null)
@@ -686,24 +666,7 @@ namespace Crusaders30XX.ECS.Systems
 				rewardsSpace = rewardsVert + rewardsLineHeight + System.Math.Max(0, RewardsVerticalSpacing / 2) + pad + rowHeightEst;
 			}
 			
-			// Calculate space for chevrons
-			int maxDiff = 0;
-			foreach (var q in questDefs)
-			{
-				int d = q.difficulty switch
-				{
-					EnemyDifficulty.Easy => 1,
-					EnemyDifficulty.Medium => 2,
-					EnemyDifficulty.Hard => 3,
-					_ => 1
-				};
-				if (d > maxDiff) maxDiff = d;
-			}
-			float scaledChevronHeight = ChevronHeight * ChevronScale;
-			int maxChevronStackHeight = (int)System.Math.Ceiling((maxDiff * scaledChevronHeight) + ((maxDiff - 1) * ChevronGap * ChevronScale));
-			int chevronTotalSpace = maxDiff > 0 ? (ChevronTopMargin + maxChevronStackHeight) : 0;
-
-			int enemiesHeight = System.Math.Max(1, inner.Bottom - enemiesTop - tribulationSpace - rewardsSpace - chevronTotalSpace);
+				int enemiesHeight = System.Math.Max(1, inner.Bottom - enemiesTop - tribulationSpace - rewardsSpace);
 			var enemiesRect = new Rectangle(inner.X, enemiesTop, inner.Width, enemiesHeight);
 
 			// load enemy textures and their definitions
@@ -730,32 +693,7 @@ namespace Crusaders30XX.ECS.Systems
 				int drawY = enemiesRect.Y + (enemiesRect.Height - sizes[i].Y) / 2;
 				_spriteBatch.Draw(entries[i].tex, new Rectangle(drawX, drawY, sizes[i].X, sizes[i].Y), Color.White * alpha01);
 
-				// Draw difficulty chevrons centered under this enemy
-				int diffCount = entries[i].def.difficulty switch
-				{
-					EnemyDifficulty.Easy => 1,
-					EnemyDifficulty.Medium => 2,
-					EnemyDifficulty.Hard => 3,
-					_ => 1
-				};
-
-				Texture2D chevronMask = PrimitiveTextureFactory.GetAntialiasedChevronMask(
-					_graphicsDevice,
-					ChevronWidth,
-					ChevronHeight,
-					ChevronThickness,
-					diffCount,
-					ChevronGap
-				);
-
-				if (chevronMask != null)
-				{
-					float totalStackWidth = ChevronWidth * ChevronScale;
-					float chevronX = drawX + (sizes[i].X - totalStackWidth) / 2f;
-					float chevronY = enemiesRect.Bottom + ChevronTopMargin;
-					_spriteBatch.Draw(chevronMask, new Vector2(chevronX, chevronY), null, Color.White * alpha01, 0f, Vector2.Zero, new Vector2(ChevronScale), SpriteEffects.None, 0f);
 				}
-			}
 
 			// Draw tribulations below enemies (within inner bounds)
 			if (tribulations != null && tribulations.Count > 0 && _chaliceTexture != null)

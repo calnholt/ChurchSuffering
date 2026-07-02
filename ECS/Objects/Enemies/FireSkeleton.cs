@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Services;
@@ -12,9 +13,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies
     public class FireSkeleton : EnemyBase
     {
         private int Armor = 2;
-        public FireSkeleton(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+        public FireSkeleton()
         {
-            Id = "fire_skeleton";
+            Id = EnemyId.FireSkeleton;
             Name = "Fire Skeleton";
             HP = 20;
 
@@ -53,7 +54,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
           });
         }
 
-        public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+        public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
         {
             return new Skeleton().GetAttackIds(entityManager, turnNumber);
         }

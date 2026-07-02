@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 
@@ -11,7 +12,7 @@ public class HaveNoMercy : EnemyAttackBase
 {
   public HaveNoMercy()
   {
-    Id = "have_no_mercy";
+    Id = EnemyAttackId.HaveNoMercy;
     Name = "Have No Mercy";
     Damage = 5;
     ConditionType = ConditionType.OnBlockedByAtLeast1Card;

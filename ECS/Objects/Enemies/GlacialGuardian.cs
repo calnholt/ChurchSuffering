@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -11,9 +12,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 
 public class GlacialGuardian : EnemyBase
 {
-  public GlacialGuardian(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public GlacialGuardian()
   {
-    Id = "glacial_guardian";
+    Id = EnemyId.GlacialGuardian;
     Name = "Glacial Guardian";
     HP = 24;
 
@@ -27,9 +28,9 @@ public class GlacialGuardian : EnemyBase
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    return ArrayUtils.TakeRandomWithoutReplacement(new List<string> { "glacial_strike", "glacial_blast" }, 1);
+    return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.GlacialStrike, EnemyAttackId.GlacialBlast }, 1);
   }
 
   private void OnCardMoved(CardMoved evt)
@@ -52,7 +53,7 @@ public class GlacialStrike : EnemyAttackBase
   private int Threshold = 1;
   public GlacialStrike()
   {
-    Id = "glacial_strike";
+    Id = EnemyAttackId.GlacialStrike;
     Name = "Glacial Strike";
     Damage = 8;
     ConditionType = ConditionType.MustBeBlockedByAtLeast1Card;
@@ -70,7 +71,7 @@ public class GlacialBlast : EnemyAttackBase
   private int Threshold = 2;
   public GlacialBlast()
   {
-    Id = "glacial_blast";
+    Id = EnemyAttackId.GlacialBlast;
     Name = "Glacial Blast";
     Damage = 11;
     ConditionType = ConditionType.MustBeBlockedByAtLeast2Cards;

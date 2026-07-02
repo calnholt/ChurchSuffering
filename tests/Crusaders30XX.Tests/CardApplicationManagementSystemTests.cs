@@ -1,6 +1,7 @@
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
@@ -91,7 +92,7 @@ public class CardApplicationManagementSystemTests
 	public void Curse_is_factory_creatable_but_not_in_card_pool()
 	{
 		Assert.IsType<Curse>(CardFactory.Create(Curse.CardIdValue));
-		Assert.DoesNotContain(Curse.CardIdValue, CardFactory.GetAllCards().Keys);
+		Assert.DoesNotContain(CardId.Curse, CardFactory.GetAllCards().Keys);
 	}
 
 	[Theory]

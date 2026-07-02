@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Systems;
@@ -107,7 +108,7 @@ public class FearSlowPassiveTests : IDisposable
 			Name = definition.Name,
 			EnemyBase = definition,
 		});
-		entityManager.AddComponent(enemy, new EnemyArsenal { AttackIds = new() { "fallen_shepherd_phase_1" } });
+		entityManager.AddComponent(enemy, new EnemyArsenal { AttackIds = new() { EnemyAttackId.FallenShepherdPhase1 } });
 		entityManager.AddComponent(enemy, new AppliedPassives());
 		var intent = new AttackIntent();
 		entityManager.AddComponent(enemy, intent);

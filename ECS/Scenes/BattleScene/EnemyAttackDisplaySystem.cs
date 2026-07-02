@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.VisualEffects;
 using System.Collections.Generic;
 using System;
@@ -387,7 +388,7 @@ namespace Crusaders30XX.ECS.Systems
 				{
 					["reason"] = "VisualEffectRequestFailed",
 					["contextId"] = ctx ?? string.Empty,
-					["attackId"] = attack?.Id ?? string.Empty
+					["attackId"] = attack?.Id.ToKey() ?? string.Empty
 				});
 				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<EnemyAttackImpactNow>(
 					"Rule.EnemyAttackImpactNow.Emergency",

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Microsoft.Xna.Framework;
 
@@ -11,7 +12,7 @@ namespace Crusaders30XX.ECS.Components
 	public class EnemyArsenal : IComponent
 	{
 		public Entity Owner { get; set; }
-		public List<string> AttackIds { get; set; } = new();
+		public List<EnemyAttackId> AttackIds { get; set; } = new();
 	}
 
 	/// <summary>
@@ -34,7 +35,7 @@ namespace Crusaders30XX.ECS.Components
 
 	public class PlannedAttack
 	{
-		public string AttackId;
+		public EnemyAttackId AttackId;
 		public int ResolveStep;
 		public string ContextId;
 		public bool WasBlocked;
@@ -54,7 +55,7 @@ namespace Crusaders30XX.ECS.Components
 
 		public string ContextId { get; set; }
 		public Entity Enemy { get; set; }
-		public string AttackId { get; set; }
+		public EnemyAttackId AttackId { get; set; }
 
 		// Typed counters replacing generic dictionary keys
 		public int AssignedBlockTotal { get; set; }

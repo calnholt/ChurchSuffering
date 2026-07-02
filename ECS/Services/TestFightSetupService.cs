@@ -56,7 +56,6 @@ namespace Crusaders30XX.ECS.Services
 			{
 				EventId = TestFightRuntime.Options.EnemyId,
 				EventType = QueuedEventType.Enemy,
-				Difficulty = EnemyDifficulty.Easy,
 			});
 			queued.CurrentIndex = -1;
 			queued.LocationId = string.Empty;

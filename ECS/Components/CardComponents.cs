@@ -8,6 +8,7 @@ using Crusaders30XX.ECS.Objects.Enemies;
 using System;
 using Crusaders30XX.ECS.Objects.Medals;
 using Crusaders30XX.ECS.Objects.Equipment;
+using Crusaders30XX.ECS.Data.Ids;
 
 namespace Crusaders30XX.ECS.Components
 {
@@ -96,7 +97,7 @@ namespace Crusaders30XX.ECS.Components
 
         public Entity Owner { get; set; }
         
-        public string Id { get; set; } = "demon";
+        public EnemyId Id { get; set; } = EnemyId.Demon;
 
         public string Name { get; set; } = "";
         public int MaxHealth { get; set; } = 40;

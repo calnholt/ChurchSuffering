@@ -52,7 +52,6 @@ namespace Crusaders30XX.ECS.Services
 			{
 				EventId = slot.enemyId,
 				EventType = QueuedEventType.Enemy,
-				Difficulty = EnemyDifficulty.Easy,
 			});
 			queued.IsClimbEncounter = true;
 			queued.ClimbEncounterSlotId = slot.id;
@@ -149,7 +148,6 @@ namespace Crusaders30XX.ECS.Services
 			{
 				EventId = "fallen_shepherd",
 				EventType = QueuedEventType.Enemy,
-				Difficulty = EnemyDifficulty.Hard,
 			});
 			queued.IsClimbEncounter = true;
 			queued.ClimbEncounterSlotId = "final";

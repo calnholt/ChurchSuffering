@@ -557,7 +557,7 @@ namespace Crusaders30XX.ECS.Systems
 				EventManager.Publish(new SetCourageEvent { Amount = 0 });
 				StateSingleton.IsPledgeEnabled = true;
 				var nextEvent = queued.Events[++queued.CurrentIndex];
-				nextEnemy = EntityFactory.CreateEnemyFromId(_world, nextEvent.EventId, EntityManager, nextEvent.Difficulty);
+				nextEnemy = EntityFactory.CreateEnemyFromId(_world, nextEvent.EventId, EntityManager);
 			}
 			TestFightSetupService.ApplyEnemyHpDelta(nextEnemy);
 			if (!guidedTutorial)

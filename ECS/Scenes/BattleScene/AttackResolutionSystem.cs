@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
@@ -59,7 +60,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
 			var source = enemy;
-			LoggingService.Append("AttackResolutionSystem.OnResolveAttack", new System.Text.Json.Nodes.JsonObject { ["attackId"] = pa.AttackId, ["damage"] = def.Damage, ["isBlocked"] = blocked, ["fullyPreventedBySpecial"] = fullyPreventedBySpecial });
+			LoggingService.Append("AttackResolutionSystem.OnResolveAttack", new System.Text.Json.Nodes.JsonObject { ["attackId"] = pa.AttackId.ToKey(), ["damage"] = def.Damage, ["isBlocked"] = blocked, ["fullyPreventedBySpecial"] = fullyPreventedBySpecial });
 
 			if (def.Damage > 0 && !fullyPreventedBySpecial)
 			{
@@ -69,7 +70,7 @@ namespace Crusaders30XX.ECS.Systems
 					Amount = def.Damage,
 					Source = enemy,
 					Target = player,
-					attackId = !blocked ? pa.AttackId : null,
+					attackId = !blocked ? pa.AttackId.ToKey() : null,
 					Percentage = 100
 				});
 			}
@@ -122,7 +123,7 @@ namespace Crusaders30XX.ECS.Systems
 				if (evt.WasHit)
 				{
 					EventManager.Publish(new OnEnemyAttackHitEvent {} );
-					EventManager.Publish(new TrackingEvent { Type = def.Id, Delta = 1 });
+					EventManager.Publish(new TrackingEvent { Type = def.Id.ToKey(), Delta = 1 });
 				}
 				EventManager.Unsubscribe(onResolving);
 				EventManager.Unsubscribe(onApplied);
@@ -137,4 +138,3 @@ namespace Crusaders30XX.ECS.Systems
 
 	}
 }
-

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
@@ -15,28 +16,28 @@ namespace Crusaders30XX.Tests;
 
 public class FallenShepherdAttackTests : IDisposable
 {
-    private static readonly HashSet<string> Phase1SmallPool =
+    private static readonly HashSet<EnemyAttackId> Phase1SmallPool =
     [
-        "fallen_shepherd_crooks_scar",
-        "fallen_shepherd_break_faith",
-        "fallen_shepherd_bloodletting",
-        "fallen_shepherd_cow_the_flock",
+        EnemyAttackId.FallenShepherdCrooksScar,
+        EnemyAttackId.FallenShepherdBreakFaith,
+        EnemyAttackId.FallenShepherdBloodletting,
+        EnemyAttackId.FallenShepherdCowTheFlock,
     ];
 
-    private static readonly HashSet<string> Phase2SmallPool =
+    private static readonly HashSet<EnemyAttackId> Phase2SmallPool =
     [
-        "fallen_shepherd_shepherds_vigil",
-        "fallen_shepherd_hush",
-        "fallen_shepherd_crooks_scar",
-        "fallen_shepherd_cow_the_flock",
+        EnemyAttackId.FallenShepherdShepherdsVigil,
+        EnemyAttackId.FallenShepherdHush,
+        EnemyAttackId.FallenShepherdCrooksScar,
+        EnemyAttackId.FallenShepherdCowTheFlock,
     ];
 
-    private static readonly HashSet<string> Phase3Pool =
+    private static readonly HashSet<EnemyAttackId> Phase3Pool =
     [
-        "fallen_shepherd_purge_the_heretic",
-        "fallen_shepherd_fear_the_shepherd",
-        "fallen_shepherd_final_sermon",
-        "fallen_shepherd_phase_3",
+        EnemyAttackId.FallenShepherdPurgeTheHeretic,
+        EnemyAttackId.FallenShepherdFearTheShepherd,
+        EnemyAttackId.FallenShepherdFinalSermon,
+        EnemyAttackId.FallenShepherdPhase3,
     ];
 
     public FallenShepherdAttackTests()
@@ -54,8 +55,8 @@ public class FallenShepherdAttackTests : IDisposable
     {
         var shepherd = new FallenShepherd();
 
-        Assert.Equal(new[] { "fallen_shepherd_phase_1" }, shepherd.GetAttackIds(null, 1));
-        Assert.Equal(new[] { "fallen_shepherd_phase_1" }, shepherd.GetAttackIds(null, 0));
+        Assert.Equal(new[] { EnemyAttackId.FallenShepherdPhase1 }, shepherd.GetAttackIds(null, 1));
+        Assert.Equal(new[] { EnemyAttackId.FallenShepherdPhase1 }, shepherd.GetAttackIds(null, 0));
 
         var selected = shepherd.GetAttackIds(null, 2).ToList();
         Assert.Equal(3, selected.Count);
@@ -68,7 +69,7 @@ public class FallenShepherdAttackTests : IDisposable
     {
         var shepherd = new FallenShepherd { CurrentPhase = 2 };
 
-        Assert.Equal(new[] { "fallen_shepherd_phase_2" }, shepherd.GetAttackIds(null, 7));
+        Assert.Equal(new[] { EnemyAttackId.FallenShepherdPhase2 }, shepherd.GetAttackIds(null, 7));
 
         var selected = shepherd.GetAttackIds(null, 8).ToList();
         Assert.Equal(3, selected.Count);
@@ -83,7 +84,7 @@ public class FallenShepherdAttackTests : IDisposable
 
         for (int turn = 1; turn <= 20; turn++)
         {
-            string attackId = Assert.Single(shepherd.GetAttackIds(null, turn));
+            EnemyAttackId attackId = Assert.Single(shepherd.GetAttackIds(null, turn));
             Assert.Contains(attackId, Phase3Pool);
             Assert.NotNull(EnemyAttackFactory.Create(attackId));
         }
@@ -95,8 +96,8 @@ public class FallenShepherdAttackTests : IDisposable
         var attackIds = Phase1SmallPool
             .Concat(Phase2SmallPool)
             .Concat(Phase3Pool)
-            .Append("fallen_shepherd_phase_1")
-            .Append("fallen_shepherd_phase_2")
+            .Append(EnemyAttackId.FallenShepherdPhase1)
+            .Append(EnemyAttackId.FallenShepherdPhase2)
             .Distinct()
             .ToList();
         var allAttacks = EnemyAttackFactory.GetAllAttacks();
@@ -104,7 +105,7 @@ public class FallenShepherdAttackTests : IDisposable
         Assert.All(attackIds, attackId =>
         {
             Assert.NotNull(EnemyAttackFactory.Create(attackId));
-            Assert.True(allAttacks.ContainsKey(attackId), $"Missing attack registration: {attackId}");
+            Assert.True(allAttacks.ContainsKey(attackId), $"Missing attack registration: {attackId.ToKey()}");
         });
     }
 

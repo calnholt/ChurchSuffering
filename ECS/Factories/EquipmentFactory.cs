@@ -1,82 +1,60 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Equipment;
 
 namespace Crusaders30XX.ECS.Factories
 {
-    /// <summary>
-    /// Factory for creating EquipmentBase instances from equipment IDs
-    /// </summary>
     public static class EquipmentFactory
     {
-        /// <summary>
-        /// Creates an EquipmentBase instance from an equipment ID string
-        /// </summary>
-        /// <param name="equipmentId">The equipment ID (e.g., "pierced_heart_place")</param>
-        /// <returns>The corresponding EquipmentBase instance, or null if not found</returns>
-        public static EquipmentBase Create(string equipmentId)
-        {
-            return equipmentId switch
+        private static readonly IReadOnlyDictionary<EquipmentId, Func<EquipmentBase>> EquipmentConstructors =
+            new Dictionary<EquipmentId, Func<EquipmentBase>>
             {
-                "crimson_cuirass" => new CrimsonCuirass(),
-                "crimson_greathelm" => new CrimsonGreathelm(),
-                "crimson_greaves" => new CrimsonGreaves(),
-                "crimson_vambraces" => new CrimsonVambraces(),
-                "helm_of_seeing" => new HelmOfSeeing(),
-                "ivory_coif" => new IvoryCoif(),
-                "ivory_treads" => new IvoryTreads(),
-                "ivory_vest" => new IvoryVest(),
-                "ivory_wraps" => new IvoryWraps(),
-                "knightly_chest" => new KnightlyChest(),
-                "knightly_grieves" => new KnightlyGrieves(),
-                "knightly_gauntlets" => new KnightlyGauntlets(),
-                "knightly_helm" => new KnightlyHelm(),
-                "pale_cuirass" => new PaleCuirass(),
-                "pale_greathelm" => new PaleGreathelm(),
-                "pale_greaves" => new PaleGreaves(),
-                "pale_vambraces" => new PaleVambraces(),
-                "pierced_heart_plate" => new PiercedHeartPlate(),
-                "purging_bracers" => new PurgingBracers(),
-                "scarlet_coif" => new ScarletCoif(),
-                "scarlet_treads" => new ScarletTreads(),
-                "scarlet_vest" => new ScarletVest(),
-                "scarlet_wraps" => new ScarletWraps(),
-                _ => null
+                { EquipmentId.CrimsonCuirass, () => new CrimsonCuirass() },
+                { EquipmentId.CrimsonGreathelm, () => new CrimsonGreathelm() },
+                { EquipmentId.CrimsonGreaves, () => new CrimsonGreaves() },
+                { EquipmentId.CrimsonVambraces, () => new CrimsonVambraces() },
+                { EquipmentId.HelmOfSeeing, () => new HelmOfSeeing() },
+                { EquipmentId.IvoryCoif, () => new IvoryCoif() },
+                { EquipmentId.IvoryTreads, () => new IvoryTreads() },
+                { EquipmentId.IvoryVest, () => new IvoryVest() },
+                { EquipmentId.IvoryWraps, () => new IvoryWraps() },
+                { EquipmentId.KnightlyChest, () => new KnightlyChest() },
+                { EquipmentId.KnightlyGrieves, () => new KnightlyGrieves() },
+                { EquipmentId.KnightlyGauntlets, () => new KnightlyGauntlets() },
+                { EquipmentId.KnightlyHelm, () => new KnightlyHelm() },
+                { EquipmentId.PaleCuirass, () => new PaleCuirass() },
+                { EquipmentId.PaleGreathelm, () => new PaleGreathelm() },
+                { EquipmentId.PaleGreaves, () => new PaleGreaves() },
+                { EquipmentId.PaleVambraces, () => new PaleVambraces() },
+                { EquipmentId.PiercedHeartPlate, () => new PiercedHeartPlate() },
+                { EquipmentId.PurgingBracers, () => new PurgingBracers() },
+                { EquipmentId.ScarletCoif, () => new ScarletCoif() },
+                { EquipmentId.ScarletTreads, () => new ScarletTreads() },
+                { EquipmentId.ScarletVest, () => new ScarletVest() },
+                { EquipmentId.ScarletWraps, () => new ScarletWraps() },
             };
+
+        public static EquipmentBase Create(EquipmentId equipmentId)
+        {
+            return EquipmentConstructors.TryGetValue(equipmentId, out var create)
+                ? create()
+                : null;
         }
 
-        /// <summary>
-        /// Returns a dictionary of all available equipment, keyed by equipment ID
-        /// </summary>
-        /// <returns>A dictionary mapping equipment IDs to EquipmentBase instances</returns>
-        public static Dictionary<string, EquipmentBase> GetAllEquipment()
+        public static EquipmentBase Create(string equipmentId)
         {
-            return new Dictionary<string, EquipmentBase>
-            {
-                { "crimson_cuirass", new CrimsonCuirass() },
-                { "crimson_greathelm", new CrimsonGreathelm() },
-                { "crimson_greaves", new CrimsonGreaves() },
-                { "crimson_vambraces", new CrimsonVambraces() },
-                { "helm_of_seeing", new HelmOfSeeing() },
-                { "ivory_coif", new IvoryCoif() },
-                { "ivory_treads", new IvoryTreads() },
-                { "ivory_vest", new IvoryVest() },
-                { "ivory_wraps", new IvoryWraps() },
-                { "knightly_chest", new KnightlyChest() },
-                { "knightly_grieves", new KnightlyGrieves() },
-                { "knightly_gauntlets", new KnightlyGauntlets() },
-                { "knightly_helm", new KnightlyHelm() },
-                { "pale_cuirass", new PaleCuirass() },
-                { "pale_greathelm", new PaleGreathelm() },
-                { "pale_greaves", new PaleGreaves() },
-                { "pale_vambraces", new PaleVambraces() },
-                { "pierced_heart_plate", new PiercedHeartPlate() },
-                { "purging_bracers", new PurgingBracers() },
-                { "scarlet_coif", new ScarletCoif() },
-                { "scarlet_treads", new ScarletTreads() },
-                { "scarlet_vest", new ScarletVest() },
-                { "scarlet_wraps", new ScarletWraps() },
-            };
+            return GameIdExtensions.TryParseEquipmentId(equipmentId, out var parsed)
+                ? Create(parsed)
+                : null;
+        }
+
+        public static Dictionary<EquipmentId, EquipmentBase> GetAllEquipment()
+        {
+            return EquipmentConstructors.ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value());
         }
     }
 }
-

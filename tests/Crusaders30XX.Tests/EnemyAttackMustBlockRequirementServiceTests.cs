@@ -1,6 +1,7 @@
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Objects.Equipment;
@@ -102,7 +103,7 @@ public class EnemyAttackMustBlockRequirementServiceTests
 	{
 		return new EnemyAttackBase
 		{
-			Id = "test-attack",
+			Id = EnemyAttackId.Cinderbolt,
 			Name = "Test Attack",
 			Damage = 5,
 			ConditionType = conditionType

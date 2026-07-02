@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Text.RegularExpressions;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Services;
 
@@ -13,7 +14,7 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
 {
   public class EnemyAttackBase
   {
-    public string Id { get; set; }
+    public EnemyAttackId Id { get; set; }
     public string Name { get; set; }
     public int Damage { get; set; }
     public int AdditionalDamage { get; set; } = 0;

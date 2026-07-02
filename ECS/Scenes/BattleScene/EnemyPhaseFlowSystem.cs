@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Dialog;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
@@ -49,7 +50,7 @@ namespace Crusaders30XX.ECS.Systems
 				? "victory"
 				: $"phase_{enemyBase.CurrentPhase}_end";
 
-			if (!HasDialogueSegment(enemyBase.Id, segmentId))
+			if (!HasDialogueSegment(enemyBase.Id.ToKey(), segmentId))
 			{
 				ContinueFlow();
 				return;
@@ -58,7 +59,7 @@ namespace Crusaders30XX.ECS.Systems
 			_pendingRequestId = Guid.NewGuid();
 			EventManager.Publish(new DialogueSequenceRequested
 			{
-				DefinitionId = enemyBase.Id,
+				DefinitionId = enemyBase.Id.ToKey(),
 				SegmentId = segmentId,
 				RequestId = _pendingRequestId,
 			});

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 
@@ -9,9 +10,9 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 
 public class DustWuurm : EnemyBase
 {
-  public DustWuurm(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public DustWuurm()
   {
-    Id = "dust_wuurm";
+    Id = EnemyId.DustWuurm;
     Name = "Dust Wuurm";
     HP = 31;
 
@@ -22,9 +23,9 @@ public class DustWuurm : EnemyBase
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    return ["dust_storm"];
+    return [EnemyAttackId.DustStorm];
   }
 
   private void OnChangeBattlePhaseEvent(ChangeBattlePhaseEvent evt)
@@ -47,7 +48,7 @@ public class DustStorm : EnemyAttackBase
 {
   public DustStorm()
   {
-    Id = "dust_storm";
+    Id = EnemyAttackId.DustStorm;
     Name = "Dust Storm";
     Damage = 8;
     ConditionType = ConditionType.MustBeBlockedByAtLeast1Card;

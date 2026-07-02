@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Data.Ids;
 using Microsoft.Xna.Framework;
 using System;
 using Crusaders30XX.Diagnostics;
@@ -153,7 +154,7 @@ namespace Crusaders30XX.ECS.Systems
 			PrintProgress(progress);
 		}
 
-		private EnemyAttackProgress FindOrCreateProgress(string contextId, Entity enemy, string attackId)
+		private EnemyAttackProgress FindOrCreateProgress(string contextId, Entity enemy, EnemyAttackId attackId)
 		{
 			var existing = FindProgressByContext(contextId);
 			if (existing != null)
@@ -203,7 +204,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void Recompute(EnemyAttackProgress p)
 		{
-			if (p == null || string.IsNullOrEmpty(p.AttackId)) return;
+			if (p == null) return;
 			// Resolve owning enemy and planned attack for this context
 			var enemy = p.Enemy ?? EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
 			if (enemy == null) return;
@@ -215,7 +216,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				planned = attackIntent.Planned.FirstOrDefault(pa => pa.ContextId == p.ContextId);
 			}
-			if (planned == null && !string.IsNullOrEmpty(p.AttackId))
+			if (planned == null)
 			{
 				planned = attackIntent.Planned.FirstOrDefault(pa => pa.AttackId == p.AttackId);
 			}

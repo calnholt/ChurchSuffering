@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Factories;
 
@@ -117,7 +118,7 @@ namespace Crusaders30XX.ECS.Services
 		{
 			if (items == null || items.Count == 0) return;
 
-			var medalIds = MedalFactory.GetAllMedals().Keys.ToList();
+			var medalIds = MedalFactory.GetAllMedals().Keys.Select(id => id.ToKey()).ToList();
 			if (medalIds.Count == 0) return;
 
 			string medalId = medalIds[rng.Next(medalIds.Count)];

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Services;
@@ -12,24 +13,24 @@ namespace Crusaders30XX.ECS.Objects.Enemies
 {
 	public class Medusa : EnemyBase
 	{
-		public Medusa(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+		public Medusa()
 		{
-			Id = "medusa";
+			Id = EnemyId.Medusa;
 			Name = "Medusa";
 			HP = 37;
 		}
 
-		private static readonly string[] BaseAttacks = new[]
+		private static readonly EnemyAttackId[] BaseAttacks = new[]
 		{
-			"gaze", "petrifying_gaze", "vipers_curse"
+			EnemyAttackId.Gaze, EnemyAttackId.PetrifyingGaze, EnemyAttackId.VipersCurse
 		};
 
-		private static readonly string[] SealReliantAttacks = new[]
+		private static readonly EnemyAttackId[] SealReliantAttacks = new[]
 		{
-			"basilisk_glare", "serpent_strike", "stone_skin", "crumbling_stone"
+			EnemyAttackId.BasiliskGlare, EnemyAttackId.SerpentStrike, EnemyAttackId.StoneSkin, EnemyAttackId.CrumblingStone
 		};
 
-		public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+		public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
 		{
 			var playerHasSeals = GetComponentHelper.GetHandOfCards(entityManager)
 				.Any(c => c.GetComponent<Sealed>() != null);
@@ -39,7 +40,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
 				: BaseAttacks;
 
 			var random = new Random();
-			var attacks = new List<string>();
+			var attacks = new List<EnemyAttackId>();
 			for (int i = 0; i < 3; i++)
 			{
 				attacks.Add(pool[random.Next(pool.Length)]);
@@ -56,7 +57,7 @@ public class Gaze : EnemyAttackBase
 
 	public Gaze()
 	{
-		Id = "gaze";
+		Id = EnemyAttackId.Gaze;
 		Name = "Gaze";
 		Damage = new Random().Next(2, 6);
 		ConditionType = ConditionType.OnHit;
@@ -73,7 +74,7 @@ public class BasiliskGlare : EnemyAttackBase
 {
 	public BasiliskGlare()
 	{
-		Id = "basilisk_glare";
+		Id = EnemyAttackId.BasiliskGlare;
 		Name = "Basilisk Glare";
 		Damage = new Random().Next(2, 6);
 		ConditionType = ConditionType.OnHit;
@@ -104,7 +105,7 @@ public class SerpentStrike : EnemyAttackBase
 
 	public SerpentStrike()
 	{
-		Id = "serpent_strike";
+		Id = EnemyAttackId.SerpentStrike;
 		Name = "Serpent Strike";
 		Damage = new Random().Next(2, 6);
 		ConditionType = ConditionType.OnHit;
@@ -123,7 +124,7 @@ public class PetrifyingGaze : EnemyAttackBase
 
 	public PetrifyingGaze()
 	{
-		Id = "petrifying_gaze";
+		Id = EnemyAttackId.PetrifyingGaze;
 		Name = "Petrifying Gaze";
 		Damage = new Random().Next(2, 6);
 		Text = $"Each card that blocks this gains {SealsGained} seals.";
@@ -149,7 +150,7 @@ public class StoneSkin : EnemyAttackBase
 
 	public StoneSkin()
 	{
-		Id = "stone_skin";
+		Id = EnemyAttackId.StoneSkin;
 		Name = "Stone Skin";
 		Damage = new Random().Next(2, 6);
 		Text = $"Sealed cards block for {BlockReduction} less.";
@@ -175,7 +176,7 @@ public class VipersCurse : EnemyAttackBase
 
 	public VipersCurse()
 	{
-		Id = "vipers_curse";
+		Id = EnemyAttackId.VipersCurse;
 		Name = "Viper's Curse";
 		Damage = new Random().Next(1, 4);
 		Text = $"On attack - Random card in hand gains {SealsApplied} seal.";
@@ -193,7 +194,7 @@ public class CrumblingStone : EnemyAttackBase
 
 	public CrumblingStone()
 	{
-		Id = "crumbling_stone";
+		Id = EnemyAttackId.CrumblingStone;
 		Name = "Crumbling Stone";
 		Damage = new Random().Next(2, 6);
 		Text = $"Blocking cards lose {SealsRemoved} seals.";

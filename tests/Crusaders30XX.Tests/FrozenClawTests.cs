@@ -33,7 +33,7 @@ public class FrozenClawTests : IDisposable
         Assert.Equal(ConditionType.None, attack.ConditionType);
         Assert.Null(attack.OnAttackHit);
         Assert.Equal(
-            "On attack - Intimidate 1 card.\n\nIf this attack deals 7 or more damage - Freeze the top card of your draw pile.",
+            $"On attack - Intimidate 1 card.\n\n{EnemyAttackTextHelper.GetBlockThresholdText(attack.Damage - attack.BlockRequiredToPreventEffect!.Value, "Freeze the top card of your draw pile.")}",
             attack.Text);
         Assert.NotNull(publishedEvent);
         Assert.Equal(1, publishedEvent.Amount);

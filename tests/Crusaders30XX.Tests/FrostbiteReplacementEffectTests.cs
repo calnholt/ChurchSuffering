@@ -1,6 +1,7 @@
 using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Medals;
@@ -153,7 +154,7 @@ public class FrostbiteReplacementEffectTests : IDisposable
     public void MedalFactory_includes_st_olaf()
     {
         Assert.IsType<StOlaf>(MedalFactory.Create("st_olaf"));
-        Assert.Contains("st_olaf", MedalFactory.GetAllMedals().Keys);
+        Assert.Contains(MedalId.StOlaf, MedalFactory.GetAllMedals().Keys);
     }
 
     private static EntityManager BuildWorld(

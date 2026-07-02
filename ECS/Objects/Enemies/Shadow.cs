@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Utils;
@@ -12,13 +13,11 @@ namespace Crusaders30XX.ECS.Objects.Enemies
   public class Shadow : EnemyBase
   {
     private int StartAnathema = 4;
-    public Shadow(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public Shadow()
     {
-      Id = "shadow";
+      Id = EnemyId.Shadow;
       Name = "Shadow";
       HP = 42;
-      StartAnathema -= (int)difficulty * 1;
-      Difficulty = difficulty;
 
       OnStartOfBattle = (entityManager) =>
       {
@@ -26,13 +25,13 @@ namespace Crusaders30XX.ECS.Objects.Enemies
       };
     }
 
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
       if (turnNumber % 2 == 0)
       {
-        return ArrayUtils.TakeRandomWithoutReplacement(new List<string> { "snuff_out_the_light", "night_fall", "from_the_shadows", "umbra_slice" }, 3);
+        return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.SnuffOutTheLight, EnemyAttackId.NightFall, EnemyAttackId.FromTheShadows, EnemyAttackId.UmbraSlice }, 3);
       }
-      return ArrayUtils.TakeRandomWithoutReplacement(new List<string> { "shadow_strike", "dissipating_darkness" }, 1);
+      return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.ShadowStrike, EnemyAttackId.DissipatingDarkness }, 1);
     }
   }
 }
@@ -42,7 +41,7 @@ public class ShadowStrike : EnemyAttackBase
   private int AnathemaLoss = 1;
   public ShadowStrike()
   {
-    Id = "shadow_strike";
+    Id = EnemyAttackId.ShadowStrike;
     Name = "Shadow Strike";
     Damage = 10;
     BlockRequiredToPreventEffect = 7;
@@ -60,7 +59,7 @@ public class EncroachingDarkness : EnemyAttackBase
   private int AnathemaGain = 1;
   public EncroachingDarkness()
   {
-    Id = "dissipating_darkness";
+    Id = EnemyAttackId.DissipatingDarkness;
     Name = "Encroaching Darkness";
     Damage = 10;
     ConditionType = ConditionType.OnBlockedByAtLeast2Cards;
@@ -78,7 +77,7 @@ public class SnuffOutTheLight : EnemyAttackBase
   private int SilencedGain = 1;
   public SnuffOutTheLight()
   {
-    Id = "snuff_out_the_light";
+    Id = EnemyAttackId.SnuffOutTheLight;
     Name = "Snuff Out the Light";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -95,7 +94,7 @@ public class FromTheShadows : EnemyAttackBase
 {
   public FromTheShadows()
   {
-    Id = "from_the_shadows";
+    Id = EnemyAttackId.FromTheShadows;
     Name = "From the Shadows";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -114,7 +113,7 @@ public class NightFall : EnemyAttackBase
   private int AnathemaLoss = 1;
   public NightFall()
   {
-    Id = "night_fall";
+    Id = EnemyAttackId.NightFall;
     Name = "Night Fall";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -132,7 +131,7 @@ public class UmbraSlice : EnemyAttackBase
   private int Scar = 1;
   public UmbraSlice()
   {
-    Id = "umbra_slice";
+    Id = EnemyAttackId.UmbraSlice;
     Name = "Umbra Slice";
     Damage = 3;
     ConditionType = ConditionType.OnHit;

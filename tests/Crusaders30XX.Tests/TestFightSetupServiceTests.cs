@@ -35,7 +35,6 @@ public class TestFightSetupServiceTests
 			var queued = world.EntityManager.GetEntity("QueuedEvents").GetComponent<QueuedEvents>();
 			Assert.Single(queued.Events);
 			Assert.Equal("skeleton", queued.Events[0].EventId);
-			Assert.Equal(EnemyDifficulty.Easy, queued.Events[0].Difficulty);
 		}
 		finally
 		{

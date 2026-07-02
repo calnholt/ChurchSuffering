@@ -115,7 +115,6 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public string EventId;
 		public QueuedEventType EventType = QueuedEventType.Enemy;
-		public EnemyDifficulty Difficulty { get; set; } = EnemyDifficulty.Easy;
 		public List<EnemyModification> Modifications { get; set; } = new List<EnemyModification>();
 	}
 

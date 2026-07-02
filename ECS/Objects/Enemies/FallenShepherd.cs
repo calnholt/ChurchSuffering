@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Services;
@@ -15,60 +16,60 @@ public class FallenShepherd : EnemyBase
 {
     private bool _fearSelected = false;
 
-    private static readonly List<string> Phase1SmallAttacks =
+    private static readonly List<EnemyAttackId> Phase1SmallAttacks =
     [
-        "fallen_shepherd_crooks_scar",
-        "fallen_shepherd_break_faith",
-        "fallen_shepherd_bloodletting",
-        "fallen_shepherd_cow_the_flock",
+        EnemyAttackId.FallenShepherdCrooksScar,
+        EnemyAttackId.FallenShepherdBreakFaith,
+        EnemyAttackId.FallenShepherdBloodletting,
+        EnemyAttackId.FallenShepherdCowTheFlock,
     ];
 
-    private static readonly List<string> Phase2SmallAttacks =
+    private static readonly List<EnemyAttackId> Phase2SmallAttacks =
     [
-        "fallen_shepherd_shepherds_vigil",
-        "fallen_shepherd_hush",
-        "fallen_shepherd_crooks_scar",
-        "fallen_shepherd_cow_the_flock",
+        EnemyAttackId.FallenShepherdShepherdsVigil,
+        EnemyAttackId.FallenShepherdHush,
+        EnemyAttackId.FallenShepherdCrooksScar,
+        EnemyAttackId.FallenShepherdCowTheFlock,
     ];
 
-    private static readonly List<string> Phase3Attacks =
+    private static readonly List<EnemyAttackId> Phase3Attacks =
     [
-        "fallen_shepherd_purge_the_heretic",
-        "fallen_shepherd_fear_the_shepherd",
-        "fallen_shepherd_final_sermon",
-        "fallen_shepherd_phase_3",
+        EnemyAttackId.FallenShepherdPurgeTheHeretic,
+        EnemyAttackId.FallenShepherdFearTheShepherd,
+        EnemyAttackId.FallenShepherdFinalSermon,
+        EnemyAttackId.FallenShepherdPhase3,
     ];
 
-    public FallenShepherd(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public FallenShepherd()
     {
-        Id = "fallen_shepherd";
+        Id = EnemyId.FallenShepherd;
         Name = "Fallen Shepherd";
         HP = 29;
         IsBoss = true;
         Phases = 3;
     }
 
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
         bool isHeavyTurn = turnNumber <= 1 || turnNumber % 2 == 1;
 
         return CurrentPhase switch
         {
-            2 when isHeavyTurn => ["fallen_shepherd_phase_2"],
+            2 when isHeavyTurn => [EnemyAttackId.FallenShepherdPhase2],
             2 => ArrayUtils.TakeRandomWithoutReplacement(Phase2SmallAttacks, 3),
             3 => GetPhase3Attacks(),
-            _ when isHeavyTurn => ["fallen_shepherd_phase_1"],
+            _ when isHeavyTurn => [EnemyAttackId.FallenShepherdPhase1],
             _ => ArrayUtils.TakeRandomWithoutReplacement(Phase1SmallAttacks, 3),
         };
     }
 
-    private IEnumerable<string> GetPhase3Attacks()
+    private IEnumerable<EnemyAttackId> GetPhase3Attacks()
     {
         var pool = _fearSelected
-            ? Phase3Attacks.Where(a => a != "fallen_shepherd_fear_the_shepherd").ToList()
+            ? Phase3Attacks.Where(a => a != EnemyAttackId.FallenShepherdFearTheShepherd).ToList()
             : Phase3Attacks;
         var result = ArrayUtils.TakeRandomWithoutReplacement(pool, 1).ToList();
-        if (result.FirstOrDefault() == "fallen_shepherd_fear_the_shepherd")
+        if (result.FirstOrDefault() == EnemyAttackId.FallenShepherdFearTheShepherd)
             _fearSelected = true;
         return result;
     }
@@ -80,7 +81,7 @@ public class FallenShepherdPhase1 : EnemyAttackBase
 
     public FallenShepherdPhase1()
     {
-        Id = "fallen_shepherd_phase_1";
+        Id = EnemyAttackId.FallenShepherdPhase1;
         Name = "Cast Out";
         Damage = 9;
         ConditionType = ConditionType.MustBeBlockedByAtLeast1Card;
@@ -108,7 +109,7 @@ public class FallenShepherdCrooksScar : EnemyAttackBase
 
     public FallenShepherdCrooksScar()
     {
-        Id = "fallen_shepherd_crooks_scar";
+        Id = EnemyAttackId.FallenShepherdCrooksScar;
         Name = "Crook's Scar";
         Damage = 3;
         ConditionType = ConditionType.OnHit;
@@ -130,7 +131,7 @@ public class FallenShepherdBreakFaith : EnemyAttackBase
 {
     public FallenShepherdBreakFaith()
     {
-        Id = "fallen_shepherd_break_faith";
+        Id = EnemyAttackId.FallenShepherdBreakFaith;
         Name = "Break Faith";
         Damage = 3;
         Text = "Each card used to block this attack becomes brittle.";
@@ -148,7 +149,7 @@ public class FallenShepherdBloodletting : EnemyAttackBase
 
     public FallenShepherdBloodletting()
     {
-        Id = "fallen_shepherd_bloodletting";
+        Id = EnemyAttackId.FallenShepherdBloodletting;
         Name = "Bloodletting";
         Damage = 3;
         ConditionType = ConditionType.OnHit;
@@ -172,7 +173,7 @@ public class FallenShepherdCowTheFlock : EnemyAttackBase
 
     public FallenShepherdCowTheFlock()
     {
-        Id = "fallen_shepherd_cow_the_flock";
+        Id = EnemyAttackId.FallenShepherdCowTheFlock;
         Name = "Cow the Flock";
         Damage = 3;
         Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Intimidate, IntimidateAmount);
@@ -190,7 +191,7 @@ public class FallenShepherdPhase2 : EnemyAttackBase
 
     public FallenShepherdPhase2()
     {
-        Id = "fallen_shepherd_phase_2";
+        Id = EnemyAttackId.FallenShepherdPhase2;
         Name = "Binding Sermon";
         Damage = 10;
         BlockRequiredToPreventEffect = Random.Shared.Next(0, 100) <= 50 ? 6 : 7;
@@ -214,7 +215,7 @@ public class FallenShepherdShepherdsVigil : EnemyAttackBase
 
     public FallenShepherdShepherdsVigil()
     {
-        Id = "fallen_shepherd_shepherds_vigil";
+        Id = EnemyAttackId.FallenShepherdShepherdsVigil;
         Name = "Shepherd's Vigil";
         Damage = 3;
         ConditionType = ConditionType.OnHit;
@@ -238,7 +239,7 @@ public class FallenShepherdHush : EnemyAttackBase
 
     public FallenShepherdHush()
     {
-        Id = "fallen_shepherd_hush";
+        Id = EnemyAttackId.FallenShepherdHush;
         Name = "Hush";
         Damage = 3;
         ConditionType = ConditionType.OnHit;
@@ -262,7 +263,7 @@ public class FallenShepherdPurgeTheHeretic : EnemyAttackBase
 
     public FallenShepherdPurgeTheHeretic()
     {
-        Id = "fallen_shepherd_purge_the_heretic";
+        Id = EnemyAttackId.FallenShepherdPurgeTheHeretic;
         Name = "Purge the Heretic";
         Damage = 8;
         Text = $"On reveal - Gain {BurnAmount} burn.";
@@ -285,7 +286,7 @@ public class FallenShepherdFearTheShepherd : EnemyAttackBase
 
     public FallenShepherdFearTheShepherd()
     {
-        Id = "fallen_shepherd_fear_the_shepherd";
+        Id = EnemyAttackId.FallenShepherdFearTheShepherd;
         Name = "Fear the Shepherd";
         Damage = 9;
         Text = $"On reveal - Gain {FearAmount} fear.";
@@ -308,7 +309,7 @@ public class FallenShepherdFinalSermon : EnemyAttackBase
 
     public FallenShepherdFinalSermon()
     {
-        Id = "fallen_shepherd_final_sermon";
+        Id = EnemyAttackId.FallenShepherdFinalSermon;
         Name = "Final Sermon";
         Damage = 9;
         Text = $"On reveal - Gain {SilencedAmount} silenced.";
@@ -331,7 +332,7 @@ public class FallenShepherdPhase3 : EnemyAttackBase
 
     public FallenShepherdPhase3()
     {
-        Id = "fallen_shepherd_phase_3";
+        Id = EnemyAttackId.FallenShepherdPhase3;
         Name = "Have No Mercy";
         Damage = 9;
         BlockRequiredToPreventEffect = Random.Shared.Next(0, 100) <= 50 ? 3 : 4;

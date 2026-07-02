@@ -9,6 +9,7 @@ using System.IO;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Tutorials;
+using Crusaders30XX.ECS.Data.Ids;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -77,7 +78,7 @@ namespace Crusaders30XX.ECS.Systems
 					var enemyCmp = enemy.GetComponent<Enemy>();
 					var arsenal = enemy.GetComponent<EnemyArsenal>();
 					if (arsenal == null || arsenal.AttackIds.Count == 0) continue;
-					string enemyId = enemyCmp?.EnemyBase?.Id ?? "demon";
+					string enemyId = enemyCmp?.EnemyBase?.Id.ToKey() ?? EnemyId.Demon.ToKey();
 					var intent = enemy.GetComponent<AttackIntent>();
 					if (intent == null)
 					{
@@ -110,7 +111,7 @@ namespace Crusaders30XX.ECS.Systems
 					if (intent.Planned.Count == 0)
 					{
 						var currentIds = enemyCmp?.EnemyBase?.GetAttackIds(EntityManager, turnNumber) ?? [];
-						LoggingService.Append("EnemyIntentPlanningSystem.OnStartEnemyTurn", new System.Text.Json.Nodes.JsonObject { ["action"] = "Planning current turn", ["currentTurnIds"] = string.Join(", ", currentIds) });
+						LoggingService.Append("EnemyIntentPlanningSystem.OnStartEnemyTurn", new System.Text.Json.Nodes.JsonObject { ["action"] = "Planning current turn", ["currentTurnIds"] = string.Join(", ", currentIds.Select(id => id.ToKey())) });
 						AddPlanned(currentIds, intent, enemyId, turnNumber);
 					}
 					// Plan next-turn preview using next turn's selection
@@ -134,7 +135,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void AddPlanned(IEnumerable<string> attackIds, dynamic target, string enemyId, int plannedTurn)
+		private void AddPlanned(IEnumerable<EnemyAttackId> attackIds, dynamic target, string enemyId, int plannedTurn)
 		{
 			int index = (target.Planned is List<PlannedAttack> l) ? l.Count : 0;
 			foreach (var id in attackIds)
@@ -157,7 +158,7 @@ namespace Crusaders30XX.ECS.Systems
 				});
 				EventManager.Publish(new IntentPlanned
 				{
-					AttackId = id,
+					AttackId = id.ToKey(),
 					ContextId = ctx,
 					Step = Math.Max(1, index + 1),
 					TelegraphText = attackDef.Name

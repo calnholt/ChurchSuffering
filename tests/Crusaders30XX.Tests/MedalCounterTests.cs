@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
@@ -305,9 +306,9 @@ public class MedalCounterTests
 		Assert.IsType<StRita>(MedalFactory.Create("st_rita"));
 		Assert.IsType<StLonginus>(MedalFactory.Create("st_longinus"));
 		Assert.IsType<StElijah>(MedalFactory.Create("st_elijah"));
-		Assert.Contains("st_rita", MedalFactory.GetAllMedals().Keys);
-		Assert.Contains("st_longinus", MedalFactory.GetAllMedals().Keys);
-		Assert.Contains("st_elijah", MedalFactory.GetAllMedals().Keys);
+		Assert.Contains(MedalId.StRita, MedalFactory.GetAllMedals().Keys);
+		Assert.Contains(MedalId.StLonginus, MedalFactory.GetAllMedals().Keys);
+		Assert.Contains(MedalId.StElijah, MedalFactory.GetAllMedals().Keys);
 	}
 
 	[Fact]

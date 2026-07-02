@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Climb;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
@@ -602,13 +603,13 @@ namespace Crusaders30XX.ECS.Services
 
 			if (kind == ClimbShopSlotKinds.Medal)
 			{
-				slot.itemId = PickUnshown(MedalFactory.GetAllMedals().Keys, state.shownMedalIds, rng);
+				slot.itemId = PickUnshown(MedalFactory.GetAllMedals().Keys.Select(id => id.ToKey()), state.shownMedalIds, rng);
 				if (string.IsNullOrWhiteSpace(slot.itemId)) slot.kind = ClimbShopSlotKinds.Empty;
 				else AddDistinct(state.shownMedalIds, slot.itemId);
 			}
 			else if (kind == ClimbShopSlotKinds.Equipment)
 			{
-				var allEquipment = EquipmentFactory.GetAllEquipment().Keys;
+				var allEquipment = EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey());
 				slot.itemId = PickUnshown(allEquipment, state.shownEquipmentIds, rng);
 				if (string.IsNullOrWhiteSpace(slot.itemId)) slot.kind = ClimbShopSlotKinds.Empty;
 				else AddDistinct(state.shownEquipmentIds, slot.itemId);

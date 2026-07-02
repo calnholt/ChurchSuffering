@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
@@ -60,7 +61,7 @@ namespace Crusaders30XX.ECS.Services
 			if (entityManager == null || enemyEntity == null || attack == null) return null;
 			var resolvedRecipe = recipe ?? attack.AttackEffectRecipe ?? VisualEffectPresets.EnemyAttackLunge();
 			var target = ResolveTarget(entityManager, VisualEffectSourceKind.EnemyAttack, resolvedRecipe.TargetRole);
-			return Build(resolvedRecipe, enemyEntity, target, VisualEffectSourceKind.EnemyAttack, attack.Id, attack.Name, contextId, isPreview);
+			return Build(resolvedRecipe, enemyEntity, target, VisualEffectSourceKind.EnemyAttack, attack.Id.ToKey(), attack.Name, contextId, isPreview);
 		}
 
 		public static VisualEffectRequested ForDebugPreview(

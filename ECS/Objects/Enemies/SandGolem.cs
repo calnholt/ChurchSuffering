@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
@@ -10,15 +11,15 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
 
 public class SandGolem : EnemyBase
 {
-  public SandGolem(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public SandGolem()
   {
-    Id = "sand_golem";
+    Id = EnemyId.SandGolem;
     Name = "Sand Golem";
     HP = 30;
   }
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    return turnNumber % 2 == 1 ? ["sand_pound"] : ["sand_slam"];
+    return turnNumber % 2 == 1 ? [EnemyAttackId.SandPound] : [EnemyAttackId.SandSlam];
   }
 }
 
@@ -27,7 +28,7 @@ public class SandPound : EnemyAttackBase
   private int Threshold = 1;
   public SandPound()
   {
-    Id = "sand_pound";
+    Id = EnemyAttackId.SandPound;
     Name = "Sand Pound";
     Damage = 7;
     AttackEffectRecipe = EnemyRockBlastEffect();
@@ -46,7 +47,7 @@ public class SandSlam : EnemyAttackBase
   private int Threshold = 2;
   public SandSlam()
   {
-    Id = "sand_slam";
+    Id = EnemyAttackId.SandSlam;
     Name = "Sand Slam";
     Damage = 10;
     ConditionType = ConditionType.MustBeBlockedByExactly2Cards;

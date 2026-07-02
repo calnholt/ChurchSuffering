@@ -1,281 +1,136 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 
 namespace Crusaders30XX.ECS.Factories
 {
-    /// <summary>
-    /// Factory for creating EnemyAttackBase instances from attack IDs
-    /// </summary>
     public static class EnemyAttackFactory
     {
-        /// <summary>
-        /// Creates an EnemyAttackBase instance from an attack ID string
-        /// </summary>
-        /// <param name="attackId">The attack ID (e.g., "bone_strike")</param>
-        /// <returns>The corresponding EnemyAttackBase instance, or null if not found</returns>
-        public static EnemyAttackBase Create(string attackId)
-        {
-            return attackId switch
+        private static readonly IReadOnlyDictionary<EnemyAttackId, Func<EnemyAttackBase>> AttackConstructors =
+            new Dictionary<EnemyAttackId, Func<EnemyAttackBase>>
             {
-                // Ogre attacks
-                "pummel_into_submission" => new PummelIntoSubmission(),
-                "tree_stomp" => new TreeStomp(),
-                "slam_trunk" => new SlamTrunk(),
-                "fake_out" => new FakeOut(),
-                "thud" => new Thud(),
-                // Skeleton attacks
-                "bone_strike" => new BoneStrike(),
-                "sweep" => new Sweep(),
-                "calcify" => new Calcify(),
-                "skull_crusher" => new SkullCrusher(),
-                // SkeletalArcher attacks
-                "piercing_shot" => new PiercingShot(),
-                "weathering_shot" => new WeatheringShot(),
-                "quick_shot" => new QuickShot(),
-                "snipe" => new Snipe(),
-                // Ninja attacks
-                "slice" => new Slice(),
-                "dice" => new Dice(),
-                "dusk_flick" => new DuskFlick(),
-                "cloaked_reaver" => new CloakedReaver(),
-                "silencing_stab" => new SilencingStab(),
-                "sharpen_blade" => new SharpenBlade(),
-                "shadow_step" => new ShadowStep(),
-                "nightveil_guillotine" => new NightveilGuillotine(),
-                // Demon attacks
-                "razor_maw" => new RazorMaw(),
-                "scorching_claw" => new ScorchingClaw(),
-                "infernal_execution" => new InfernalExecution(),
-                // Gleeber attacks
-                "pounce" => new Pounce(),
-                "tutorial_gleeber_strike" => new TutorialGleeberStrike(),
-                "tutorial_gleeber_strike_3" => new TutorialGleeberStrike3(),
-                "tutorial_gleeber_strike_5" => new TutorialGleeberStrike5(),
-                "tutorial_gleeber_strike_6" => new TutorialGleeberStrike6(),
-                "tutorial_gleeber_strike_7" => new TutorialGleeberStrike7(),
-                "tutorial_gleeber_strike_8" => new TutorialGleeberStrike8(),
-                "tutorial_gleeber_strike_9" => new TutorialGleeberStrike9(),
-                // SandCorpse attacks
-                "sand_blast" => new SandBlast(),
-                "sand_storm" => new SandStorm(),
-                "tutorial_sand_blast" => new TutorialSandBlast(),
-                "tutorial_sand_storm" => new TutorialSandStorm(),
-                // SandGolem attacks
-                "sand_pound" => new SandPound(),
-                "sand_slam" => new SandSlam(),
-                // Spider attacks
-                "suffocating_silk" => new SuffocatingSilk(),
-                "mandible_breaker" => new MandibleBreaker(),
-                // Mummy attacks
-                "entomb" => new Entomb(),
-                "mummify" => new Mummify(),
-                "leprosy" => new Leprosy(),
-                // Succubus attacks
-                "velvet_fangs" => new VelvetFangs(),
-                "soul_siphon" => new SoulSiphon(),
-                "enthralling_gaze" => new EnthrallingGaze(),
-                "crushing_adoration" => new CrushingAdoration(),
-                "teasing_nip" => new TeasingNip(),
-                // Thornreaver attacks
-                "sawtooth_rend" => new SawtoothRend(),
-                // DustWuurm attacks
-                "dust_storm" => new DustStorm(),
-                // Sorcerer attacks
-                "strange_force" => new StrangeForce(),
-                // IceDemon attacks
-                "icy_blade" => new IcyBlade(),
-                "frozen_claw" => new FrozenClaw(),
-                "frost_eater" => new FrostEater(),
-                // GlacialGuardian attacks
-                "glacial_strike" => new GlacialStrike(),
-                "glacial_blast" => new GlacialBlast(),
-                // CinderboltDemon attacks
-                "cinderbolt" => new Cinderbolt(),
-                "insidious_bolt" => new InsidiousBolt(),
-                // Berserker attacks
-                "rage" => new Rage(),
-                // TrainingDemon attacks
-                "training_strike" => new TrainingStrike(),
-                // Shadow attacks
-                "shadow_strike" => new ShadowStrike(),
-                "dissipating_darkness" => new EncroachingDarkness(),
-                "snuff_out_the_light" => new SnuffOutTheLight(),
-                "night_fall" => new NightFall(),
-                "from_the_shadows" => new FromTheShadows(),
-                "umbra_slice" => new UmbraSlice(),
-                // EarthDemon attacks
-                "tremor_strike" => new TremorStrike(),
-                "stone_barrage" => new StoneBarrage(),
-                "earthen_wall" => new EarthenWall(),
-                // Generic attacks
-                "have_no_mercy" => new HaveNoMercy(),
-                // Medusa attacks
-                "gaze" => new Gaze(),
-                "basilisk_glare" => new BasiliskGlare(),
-                "serpent_strike" => new SerpentStrike(),
-                "petrifying_gaze" => new PetrifyingGaze(),
-                "stone_skin" => new StoneSkin(),
-                "vipers_curse" => new VipersCurse(),
-                "crumbling_stone" => new CrumblingStone(),
-                // Wyvern attacks
-                "wyvern_strike" => new WyvernStrike(),
-                "wyvern_threat" => new WyvernThreat(),
-                // BloodMartyr attacks
-                "flagellation" => new Flagellation(),
-                "blood_ward" => new BloodWard(),
-                "blood_tithe" => new BloodTithe(),
-                "masochism" => new Masochism(),
-                // Sniper attacks
-                "sniper_shot" => new SniperShot(),
-                // FallenShepherd attacks
-                "fallen_shepherd_phase_1" => new FallenShepherdPhase1(),
-                "fallen_shepherd_crooks_scar" => new FallenShepherdCrooksScar(),
-                "fallen_shepherd_break_faith" => new FallenShepherdBreakFaith(),
-                "fallen_shepherd_bloodletting" => new FallenShepherdBloodletting(),
-                "fallen_shepherd_cow_the_flock" => new FallenShepherdCowTheFlock(),
-                "fallen_shepherd_phase_2" => new FallenShepherdPhase2(),
-                "fallen_shepherd_shepherds_vigil" => new FallenShepherdShepherdsVigil(),
-                "fallen_shepherd_hush" => new FallenShepherdHush(),
-                "fallen_shepherd_phase_3" => new FallenShepherdPhase3(),
-                "fallen_shepherd_purge_the_heretic" => new FallenShepherdPurgeTheHeretic(),
-                "fallen_shepherd_fear_the_shepherd" => new FallenShepherdFearTheShepherd(),
-                "fallen_shepherd_final_sermon" => new FallenShepherdFinalSermon(),
-                _ => null
+                { EnemyAttackId.PummelIntoSubmission, () => new PummelIntoSubmission() },
+                { EnemyAttackId.TreeStomp, () => new TreeStomp() },
+                { EnemyAttackId.SlamTrunk, () => new SlamTrunk() },
+                { EnemyAttackId.FakeOut, () => new FakeOut() },
+                { EnemyAttackId.Thud, () => new Thud() },
+                { EnemyAttackId.BoneStrike, () => new BoneStrike() },
+                { EnemyAttackId.Sweep, () => new Sweep() },
+                { EnemyAttackId.Calcify, () => new Calcify() },
+                { EnemyAttackId.SkullCrusher, () => new SkullCrusher() },
+                { EnemyAttackId.PiercingShot, () => new PiercingShot() },
+                { EnemyAttackId.WeatheringShot, () => new WeatheringShot() },
+                { EnemyAttackId.QuickShot, () => new QuickShot() },
+                { EnemyAttackId.Snipe, () => new Snipe() },
+                { EnemyAttackId.Slice, () => new Slice() },
+                { EnemyAttackId.Dice, () => new Dice() },
+                { EnemyAttackId.DuskFlick, () => new DuskFlick() },
+                { EnemyAttackId.CloakedReaver, () => new CloakedReaver() },
+                { EnemyAttackId.SilencingStab, () => new SilencingStab() },
+                { EnemyAttackId.SharpenBlade, () => new SharpenBlade() },
+                { EnemyAttackId.ShadowStep, () => new ShadowStep() },
+                { EnemyAttackId.NightveilGuillotine, () => new NightveilGuillotine() },
+                { EnemyAttackId.RazorMaw, () => new RazorMaw() },
+                { EnemyAttackId.ScorchingClaw, () => new ScorchingClaw() },
+                { EnemyAttackId.InfernalExecution, () => new InfernalExecution() },
+                { EnemyAttackId.Pounce, () => new Pounce() },
+                { EnemyAttackId.TutorialGleeberStrike, () => new TutorialGleeberStrike() },
+                { EnemyAttackId.TutorialGleeberStrike3, () => new TutorialGleeberStrike3() },
+                { EnemyAttackId.TutorialGleeberStrike5, () => new TutorialGleeberStrike5() },
+                { EnemyAttackId.TutorialGleeberStrike6, () => new TutorialGleeberStrike6() },
+                { EnemyAttackId.TutorialGleeberStrike7, () => new TutorialGleeberStrike7() },
+                { EnemyAttackId.TutorialGleeberStrike8, () => new TutorialGleeberStrike8() },
+                { EnemyAttackId.TutorialGleeberStrike9, () => new TutorialGleeberStrike9() },
+                { EnemyAttackId.SandBlast, () => new SandBlast() },
+                { EnemyAttackId.SandStorm, () => new SandStorm() },
+                { EnemyAttackId.TutorialSandBlast, () => new TutorialSandBlast() },
+                { EnemyAttackId.TutorialSandStorm, () => new TutorialSandStorm() },
+                { EnemyAttackId.SandPound, () => new SandPound() },
+                { EnemyAttackId.SandSlam, () => new SandSlam() },
+                { EnemyAttackId.SuffocatingSilk, () => new SuffocatingSilk() },
+                { EnemyAttackId.MandibleBreaker, () => new MandibleBreaker() },
+                { EnemyAttackId.Entomb, () => new Entomb() },
+                { EnemyAttackId.Mummify, () => new Mummify() },
+                { EnemyAttackId.Leprosy, () => new Leprosy() },
+                { EnemyAttackId.VelvetFangs, () => new VelvetFangs() },
+                { EnemyAttackId.SoulSiphon, () => new SoulSiphon() },
+                { EnemyAttackId.EnthrallingGaze, () => new EnthrallingGaze() },
+                { EnemyAttackId.CrushingAdoration, () => new CrushingAdoration() },
+                { EnemyAttackId.TeasingNip, () => new TeasingNip() },
+                { EnemyAttackId.SawtoothRend, () => new SawtoothRend() },
+                { EnemyAttackId.DustStorm, () => new DustStorm() },
+                { EnemyAttackId.StrangeForce, () => new StrangeForce() },
+                { EnemyAttackId.IcyBlade, () => new IcyBlade() },
+                { EnemyAttackId.FrozenClaw, () => new FrozenClaw() },
+                { EnemyAttackId.FrostEater, () => new FrostEater() },
+                { EnemyAttackId.GlacialStrike, () => new GlacialStrike() },
+                { EnemyAttackId.GlacialBlast, () => new GlacialBlast() },
+                { EnemyAttackId.Cinderbolt, () => new Cinderbolt() },
+                { EnemyAttackId.InsidiousBolt, () => new InsidiousBolt() },
+                { EnemyAttackId.Rage, () => new Rage() },
+                { EnemyAttackId.TrainingStrike, () => new TrainingStrike() },
+                { EnemyAttackId.ShadowStrike, () => new ShadowStrike() },
+                { EnemyAttackId.DissipatingDarkness, () => new EncroachingDarkness() },
+                { EnemyAttackId.SnuffOutTheLight, () => new SnuffOutTheLight() },
+                { EnemyAttackId.NightFall, () => new NightFall() },
+                { EnemyAttackId.FromTheShadows, () => new FromTheShadows() },
+                { EnemyAttackId.UmbraSlice, () => new UmbraSlice() },
+                { EnemyAttackId.TremorStrike, () => new TremorStrike() },
+                { EnemyAttackId.StoneBarrage, () => new StoneBarrage() },
+                { EnemyAttackId.EarthenWall, () => new EarthenWall() },
+                { EnemyAttackId.HaveNoMercy, () => new HaveNoMercy() },
+                { EnemyAttackId.Gaze, () => new Gaze() },
+                { EnemyAttackId.BasiliskGlare, () => new BasiliskGlare() },
+                { EnemyAttackId.SerpentStrike, () => new SerpentStrike() },
+                { EnemyAttackId.PetrifyingGaze, () => new PetrifyingGaze() },
+                { EnemyAttackId.StoneSkin, () => new StoneSkin() },
+                { EnemyAttackId.VipersCurse, () => new VipersCurse() },
+                { EnemyAttackId.CrumblingStone, () => new CrumblingStone() },
+                { EnemyAttackId.WyvernStrike, () => new WyvernStrike() },
+                { EnemyAttackId.WyvernThreat, () => new WyvernThreat() },
+                { EnemyAttackId.Flagellation, () => new Flagellation() },
+                { EnemyAttackId.BloodWard, () => new BloodWard() },
+                { EnemyAttackId.BloodTithe, () => new BloodTithe() },
+                { EnemyAttackId.Masochism, () => new Masochism() },
+                { EnemyAttackId.SniperShot, () => new SniperShot() },
+                { EnemyAttackId.FallenShepherdPhase1, () => new FallenShepherdPhase1() },
+                { EnemyAttackId.FallenShepherdCrooksScar, () => new FallenShepherdCrooksScar() },
+                { EnemyAttackId.FallenShepherdBreakFaith, () => new FallenShepherdBreakFaith() },
+                { EnemyAttackId.FallenShepherdBloodletting, () => new FallenShepherdBloodletting() },
+                { EnemyAttackId.FallenShepherdCowTheFlock, () => new FallenShepherdCowTheFlock() },
+                { EnemyAttackId.FallenShepherdPhase2, () => new FallenShepherdPhase2() },
+                { EnemyAttackId.FallenShepherdShepherdsVigil, () => new FallenShepherdShepherdsVigil() },
+                { EnemyAttackId.FallenShepherdHush, () => new FallenShepherdHush() },
+                { EnemyAttackId.FallenShepherdPhase3, () => new FallenShepherdPhase3() },
+                { EnemyAttackId.FallenShepherdPurgeTheHeretic, () => new FallenShepherdPurgeTheHeretic() },
+                { EnemyAttackId.FallenShepherdFearTheShepherd, () => new FallenShepherdFearTheShepherd() },
+                { EnemyAttackId.FallenShepherdFinalSermon, () => new FallenShepherdFinalSermon() },
             };
+
+        public static EnemyAttackBase Create(EnemyAttackId attackId)
+        {
+            return AttackConstructors.TryGetValue(attackId, out var create)
+                ? create()
+                : null;
         }
 
-        /// <summary>
-        /// Returns a dictionary of all available enemy attacks, keyed by attack ID
-        /// </summary>
-        /// <returns>A dictionary mapping attack IDs to EnemyAttackBase instances</returns>
-        public static Dictionary<string, EnemyAttackBase> GetAllAttacks()
+        public static EnemyAttackBase Create(string attackId)
         {
-            return new Dictionary<string, EnemyAttackBase>
-            {
-                // Ogre attacks
-                { "pummel_into_submission", new PummelIntoSubmission() },
-                { "tree_stomp", new TreeStomp() },
-                { "slam_trunk", new SlamTrunk() },
-                { "fake_out", new FakeOut() },
-                { "thud", new Thud() },
-                // Skeleton attacks
-                { "bone_strike", new BoneStrike() },
-                { "sweep", new Sweep() },
-                { "calcify", new Calcify() },
-                { "skull_crusher", new SkullCrusher() },
-                // SkeletalArcher attacks
-                { "piercing_shot", new PiercingShot() },
-                { "weathering_shot", new WeatheringShot() },
-                { "quick_shot", new QuickShot() },
-                { "snipe", new Snipe() },
-                // Ninja attacks
-                { "slice", new Slice() },
-                { "dice", new Dice() },
-                { "dusk_flick", new DuskFlick() },
-                { "cloaked_reaver", new CloakedReaver() },
-                { "silencing_stab", new SilencingStab() },
-                { "sharpen_blade", new SharpenBlade() },
-                { "shadow_step", new ShadowStep() },
-                { "nightveil_guillotine", new NightveilGuillotine() },
-                // Demon attacks
-                { "razor_maw", new RazorMaw() },
-                { "scorching_claw", new ScorchingClaw() },
-                { "infernal_execution", new InfernalExecution() },
-                // Gleeber attacks
-                { "pounce", new Pounce() },
-                { "tutorial_gleeber_strike", new TutorialGleeberStrike() },
-                { "tutorial_gleeber_strike_3", new TutorialGleeberStrike3() },
-                { "tutorial_gleeber_strike_5", new TutorialGleeberStrike5() },
-                { "tutorial_gleeber_strike_6", new TutorialGleeberStrike6() },
-                { "tutorial_gleeber_strike_8", new TutorialGleeberStrike8() },
-                { "tutorial_gleeber_strike_9", new TutorialGleeberStrike9() },
-                // SandCorpse attacks
-                { "sand_blast", new SandBlast() },
-                { "sand_storm", new SandStorm() },
-                { "tutorial_sand_blast", new TutorialSandBlast() },
-                { "tutorial_sand_storm", new TutorialSandStorm() },
-                // SandGolem attacks
-                { "sand_pound", new SandPound() },
-                { "sand_slam", new SandSlam() },
-                // Spider attacks
-                { "suffocating_silk", new SuffocatingSilk() },
-                { "mandible_breaker", new MandibleBreaker() },
-                // Mummy attacks
-                { "entomb", new Entomb() },
-                { "mummify", new Mummify() },
-                { "leprosy", new Leprosy() },
-                // Succubus attacks
-                { "velvet_fangs", new VelvetFangs() },
-                { "soul_siphon", new SoulSiphon() },
-                { "enthralling_gaze", new EnthrallingGaze() },
-                { "crushing_adoration", new CrushingAdoration() },
-                { "teasing_nip", new TeasingNip() },
-                // Thornreaver attacks
-                { "sawtooth_rend", new SawtoothRend() },
-                // DustWuurm attacks
-                { "dust_storm", new DustStorm() },
-                // Sorcerer attacks
-                { "strange_force", new StrangeForce() },
-                // IceDemon attacks
-                { "icy_blade", new IcyBlade() },
-                { "frozen_claw", new FrozenClaw() },
-                { "frost_eater", new FrostEater() },
-                // GlacialGuardian attacks
-                { "glacial_strike", new GlacialStrike() },
-                { "glacial_blast", new GlacialBlast() },
-                // CinderboltDemon attacks
-                { "cinderbolt", new Cinderbolt() },
-                { "insidious_bolt", new InsidiousBolt() },
-                // Berserker attacks
-                { "rage", new Rage() },
-                // TrainingDemon attacks
-                { "training_strike", new TrainingStrike() },
-                // Shadow attacks
-                { "shadow_strike", new ShadowStrike() },
-                { "dissipating_darkness", new EncroachingDarkness() },
-                { "snuff_out_the_light", new SnuffOutTheLight() },
-                { "night_fall", new NightFall() },
-                { "from_the_shadows", new FromTheShadows() },
-                { "umbra_slice", new UmbraSlice() },
-                // EarthDemon attacks
-                { "tremor_strike", new TremorStrike() },
-                { "stone_barrage", new StoneBarrage() },
-                { "earthen_wall", new EarthenWall() },
-                // Generic attacks
-                { "have_no_mercy", new HaveNoMercy() },
-                // Medusa attacks
-                { "gaze", new Gaze() },
-                { "basilisk_glare", new BasiliskGlare() },
-                { "serpent_strike", new SerpentStrike() },
-                { "petrifying_gaze", new PetrifyingGaze() },
-                { "stone_skin", new StoneSkin() },
-                { "vipers_curse", new VipersCurse() },
-                { "crumbling_stone", new CrumblingStone() },
-                // Wyvern attacks
-                { "wyvern_strike", new WyvernStrike() },
-                { "wyvern_threat", new WyvernThreat() },
-                // BloodMartyr attacks
-                { "flagellation", new Flagellation() },
-                { "blood_ward", new BloodWard() },
-                { "blood_tithe", new BloodTithe() },
-                { "masochism", new Masochism() },
-                // Sniper attacks
-                { "sniper_shot", new SniperShot() },
-                // FallenShepherd attacks
-                { "fallen_shepherd_phase_1", new FallenShepherdPhase1() },
-                { "fallen_shepherd_crooks_scar", new FallenShepherdCrooksScar() },
-                { "fallen_shepherd_break_faith", new FallenShepherdBreakFaith() },
-                { "fallen_shepherd_bloodletting", new FallenShepherdBloodletting() },
-                { "fallen_shepherd_cow_the_flock", new FallenShepherdCowTheFlock() },
-                { "fallen_shepherd_phase_2", new FallenShepherdPhase2() },
-                { "fallen_shepherd_shepherds_vigil", new FallenShepherdShepherdsVigil() },
-                { "fallen_shepherd_hush", new FallenShepherdHush() },
-                { "fallen_shepherd_phase_3", new FallenShepherdPhase3() },
-                { "fallen_shepherd_purge_the_heretic", new FallenShepherdPurgeTheHeretic() },
-                { "fallen_shepherd_fear_the_shepherd", new FallenShepherdFearTheShepherd() },
-                { "fallen_shepherd_final_sermon", new FallenShepherdFinalSermon() },
-            };
+            return GameIdExtensions.TryParseEnemyAttackId(attackId, out var parsed)
+                ? Create(parsed)
+                : null;
         }
+
+        public static Dictionary<EnemyAttackId, EnemyAttackBase> GetAllAttacks()
+        {
+            return AttackConstructors.ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value());
+        }
+
+        public static bool IsRegistered(EnemyAttackId attackId) => AttackConstructors.ContainsKey(attackId);
     }
 }

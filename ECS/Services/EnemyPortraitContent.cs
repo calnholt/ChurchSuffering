@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Factories;
 
 namespace Crusaders30XX.ECS.Services
@@ -59,9 +60,9 @@ namespace Crusaders30XX.ECS.Services
 				.Where(entry => entry.Value != null
 					&& !entry.Value.IsBoss
 					&& !entry.Value.IsTutorialOnly
-					&& HasPortrait(entry.Key)
+					&& HasPortrait(entry.Key.ToKey())
 				)
-				.Select(entry => entry.Key)
+				.Select(entry => entry.Key.ToKey())
 				.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
 				.ToList();
 		}

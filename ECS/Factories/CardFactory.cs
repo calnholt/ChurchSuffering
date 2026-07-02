@@ -1,160 +1,102 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Cards;
 
 namespace Crusaders30XX.ECS.Factories
 {
-    /// <summary>
-    /// Factory for creating CardBase instances from card IDs
-    /// </summary>
     public static class CardFactory
     {
-        /// <summary>
-        /// Creates a CardBase instance from a card ID string
-        /// </summary>
-        /// <param name="cardId">The card ID (e.g., "absolution")</param>
-        /// <returns>The corresponding CardBase instance, or null if not found</returns>
-        public static CardBase Create(string cardId)
-        {
-            return cardId switch
+        private static readonly IReadOnlyDictionary<CardId, Func<CardBase>> CardConstructors =
+            new Dictionary<CardId, Func<CardBase>>
             {
-                "absolution" => new Absolution(),
-                "ark_of_the_covenant" => new ArkOfTheCovenant(),
-                "battering_blow" => new BatteringBlow(),
-                "battle_scars" => new BattleScars(),
-                "burn" => new Burn(),
-                "carpe_diem" => new CarpeDiem(),
-                "colorless_3_block" => new ColorlessBlock(),
-                "consecrate" => new Consecrate(),
-                "courageous" => new Courageous(),
-                "crimson_rite" => new CrimsonRite(),
-                "crusade" => new Crusade(),
-                "curse" => new Curse(),
-                "dagger" => new Dagger(),
-                "deus_vult" => new DeusVult(),
-                "divine_protection" => new DivineProtection(),
-                "dowse_with_holy_water" => new DowseWithHolyWater(),
-                "ember_harvest" => new EmberHarvest(),
-                "exaltation" => new Exaltation(),
-                "excavate" => new Excavate(),
-                "fervor" => new Fervor(),
-                "forge_strike" => new ForgeStrike(),
-                "fury" => new Fury(),
-                "hold_the_line" => new HoldTheLine(),
-                "hammer" => new Hammer(),
-                "hidden_kunai" => new HiddenKunai(),
-                "impale" => new Impale(),
-                "increase_faith" => new IncreaseFaith(),
-                "iron_covenant" => new IronCovenant(),
-                "kunai" => new Kunai(),
-                "litany_of_wrath" => new LitanyOfWrath(),
-                "mantlet" => new Mantlet(),
-                "malefic_rite" => new MaleficRite(),
-                "quick_wit" => new QuickWit(),
-                "rally_the_faithful" => new RallyTheFaithful(),
-                "relentless_strike" => new RelentlessStrike(),
-                "pouch_of_kunai" => new PouchOfKunai(),
-                "ravage" => new Ravage(),
-                "razor_storm" => new RazorStorm(),
-                "reckoning" => new Reckoning(),
-                "reap" => new Reap(),
-                "renounce_and_hone" => new RenounceAndHone(),
-                "sacrifice" => new Sacrifice(),
-                "serpent_crush" => new SerpentCrush(),
-                "seize" => new Seize(),
-                "shield_of_faith" => new ShieldOfFaith(),
-                "smite" => new Smite(),
-                "stab" => new Stab(),
-                "steadfast_resolve" => new SteadfastResolve(),
-                "stalwart" => new Stalwart(),
-                "steel_the_spirit" => new SteelTheSpirit(),
-                "stoked_assault" => new StokedAssault(),
-                "strike" => new Strike(),
-                "sudden_thrust" => new SuddenThrust(),
-                "stoke_the_furnace" => new StokeTheFurnace(),
-                "sword" => new Sword(),
-                "temper_the_blade" => new TemperTheBlade(),
-                "tempest" => new Tempest(),
-                "thaw" => new Thaw(),
-                "unburdened_strike" => new UnburdenedStrike(),
-                "vanguards_promise" => new VanguardsPromise(),
-                "vindicate" => new Vindicate(),
-                "whirlwind" => new Whirlwind(),
-                "zealous_vow" => new ZealousVow(),
-                _ => null
+                { CardId.Absolution, () => new Absolution() },
+                { CardId.ArkOfTheCovenant, () => new ArkOfTheCovenant() },
+                { CardId.BatteringBlow, () => new BatteringBlow() },
+                { CardId.BattleScars, () => new BattleScars() },
+                { CardId.Burn, () => new Burn() },
+                { CardId.CarpeDiem, () => new CarpeDiem() },
+                { CardId.Colorless3Block, () => new ColorlessBlock() },
+                { CardId.Consecrate, () => new Consecrate() },
+                { CardId.Courageous, () => new Courageous() },
+                { CardId.CrimsonRite, () => new CrimsonRite() },
+                { CardId.Crusade, () => new Crusade() },
+                { CardId.Curse, () => new Curse() },
+                { CardId.Dagger, () => new Dagger() },
+                { CardId.DeusVult, () => new DeusVult() },
+                { CardId.DivineProtection, () => new DivineProtection() },
+                { CardId.DowseWithHolyWater, () => new DowseWithHolyWater() },
+                { CardId.EmberHarvest, () => new EmberHarvest() },
+                { CardId.Exaltation, () => new Exaltation() },
+                { CardId.Excavate, () => new Excavate() },
+                { CardId.Fervor, () => new Fervor() },
+                { CardId.ForgeStrike, () => new ForgeStrike() },
+                { CardId.Fury, () => new Fury() },
+                { CardId.HoldTheLine, () => new HoldTheLine() },
+                { CardId.Hammer, () => new Hammer() },
+                { CardId.HiddenKunai, () => new HiddenKunai() },
+                { CardId.Impale, () => new Impale() },
+                { CardId.IncreaseFaith, () => new IncreaseFaith() },
+                { CardId.IronCovenant, () => new IronCovenant() },
+                { CardId.Kunai, () => new Kunai() },
+                { CardId.LitanyOfWrath, () => new LitanyOfWrath() },
+                { CardId.Mantlet, () => new Mantlet() },
+                { CardId.MaleficRite, () => new MaleficRite() },
+                { CardId.QuickWit, () => new QuickWit() },
+                { CardId.RallyTheFaithful, () => new RallyTheFaithful() },
+                { CardId.RelentlessStrike, () => new RelentlessStrike() },
+                { CardId.PouchOfKunai, () => new PouchOfKunai() },
+                { CardId.Ravage, () => new Ravage() },
+                { CardId.RazorStorm, () => new RazorStorm() },
+                { CardId.Reckoning, () => new Reckoning() },
+                { CardId.Reap, () => new Reap() },
+                { CardId.RenounceAndHone, () => new RenounceAndHone() },
+                { CardId.Sacrifice, () => new Sacrifice() },
+                { CardId.SerpentCrush, () => new SerpentCrush() },
+                { CardId.Seize, () => new Seize() },
+                { CardId.ShieldOfFaith, () => new ShieldOfFaith() },
+                { CardId.Smite, () => new Smite() },
+                { CardId.Stab, () => new Stab() },
+                { CardId.SteadfastResolve, () => new SteadfastResolve() },
+                { CardId.Stalwart, () => new Stalwart() },
+                { CardId.SteelTheSpirit, () => new SteelTheSpirit() },
+                { CardId.StokedAssault, () => new StokedAssault() },
+                { CardId.Strike, () => new Strike() },
+                { CardId.SuddenThrust, () => new SuddenThrust() },
+                { CardId.StokeTheFurnace, () => new StokeTheFurnace() },
+                { CardId.Sword, () => new Sword() },
+                { CardId.TemperTheBlade, () => new TemperTheBlade() },
+                { CardId.Tempest, () => new Tempest() },
+                { CardId.Thaw, () => new Thaw() },
+                { CardId.UnburdenedStrike, () => new UnburdenedStrike() },
+                { CardId.VanguardsPromise, () => new VanguardsPromise() },
+                { CardId.Vindicate, () => new Vindicate() },
+                { CardId.Whirlwind, () => new Whirlwind() },
+                { CardId.ZealousVow, () => new ZealousVow() },
             };
+
+        public static CardBase Create(CardId cardId)
+        {
+            return CardConstructors.TryGetValue(cardId, out var create)
+                ? create()
+                : null;
         }
 
-        /// <summary>
-        /// Returns a dictionary of all available cards, keyed by card ID
-        /// </summary>
-        /// <returns>A dictionary mapping card IDs to CardBase instances</returns>
-        public static Dictionary<string, CardBase> GetAllCards()
+        public static CardBase Create(string cardId)
         {
-            return new Dictionary<string, CardBase>
-            {
-                { "absolution", new Absolution() },
-                { "ark_of_the_covenant", new ArkOfTheCovenant() },
-                { "battering_blow", new BatteringBlow() },
-                { "battle_scars", new BattleScars() },
-                { "burn", new Burn() },
-                { "carpe_diem", new CarpeDiem() },
-                { "colorless_3_block", new ColorlessBlock() },
-                { "consecrate", new Consecrate() },
-                { "courageous", new Courageous() },
-                { "crimson_rite", new CrimsonRite() },
-                { "crusade", new Crusade() },
-                { "dagger", new Dagger() },
-                { "deus_vult", new DeusVult() },
-                { "divine_protection", new DivineProtection() },
-                { "dowse_with_holy_water", new DowseWithHolyWater() },
-                { "ember_harvest", new EmberHarvest() },
-                { "exaltation", new Exaltation() },
-                { "excavate", new Excavate() },
-                { "fervor", new Fervor() },
-                { "forge_strike", new ForgeStrike() },
-                { "fury", new Fury() },
-                { "impale", new Impale() },
-                { "increase_faith", new IncreaseFaith() },
-                { "iron_covenant", new IronCovenant() },
-                { "hold_the_line", new HoldTheLine() },
-                { "hammer", new Hammer() },
-                { "hidden_kunai", new HiddenKunai() },
-                { "kunai", new Kunai() },
-                { "litany_of_wrath", new LitanyOfWrath() },
-                { "mantlet", new Mantlet() },
-                { "malefic_rite", new MaleficRite() },
-                { "quick_wit", new QuickWit() },
-                { "rally_the_faithful", new RallyTheFaithful() },
-                { "relentless_strike", new RelentlessStrike() },
-                { "pouch_of_kunai", new PouchOfKunai() },
-                { "ravage", new Ravage() },
-                { "razor_storm", new RazorStorm() },
-                { "reckoning", new Reckoning() },
-                { "reap", new Reap() },
-                { "renounce_and_hone", new RenounceAndHone() },
-                { "sacrifice", new Sacrifice() },
-                { "serpent_crush", new SerpentCrush() },
-                { "seize", new Seize() },
-                { "shield_of_faith", new ShieldOfFaith() },
-                { "smite", new Smite() },
-                { "stab", new Stab() },
-                { "steadfast_resolve", new SteadfastResolve() },
-                { "stalwart", new Stalwart() },
-                { "steel_the_spirit", new SteelTheSpirit() },
-                { "stoked_assault", new StokedAssault() },
-                { "strike", new Strike() },
-                { "sudden_thrust", new SuddenThrust() },
-                { "stoke_the_furnace", new StokeTheFurnace() },
-                { "sword", new Sword() },
-                { "temper_the_blade", new TemperTheBlade() },
-                { "tempest", new Tempest() },
-                { "thaw", new Thaw() },
-                { "unburdened_strike", new UnburdenedStrike() },
-                { "vanguards_promise", new VanguardsPromise() },
-                { "vindicate", new Vindicate() },
-                { "whirlwind", new Whirlwind() },
-                { "zealous_vow", new ZealousVow() }
-            };
+            return GameIdExtensions.TryParseCardId(cardId, out var parsed)
+                ? Create(parsed)
+                : null;
+        }
+
+        public static Dictionary<CardId, CardBase> GetAllCards()
+        {
+            return CardConstructors
+                .Where(entry => entry.Key != CardId.Curse)
+                .ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value());
         }
     }
 }

@@ -1,5 +1,6 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
@@ -23,7 +24,7 @@ public class EnemyDefeatFlowSystemTests
 		try
 		{
 			var world = BuildWorld(out var phaseState, out var enemy);
-			_ = new EnemyDefeatFlowSystem(world.EntityManager, content: null);
+			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			int enemyKilledCount = 0;
 			int questRewardCount = 0;
@@ -57,7 +58,7 @@ public class EnemyDefeatFlowSystemTests
 		try
 		{
 			var world = BuildWorld(out var phaseState, out var enemy);
-			_ = new EnemyDefeatFlowSystem(world.EntityManager, content: null);
+			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			EventManager.Publish(new BeginDefeatPresentationEvent { Enemy = enemy, IsPreview = true });
 
@@ -85,10 +86,10 @@ public class EnemyDefeatFlowSystemTests
 			queued.ClimbEncounterSlotId = "final";
 			queued.Events[0].EventId = "fallen_shepherd";
 			var enemyComponent = enemy.GetComponent<Enemy>();
-			enemyComponent.Id = "fallen_shepherd";
+			enemyComponent.Id = EnemyId.FallenShepherd;
 			enemyComponent.Name = "Fallen Shepherd";
-			enemyComponent.EnemyBase = EnemyFactory.Create("fallen_shepherd", EnemyDifficulty.Hard);
-			_ = new EnemyDefeatFlowSystem(world.EntityManager, content: null);
+			enemyComponent.EnemyBase = EnemyFactory.Create(EnemyId.FallenShepherd);
+			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			ShowTransition transition = null;
 			int rewardCount = 0;
@@ -155,7 +156,6 @@ public class EnemyDefeatFlowSystemTests
 					{
 						EventId = "skeleton",
 						EventType = QueuedEventType.Enemy,
-						Difficulty = EnemyDifficulty.Easy,
 					},
 				},
 				CurrentIndex = 0,
@@ -174,10 +174,10 @@ public class EnemyDefeatFlowSystemTests
 			});
 
 			var enemy = world.CreateEntity("Enemy");
-			world.AddComponent(enemy, new Enemy { Id = "skeleton", Name = "Skeleton" });
+			world.AddComponent(enemy, new Enemy { Id = EnemyId.Skeleton, Name = "Skeleton" });
 			world.AddComponent(enemy, new Transform());
 
-			_ = new EnemyDefeatFlowSystem(world.EntityManager, content: null);
+			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			ShowQuestRewardOverlay reward = null;
 			int musicCount = 0;
@@ -214,7 +214,7 @@ public class EnemyDefeatFlowSystemTests
 		try
 		{
 			var world = BuildWorld(out _, out var enemy);
-			_ = new EnemyDefeatFlowSystem(world.EntityManager, content: null);
+			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			int musicCount = 0;
 			EventManager.Subscribe<ChangeMusicTrack>(evt =>
@@ -246,7 +246,7 @@ public class EnemyDefeatFlowSystemTests
 			queued.Events.Add(new QueuedEvent { EventId = "skeleton" });
 			queued.CurrentIndex = 0;
 
-			_ = new EnemyDefeatFlowSystem(world.EntityManager, content: null);
+			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			int musicCount = 0;
 			EventManager.Subscribe<ChangeMusicTrack>(evt =>
@@ -291,7 +291,7 @@ public class EnemyDefeatFlowSystemTests
 		world.AddComponent(queuedEntity, queued);
 
 		enemy = world.CreateEntity("Enemy");
-		world.AddComponent(enemy, new Enemy { Id = "skeleton", Name = "Skeleton" });
+		world.AddComponent(enemy, new Enemy { Id = EnemyId.Skeleton, Name = "Skeleton" });
 		world.AddComponent(enemy, new Transform());
 		return world;
 	}

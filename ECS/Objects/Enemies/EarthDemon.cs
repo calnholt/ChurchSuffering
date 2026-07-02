@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -13,16 +14,16 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 
 public class EarthDemon : EnemyBase
 {
-    public EarthDemon(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public EarthDemon()
     {
-        Id = "earth_demon";
+        Id = EnemyId.EarthDemon;
         Name = "Earth Demon";
         HP = 32;
     }
 
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
-        return ArrayUtils.TakeRandomWithoutReplacement(new List<string> { "tremor_strike", "stone_barrage", "earthen_wall" }, 1);
+        return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.TremorStrike, EnemyAttackId.StoneBarrage, EnemyAttackId.EarthenWall }, 1);
     }
 }
 
@@ -33,7 +34,7 @@ public class TremorStrike : EnemyAttackBase
 
     public TremorStrike()
     {
-        Id = "tremor_strike";
+        Id = EnemyAttackId.TremorStrike;
         Name = "Tremor Strike";
         Damage = 9;
         ConditionType = ConditionType.OnBlockedByAtLeast2Cards;
@@ -58,7 +59,7 @@ public class StoneBarrage : EnemyAttackBase
 
     public StoneBarrage()
     {
-        Id = "stone_barrage";
+        Id = EnemyAttackId.StoneBarrage;
         Name = "Stone Barrage";
         Damage = 10;
         AttackEffectRecipe = EnemyRockBlastEffect();
@@ -94,7 +95,7 @@ public class EarthenWall : EnemyAttackBase
 
     public EarthenWall()
     {
-        Id = "earthen_wall";
+        Id = EnemyAttackId.EarthenWall;
         Name = "Earthen Wall";
         Damage = 6;
         ConditionType = ConditionType.None;

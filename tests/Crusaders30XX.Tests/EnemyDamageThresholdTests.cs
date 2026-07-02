@@ -1,6 +1,7 @@
 using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -189,7 +190,7 @@ public class EnemyDamageThresholdTests : IDisposable
 
         public ThresholdAttack(int damage, int blockRequired, bool ignoresAegis, bool useOnHit = false)
         {
-            Id = "threshold_test";
+            Id = EnemyAttackId.Cinderbolt;
             Name = "Threshold Test";
             Damage = damage;
             BlockRequiredToPreventEffect = blockRequired;

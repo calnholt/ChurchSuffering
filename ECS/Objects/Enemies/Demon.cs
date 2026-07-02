@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Utils;
@@ -11,25 +12,25 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
 
 public class Demon : EnemyBase
 {
-  public Demon(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public Demon()
   {
-    Id = "demon";
+    Id = EnemyId.Demon;
     Name = "Demon";
     HP = 29;
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
     var random = Random.Shared.Next(0, 100);
     if (random >= 60)
     {
-      return ["razor_maw"];
+      return [EnemyAttackId.RazorMaw];
     }
     else if (random >= 20)
     {
-      return ["scorching_claw"];
+      return [EnemyAttackId.ScorchingClaw];
     }
-    return ["infernal_execution"];
+    return [EnemyAttackId.InfernalExecution];
   }
 }
 
@@ -38,7 +39,7 @@ public class RazorMaw : EnemyAttackBase
   private int Burn = 1;
   public RazorMaw()
   {
-    Id = "razor_maw";
+    Id = EnemyAttackId.RazorMaw;
     Name = "Razor Maw";
     Damage = 9;
     AttackEffectRecipe = EnemyBiteEffect();
@@ -57,7 +58,7 @@ public class ScorchingClaw : EnemyAttackBase
   private int Burn = 1;
   public ScorchingClaw()
   {
-    Id = "scorching_claw";
+    Id = EnemyAttackId.ScorchingClaw;
     Name = "Scorching Claw";
     Damage = 10;
     AttackEffectRecipe = EnemyClawSlashEffect();
@@ -77,7 +78,7 @@ public class InfernalExecution : EnemyAttackBase
   private int Threshold = 2;
   public InfernalExecution()
   {
-    Id = "infernal_execution";
+    Id = EnemyAttackId.InfernalExecution;
     Name = "Infernal Execution";
     Damage = 8;
     ConditionType = ConditionType.MustBeBlockedByAtLeast2Cards;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
@@ -15,12 +16,11 @@ public class Skeleton : EnemyBase
 {
   private int Armor = 1;
 
-  public Skeleton(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public Skeleton()
   {
-    Id = "skeleton";
+    Id = EnemyId.Skeleton;
     Name = "Skeleton";
     HP = 26;
-    Armor += (int)difficulty;
 
     OnStartOfBattle = (entityManager) =>
     {
@@ -31,29 +31,29 @@ public class Skeleton : EnemyBase
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
     int random = Random.Shared.Next(0, 100);
-    var linkers = new List<string> { "bone_strike", "sweep", "calcify" };
+    var linkers = new List<EnemyAttackId> { EnemyAttackId.BoneStrike, EnemyAttackId.Sweep, EnemyAttackId.Calcify };
     if (random <= 65)
     {
       var selected = ArrayUtils.TakeRandomWithReplacement(linkers, 3);
-      var sweepCount = selected.Count(x => x == "sweep");
+      var sweepCount = selected.Count(x => x == EnemyAttackId.Sweep);
       while (sweepCount > 2)
       {
         selected = ArrayUtils.TakeRandomWithReplacement(linkers, 3);
-        sweepCount = selected.Count(x => x == "sweep");
+        sweepCount = selected.Count(x => x == EnemyAttackId.Sweep);
       }
       int haveNoMercy = Random.Shared.Next(0, 100);
       if (haveNoMercy <= 5)
       {
         var selected2 = ArrayUtils.TakeRandomWithReplacement(linkers, 2);
-        selected2 = selected2.Append("have_no_mercy");
+        selected2 = selected2.Append(EnemyAttackId.HaveNoMercy);
         selected = ArrayUtils.Shuffled(selected2);
       }
       return selected;
     }
-    return ["skull_crusher"];
+    return [EnemyAttackId.SkullCrusher];
   }
 }
 
@@ -62,7 +62,7 @@ public class BoneStrike : EnemyAttackBase
   private int Scar = 1;
   public BoneStrike()
   {
-    Id = "bone_strike";
+    Id = EnemyAttackId.BoneStrike;
     Name = "Bone Strike";
     Damage = 2;
     AttackEffectRecipe = EnemySlashEffect();
@@ -81,7 +81,7 @@ public class Sweep : EnemyAttackBase
   private int Recoil = 1;
   public Sweep()
   {
-    Id = "sweep";
+    Id = EnemyAttackId.Sweep;
     Name = "Sweep";
     Damage = 4;
     Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Recoil, Recoil);
@@ -98,7 +98,7 @@ public class Calcify : EnemyAttackBase
   private int Guard = 2;
   public Calcify()
   {
-    Id = "calcify";
+    Id = EnemyAttackId.Calcify;
     Name = "Calcify";
     Damage = 2;
     ConditionType = ConditionType.OnHit;
@@ -115,7 +115,7 @@ public class SkullCrusher : EnemyAttackBase
 {
   public SkullCrusher()
   {
-    Id = "skull_crusher";
+    Id = EnemyAttackId.SkullCrusher;
     Name = "Skull Crusher";
     Damage = 9;
   }

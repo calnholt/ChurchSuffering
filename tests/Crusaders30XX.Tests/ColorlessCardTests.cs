@@ -1,6 +1,7 @@
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Events;
@@ -126,7 +127,7 @@ public sealed class ColorlessCardTests
 				[
 					new PlannedAttack
 					{
-						AttackId = "cinderbolt",
+						AttackId = EnemyAttackId.Cinderbolt,
 						ContextId = "attack-1",
 						AttackDefinition = new Cinderbolt(),
 					},

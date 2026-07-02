@@ -10,6 +10,7 @@ using Crusaders30XX.ECS.Systems;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Objects.Medals;
@@ -400,9 +401,9 @@ namespace Crusaders30XX.ECS.Factories
             uiElement.TooltipType = TooltipType.Card;
         }
 
-        public static Entity CreateEnemyFromId(World world, string enemyId, EntityManager entityManager, EnemyDifficulty difficulty = EnemyDifficulty.Easy)
+        public static Entity CreateEnemyFromId(World world, string enemyId, EntityManager entityManager)
         {
-            var def = EnemyFactory.Create(enemyId, difficulty);
+            var def = EnemyFactory.Create(enemyId);
             if (def == null)
             {
                 throw new InvalidOperationException($"Cannot spawn enemy: unknown enemy ID '{enemyId ?? string.Empty}'.");
@@ -450,11 +451,11 @@ namespace Crusaders30XX.ECS.Factories
             // var numEquippedEquipment = world.EntityManager.GetEntitiesWithComponent<EquippedEquipment>().Count();
             // int equipmentHpModifier = numEquippedEquipment * 3;
             // def.MaxHealth += equipmentHpModifier;
-            var enemy = new Enemy { Id = def.Id, Name = def.Id, MaxHealth = def.MaxHealth, CurrentHealth = def.CurrentHealth, EnemyBase = def };
+            var enemy = new Enemy { Id = def.Id, Name = def.Id.ToKey(), MaxHealth = def.MaxHealth, CurrentHealth = def.CurrentHealth, EnemyBase = def };
             var enemyTransform = new Transform { Position = new Vector2(world.EntityManager.GetEntitiesWithComponent<Player>().Any() ? 1200 : 1000, 260), Scale = Vector2.One };
             world.AddComponent(enemyEntity, enemy);
             world.AddComponent(enemyEntity, enemyTransform);
-            world.AddComponent(enemyEntity, new UIElement { Tooltip = def.Name ?? def.Id, IsInteractable = false , TooltipPosition = TooltipPosition.Above });
+            world.AddComponent(enemyEntity, new UIElement { Tooltip = def.Name ?? def.Id.ToKey(), IsInteractable = false , TooltipPosition = TooltipPosition.Above });
             world.AddComponent(enemyEntity, new HP { Max = enemy.MaxHealth, Current = enemy.CurrentHealth });
             world.AddComponent(enemyEntity, new PortraitInfo { TextureWidth = 0, TextureHeight = 0, CurrentScale = 1f });
             world.AddComponent(enemyEntity, new EnemyArsenal { AttackIds = [.. def.GetAttackIds(world.EntityManager, 0)] });
@@ -567,7 +568,7 @@ namespace Crusaders30XX.ECS.Factories
 					{
 						displayName = string.IsNullOrWhiteSpace(card.Name) ? id : card.Name;
 					}
-					else if (itemType == ForSaleItemType.Medal && MedalFactory.GetAllMedals().TryGetValue(id, out var medal) && medal != null)
+					else if (itemType == ForSaleItemType.Medal && MedalFactory.Create(id) is { } medal)
 					{
 						displayName = string.IsNullOrWhiteSpace(medal.Name) ? id : medal.Name;
 					}

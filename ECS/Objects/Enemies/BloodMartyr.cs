@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Services;
@@ -11,16 +12,16 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 
 public class BloodMartyr : EnemyBase
 {
-  public BloodMartyr(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public BloodMartyr()
   {
-    Id = "blood_martyr";
+    Id = EnemyId.BloodMartyr;
     Name = "Blood Martyr";
     HP = 35;
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    var attacks = new List<string> { "flagellation", "blood_ward", "blood_tithe", "masochism" };
+    var attacks = new List<EnemyAttackId> { EnemyAttackId.Flagellation, EnemyAttackId.BloodWard, EnemyAttackId.BloodTithe, EnemyAttackId.Masochism };
     return ArrayUtils.TakeRandomWithoutReplacement(attacks, 2);
   }
 
@@ -36,7 +37,7 @@ public class Flagellation : EnemyAttackBase
 
   public Flagellation()
   {
-    Id = "flagellation";
+    Id = EnemyAttackId.Flagellation;
     Name = "Flagellation";
     Damage = 7;
     ConditionType = ConditionType.OnHit;
@@ -66,7 +67,7 @@ public class BloodWard : EnemyAttackBase
 
   public BloodWard()
   {
-    Id = "blood_ward";
+    Id = EnemyAttackId.BloodWard;
     Name = "Blood Ward";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -89,7 +90,7 @@ public class Masochism : EnemyAttackBase
   private const int SelfDamage = 1;
   public Masochism()
   {
-    Id = "masochism";
+    Id = EnemyAttackId.Masochism;
     Name = "Masochism";
     Damage = 4;
     ConditionType = ConditionType.OnBlockedByAtLeast1Card;
@@ -113,7 +114,7 @@ public class BloodTithe : EnemyAttackBase
 
   public BloodTithe()
   {
-    Id = "blood_tithe";
+    Id = EnemyAttackId.BloodTithe;
     Name = "Blood Tithe";
     Damage = BaseDamage;
     Text = "On hit - remove all burn and wounded from Blood Martyr.";

@@ -27,17 +27,16 @@ public class EntombTests : IDisposable
         EventManager.Subscribe<ApplyCardApplicationEvent>(evt => publishedEvent = evt);
 
         attack.OnAttackReveal(new EntityManager());
+        string expectedText = EnemyAttackTextHelper.GetBlockThresholdText(
+            attack.Damage - attack.BlockRequiredToPreventEffect!.Value,
+            "Apply brittle to the top card of your draw pile.");
         attack.OnDamageThresholdMet(new EntityManager());
 
         Assert.Equal(10, attack.Damage);
         Assert.True(attack.BlockRequiredToPreventEffect is 6 or 7);
         Assert.Equal(ConditionType.None, attack.ConditionType);
         Assert.Null(attack.OnAttackHit);
-        Assert.Equal(
-            EnemyAttackTextHelper.GetBlockThresholdText(
-                attack.BlockRequiredToPreventEffect!.Value,
-                "Apply brittle to the top card of your draw pile."),
-            attack.Text);
+        Assert.Equal(expectedText, attack.Text);
         Assert.NotNull(publishedEvent);
         Assert.Equal(1, publishedEvent.Amount);
         Assert.Equal(CardApplicationType.Brittle, publishedEvent.Type);

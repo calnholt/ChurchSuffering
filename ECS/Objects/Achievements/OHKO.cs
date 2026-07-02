@@ -1,6 +1,7 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Achievements;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 
 namespace Crusaders30XX.ECS.Objects.Achievements
@@ -42,7 +43,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             var enemy = EntityManager.GetEntity("Enemy");
             var id = enemy.GetComponent<Enemy>().EnemyBase.Id;
             // skip if not gleeber
-            if (id != "gleeber")
+            if (id != EnemyId.Gleeber)
             {
                 IsStillEligible = false;
                 return;

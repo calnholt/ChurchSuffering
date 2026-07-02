@@ -88,7 +88,8 @@ namespace Crusaders30XX.ECS.Services
 				if (string.Equals(weapon, equippedWeaponId, StringComparison.OrdinalIgnoreCase)) continue;
 				foreach (var cardId in cards)
 				{
-					if (allCards.TryGetValue(cardId, out var card) && card?.Rarity == Rarity.Starter) continue;
+					var card = CardFactory.Create(cardId);
+					if (card?.Rarity == Rarity.Starter) continue;
 					result.Add(cardId);
 				}
 			}
@@ -289,7 +290,8 @@ namespace Crusaders30XX.ECS.Services
 			var allPairs = new List<(string Id, string Color)>();
 			foreach (var cardId in distinctPool)
 			{
-				if (!CardFactory.GetAllCards().TryGetValue(cardId, out var card) || card == null) continue;
+				var card = CardFactory.Create(cardId);
+				if (card == null) continue;
 				if (!card.CanAddToLoadout || card.IsWeapon || card.IsToken) continue;
 
 				allPairs.Add((card.CardId, "Red"));
@@ -349,7 +351,8 @@ namespace Crusaders30XX.ECS.Services
 			foreach (var cardId in guaranteedIds)
 			{
 				if (finalDeck.Count >= DeckRules.StartingDeckSize) break;
-				if (!CardFactory.GetAllCards().TryGetValue(cardId, out var card) || card == null) continue;
+				var card = CardFactory.Create(cardId);
+				if (card == null) continue;
 				if (!card.CanAddToLoadout || card.IsWeapon || card.IsToken) continue;
 
 				cardIdUsage.TryGetValue(cardId, out int usage);
