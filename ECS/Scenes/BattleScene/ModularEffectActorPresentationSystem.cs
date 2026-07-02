@@ -14,7 +14,10 @@ namespace Crusaders30XX.ECS.Systems
 	public sealed class ModularEffectActorPresentationSystem : Core.System
 	{
 		[DebugEditable(DisplayName = "Lunge Distance", Step = 1f, Min = 0f, Max = 160f)]
-		public float LungeDistance { get; set; } = 36f;
+		public float LungeDistance { get; set; } = 54f;
+
+		[DebugEditable(DisplayName = "Lunge Overshoot", Step = 0.01f, Min = 0f, Max = 2f)]
+		public float LungeOvershoot { get; set; } = 0.18f;
 
 		[DebugEditable(DisplayName = "Damage Flash Duration (s)", Step = 0.05f, Min = 0.05f, Max = 2f)]
 		public float DamageFlashDurationSec { get; set; } = 0.3f;
@@ -82,7 +85,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (effect.Recipe.Modules.Contains(VisualEffectModule.ActorSquashStretch))
 			{
 				var state = EnsureState(effect.Target);
-				var scale = ComputeBuffScale(effect.ElapsedSeconds);
+				var scale = ComputeBuffScale(VisualEffectDisplayMath.SampleElapsed(effect));
 				state.ScaleMultiplier = new Vector2(
 					state.ScaleMultiplier.X * scale.X,
 					state.ScaleMultiplier.Y * scale.Y);
@@ -92,9 +95,11 @@ namespace Crusaders30XX.ECS.Systems
 		private Vector2 ComputeLungeOffset(ActiveVisualEffect effect)
 		{
 			float duration = Math.Max(0.0001f, effect.Timing.DurationSeconds);
-			float t = MathHelper.Clamp(effect.ElapsedSeconds / duration, 0f, 1f);
-			float outPhase = Math.Min(0.5f, t) * 2f;
-			float backPhase = Math.Max(0f, t - 0.5f) * 2f;
+			float elapsed = VisualEffectDisplayMath.SampleElapsed(effect);
+			float impact = MathHelper.Clamp(effect.Timing.ImpactTimeSeconds / duration, 0.08f, 0.82f);
+			float t = MathHelper.Clamp(elapsed / duration, 0f, 1f);
+			float outPhase = MathHelper.Clamp(t / impact, 0f, 1f);
+			float backPhase = MathHelper.Clamp((t - impact) / Math.Max(0.0001f, 1f - impact), 0f, 1f);
 			var dir = effect.TargetAnchor - effect.SourceAnchor;
 			if (dir.LengthSquared() > 0.0001f)
 			{
@@ -105,8 +110,10 @@ namespace Crusaders30XX.ECS.Systems
 				dir = new Vector2(effect.DirectionSign, 0f);
 			}
 			var peak = dir * LungeDistance * Math.Max(0f, effect.Recipe.Intensity);
-			var outOffset = Vector2.Lerp(Vector2.Zero, peak, 1f - (float)Math.Pow(1f - outPhase, 3));
-			return Vector2.Lerp(outOffset, Vector2.Zero, backPhase);
+			var overshoot = peak * (1f + Math.Max(0f, LungeOvershoot));
+			var outOffset = Vector2.Lerp(Vector2.Zero, overshoot, VisualEffectDisplayMath.EaseOutCubic(outPhase));
+			if (backPhase <= 0f) return outOffset;
+			return Vector2.Lerp(peak, Vector2.Zero, VisualEffectDisplayMath.EaseInOutQuad(backPhase));
 		}
 
 		private Entity ResolveLungeActor(ActiveVisualEffect effect)

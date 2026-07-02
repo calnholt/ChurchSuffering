@@ -6,7 +6,6 @@ using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -55,11 +54,11 @@ namespace Crusaders30XX.ECS.Systems
 			(1, 1), (-1, 1), (1, -1), (-1, -1),
 		};
 
-		public static void EnsureHourglassTextures(ContentManager content)
+		public static void EnsureHourglassTextures(ImageAssetService imageAssets)
 		{
 			if (_hourglassTexturesLoaded) return;
-			_hourglassFrame = content.Load<Texture2D>("time_icon_hourglass_frame");
-			_hourglassSand = content.Load<Texture2D>("time_icon_hourglass_sand");
+			_hourglassFrame = imageAssets.GetRequiredTexture("time_icon_hourglass_frame");
+			_hourglassSand = imageAssets.GetRequiredTexture("time_icon_hourglass_sand");
 			_hourglassTexturesLoaded = true;
 		}
 

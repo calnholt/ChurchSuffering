@@ -30,6 +30,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<SetCourageEvent>(OnSetCourageEvent, priority: 10);
             EventManager.Subscribe<ApplyEffect>(OnApplyEffect);
             EventManager.Subscribe<ModifyHpEvent>(OnModifyHp);
+            EventManager.Subscribe<TopCardRemovedForMillEvent>(OnTopCardRemovedForMill);
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -79,6 +80,16 @@ namespace Crusaders30XX.ECS.Systems
             var st = player.GetComponent<BattleStateInfo>();
             if (st == null) return;
             st.PlayerActionPhaseAttackHits++;
+        }
+
+        private void OnTopCardRemovedForMill(TopCardRemovedForMillEvent evt)
+        {
+            if (evt?.Card == null) return;
+            OnTrackingEvent(new TrackingEvent
+            {
+                Type = TrackingTypeEnum.CardsMilled.ToString(),
+                Delta = 1
+            });
         }
 
         private void ClearBattleTracking()

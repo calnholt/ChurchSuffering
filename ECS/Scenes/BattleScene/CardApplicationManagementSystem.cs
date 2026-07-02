@@ -135,6 +135,15 @@ namespace Crusaders30XX.ECS.Systems
 
 			definition.Remove(EntityManager, card);
 			RunScopedStateService.SyncCardRestrictionsFromComponents(card);
+
+			if (type == CardApplicationType.Cursed)
+			{
+				EventManager.Publish(new TrackingEvent
+				{
+					Type = TrackingTypeEnum.CursesRemoved.ToString(),
+					Delta = 1
+				});
+			}
 		}
 
 		private ApplicationDefinition GetDefinition(CardApplicationType type)

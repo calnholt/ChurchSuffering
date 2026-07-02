@@ -20,6 +20,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly Texture2D _pixel;
 		private const int LayeredBackgroundTextureSlotCount = 3;
 		private LayeredHolesOverlay _overlay;
@@ -93,14 +94,14 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Reveal Darken", Step = 0.01f, Min = 0f, Max = 1f)]
 		public float RevealDarken { get; set; } = 0f;
 
-		public ClimbBackgroundDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public ClimbBackgroundDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_content = content;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_imageAssets = imageAssets;
+			_pixel = _imageAssets.GetPixel(Color.White);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -365,7 +366,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private Texture2D LoadClimbBackground(BattleLocation location)
 		{
-			return BattleLocationAssetService.TryLoadClimbBackground(_content, location);
+			return _imageAssets.TryGetTexture(BattleLocationAssetService.GetClimbBackgroundAsset(location));
 		}
 
 		private IEnumerable<ClimbEncounterSlotSave> GetEncounterSlots()

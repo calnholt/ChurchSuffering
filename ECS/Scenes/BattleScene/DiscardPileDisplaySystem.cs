@@ -5,7 +5,6 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Events;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Services;
@@ -20,7 +19,7 @@ namespace Crusaders30XX.ECS.Systems
     public class DiscardPileDisplaySystem : Core.System
     {
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private readonly SpriteFont _font;
         private Texture2D _pileTexture;
         private const string RootEntityName = "UI_DiscardPileRoot";
@@ -44,11 +43,11 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Count Text Color B", Step = 1, Min = 0, Max = 255)]
         public int CountTextColorB { get; set; } = 0;
 
-        public DiscardPileDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public DiscardPileDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
             _font = FontSingleton.ContentFont;
             EventManager.Subscribe<CardMoved>(OnCardMoved);
             LoggingService.Append("DiscardPileDisplaySystem.constructor", new System.Text.Json.Nodes.JsonObject { ["action"] = "Subscribed to CardMoved" });
@@ -162,15 +161,8 @@ namespace Crusaders30XX.ECS.Systems
 
         private void EnsurePileTexture()
         {
-            if (_pileTexture != null || _content == null) return;
-            try
-            {
-                _pileTexture = _content.Load<Texture2D>(PileAsset);
-            }
-            catch
-            {
-                _pileTexture = null;
-            }
+            if (_pileTexture != null) return;
+            _pileTexture = _imageAssets.TryGetTexture(PileAsset);
         }
 
         private void EnsureRootEntity()

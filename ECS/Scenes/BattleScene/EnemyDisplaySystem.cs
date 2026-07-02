@@ -5,7 +5,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -15,8 +14,9 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private Texture2D _enemyTexture;
+		private string _loadedAssetName;
 		private float _pulseTimerSeconds;
 		private readonly float _pulseDurationSeconds = 0.25f;
 
@@ -26,12 +26,12 @@ namespace Crusaders30XX.ECS.Systems
 		public float CenterOffsetXPct { get; set; } = 0.3f; // positive = right, negative = left
 		[DebugEditable(DisplayName = "Center Offset Y (% of height)", Step = 0.01f, Min = -1.0f, Max = 1.0f)]
 		public float CenterOffsetYPct { get; set; } = -0.09f; // positive = down, negative = up
-		public EnemyDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public EnemyDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
+			_imageAssets = imageAssets;
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -127,16 +127,11 @@ namespace Crusaders30XX.ECS.Systems
 			var queued = queuedEntity.GetComponent<QueuedEvents>();
 			string enemyId = queued.Events[queued.CurrentIndex].EventId;
 			string assetName = EnemyPortraitContent.ToAssetName(enemyId);
-			try
-			{
-				_enemyTexture = _content.Load<Texture2D>(assetName);
-				return _enemyTexture;
-			}
-			catch
-			{
-				_enemyTexture = _content.Load<Texture2D>("Skeleton");
-				return _enemyTexture;
-			}
+			if (_enemyTexture != null && _loadedAssetName == assetName) return _enemyTexture;
+
+			_loadedAssetName = assetName;
+			_enemyTexture = _imageAssets.GetTextureOrFallback(assetName, "Skeleton");
+			return _enemyTexture;
 		}
 	}
 }

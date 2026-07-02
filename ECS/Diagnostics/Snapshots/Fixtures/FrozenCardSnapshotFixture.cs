@@ -55,7 +55,7 @@ public sealed class FrozenCardSnapshotFixture : IDisplaySnapshotFixture
 
         if (!ShaderRuntimeOptions.ShadersEnabled)
         {
-            var frostTexture = ctx.Content.Load<Texture2D>("frost");
+            var frostTexture = ctx.ImageAssets.GetRequiredTexture("frost");
             ctx.World.AddSystem(new FrozenCardDisplaySystem(
                 ctx.World.EntityManager,
                 ctx.GraphicsDevice,

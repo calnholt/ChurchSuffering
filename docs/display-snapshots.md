@@ -54,6 +54,7 @@ to the fixture.
 | `thorned-card` | Thorned card shader | One thorned card on a patterned backdrop, optionally composed with Frozen |
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
+| `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
 | `waystation` | WayStation run setup | Run setup scene with default Sword/Easy selections |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
@@ -230,6 +231,25 @@ Example: `'strike|white'`, `'smite|red|Upgraded'` (quote in shell so `|` is not 
 - Invalid or unknown `cardId` in any card key: exit `1`, no PNG
 - Malformed card key: exit `1`, no PNG
 - Invalid `--gold` (non-integer): exit `1`, no PNG
+
+---
+
+## `modular-fx`
+
+Renders one modular battle visual effect at fixed player/enemy anchors.
+
+```bash
+dotnet run -- snapshot modular-fx heavy-hammer impact
+dotnet run -- snapshot modular-fx holy-strike impact
+dotnet run -- snapshot modular-fx enemy-rock-blast impact
+dotnet run -- snapshot modular-fx enemy-bite impact
+```
+
+Preset tokens: `heavy-hammer`, `holy-strike`, `enemy-rock-blast`, `enemy-bite`, `enemy-slash`, `light-slash`.
+
+Sample tokens: `start`, `impact`, `late`.
+
+Output: `debug/snapshots/modular-fx/<preset>-<sample>.png`
 
 ---
 

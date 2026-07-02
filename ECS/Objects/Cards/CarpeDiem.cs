@@ -6,7 +6,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class CarpeDiem : CardBase
     {
-        private int CourageGain = 4;
+        private int CourageGain = 5;
         private int MightGainUpgrade = 1;
 
         public CarpeDiem()

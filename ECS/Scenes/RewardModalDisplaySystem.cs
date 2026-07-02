@@ -13,7 +13,6 @@ using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Input;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -23,7 +22,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
 		private readonly Texture2D _pixel;
@@ -33,7 +32,6 @@ namespace Crusaders30XX.ECS.Systems
 		private Entity _deckRewardSkipButton;
 		private Entity _rewardMedalEntity;
 		private Entity _rewardEquipmentEntity;
-		private readonly Dictionary<string, Texture2D> _equipmentIconCache = new();
 		private QuestRewardLayout _layout;
 
 		private bool _layoutValid;
@@ -348,13 +346,12 @@ namespace Crusaders30XX.ECS.Systems
 			public Vector2 ProceedTextSize;
 		}
 
-		public RewardModalDisplaySystem(EntityManager entityManager, GraphicsDevice gd, SpriteBatch sb, ContentManager content) : base(entityManager)
+		public RewardModalDisplaySystem(EntityManager entityManager, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(entityManager)
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			_content = content;
-			_pixel = new Texture2D(gd, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_imageAssets = imageAssets;
+			_pixel = _imageAssets.GetPixel(Color.White);
 			_gradientRuleCache = new HorizontalGradientRuleCache(gd);
 			EventManager.Subscribe<ShowQuestRewardOverlay>(e => {
 				LoggingService.Append("RewardModalDisplaySystem.OnShowQuestRewardOverlay", new JsonObject {
@@ -1431,7 +1428,7 @@ namespace Crusaders30XX.ECS.Systems
 				center,
 				iconSize,
 				medalId,
-				_content);
+				_imageAssets);
 		}
 
 		private void DrawStageLabel(ModalAnimationRenderState render)
@@ -2573,17 +2570,7 @@ namespace Crusaders30XX.ECS.Systems
 		private Texture2D GetEquipmentSlotIcon(EquipmentSlot slot)
 		{
 			string key = slot.ToString().ToLowerInvariant();
-			if (_equipmentIconCache.TryGetValue(key, out var cached)) return cached;
-			try
-			{
-				cached = _content?.Load<Texture2D>(key);
-			}
-			catch
-			{
-				cached = null;
-			}
-			_equipmentIconCache[key] = cached;
-			return cached;
+			return _imageAssets.TryGetTexture(key);
 		}
 
 		private static CardData.CardColor ParseColor(string color)

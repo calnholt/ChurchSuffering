@@ -304,8 +304,10 @@ public class MedalCounterTests
 	{
 		Assert.IsType<StRita>(MedalFactory.Create("st_rita"));
 		Assert.IsType<StLonginus>(MedalFactory.Create("st_longinus"));
+		Assert.IsType<StElijah>(MedalFactory.Create("st_elijah"));
 		Assert.Contains("st_rita", MedalFactory.GetAllMedals().Keys);
 		Assert.Contains("st_longinus", MedalFactory.GetAllMedals().Keys);
+		Assert.Contains("st_elijah", MedalFactory.GetAllMedals().Keys);
 	}
 
 	[Fact]
@@ -457,6 +459,122 @@ public class MedalCounterTests
 			Assert.Equal(CardZoneType.Hand, moveRequest.Destination);
 			Assert.Equal("kunai", moveRequest.Card?.GetComponent<CardData>()?.Card?.CardId);
 			Assert.Equal("st_longinus", moveRequest.Reason);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StElijah_emits_activate_on_scorched_pledge()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StElijah();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var scorchedCard = entityManager.CreateEntity("ScorchedCard");
+			entityManager.AddComponent(scorchedCard, new Scorched { Owner = scorchedCard });
+
+			EventManager.Publish(new PledgeAddedEvent { Card = scorchedCard });
+
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StElijah_does_not_trigger_on_normal_pledge()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StElijah();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var normalCard = entityManager.CreateEntity("NormalCard");
+
+			EventManager.Publish(new PledgeAddedEvent { Card = normalCard });
+
+			Assert.Equal(0, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StElijah_resets_and_triggers_once_per_battle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StElijah();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
+
+			var scorchedCard = entityManager.CreateEntity("ScorchedCard");
+			entityManager.AddComponent(scorchedCard, new Scorched { Owner = scorchedCard });
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new PledgeAddedEvent { Card = scorchedCard });
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			EventManager.Publish(new PledgeAddedEvent { Card = scorchedCard });
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StElijah_activate_applies_burn_to_enemy()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			entityManager.CreateEntity("Enemy");
+			var medal = new StElijah();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			ApplyPassiveEvent appliedEvent = null;
+			EventManager.Subscribe<ApplyPassiveEvent>(evt => appliedEvent = evt);
+
+			medal.Activate();
+
+			Assert.NotNull(appliedEvent);
+			Assert.Same(entityManager.GetEntity("Enemy"), appliedEvent.Target);
+			Assert.Equal(AppliedPassiveType.Burn, appliedEvent.Type);
+			Assert.Equal(1, appliedEvent.Delta);
 		}
 		finally
 		{

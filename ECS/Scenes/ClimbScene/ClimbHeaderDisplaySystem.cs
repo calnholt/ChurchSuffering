@@ -7,7 +7,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -17,7 +16,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly Texture2D _pixel;
 		private Texture2D _weaponArt;
 		private string _weaponArtKey = string.Empty;
@@ -107,15 +106,14 @@ namespace Crusaders30XX.ECS.Systems
 		internal static int HeaderGapValue { get; private set; } = 16;
 		internal static int WeaponButtonSizeValue { get; private set; } = 67;
 
-		public ClimbHeaderDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public ClimbHeaderDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
-			ClimbSceneDrawHelpers.EnsureHourglassTextures(content);
+			_imageAssets = imageAssets;
+			_pixel = _imageAssets.GetPixel(Color.White);
+			ClimbSceneDrawHelpers.EnsureHourglassTextures(_imageAssets);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -342,8 +340,7 @@ namespace Crusaders30XX.ECS.Systems
 			string asset = CrusaderPortraitAssets.ResolveWeaponCardArtAsset(weaponId);
 			if (_weaponArt != null && _weaponArtKey == asset) return;
 			_weaponArtKey = asset;
-			try { _weaponArt = _content.Load<Texture2D>(asset); }
-			catch { _weaponArt = null; }
+			_weaponArt = _imageAssets.TryGetTexture(asset);
 		}
 
 		private bool IsClimbScene()

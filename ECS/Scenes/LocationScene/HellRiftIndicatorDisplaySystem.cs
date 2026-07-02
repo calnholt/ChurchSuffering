@@ -3,8 +3,8 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -39,21 +39,13 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Distance Scale Mult", Step = 0.05f, Min = 0f, Max = 5f)]
 		public float DistanceScaleMult { get; set; } = 5f;
 
-		public HellRiftIndicatorDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public HellRiftIndicatorDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
-			try
-			{
-				_hellriftIconTexture = content.Load<Texture2D>("Hellrift_poi");
-			}
-			catch
-			{
-				_hellriftIconTexture = null;
-			}
+			_pixel = imageAssets.GetPixel(Color.White);
+			_hellriftIconTexture = imageAssets.TryGetTexture("Hellrift_poi");
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()

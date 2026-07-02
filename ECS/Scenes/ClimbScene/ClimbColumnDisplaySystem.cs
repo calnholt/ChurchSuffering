@@ -8,7 +8,6 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -18,9 +17,8 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly Texture2D _pixel;
-		private readonly Dictionary<string, Texture2D> _textureCache = new();
 		private float _vanishPreviewAlpha;
 		private Vector2 _cursorPos;
 		private Vector2 _portraitParallaxOffset;
@@ -233,15 +231,14 @@ namespace Crusaders30XX.ECS.Systems
 		internal static int ComputePortraitSlotHeight()
 			=> PortraitRegionHeightValue + MetaBlockMinHeightValue + CompactPaddingYValue * 2;
 
-		public ClimbColumnDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public ClimbColumnDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
-			ClimbSceneDrawHelpers.EnsureHourglassTextures(content);
+			_imageAssets = imageAssets;
+			_pixel = _imageAssets.GetPixel(Color.White);
+			ClimbSceneDrawHelpers.EnsureHourglassTextures(_imageAssets);
 			EventManager.Subscribe<CursorStateEvent>(OnCursorState);
 		}
 
@@ -285,7 +282,7 @@ namespace Crusaders30XX.ECS.Systems
 					}
 					if (slot.Kind == ClimbSlotKind.Encounter)
 					{
-						BattleLocationAssetService.TryLoad(_content, slot.BattleLocation);
+						_imageAssets.TryGetTexture(BattleLocationAssetService.GetBackgroundAsset(slot.BattleLocation));
 					}
 				}
 			}
@@ -485,7 +482,7 @@ namespace Crusaders30XX.ECS.Systems
 		private void DrawEncounterSlot(Rectangle rect, ClimbSlotPresentation slot, ClimbPreviewState preview, bool source)
 		{
 			var portrait = GetPortraitRegion(rect);
-			var background = BattleLocationAssetService.TryLoad(_content, slot.BattleLocation);
+			var background = _imageAssets.TryGetTexture(BattleLocationAssetService.GetBackgroundAsset(slot.BattleLocation));
 			if (background != null)
 			{
 				DrawCoverCropped(background, portrait, Color.White);
@@ -758,20 +755,12 @@ namespace Crusaders30XX.ECS.Systems
 		private Texture2D GetTexture(string asset)
 		{
 			if (string.IsNullOrWhiteSpace(asset)) return null;
-			return _textureCache.TryGetValue(asset, out var cached) ? cached : null;
+			return _imageAssets.TryGetTexture(asset);
 		}
 
 		private void EnsureTexture(string asset)
 		{
-			if (string.IsNullOrWhiteSpace(asset) || _textureCache.ContainsKey(asset)) return;
-			try
-			{
-				_textureCache[asset] = _content.Load<Texture2D>(asset);
-			}
-			catch
-			{
-				_textureCache[asset] = null;
-			}
+			_imageAssets.TryGetTexture(asset);
 		}
 
 		private void DrawCoverCropped(Texture2D texture, Rectangle destination, Color color)

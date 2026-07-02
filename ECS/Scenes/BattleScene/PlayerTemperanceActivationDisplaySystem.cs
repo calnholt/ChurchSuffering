@@ -5,7 +5,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Services;
 
@@ -19,7 +18,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private Texture2D _crusaderTexture;
 		private string _loadedWeaponId;
 		private float _elapsed;
@@ -44,11 +43,11 @@ namespace Crusaders30XX.ECS.Systems
 		public int OffsetY { get; set; } = 0;
 
 
-		public PlayerTemperanceActivationDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content) : base(entityManager)
+		public PlayerTemperanceActivationDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets) : base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
+			_imageAssets = imageAssets;
 			EventManager.Subscribe<TriggerTemperance>(e => {
 				LoggingService.Append("PlayerTemperanceActivationDisplaySystem.OnTriggerTemperance", new JsonObject {
 					{ "AbilityId", e.AbilityId }
@@ -135,14 +134,9 @@ namespace Crusaders30XX.ECS.Systems
 			if (_crusaderTexture != null && weaponId == _loadedWeaponId) return;
 
 			_loadedWeaponId = weaponId;
-			_crusaderTexture = TryLoadPortrait(CrusaderPortraitAssets.ResolveBattlePortraitAsset(weaponId))
-				?? TryLoadPortrait(CrusaderPortraitAssets.DialogPortraitAsset);
-		}
-
-		private Texture2D TryLoadPortrait(string assetName)
-		{
-			try { return _content.Load<Texture2D>(assetName); }
-			catch { return null; }
+			_crusaderTexture = _imageAssets.GetTextureOrFallback(
+				CrusaderPortraitAssets.ResolveBattlePortraitAsset(weaponId),
+				CrusaderPortraitAssets.DialogPortraitAsset);
 		}
 
 		[DebugAction("Simulate Temperance Trigger")]

@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Crusaders30XX.ECS.Events;
-using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Services
 {
@@ -18,8 +15,6 @@ namespace Crusaders30XX.ECS.Services
 		};
 
 		public const BattleLocation FinalEncounterLocation = BattleLocation.TheGate;
-
-		private static readonly Dictionary<string, Texture2D> BackgroundCache = new(StringComparer.OrdinalIgnoreCase);
 
 		public static BattleLocation RollClimbEncounterLocation(Random rng)
 		{
@@ -68,34 +63,6 @@ namespace Crusaders30XX.ECS.Services
 				BattleLocation.Gothic => MusicTrack.GothicBattle,
 				_ => MusicTrack.DesertBattle,
 			};
-		}
-
-		public static Texture2D TryLoad(ContentManager content, BattleLocation location)
-		{
-			return TryLoad(content, GetBackgroundAsset(location));
-		}
-
-		public static Texture2D TryLoadClimbBackground(ContentManager content, BattleLocation location)
-		{
-			return TryLoad(content, GetClimbBackgroundAsset(location));
-		}
-
-		public static Texture2D TryLoad(ContentManager content, string asset)
-		{
-			if (content == null || string.IsNullOrWhiteSpace(asset)) return null;
-			if (BackgroundCache.TryGetValue(asset, out var cached)) return cached;
-
-			try
-			{
-				var texture = content.Load<Texture2D>(asset);
-				BackgroundCache[asset] = texture;
-				return texture;
-			}
-			catch
-			{
-				BackgroundCache[asset] = null;
-				return null;
-			}
 		}
 	}
 }

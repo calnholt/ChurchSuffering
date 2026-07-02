@@ -7,7 +7,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Events;
 using System.Collections.Generic;
-using Microsoft.Xna.Framework.Content;
 using System;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Factories;
@@ -19,7 +18,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly SpriteFont _font = FontSingleton.ContentFont;
 		private readonly System.Collections.Generic.Dictionary<(int w, int h, int r), Texture2D> _roundedRectCache = new();
 		private readonly List<Entity> _pendingReturn = new();
@@ -86,11 +85,11 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Equip Icon Offset Y", Step = 1, Min = -200, Max = 200)]
 		public int EquipIconOffsetY { get; set; } = 10;
 
-		public AssignedBlockCardsDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ContentManager content) : base(em)
+		public AssignedBlockCardsDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(em)
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			_content = content;
+			_imageAssets = imageAssets;
 			EventManager.Subscribe<UnassignCardAsBlockRequested>(OnUnassignCardAsBlockRequested);
 			EventManager.Subscribe<BlockAssignmentAdded>(OnBlockAssignmentAdded);
 			EventManager.Subscribe<BlockAssignmentRemoved>(OnBlockAssignmentRemoved);
@@ -808,7 +807,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			string key = (type ?? string.Empty).Trim().ToLowerInvariant();
 			string assetName = key; // expects head.png, chest.png, arms.png, legs.png
-			try { return _content.Load<Texture2D>(assetName); } catch { return null; }
+			return _imageAssets.TryGetTexture(assetName);
 		}
 
 		private static byte ClampByte(int value) => (byte)Math.Clamp(value, 0, 255);

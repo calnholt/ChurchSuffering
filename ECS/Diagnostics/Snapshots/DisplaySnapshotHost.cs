@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -14,6 +15,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
         private readonly DisplaySnapshotLaunchOptions _options;
         private readonly GraphicsDevice _graphicsDevice;
         private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
 
         private IDisplaySnapshotFixture _fixture;
         private DisplaySnapshotContext _ctx;
@@ -33,6 +35,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             _options = options;
             _graphicsDevice = graphicsDevice;
             _content = content;
+            _imageAssets = new ImageAssetService(content, graphicsDevice);
         }
 
         public static DisplaySnapshotHost TryCreate(
@@ -59,6 +62,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
                 GraphicsDevice = _graphicsDevice,
                 SpriteBatch = spriteBatch,
                 Content = _content,
+                ImageAssets = _imageAssets,
                 SceneEntity = sceneEntity
             };
 
@@ -88,6 +92,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
                 GraphicsDevice = _ctx.GraphicsDevice,
                 SpriteBatch = spriteBatch,
                 Content = _ctx.Content,
+                ImageAssets = _ctx.ImageAssets,
                 SceneEntity = _ctx.SceneEntity
             };
             _fixture.Draw(_ctx);

@@ -8,7 +8,6 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -119,12 +118,12 @@ namespace Crusaders30XX.ECS.Systems
             public float Elapsed;
         }
 
-        public PledgeDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public PledgeDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _pledgeTexture = content.Load<Texture2D>("pledge");
+            _pledgeTexture = imageAssets.GetRequiredTexture("pledge");
 
             EventManager.Subscribe<CardRenderEvent>(evt => FrameProfiler.Measure("PledgeDisplaySystem.OnCardRenderEvent", () => OnCardRenderEvent(evt)));
             EventManager.Subscribe<CardRenderScaledEvent>(evt => FrameProfiler.Measure("PledgeDisplaySystem.OnCardRenderScaledEvent", () => OnCardRenderScaledEvent(evt)));

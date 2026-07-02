@@ -12,7 +12,6 @@ using Crusaders30XX.ECS.Utils;
 using Crusaders30XX.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -21,11 +20,8 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
-        private readonly Dictionary<string, Texture2D> _textureCache = new();
+        private readonly ImageAssetService _imageAssets;
         private readonly Dictionary<(string assetName, int artW, int artH, int artX, int artY, int cardW, int cardH, int radius), Texture2D> _clippedArtCache = new();
-        private readonly Dictionary<(int w, int h, int r), Texture2D> _roundedRectCache = new();
-        private readonly Dictionary<(int w, int h, int rTL, int rTR, int rBR, int rBL), Texture2D> _perCornerRoundedRectCache = new();
         private readonly Texture2D _pixelTexture;
         private SpriteFont _nameFont = FontSingleton.TitleFont;
         private SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
@@ -349,14 +345,13 @@ namespace Crusaders30XX.ECS.Systems
             { CardData.CardColor.Black, new Color(136, 136, 136) },
         };
 
-        public CardDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public CardDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
-            _pixelTexture = new Texture2D(_graphicsDevice, 1, 1);
-            _pixelTexture.SetData(new[] { Color.White });
+            _imageAssets = imageAssets;
+            _pixelTexture = _imageAssets.GetPixel(Color.White);
 
             LoadTypeIconTextures();
             EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent);
@@ -487,36 +482,17 @@ namespace Crusaders30XX.ECS.Systems
 
         private Texture2D GetRoundedRectTexture(int width, int height, int radius)
         {
-            var key = (width, height, radius);
-            if (_roundedRectCache.TryGetValue(key, out var tex)) return tex;
-            var texture = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, width, height, radius);
-            _roundedRectCache[key] = texture;
-            return texture;
+            return _imageAssets.GetRoundedRect(width, height, radius);
         }
 
         private Texture2D GetPerCornerRoundedRectTexture(int width, int height, int rTL, int rTR, int rBR, int rBL)
         {
-            var key = (width, height, rTL, rTR, rBR, rBL);
-            if (_perCornerRoundedRectCache.TryGetValue(key, out var tex)) return tex;
-            var texture = RoundedRectTextureFactory.CreateRoundedRectPerCorner(_graphicsDevice, width, height, rTL, rTR, rBR, rBL);
-            _perCornerRoundedRectCache[key] = texture;
-            return texture;
+            return _imageAssets.GetRoundedRectPerCorner(width, height, rTL, rTR, rBR, rBL);
         }
 
         private Texture2D GetOrLoadTexture(string assetName)
         {
-            if (string.IsNullOrEmpty(assetName)) return null;
-            if (_textureCache.TryGetValue(assetName, out var tex) && tex != null) return tex;
-            try
-            {
-                var loaded = _content.Load<Texture2D>(assetName);
-                _textureCache[assetName] = loaded;
-                return loaded;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return _imageAssets.TryGetTexture(assetName);
         }
 
         // Event handlers

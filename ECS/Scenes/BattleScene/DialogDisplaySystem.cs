@@ -3,7 +3,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Dialog;
@@ -25,7 +24,7 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private readonly SpriteFont _titleFont;
         private readonly SpriteFont _bodyFont;
         private readonly Texture2D _pixel;
@@ -325,15 +324,14 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        public DialogDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ContentManager content) : base(em)
+        public DialogDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(em)
         {
             _graphicsDevice = gd;
             _spriteBatch = sb;
-            _content = content;
+            _imageAssets = imageAssets;
             _titleFont = FontSingleton.TitleFont;
             _bodyFont = FontSingleton.ChakraPetchFont;
-            _pixel = new Texture2D(gd, 1, 1);
-            _pixel.SetData(new[] { Color.White });
+            _pixel = _imageAssets.GetPixel(Color.White);
 
             EventManager.Subscribe<QuestSelected>(OnQuestSelected);
             EventManager.Subscribe<TransitionCompleteEvent>(OnTransitionComplete);
@@ -1316,12 +1314,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             string assetName = ResolvePortraitAssetName(actor);
             if (string.IsNullOrEmpty(assetName)) return null;
-            try
-            {
-                return _content.Load<Texture2D>(assetName);
-            }
-            catch { }
-            return null;
+            return _imageAssets.TryGetTexture(assetName);
         }
 
         internal static string ResolvePortraitAssetName(string actor)

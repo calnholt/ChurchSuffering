@@ -6,7 +6,6 @@ using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
@@ -20,7 +19,7 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
         private Texture2D _angelTexture;
         private Texture2D _pixel;
         private SpriteFont _font = FontSingleton.ChakraPetchFont;
@@ -168,14 +167,13 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Bubble Text", Step = 1)]
 		public string DefaultStartBattleText { get; set; } = "You don't scare us!";
 
-        public GuardianAngelDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public GuardianAngelDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-			_content = content;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_imageAssets = imageAssets;
+			_pixel = _imageAssets.GetPixel(Color.White);
             // Load shared UI font
             // Listen for phase changes to show speech bubbles
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
@@ -488,8 +486,7 @@ namespace Crusaders30XX.ECS.Systems
         {
 			if (_angelTexture == null)
             {
-                // Content pipeline builds guardian_angel.png without extension
-                _angelTexture = _content.Load<Texture2D>("guardian_angel");
+                _angelTexture = _imageAssets.TryGetTexture("guardian_angel");
                 if (_angelTexture == null) return;
             }
 

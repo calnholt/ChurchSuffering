@@ -4,7 +4,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 using System.Collections.Generic;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Events;
@@ -19,7 +18,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly SpriteFont _font = FontSingleton.ContentFont;
 
 		// Layout/debug controls
@@ -74,12 +73,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Pulse Frequency (Hz)", Step = 0.1f, Min = 0.5f, Max = 8f)]
 		public float PulseFrequencyHz { get; set; } = 1.7f;
 
-		public MedalDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public MedalDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
+			_imageAssets = imageAssets;
 			EventManager.Subscribe<MedalTriggered>(OnMedalTriggered);
 		}
 
@@ -163,7 +162,7 @@ namespace Crusaders30XX.ECS.Systems
                     new Vector2(centerX, centerY),
                     IconSize,
                     m.Medal.Id,
-                    _content,
+                    _imageAssets,
                     scalePulse,
                     rot);
 
@@ -230,5 +229,4 @@ namespace Crusaders30XX.ECS.Systems
     }
   }
 }
-
 

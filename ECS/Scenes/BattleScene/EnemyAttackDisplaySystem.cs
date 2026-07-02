@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Rendering;
-using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.ECS.Services;
 
 namespace Crusaders30XX.ECS.Systems
@@ -25,7 +24,7 @@ namespace Crusaders30XX.ECS.Systems
 		// Graphics & rendering
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _contentFont = FontSingleton.ContentFont;
 		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
@@ -236,13 +235,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Debris Lifetime (s)", Step = 0.05f, Min = 0f, Max = 2f)]
 		public float DebrisLifetimeSeconds { get; set; } = 0.8f;
 
-		public EnemyAttackDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ContentManager content) : base(em)
+		public EnemyAttackDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(em)
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			_content = content;
-			_pixel = new Texture2D(gd, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_imageAssets = imageAssets;
+			_pixel = _imageAssets.GetPixel(Color.White);
 			_enemyAttackCornerBlTexture = TryLoadDecorationTexture("enemy_attack_bl");
 			_enemyAttackCornerBrTexture = TryLoadDecorationTexture("enemy_attack_br");
 			_enemyAttackTopTexture = TryLoadDecorationTexture("enemy_attack_top");
@@ -285,9 +283,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private Texture2D TryLoadDecorationTexture(string assetName)
 		{
-			if (_content == null || string.IsNullOrWhiteSpace(assetName)) return null;
-			try { return _content.Load<Texture2D>(assetName); }
-			catch { return null; }
+			return _imageAssets.TryGetTexture(assetName);
 		}
 
 		private void CreateConfirmButton()

@@ -9,7 +9,6 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.Diagnostics;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -34,7 +33,7 @@ namespace Crusaders30XX.ECS.Systems
 			public DialogueSequenceRequested TutorialDialogue;
 		}
 
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 
 		private Guid? _pendingBurstId;
 		private Entity _pendingEnemy;
@@ -43,9 +42,9 @@ namespace Crusaders30XX.ECS.Systems
 		private PostVictoryAction _pendingPostVictory;
 		private bool _waitingForVictoryAnimation;
 
-		public EnemyDefeatFlowSystem(EntityManager entityManager, ContentManager content) : base(entityManager)
+		public EnemyDefeatFlowSystem(EntityManager entityManager, ImageAssetService imageAssets) : base(entityManager)
 		{
-			_content = content;
+			_imageAssets = imageAssets;
 			EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
 			EventManager.Subscribe<PixelBurstAnimationCompleted>(OnPixelBurstCompleted);
 			EventManager.Subscribe<VictoryAnimationCompleteEvent>(OnVictoryAnimationComplete);
@@ -81,7 +80,7 @@ namespace Crusaders30XX.ECS.Systems
 			SetDefeatPresentationActive(true);
 			EnsureSuppressPortrait(evt.Enemy);
 
-			if (!PortraitPixelBurstRequestBuilder.TryBuild(EntityManager, _content, evt.Enemy, evt.IsPreview, out var request))
+			if (!PortraitPixelBurstRequestBuilder.TryBuild(EntityManager, _imageAssets, evt.Enemy, evt.IsPreview, out var request))
 			{
 				FinishWithoutBurst(evt.Enemy, evt.IsPreview);
 				return;

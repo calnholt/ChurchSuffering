@@ -12,7 +12,6 @@ using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Utils;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.ECS.Data.Locations;
 
@@ -23,7 +22,7 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private readonly SpriteFont _font;
         private readonly TutorialManager _tutorialManager;
         private readonly TutorialOverlay _overlay;
@@ -93,12 +92,12 @@ namespace Crusaders30XX.ECS.Systems
         public int ZOrder { get; set; } = 50000;
 
         public TutorialDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, 
-            SpriteBatch spriteBatch, ContentManager content, TutorialManager tutorialManager)
+            SpriteBatch spriteBatch, ImageAssetService imageAssets, TutorialManager tutorialManager)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
             _font = FontSingleton.ChakraPetchFont;
             _tutorialManager = tutorialManager;
             _overlay = new TutorialOverlay(graphicsDevice);
@@ -545,7 +544,7 @@ namespace Crusaders30XX.ECS.Systems
             {
                 try
                 {
-                    _angelTexture = _content.Load<Texture2D>("guardian_angel");
+                    _angelTexture = _imageAssets.TryGetTexture("guardian_angel");
                 }
                 catch
                 {

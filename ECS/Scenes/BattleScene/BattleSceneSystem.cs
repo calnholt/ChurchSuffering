@@ -26,6 +26,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private bool _loadedSystems = false;
 		private bool _loadedEntities = false;
 
@@ -178,13 +179,14 @@ namespace Crusaders30XX.ECS.Systems
 		private RasterizerState _rasterizerState;
 
 
-		public BattleSceneSystem(EntityManager em, SystemManager sm, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content) : base(em)
+		public BattleSceneSystem(EntityManager em, SystemManager sm, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content, ImageAssetService imageAssets) : base(em)
 		{
 			_systemManager = sm;
 			_world = world;
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_content = content;
+			_imageAssets = imageAssets;
 			EventManager.Subscribe<StartBattleRequested>(_ =>
 			{
 				LoggingService.Append("BattleSceneSystem.OnStartBattleRequested", new System.Text.Json.Nodes.JsonObject { ["event"] = "StartBattleRequested" });
@@ -400,9 +402,9 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("GuardianAngelDisplaySystem.Draw", _guardianAngelDisplaySystem.Draw);
 			FrameProfiler.Measure("EnemyDisplaySystem.Draw", _enemyDisplaySystem.Draw);
 			FrameProfiler.Measure("PixelBurstDisplaySystem.Draw", _pixelBurstDisplaySystem.Draw);
+			FrameProfiler.Measure("ModularEffectScreenDisplaySystem.Draw", _modularEffectScreenDisplaySystem.Draw);
 			FrameProfiler.Measure("ModularEffectPrimitiveDisplaySystem.Draw", _modularEffectPrimitiveDisplaySystem.Draw);
 			FrameProfiler.Measure("ModularEffectParticleDisplaySystem.Draw", _modularEffectParticleDisplaySystem.Draw);
-			FrameProfiler.Measure("ModularEffectScreenDisplaySystem.Draw", _modularEffectScreenDisplaySystem.Draw);
 			FrameProfiler.Measure("PlunderDisplaySystem.Draw", _plunderDisplaySystem.Draw);
 			FrameProfiler.Measure("PlunderSnatchDisplaySystem.Draw", _plunderSnatchDisplaySystem.Draw);
 			FrameProfiler.Measure("ActiveCharacterIndicatorDisplaySystem.Draw", _activeCharacterIndicatorDisplaySystem.Draw);
@@ -705,16 +707,16 @@ namespace Crusaders30XX.ECS.Systems
 			if (_loadedSystems) return;
 			_loadedSystems = true;
 			LoggingService.Append("BattleSceneSystem.AddBattleSystems", new System.Text.Json.Nodes.JsonObject { ["action"] = "Adding battle systems" });
-		_battleBackgroundSystem = new BattleBackgroundSystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+		_battleBackgroundSystem = new BattleBackgroundSystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 		_handDisplaySystem = new HandDisplaySystem(_world.EntityManager, _graphicsDevice);
 		_cardHoverDetectionSystem = new CardHoverDetectionSystem(_world.EntityManager);
 		_cardVisualEffectsSuppressionSystem = new CardVisualEffectsSuppressionSystem(_world.EntityManager);
 			_cardZoneSystem = new CardZoneSystem(_world.EntityManager);
-			_drawPileDisplaySystem = new DrawPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_discardPileDisplaySystem = new DiscardPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_drawPileDisplaySystem = new DrawPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_discardPileDisplaySystem = new DiscardPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_drawPileColorCountDisplaySystem = new DrawPileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_millCardSystem = new MillCardSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_playerDisplaySystem = new PlayerDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_playerDisplaySystem = new PlayerDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_cathedralLightingSystem = new CathedralLightingSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_desertBackgroundEffectSystem = new DesertBackgroundEffectSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_desertStormDisplaySystem = new DesertStormDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
@@ -723,7 +725,7 @@ namespace Crusaders30XX.ECS.Systems
 			_purpleZapsDisplaySystem = new PurpleZapsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
 			_jungleBackgroundDisplaySystem = new JungleBackgroundDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
 			_playerWispParticleSystem = new PlayerWispParticleSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_playerTemperanceActivationDisplaySystem = new PlayerTemperanceActivationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_playerTemperanceActivationDisplaySystem = new PlayerTemperanceActivationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_modularEffectCoordinatorSystem = new ModularEffectCoordinatorSystem(_world.EntityManager);
 			_modularEffectActorPresentationSystem = new ModularEffectActorPresentationSystem(_world.EntityManager);
 			_modularEffectScreenDisplaySystem = new ModularEffectScreenDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -740,7 +742,7 @@ namespace Crusaders30XX.ECS.Systems
 			_playerHudCourageDisplaySystem = new PlayerHudCourageDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_playerHudTemperanceDisplaySystem = new PlayerHudTemperanceDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_playerHudActionPointDisplaySystem = new PlayerHudActionPointDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_playerHudPledgeDisplaySystem = new PlayerHudPledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_playerHudPledgeDisplaySystem = new PlayerHudPledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			// _threatDisplaySystem = new ThreatDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_cardMoveDisplaySystem = new CardMoveDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_courageManagerSystem = new CourageManagerSystem(_world.EntityManager);
@@ -759,21 +761,21 @@ namespace Crusaders30XX.ECS.Systems
 			_eventQueueSystem = new EventQueueSystem(_world.EntityManager);
 			_battlePhaseDisplaySystem = new BattlePhaseDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_testFightHpDisplaySystem = new TestFightHpDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyDisplaySystem = new EnemyDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_guardianAngelDisplaySystem = new GuardianAngelDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_enemyDisplaySystem = new EnemyDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_guardianAngelDisplaySystem = new GuardianAngelDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_enemyIntentPipsSystem = new EnemyIntentPipsSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyAttackDisplaySystem = new EnemyAttackDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_enemyAttackDisplaySystem = new EnemyAttackDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_enemyDamageMeterDisplaySystem = new EnemyDamageMeterDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_ambushDisplaySystem = new AmbushDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			// _queuedEventsDisplaySystem = new QueuedEventsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
 			_damageModificationDisplaySystem = new DamageModificationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_attackAnimationDisplaySystem = new SplashEffectAnimationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_attackAnimationDisplaySystem = new SplashEffectAnimationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_cardPlayedAnimationSystem = new CardPlayedAnimationSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_pixelBurstDisplaySystem = new PixelBurstDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyDefeatFlowSystem = new EnemyDefeatFlowSystem(_world.EntityManager, _content);
+			_enemyDefeatFlowSystem = new EnemyDefeatFlowSystem(_world.EntityManager, _imageAssets);
 			_enemyPhaseFlowSystem = new EnemyPhaseFlowSystem(_world.EntityManager);
 			_endTurnDisplaySystem = new EndTurnDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_assignedBlockCardsDisplaySystem = new AssignedBlockCardsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_assignedBlockCardsDisplaySystem = new AssignedBlockCardsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_exhaustOnBlockDisplaySystem = new ExhaustOnBlockDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_payCostOverlaySystem = new PayCostOverlaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_cantPlayCardMessageSystem = new CantPlayCardMessageSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -799,11 +801,11 @@ namespace Crusaders30XX.ECS.Systems
 			_equipmentManagerSystem = new EquipmentManagerSystem(_world.EntityManager);
 			_medalManagerSystem = new MedalManagerSystem(_world.EntityManager);
 			_tribulationManagerSystem = new TribulationManagerSystem(_world.EntityManager);
-			_equipmentDisplaySystem = new EquipmentDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_equippedWeaponDisplaySystem = new EquippedWeaponDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_medalDisplaySystem = new MedalDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_questTribulationDisplaySystem = new QuestTribulationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_equipmentDisplaySystem = new EquipmentDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_equippedWeaponDisplaySystem = new EquippedWeaponDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_medalDisplaySystem = new MedalDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_questTribulationDisplaySystem = new QuestTribulationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_equipmentHighlightSettingsDebugSystem = new HighlightSettingsSystem(_world.EntityManager);
 			_equipmentBlockInteractionSystem = new EquipmentBlockInteractionSystem(_world.EntityManager);
 			_replacementEffectSystem = new ReplacementEffectSystem(_world.EntityManager);
@@ -819,19 +821,19 @@ namespace Crusaders30XX.ECS.Systems
 			_shackleManagementSystem = new ShackleManagementSystem(_world.EntityManager);
 			if (!ShaderRuntimeOptions.ShadersEnabled)
 			{
-				var frostTexture = _content.Load<Texture2D>("frost");
+				var frostTexture = _imageAssets.GetRequiredTexture("frost");
 				_frozenCardDisplaySystem = new FrozenCardDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, frostTexture);
 			}
 			_recoilManagementSystem = new RecoilManagementSystem(_world.EntityManager);
 			_recoilDisplaySystem = new RecoilDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_sealManagementSystem = new SealManagementSystem(_world.EntityManager);
 			_vigorManagementSystem = new VigorManagementSystem(_world.EntityManager);
-			var shackleTexture = _content.Load<Texture2D>("shackles");
+			var shackleTexture = _imageAssets.GetRequiredTexture("shackles");
 			_shackleDisplaySystem = new ShackleDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, shackleTexture);
 			_intimidateDisplaySystem = new IntimidateDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_uiElementHighlightSystem = new UIElementHighlightSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_mustBeBlockedSystem = new MustBeBlockedSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_activeCharacterIndicatorDisplaySystem = new ActiveCharacterIndicatorDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_activeCharacterIndicatorDisplaySystem = new ActiveCharacterIndicatorDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 
 			// Plunder system (Wyvern)
 			_plunderManagementSystem = new PlunderManagementSystem(_world.EntityManager, _graphicsDevice);
@@ -840,7 +842,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			// Marksman system (Sniper)
 			_markManagementSystem = new MarkManagementSystem(_world.EntityManager);
-			var markTexture = _content.Load<Texture2D>("mark");
+			var markTexture = _imageAssets.GetRequiredTexture("mark");
 			_markDisplaySystem = new MarkDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, markTexture);
 
 			// Can-play card highlight
@@ -986,14 +988,14 @@ namespace Crusaders30XX.ECS.Systems
 			if (!TutorialLaunchOptions.SkipTutorials)
 			{
 				_tutorialManager = new TutorialManager(_world.EntityManager);
-				_tutorialDisplaySystem = new TutorialDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content, _tutorialManager);
+				_tutorialDisplaySystem = new TutorialDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets, _tutorialManager);
 				_world.AddSystem(_tutorialManager);
 				_world.AddSystem(_tutorialDisplaySystem);
 				_world.AddSystem(_tutorialRetryDisplaySystem);
 			}
 
 			// Pledge system
-			_pledgeDisplaySystem = new PledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_pledgeDisplaySystem = new PledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_pledgeDisplaySystem);
 		}
 

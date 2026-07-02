@@ -36,7 +36,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_variant = PlayerHudSnapshotVariant.Parse(args);
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
-			_portrait = ctx.Content.Load<Texture2D>("crusader_sword");
+			_portrait = ctx.ImageAssets.GetRequiredTexture("crusader_sword");
 			_portraitScale = 0.36f;
 
 			EntityFactory.CreateGameState(ctx.World);
@@ -171,7 +171,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 		private void CreateEnemyHealthSnapshot(DisplaySnapshotContext ctx)
 		{
-			_enemyPortrait = ctx.Content.Load<Texture2D>("Skeleton");
+			_enemyPortrait = ctx.ImageAssets.GetRequiredTexture("Skeleton");
 			_enemyPortraitScale = Game1.VirtualHeight * 0.36f / _enemyPortrait.Height;
 			_enemy = ctx.World.CreateEntity("EnemyHealthSnapshot");
 			ctx.World.AddComponent(_enemy, new Enemy());
@@ -238,7 +238,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ctx.World.EntityManager,
 				ctx.GraphicsDevice,
 				ctx.SpriteBatch,
-				ctx.Content);
+				ctx.ImageAssets);
 			_passivesDisplay = new AppliedPassivesDisplaySystem(
 				ctx.World.EntityManager,
 				ctx.GraphicsDevice,

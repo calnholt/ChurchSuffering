@@ -5,6 +5,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -19,6 +20,7 @@ namespace Crusaders30XX.ECS.Systems
     private readonly GraphicsDevice _graphicsDevice;
     private readonly SpriteBatch _spriteBatch;
     private readonly ContentManager _content;
+    private readonly ImageAssetService _imageAssets;
     private bool _firstLoad = true;
 	private LocationMapDisplaySystem _locationMapDisplaySystem;
 	private PointOfInterestDisplaySystem _pointOfInterestDisplaySystem;
@@ -36,13 +38,14 @@ namespace Crusaders30XX.ECS.Systems
 		private int _rtW;
 		private int _rtH;
 
-    public LocationSceneSystem(EntityManager entityManager, SystemManager sm, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content) : base(entityManager)
+    public LocationSceneSystem(EntityManager entityManager, SystemManager sm, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content, ImageAssetService imageAssets) : base(entityManager)
     {
       _systemManager = sm;
 			_world = world;
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_content = content;
+			_imageAssets = imageAssets;
       EventManager.Subscribe<LoadSceneEvent>(_ => {
 				if (_.Scene == SceneId.Location)
 				{
@@ -156,9 +159,9 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (!_firstLoad) return;
 			_firstLoad = false;
-			_locationMapDisplaySystem = new LocationMapDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_locationMapDisplaySystem = new LocationMapDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_locationMapDisplaySystem);
-			_pointOfInterestDisplaySystem = new PointOfInterestDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_pointOfInterestDisplaySystem = new PointOfInterestDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_pointOfInterestDisplaySystem);
 			_poiCutsceneSystem = new LocationPoiRevealCutsceneSystem(_world.EntityManager);
 			_world.AddSystem(_poiCutsceneSystem);
@@ -166,13 +169,13 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_fogDisplaySystem);
 			_poiRadiusDebugDisplaySystem = new POIRadiusDebugDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_world.AddSystem(_poiRadiusDebugDisplaySystem);
-			_tooltipQuestDisplaySystem = new TooltipQuestDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_tooltipQuestDisplaySystem = new TooltipQuestDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_tooltipQuestDisplaySystem);
 			_shopPoiTooltipDisplaySystem = new ShopPOITooltipDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_world.AddSystem(_shopPoiTooltipDisplaySystem);
 			_treasurePoiTooltipDisplaySystem = new TreasurePOITooltipDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_world.AddSystem(_treasurePoiTooltipDisplaySystem);
-			_hellRiftIndicatorDisplaySystem = new HellRiftIndicatorDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_hellRiftIndicatorDisplaySystem = new HellRiftIndicatorDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_hellRiftIndicatorDisplaySystem);
 			_loadoutButtonDisplaySystem = new LoadoutButtonDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_world.AddSystem(_loadoutButtonDisplaySystem);

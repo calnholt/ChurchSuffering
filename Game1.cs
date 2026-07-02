@@ -23,6 +23,7 @@ public class Game1 : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     private RasterizerState _spriteRasterizer;
+    private ImageAssetService _imageAssets;
     private DebugMenuSystem _debugMenuSystem;
     private EntityListOverlaySystem _entityListOverlaySystem;
     private TransitionDisplaySystem _transitionDisplaySystem;
@@ -160,6 +161,8 @@ public class Game1 : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _spriteRasterizer = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
+        _imageAssets = new ImageAssetService(Content, GraphicsDevice);
+        EventManager.Subscribe<DeleteCachesEvent>(_ => _imageAssets.ClearTransientCaches());
 
         // Initialize FontSingleton with both fonts
         FontSingleton.Initialize(Content);
@@ -181,24 +184,24 @@ public class Game1 : Game
         // Add parent scene systems only
         _drippingBloodDisplaySystem = new DrippingBloodDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _titleMenuDisplaySystem = new TitleMenuDisplaySystem(_world, _spriteBatch);
-        _wayStationDisplaySystem = new WayStationDisplaySystem(_world, GraphicsDevice, _spriteBatch, Content);
-        _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
-        _locationSceneSystem = new LocationSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
-        _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
-        _shopSceneSystem = new ShopSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
+        _wayStationDisplaySystem = new WayStationDisplaySystem(_world, GraphicsDevice, _spriteBatch, _imageAssets);
+        _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        _locationSceneSystem = new LocationSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        _shopSceneSystem = new ShopSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, _imageAssets);
         _achievementSceneSystem = new AchievementSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
         _debugMenuSystem = new DebugMenuSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _world.SystemManager);
         _entityListOverlaySystem = new EntityListOverlaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _transitionDisplaySystem = new TransitionDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _cardDisplaySystem = new CardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cardDisplaySystem = new CardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _frozenDisplaySystem = new FrozenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _thornedDisplaySystem = new ThornedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _scorchedDisplaySystem = new ScorchedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _cursedDisplaySystem = new CursedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        var sealTexture = Content.Load<Texture2D>("seal");
+        var sealTexture = _imageAssets.GetRequiredTexture("seal");
         _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
-        _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         var playerInputAdapter = new MonoGamePlayerInputAdapter();
         _playerInputSystem = new PlayerInputSystem(
             _world.EntityManager,
@@ -211,16 +214,16 @@ public class Game1 : Game
         _pauseMenuSliderDisplaySystem = new PauseMenuSliderDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _gameOverOverlayDisplaySystem = new GameOverOverlayDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _tooltipTextDisplaySystem = new TooltipTextDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _hintTooltipDisplaySystem = new HintTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _hintTooltipDisplaySystem = new HintTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _cardTooltipDisplaySystem = new CardTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _locationNameDisplaySystem = new LocationNameDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-		_currencyDisplaySystem = new CurrencyDisplaySystem(GraphicsDevice, _spriteBatch, Content);
+		_currencyDisplaySystem = new CurrencyDisplaySystem(GraphicsDevice, _spriteBatch, _imageAssets);
 		_goldManagementService = new GoldManagementService();
 		_cardApplicationManagementSystem = new CardApplicationManagementSystem(_world.EntityManager);
 		_deckManagementSystem = new DeckManagementSystem(_world.EntityManager);
         _profilerSystem = new ProfilerSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         // _worldMapSystem = new LocationSelectDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _cursorDisplaySystem = new CursorDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cursorDisplaySystem = new CursorDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _cursorTrailDisplaySystem = new CursorTrailDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _hotKeySystem = new HotKeySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _hotKeyProgressRingSystem = new HotKeyProgressRingSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _world.SystemManager);
@@ -286,11 +289,11 @@ public class Game1 : Game
         _world.AddSystem(_treasureStartSystem);
         _eventStartSystem = new EventStartSystem(_world.EntityManager);
         _world.AddSystem(_eventStartSystem);
-        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_rewardModalDisplaySystem);
-        _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_narrativeEventModalDisplaySystem);
-        _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_cardListModalSystem);
         _howToPlayOverlaySystem = new HowToPlayOverlaySystem(
             _world.EntityManager,
@@ -687,6 +690,7 @@ public class Game1 : Game
 		LoggingService.Flush();
 		try { _currencyDisplaySystem?.Dispose(); } catch { }
 		try { _goldManagementService?.Dispose(); } catch { }
+		try { _imageAssets?.Dispose(); } catch { }
 		base.UnloadContent();
 	}
 

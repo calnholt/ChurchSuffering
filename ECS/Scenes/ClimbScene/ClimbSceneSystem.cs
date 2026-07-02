@@ -5,6 +5,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -18,6 +19,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private bool _firstLoad = true;
 		private ClimbBackgroundDisplaySystem _backgroundDisplaySystem;
 		private ClimbHeaderLayoutSystem _headerLayoutSystem;
@@ -28,13 +30,14 @@ namespace Crusaders30XX.ECS.Systems
 		private EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
 		private const string EquipmentTooltipEntityName = "Climb_EquipmentTooltip";
 
-		public ClimbSceneSystem(EntityManager entityManager, SystemManager systemManager, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public ClimbSceneSystem(EntityManager entityManager, SystemManager systemManager, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_world = world;
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_content = content;
+			_imageAssets = imageAssets;
 
 			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
 			EventManager.Subscribe<DeleteCachesEvent>(_ => RemoveClimbSystems());
@@ -77,20 +80,20 @@ namespace Crusaders30XX.ECS.Systems
 			if (!_firstLoad) return;
 			_firstLoad = false;
 
-			_backgroundDisplaySystem = new ClimbBackgroundDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_backgroundDisplaySystem = new ClimbBackgroundDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _content, _imageAssets);
 			_world.AddSystem(_backgroundDisplaySystem);
 			_headerLayoutSystem = new ClimbHeaderLayoutSystem(EntityManager);
 			_world.AddSystem(_headerLayoutSystem);
-			_headerDisplaySystem = new ClimbHeaderDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_headerDisplaySystem = new ClimbHeaderDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_headerDisplaySystem);
-			_columnDisplaySystem = new ClimbColumnDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_columnDisplaySystem = new ClimbColumnDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_columnDisplaySystem);
 			_columnLayoutSystem = new ClimbColumnLayoutSystem(EntityManager);
 			_world.AddSystem(_columnLayoutSystem);
 			_cardUpgradeDisplaySystem = new ClimbCardUpgradeDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch);
 			_world.AddSystem(_cardUpgradeDisplaySystem);
 			EnsureEquipmentTooltipEntity();
-			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _content, EquipmentTooltipEntityName);
+			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets, EquipmentTooltipEntityName);
 		}
 
 		private void RemoveClimbSystems()

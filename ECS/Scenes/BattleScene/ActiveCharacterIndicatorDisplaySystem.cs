@@ -6,7 +6,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -20,7 +19,6 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
 		private Texture2D _iconTexture;
 		private Texture2D _trapezoidTexture;
 
@@ -89,13 +87,12 @@ namespace Crusaders30XX.ECS.Systems
 		private float _lastTrapWidth, _lastTrapHeight, _lastTrapLeftOffset;
 		private float _lastTrapTopAngle, _lastTrapRightAngle, _lastTrapBottomAngle, _lastTrapLeftAngle;
 
-		public ActiveCharacterIndicatorDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public ActiveCharacterIndicatorDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-      _iconTexture = _content.Load<Texture2D>("active_icon");
+      _iconTexture = imageAssets.GetRequiredTexture("active_icon");
 			RegenerateTrapezoid();
 		}
 
@@ -271,4 +268,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-

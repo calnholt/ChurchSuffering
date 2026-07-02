@@ -10,7 +10,6 @@ using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Utils;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -27,9 +26,8 @@ namespace Crusaders30XX.ECS.Systems
 
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly Texture2D _pixel;
-		private readonly Dictionary<string, Texture2D> _iconCache = new();
 		private readonly Dictionary<(int Width, int Height, int Radius), Texture2D> _roundedRectCache = new();
 		private readonly string _tooltipEntityName;
 
@@ -97,17 +95,16 @@ namespace Crusaders30XX.ECS.Systems
 			EntityManager entityManager,
 			GraphicsDevice graphicsDevice,
 			SpriteBatch spriteBatch,
-			ContentManager content,
+			ImageAssetService imageAssets,
 			string tooltipEntityName = null) : base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
+			_imageAssets = imageAssets;
 			_tooltipEntityName = tooltipEntityName ?? string.Empty;
 			if (graphicsDevice != null)
 			{
-				_pixel = new Texture2D(graphicsDevice, 1, 1);
-				_pixel.SetData(new[] { Color.White });
+				_pixel = _imageAssets.GetPixel(Color.White);
 			}
 		}
 
@@ -499,17 +496,7 @@ namespace Crusaders30XX.ECS.Systems
 		private Texture2D GetIcon(EquipmentSlot slot)
 		{
 			string key = slot.ToString().ToLowerInvariant();
-			if (_iconCache.TryGetValue(key, out var cached)) return cached;
-			try
-			{
-				cached = _content?.Load<Texture2D>(key);
-			}
-			catch
-			{
-				cached = null;
-			}
-			_iconCache[key] = cached;
-			return cached;
+			return _imageAssets.TryGetTexture(key);
 		}
 
 		private void DrawRoundedRect(Rectangle bounds, Color color)

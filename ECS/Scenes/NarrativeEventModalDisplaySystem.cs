@@ -12,7 +12,6 @@ using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Utils;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -110,12 +109,11 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Option Text Scale", Step = 0.01f, Min = 0.05f, Max = 1f)]
 		public float OptionTextScale { get; set; } = 0.133f;
 
-		public NarrativeEventModalDisplaySystem(EntityManager entityManager, GraphicsDevice gd, SpriteBatch sb, ContentManager content) : base(entityManager)
+		public NarrativeEventModalDisplaySystem(EntityManager entityManager, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(entityManager)
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			_pixel = new Texture2D(gd, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_pixel = imageAssets.GetPixel(Color.White);
 			_gradientRuleCache = new HorizontalGradientRuleCache(gd);
 
 			EventManager.Subscribe<ShowNarrativeEventOverlay>(OnShowNarrativeEventOverlay);

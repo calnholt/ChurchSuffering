@@ -8,7 +8,6 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Utils;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Objects.Enemies;
@@ -23,7 +22,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _contentFont = FontSingleton.ContentFont;
 		private readonly Dictionary<(int w, int h, int r), Texture2D> _roundedCache = new();
@@ -193,19 +192,18 @@ namespace Crusaders30XX.ECS.Systems
 
 		private const string TooltipEntityName = "UI_QuestTooltip";
 
-		public TooltipQuestDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public TooltipQuestDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-		_pixel = new Texture2D(graphicsDevice, 1, 1);
-		_pixel.SetData(new[] { Color.White });
-		try { _chaliceTexture = _content.Load<Texture2D>("chalice"); } catch { _chaliceTexture = null; }
-		try { _treasureChestTexture = _content.Load<Texture2D>("treasure_chest"); } catch { _treasureChestTexture = null; }
-		try { _goldTexture = _content.Load<Texture2D>("gold"); } catch { _goldTexture = null; }
-		try { _questIconTexture = _content.Load<Texture2D>("Quest_poi"); } catch { _questIconTexture = null; }
-		try { _hellriftIconTexture = _content.Load<Texture2D>("Hellrift_poi"); } catch { _hellriftIconTexture = null; }
+			_imageAssets = imageAssets;
+		_pixel = _imageAssets.GetPixel(Color.White);
+		_chaliceTexture = _imageAssets.TryGetTexture("chalice");
+		_treasureChestTexture = _imageAssets.TryGetTexture("treasure_chest");
+		_goldTexture = _imageAssets.TryGetTexture("gold");
+		_questIconTexture = _imageAssets.TryGetTexture("Quest_poi");
+		_hellriftIconTexture = _imageAssets.TryGetTexture("Hellrift_poi");
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -948,9 +946,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (string.IsNullOrEmpty(id)) return null;
 			string assetName = EnemyPortraitContent.ToAssetName(id);
-			try { return _content.Load<Texture2D>(assetName); } catch { }
-			try { return _content.Load<Texture2D>(id); } catch { }
-			return null;
+			return _imageAssets.GetTextureOrFallback(assetName, id);
 		}
 
 		private void DrawPill(Rectangle rect, Color color, int radius)

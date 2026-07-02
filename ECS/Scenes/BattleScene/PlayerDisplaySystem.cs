@@ -2,7 +2,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Services;
 using System;
@@ -18,7 +17,7 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private Texture2D _crusaderTexture;
         private string _loadedWeaponId;
         private float _elapsedSeconds;
@@ -34,12 +33,12 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Center Offset Y (% of height)", Step = 0.01f, Min = -1.0f, Max = 1.0f)]
         public float CenterOffsetYPct { get; set; } = -0.09f; // negative = up, positive = down
 
-        public PlayerDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public PlayerDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -140,14 +139,9 @@ namespace Crusaders30XX.ECS.Systems
             if (_crusaderTexture != null && weaponId == _loadedWeaponId) return;
 
             _loadedWeaponId = weaponId;
-            _crusaderTexture = TryLoadPortrait(CrusaderPortraitAssets.ResolveBattlePortraitAsset(weaponId))
-                ?? TryLoadPortrait(CrusaderPortraitAssets.DialogPortraitAsset);
-        }
-
-        private Texture2D TryLoadPortrait(string assetName)
-        {
-            try { return _content.Load<Texture2D>(assetName); }
-            catch { return null; }
+            _crusaderTexture = _imageAssets.GetTextureOrFallback(
+                CrusaderPortraitAssets.ResolveBattlePortraitAsset(weaponId),
+                CrusaderPortraitAssets.DialogPortraitAsset);
         }
     }
 }

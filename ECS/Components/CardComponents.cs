@@ -229,6 +229,8 @@ namespace Crusaders30XX.ECS.Components
         CourageGained,
         CourageLost,
         NumberOfAttacksHitPlayer,
+        CardsMilled,
+        CursesRemoved,
     }
     
     /// <summary>

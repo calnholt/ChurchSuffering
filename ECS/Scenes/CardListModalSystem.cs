@@ -13,7 +13,6 @@ using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Utils;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -32,14 +31,13 @@ namespace Crusaders30XX.ECS.Systems
 
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private readonly SpriteFont _titleFont;
         private readonly SpriteFont _bodyFont;
         private readonly Texture2D _pixel;
         private readonly RasterizerState _scissorRasterizer;
         private readonly Dictionary<int, bool> _previousCardHoverHighlight = new();
         private readonly Dictionary<int, EquipmentBase> _equipmentTooltipByEntityId = new();
-        private readonly Dictionary<string, Texture2D> _textureCache = new();
         private readonly HashSet<int> _inventoryAuxCardIds = new();
 
         private Entity _weaponPreviewCard;
@@ -112,16 +110,15 @@ namespace Crusaders30XX.ECS.Systems
             EntityManager entityManager,
             GraphicsDevice graphicsDevice,
             SpriteBatch spriteBatch,
-            ContentManager content = null)
+            ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
             _titleFont = FontSingleton.TitleFont;
             _bodyFont = FontSingleton.ChakraPetchFont;
-            _pixel = new Texture2D(graphicsDevice, 1, 1);
-            _pixel.SetData(new[] { Color.White });
+            _pixel = _imageAssets.GetPixel(Color.White);
             _scissorRasterizer = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
 
             EventManager.Subscribe<OpenCardListModalEvent>(OpenModal);
@@ -522,7 +519,7 @@ namespace Crusaders30XX.ECS.Systems
                 int row = i / cols;
                 var medal = medals[i];
                 Vector2 center = new(x + col * (icon + gap) + icon / 2f, y + row * (icon + gap) + icon / 2f);
-                MedalIconRenderService.DrawMedalIcon(_spriteBatch, _graphicsDevice, _titleFont, center, icon, medal.Medal.Id, _content);
+                MedalIconRenderService.DrawMedalIcon(_spriteBatch, _graphicsDevice, _titleFont, center, icon, medal.Medal.Id, _imageAssets);
                 if (medal.Medal.MaxCount > 0)
                 {
                     string count = $"{medal.Medal.CurrentCount}/{medal.Medal.MaxCount}";
@@ -1302,18 +1299,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private Texture2D GetTexture(string asset)
         {
-            if (string.IsNullOrWhiteSpace(asset) || _content == null) return null;
-            if (_textureCache.TryGetValue(asset, out var cached)) return cached;
-            try
-            {
-                cached = _content.Load<Texture2D>(asset);
-            }
-            catch
-            {
-                cached = null;
-            }
-            _textureCache[asset] = cached;
-            return cached;
+            return _imageAssets.TryGetTexture(asset);
         }
 
         private static Color GetCardColor(CardData.CardColor color)

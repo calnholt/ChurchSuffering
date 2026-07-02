@@ -12,7 +12,6 @@ using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -22,7 +21,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly SpriteFont _font = FontSingleton.ContentFont;
 
 		private string _currentShopTitle = "Shop";
@@ -30,7 +29,6 @@ namespace Crusaders30XX.ECS.Systems
 		private bool _needsRebuild = true;
 
 		private Texture2D _goldIcon;
-		private readonly Dictionary<string, Texture2D> _textureCache = new();
 		private readonly Dictionary<string, Entity> _cardPreviewCache = new();
 
 		// Layout
@@ -107,12 +105,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Alternate Angles A/B", Step = 1)]
 		public bool AlternateAngles { get; set; } = false;
 
-		public ForSaleDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ContentManager content)
+		public ForSaleDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets)
 			: base(em)
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			_content = content;
+			_imageAssets = imageAssets;
 
 			EventManager.Subscribe<LoadSceneEvent>(_ =>
 			{
@@ -375,7 +373,7 @@ namespace Crusaders30XX.ECS.Systems
 							contentCenter,
 							IconSize,
 							x.FS.Id,
-							_content);
+							_imageAssets);
 						break;
 					}
 					case ForSaleItemType.Equipment:
@@ -495,18 +493,8 @@ namespace Crusaders30XX.ECS.Systems
 
 		private Texture2D SafeLoadTexture(string assetName)
 		{
-			if (string.IsNullOrWhiteSpace(assetName)) return null;
-			if (_textureCache.TryGetValue(assetName, out var tex) && tex != null) return tex;
-			try
-			{
-				var loaded = _content.Load<Texture2D>(assetName);
-				_textureCache[assetName] = loaded;
-				return loaded;
-			}
-			catch { _textureCache[assetName] = null; return null; }
+			return _imageAssets.TryGetTexture(assetName);
 		}
 	}
 }
-
-
 

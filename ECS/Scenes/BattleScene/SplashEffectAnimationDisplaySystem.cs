@@ -9,7 +9,6 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -24,7 +23,7 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private readonly Dictionary<string, Texture2D> _textures = new Dictionary<string, Texture2D>();
 
         private class AnimationInstance
@@ -69,12 +68,12 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Max Concurrent", Step = 1, Min = 1, Max = 64)]
         public int MaxConcurrent { get; set; } = 8;
 
-        public SplashEffectAnimationDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public SplashEffectAnimationDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
             LoadTextures();
             EventManager.Subscribe<ModifyHpEvent>(OnModifyHp);
             EventManager.Subscribe<ApplyPassiveEvent>(OnApplyPassive);
@@ -101,14 +100,7 @@ namespace Crusaders30XX.ECS.Systems
             };
             foreach (var key in textureKeys)
             {
-                try
-                {
-                    _textures[key] = _content.Load<Texture2D>(key);
-                }
-                catch
-                {
-                    _textures[key] = null;
-                }
+                _textures[key] = _imageAssets.TryGetTexture(key);
             }
         }
 
