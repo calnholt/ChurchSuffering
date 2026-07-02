@@ -52,6 +52,7 @@ namespace Crusaders30XX.ECS.Systems
 		private EquipmentModularEffectsDebugSystem _equipmentModularEffectsDebugSystem;
 		private MedalModularEffectsDebugSystem _medalModularEffectsDebugSystem;
 		private EnemyAttackModularEffectsDebugSystem _enemyAttackModularEffectsDebugSystem;
+		private ModularEffectModuleDebugSystem _modularEffectModuleDebugSystem;
 		private CathedralLightingSystem _cathedralLightingSystem;
 		private DesertBackgroundEffectSystem _desertBackgroundEffectSystem;
 		private DesertStormDisplaySystem _desertStormDisplaySystem;
@@ -735,6 +736,7 @@ namespace Crusaders30XX.ECS.Systems
 			_equipmentModularEffectsDebugSystem = new EquipmentModularEffectsDebugSystem(_world.EntityManager);
 			_medalModularEffectsDebugSystem = new MedalModularEffectsDebugSystem(_world.EntityManager);
 			_enemyAttackModularEffectsDebugSystem = new EnemyAttackModularEffectsDebugSystem(_world.EntityManager);
+			_modularEffectModuleDebugSystem = new ModularEffectModuleDebugSystem(_world.EntityManager);
 			_playerHudLayoutSystem = new PlayerHudLayoutSystem(_world.EntityManager);
 			_playerHudFeedbackSystem = new PlayerHudFeedbackSystem(_world.EntityManager);
 			_playerHudRootDisplaySystem = new PlayerHudRootDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -886,6 +888,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_equipmentModularEffectsDebugSystem);
 			_world.AddSystem(_medalModularEffectsDebugSystem);
 			_world.AddSystem(_enemyAttackModularEffectsDebugSystem);
+			_world.AddSystem(_modularEffectModuleDebugSystem);
 			_world.AddSystem(_playerTemperanceActivationDisplaySystem);
 			_world.AddSystem(_playerHudLayoutSystem);
 			_world.AddSystem(_playerHudFeedbackSystem);
