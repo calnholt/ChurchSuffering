@@ -2,6 +2,7 @@ using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Services;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -16,30 +17,32 @@ namespace Crusaders30XX.ECS.Systems
 		public EventQueue.EventState State { get; set; } = EventQueue.EventState.Pending;
 
 		private readonly EntityManager _entityManager;
-		private readonly string _contextId;
 
-		public QueuedAdvanceToNextPlannedAttackEvent(EntityManager entityManager, string contextId)
+		public QueuedAdvanceToNextPlannedAttackEvent(EntityManager entityManager)
 		{
 			_entityManager = entityManager;
-			_contextId = contextId;
 			Name = "Rule.AdvanceToNextPlannedAttackIfAny";
-			Payload = contextId;
+			Payload = null;
 		}
 
 		public void StartResolving()
 		{
-			// Remove the resolved planned attack by context id
-			var enemy = _entityManager.GetEntitiesWithComponent<AttackIntent>()
-				.FirstOrDefault(en => en.GetComponent<AttackIntent>().Planned.Any(pa => pa.ContextId == _contextId));
-			var intent = enemy.GetComponent<AttackIntent>();
-			if (intent != null)
+			var enemy = _entityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
+			var intent = enemy?.GetComponent<AttackIntent>();
+			if (intent != null && intent.Planned.Count > 0)
 			{
-				int idx = intent.Planned.FindIndex(p => p.ContextId == _contextId);
-				if (idx >= 0) intent.Planned.RemoveAt(idx);
+				intent.Planned.RemoveAt(0);
 			}
 
+			var phase = _entityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
+			if (phase != null) phase.PendingBlockConfirm = false;
+
+			BattleTransientStateCleanupService.ClearInteractionState(_entityManager);
+
 			var hasNext = intent != null && intent.Planned != null && intent.Planned.Count > 0;
-			if (hasNext) {
+			if (hasNext)
+			{
+				intent.ActiveAttackSequence++;
 				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<ChangeBattlePhaseEvent>(
 					"Rule.ChangePhase.PreBlock",
 					new ChangeBattlePhaseEvent { Current = SubPhase.PreBlock }
@@ -49,7 +52,8 @@ namespace Crusaders30XX.ECS.Systems
 					new ChangeBattlePhaseEvent { Current = SubPhase.Block }
 				));
 			}
-			else {
+			else
+			{
 				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<ChangeBattlePhaseEvent>(
 					"Rule.ChangePhase.EnemyEnd",
 					new ChangeBattlePhaseEvent { Current = SubPhase.EnemyEnd }
@@ -70,6 +74,5 @@ namespace Crusaders30XX.ECS.Systems
 		public void Update(float deltaSeconds) { }
 	}
 }
-
 
 

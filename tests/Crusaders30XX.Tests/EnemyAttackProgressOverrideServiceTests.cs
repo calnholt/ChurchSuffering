@@ -14,7 +14,6 @@ public class EnemyAttackProgressOverrideServiceTests
         var progressEntity = entityManager.CreateEntity("EnemyAttackProgress");
         var progress = new EnemyAttackProgress
         {
-            ContextId = "attack-1",
             DamageBeforePrevention = 10,
             AssignedBlockTotal = 5,
         };
@@ -46,7 +45,6 @@ public class EnemyAttackProgressOverrideServiceTests
         var progressEntity = entityManager.CreateEntity("EnemyAttackProgress");
         var progress = new EnemyAttackProgress
         {
-            ContextId = "attack-1",
             DamageBeforePrevention = 10,
             AssignedBlockTotal = 3,
         };
@@ -70,7 +68,6 @@ public class EnemyAttackProgressOverrideServiceTests
         entityManager.AddComponent(card, new CardData());
         entityManager.AddComponent(card, new AssignedBlockCard
         {
-            ContextId = "attack-1",
             IsEquipment = false,
         });
         return card;

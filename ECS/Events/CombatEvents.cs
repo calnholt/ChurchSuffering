@@ -8,7 +8,6 @@ namespace Crusaders30XX.ECS.Events
 	public class IntentPlanned
 	{
 		public string AttackId;
-		public string ContextId;
 		public int Step;
 		public string TelegraphText;
 	}
@@ -16,7 +15,6 @@ namespace Crusaders30XX.ECS.Events
 
 	public class ResolveAttack
 	{
-		public string ContextId;
 	}
 
 	public class ApplyEffect
@@ -33,25 +31,21 @@ namespace Crusaders30XX.ECS.Events
 
 	public class AttackResolved
 	{
-		public string ContextId;
 		public bool WasConditionMet;
 	}
 
 	// Fired when the absorb tween completes and the enemy is about to attack
 	public class EnemyAbsorbComplete
 	{
-		public string ContextId;
 	}
 
 	// Fired when the enemy attack animation should deal damage to the player
 	public class EnemyAttackImpactNow
 	{
-		public string ContextId;
 	}
 
 	public class ResolvingEnemyDamageEvent
 	{
-		public string ContextId;
 		public int BaseDamage;
 		public int AssignedBlock;
 		public bool WillHit;
@@ -59,7 +53,6 @@ namespace Crusaders30XX.ECS.Events
 
 	public class EnemyDamageAppliedEvent
 	{
-		public string ContextId;
 		public int FinalDamage;
 		public int TotalDamage;
 		public bool WasHit;
@@ -79,7 +72,6 @@ namespace Crusaders30XX.ECS.Events
 	// Shows a temporary "Stunned!" overlay on the enemy
 	public class ShowStunnedOverlay
 	{
-		public string ContextId;
 	}
 
 	// Fired when a battle is won (enemy defeated), to trigger scene transition
@@ -103,7 +95,6 @@ namespace Crusaders30XX.ECS.Events
 
 	public class TriggerEnemyAttackDisplayEvent
 	{
-		public string ContextId;
 	}
 
 	public class OnEnemyAttackHitEvent

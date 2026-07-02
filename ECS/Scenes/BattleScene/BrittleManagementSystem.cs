@@ -27,15 +27,8 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (evt.Card?.GetComponent<Brittle>() == null) return;
 
-			var contextId = evt.Card.GetComponent<AssignedBlockCard>()?.ContextId
-				?? GetComponentHelper.GetContextId(EntityManager);
-			if (string.IsNullOrEmpty(contextId)) return;
-
-			var progress = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>()
-				.FirstOrDefault(entity =>
-					entity.GetComponent<EnemyAttackProgress>()?.ContextId == contextId)
-				?.GetComponent<EnemyAttackProgress>();
-			if (progress == null || progress.PlayedCards != 1) return;
+			if (!EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)) return;
+			if (progress.PlayedCards != 1) return;
 
 			EventManager.Publish(new MillCardEvent());
 		}

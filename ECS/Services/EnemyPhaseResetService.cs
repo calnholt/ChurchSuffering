@@ -32,6 +32,8 @@ namespace Crusaders30XX.ECS.Services
 
 			enemy.GetComponent<AttackIntent>()?.Planned.Clear();
 			enemy.GetComponent<NextTurnAttackIntent>()?.Planned.Clear();
+			var attackIntent = enemy.GetComponent<AttackIntent>();
+			if (attackIntent != null) attackIntent.ActiveAttackSequence = 0;
 			foreach (var progress in entityManager.GetEntitiesWithComponent<EnemyAttackProgress>().ToList())
 			{
 				entityManager.DestroyEntity(progress.Id);

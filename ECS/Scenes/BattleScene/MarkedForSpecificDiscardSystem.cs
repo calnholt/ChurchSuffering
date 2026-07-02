@@ -4,13 +4,11 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
-using System;
 
 namespace Crusaders30XX.ECS.Systems
 {
     /// <summary>
-    /// Manages MarkedForSpecificDiscard components based on the current enemy attack context.
-    /// Extracted from EnemyAttackDisplaySystem.
+    /// Manages MarkedForSpecificDiscard components for the current enemy attack.
     /// </summary>
     public class MarkedForSpecificDiscardSystem : Core.System
     {
@@ -41,27 +39,23 @@ namespace Crusaders30XX.ECS.Systems
             var attackDef = GetComponentHelper.GetPlannedAttack(EntityManager);
             if (attackDef == null) return;
             if (evt.Amount <= 0) return;
-            string contextId = ResolveContextId(evt.ContextId);
             var candidates = GetComponentHelper.GetHandOfCards(EntityManager);
             int pick = System.Math.Min(evt.Amount, candidates.Count);
             LoggingService.Append("MarkedForSpecificDiscardSystem.TryPreselectSpecificDiscards", new System.Text.Json.Nodes.JsonObject { ["pickCount"] = pick, ["candidateCount"] = candidates.Count });
             if (pick <= 0) return;
-            // Shuffle candidates and take the first N
             var selected = candidates.OrderBy(_ => _random.Next()).Take(pick).ToList();
             foreach (var card in selected)
             {
                 EntityManager.AddComponent(card, new MarkedForSpecificDiscard
                 {
                     Owner = card,
-                    ContextId = contextId,
                 });
             }
         }
 
         private void OnDiscardMarkedForSpecificDiscard(DiscardMarkedForSpecificDiscardEvent evt)
         {
-            string contextId = ResolveContextId(evt.ContextId);
-            var entities = GetMarkedCardsForContext(contextId).ToList();
+            var entities = GetMarkedCards().ToList();
             if (entities.Count == 0) return;
 
             var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
@@ -75,7 +69,6 @@ namespace Crusaders30XX.ECS.Systems
                     Card = entity,
                     Deck = deckEntity,
                     Destination = CardZoneType.DiscardPile,
-                    ContextId = contextId,
                     Reason = "DiscardSpecificCard",
                 });
             }
@@ -83,7 +76,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private void OnAttackResolved(AttackResolved evt)
         {
-            var entities = GetMarkedCardsForContext(evt.ContextId).ToList();
+            var entities = GetMarkedCards().ToList();
             if (entities.Count == 0) return;
             var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
             var deck = deckEntity?.GetComponent<Deck>();
@@ -95,26 +88,13 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     continue;
                 }
-                EventManager.Publish(new CardMoveRequested { Card = e, Deck = deckEntity, Destination = CardZoneType.DiscardPile, ContextId = evt.ContextId, Reason = "DiscardSpecificCard" });
+                EventManager.Publish(new CardMoveRequested { Card = e, Deck = deckEntity, Destination = CardZoneType.DiscardPile, Reason = "DiscardSpecificCard" });
             }
         }
 
-        private IEnumerable<Entity> GetMarkedCardsForContext(string contextId)
+        private IEnumerable<Entity> GetMarkedCards()
         {
-            return EntityManager.GetEntitiesWithComponent<MarkedForSpecificDiscard>()
-                .Where(entity =>
-                {
-                    string markedContextId = entity.GetComponent<MarkedForSpecificDiscard>()?.ContextId;
-                    return string.IsNullOrEmpty(markedContextId)
-                        || string.Equals(markedContextId, contextId, StringComparison.Ordinal);
-                });
-        }
-
-        private string ResolveContextId(string contextId)
-        {
-            return !string.IsNullOrWhiteSpace(contextId)
-                ? contextId
-                : GetComponentHelper.GetContextId(EntityManager) ?? string.Empty;
+            return EntityManager.GetEntitiesWithComponent<MarkedForSpecificDiscard>();
         }
     }
 }

@@ -45,7 +45,7 @@ namespace Crusaders30XX.ECS.Systems
 			// Need a current intent context
 			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
 			var pa = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-			if (pa == null || string.IsNullOrEmpty(pa.ContextId)) return;
+			if (pa == null) return;
 
 			// Hit-test hand cards
 			var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
@@ -134,7 +134,6 @@ namespace Crusaders30XX.ECS.Systems
 					Card = card,
 					Deck = deckEntity,
 					Destination = CardZoneType.AssignedBlock,
-					ContextId = pa.ContextId,
 					Reason = "AssignBlock"
 				});
 				var assignedBlock = card.GetComponent<AssignedBlockCard>();
@@ -146,7 +145,6 @@ namespace Crusaders30XX.ECS.Systems
 
 			EventManager.Publish(new BlockAssignmentAdded
 			{
-				ContextId = pa.ContextId,
 				Card = card,
 				Color = color,
 				DeltaBlock = blockValue,

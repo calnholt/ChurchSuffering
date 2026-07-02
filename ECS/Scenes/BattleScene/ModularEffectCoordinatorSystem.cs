@@ -167,10 +167,9 @@ namespace Crusaders30XX.ECS.Systems
 			});
 
 			if (!active.IsPreview
-				&& active.SourceKind == VisualEffectSourceKind.EnemyAttack
-				&& !string.IsNullOrWhiteSpace(active.ContextId))
+				&& active.SourceKind == VisualEffectSourceKind.EnemyAttack)
 			{
-				EventManager.Publish(new EnemyAttackImpactNow { ContextId = active.ContextId });
+				EventManager.Publish(new EnemyAttackImpactNow());
 			}
 		}
 
@@ -213,9 +212,9 @@ namespace Crusaders30XX.ECS.Systems
 			if (_pendingRejectedGameplayRequests.Count == 0) return;
 			foreach (var request in _pendingRejectedGameplayRequests.ToList())
 			{
-				if (request.SourceKind == VisualEffectSourceKind.EnemyAttack && !string.IsNullOrWhiteSpace(request.ContextId))
+				if (request.SourceKind == VisualEffectSourceKind.EnemyAttack)
 				{
-					EventManager.Publish(new EnemyAttackImpactNow { ContextId = request.ContextId });
+					EventManager.Publish(new EnemyAttackImpactNow());
 				}
 				EventManager.Publish(new VisualEffectImpactReached { RequestId = request.RequestId, IsPreview = false });
 				EventManager.Publish(new VisualEffectCompleted { RequestId = request.RequestId, IsPreview = false });

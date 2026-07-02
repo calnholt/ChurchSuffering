@@ -32,7 +32,6 @@ namespace Crusaders30XX.ECS.Systems
         private void OnApplyEffect(ApplyEffect e)
         {
             if ((e.EffectType ?? string.Empty) != "Damage") return;
-            // Accumulate incoming damage; apply on EnemyAttackImpactNow
             LoggingService.Append("EnemyDamageManagerSystem.OnApplyEffect", new System.Text.Json.Nodes.JsonObject { ["effectType"] = e.EffectType, ["amount"] = e.Amount, ["percentage"] = e.Percentage });
             if (e.Percentage != 100 && Random.Shared.Next(0, 100) > e.Percentage) return;
             int amt = Math.Max(0, e.Amount);
@@ -43,30 +42,23 @@ namespace Crusaders30XX.ECS.Systems
 
         private void OnImpactNow(EnemyAttackImpactNow e)
         {
-            LoggingService.Append("EnemyDamageManagerSystem.OnImpactNow", new System.Text.Json.Nodes.JsonObject { ["contextId"] = e.ContextId, ["pendingDamage"] = _pendingDamage });
+            LoggingService.Append("EnemyDamageManagerSystem.OnImpactNow", new System.Text.Json.Nodes.JsonObject { ["pendingDamage"] = _pendingDamage });
             int baseDamage = _pendingDamage;
             _pendingDamage = 0;
 
-            // Resolve assigned block for this specific context
             int assignedBlock = 0;
-            var prog = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>()
-                .FirstOrDefault(ent => ent.GetComponent<EnemyAttackProgress>()?.ContextId == e.ContextId)
-                ?.GetComponent<EnemyAttackProgress>();
-            
+            EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var prog);
             if (prog != null) assignedBlock = prog.AssignedBlockTotal;
 
             bool willHit = baseDamage > assignedBlock;
 
-            // Phase 1: Pre-resolution (allows conditional effects to fire)
-            EventManager.Publish(new ResolvingEnemyDamageEvent 
-            { 
-                ContextId = e.ContextId, 
-                BaseDamage = baseDamage, 
-                AssignedBlock = assignedBlock, 
-                WillHit = willHit 
+            EventManager.Publish(new ResolvingEnemyDamageEvent
+            {
+                BaseDamage = baseDamage,
+                AssignedBlock = assignedBlock,
+                WillHit = willHit
             });
 
-            // Phase 2: Apply total damage
             int extraDamage = _pendingDamage;
             _pendingDamage = 0;
             int totalDamage = baseDamage + extraDamage;
@@ -101,7 +93,6 @@ namespace Crusaders30XX.ECS.Systems
 
             EventManager.Publish(new EnemyDamageAppliedEvent
             {
-                ContextId = e.ContextId,
                 FinalDamage = finalDamage,
                 TotalDamage = totalDamage,
                 WasHit = wasHit
@@ -109,4 +100,3 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-

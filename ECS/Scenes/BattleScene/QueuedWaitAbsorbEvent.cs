@@ -7,7 +7,6 @@ namespace Crusaders30XX.ECS.Systems
 {
     /// <summary>
     /// Queued event that waits for the enemy absorb animation to complete (EnemyAbsorbComplete).
-    /// It publishes a bus event to start the absorb tween (optional), then completes when the notification arrives.
     /// </summary>
     public class QueuedWaitAbsorbEvent : EventQueue.IQueuedEvent
     {
@@ -15,14 +14,12 @@ namespace Crusaders30XX.ECS.Systems
         public object Payload { get; }
         public EventQueue.EventState State { get; set; } = EventQueue.EventState.Pending;
 
-        private readonly string _contextId;
         private System.Action<EnemyAbsorbComplete> _handler;
 
-        public QueuedWaitAbsorbEvent(string contextId)
+        public QueuedWaitAbsorbEvent()
         {
-            _contextId = contextId;
             Name = "Rule.WaitAbsorb";
-            Payload = contextId;
+            Payload = null;
         }
 
         public void StartResolving()
@@ -36,15 +33,10 @@ namespace Crusaders30XX.ECS.Systems
 
         private void OnAbsorbComplete(EnemyAbsorbComplete e)
         {
-            LoggingService.Append("QueuedWaitAbsorbEvent.OnAbsorbComplete", new JsonObject {
-                { "ContextId", e?.ContextId }
-            });
-            if (e == null || string.IsNullOrEmpty(e.ContextId)) return;
-            if (e.ContextId != _contextId) return;
+            LoggingService.Append("QueuedWaitAbsorbEvent.OnAbsorbComplete", new JsonObject());
             EventManager.Unsubscribe(_handler);
             State = EventQueue.EventState.Complete;
         }
     }
 }
-
 

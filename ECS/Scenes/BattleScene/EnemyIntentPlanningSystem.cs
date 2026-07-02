@@ -104,6 +104,7 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						intent.Planned = next.Planned;
 						next.Planned = new List<PlannedAttack>();
+						intent.ActiveAttackSequence++;
 					}
 
 					next.Planned.Clear();
@@ -138,11 +139,12 @@ namespace Crusaders30XX.ECS.Systems
 		private void AddPlanned(IEnumerable<EnemyAttackId> attackIds, dynamic target, string enemyId, int plannedTurn)
 		{
 			int index = (target.Planned is List<PlannedAttack> l) ? l.Count : 0;
+			bool isCurrentIntent = target is AttackIntent;
+			bool wasEmpty = isCurrentIntent && index == 0;
 			foreach (var id in attackIds)
 			{
 				var attackDef = EnemyAttackFactory.Create(id);
 				attackDef.Initialize(EntityManager);
-				string ctx = Guid.NewGuid().ToString("N");
 				var passives = EntityManager.GetEntity("Player").GetComponent<AppliedPassives>().Passives;
 				bool hasFear = passives.TryGetValue(AppliedPassiveType.Fear, out int fear) && fear > 0;
 				bool isAmbush = hasFear
@@ -151,7 +153,6 @@ namespace Crusaders30XX.ECS.Systems
 				{
 					AttackId = id,
 					ResolveStep = Math.Max(1, index + 1),
-					ContextId = ctx,
 					WasBlocked = false,
 					IsAmbush = isAmbush,
 					AttackDefinition = attackDef
@@ -159,11 +160,15 @@ namespace Crusaders30XX.ECS.Systems
 				EventManager.Publish(new IntentPlanned
 				{
 					AttackId = id.ToKey(),
-					ContextId = ctx,
 					Step = Math.Max(1, index + 1),
 					TelegraphText = attackDef.Name
 				});
 				index++;
+			}
+			if (isCurrentIntent && wasEmpty && target.Planned.Count > 0)
+			{
+				var intent = (AttackIntent)target;
+				intent.ActiveAttackSequence++;
 			}
 		}
 

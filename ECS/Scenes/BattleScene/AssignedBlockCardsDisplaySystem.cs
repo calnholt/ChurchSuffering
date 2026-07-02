@@ -106,7 +106,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (hk != null && hk.Button == FaceButton.B)
 			{
 				EntityManager.RemoveComponent<HotKey>(evt.CardEntity);
-				AssignHotKeyToPrevious(evt.CardEntity, abc?.ContextId, abc?.AssignedAtTicks ?? long.MaxValue);
+				AssignHotKeyToPrevious(evt.CardEntity, abc?.AssignedAtTicks ?? long.MaxValue);
 			}
 			abc.StartPos = abc.CurrentPos;
 			abc.StartScale = abc.CurrentScale;
@@ -126,7 +126,6 @@ namespace Crusaders30XX.ECS.Systems
 				Card = evt.CardEntity,
 				DeltaBlock = -abc.BlockAmount,
 				Color = abc.ColorKey,
-				ContextId = abc.ContextId
 			});
 			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Equip, Volume = 0.5f, Pitch = -0.5f});
 		}
@@ -191,14 +190,10 @@ namespace Crusaders30XX.ECS.Systems
 				_pendingReturn.Clear();
 			}
 
-			// Self-heal: ensure B hotkey is on the newest assigned card for the current context
+			// Self-heal: ensure B hotkey is on the newest assigned card
+			if (EnemyAttackFlowService.HasCurrentAttack(EntityManager))
 			{
-				var enemyTip = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-				var paTip = enemyTip?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-				if (paTip != null && !string.IsNullOrEmpty(paTip.ContextId))
-				{
-					MaintainLatestHotKeyForContext(paTip.ContextId);
-				}
+				MaintainLatestHotKey();
 			}
 		}
 
@@ -217,28 +212,17 @@ namespace Crusaders30XX.ECS.Systems
 
 			// Ensure bounds reflect where the card is currently drawn and control interactivity
 			{
-				var enemyTip = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-				var paTip = enemyTip?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-				bool isForCurrentContext = paTip != null && abc.ContextId == paTip.ContextId;
 				bool showDuringPhase = abc.Phase == AssignedBlockCard.PhaseState.Idle || abc.Phase == AssignedBlockCard.PhaseState.Impact || abc.Phase == AssignedBlockCard.PhaseState.Launch || abc.Phase == AssignedBlockCard.PhaseState.Pullback;
-				bool shouldShowTooltip = isForCurrentContext && showDuringPhase;
+				bool shouldShowTooltip = showDuringPhase;
 				var rectNow = GetAssignedBlockRect(entity, abc, abc.CurrentPos, abc.CurrentScale);
 
-				// Always keep bounds in sync for cards in the current context; disable otherwise
-				if (isForCurrentContext)
-				{
-					ui.Bounds = rectNow;
-					ui.IsInteractable = (abc.Phase == AssignedBlockCard.PhaseState.Idle || abc.Phase == AssignedBlockCard.PhaseState.Impact) && !StateSingleton.IsActive;
-				}
-				else
-				{
-					ui.IsInteractable = false;
-				}
+				ui.Bounds = rectNow;
+				ui.IsInteractable = (abc.Phase == AssignedBlockCard.PhaseState.Idle || abc.Phase == AssignedBlockCard.PhaseState.Impact) && !StateSingleton.IsActive;
 
 				// Tooltip content management
 				// For non-equipment cards, ensure card tooltip override while assigned for the current context
 				bool isCardAssignment = !abc.IsEquipment;
-				if (isCardAssignment && isForCurrentContext && showDuringPhase)
+				if (isCardAssignment && showDuringPhase)
 				{
 					// Capture original tooltip config once
 					var backup = entity.GetComponent<TooltipOverrideBackup>();
@@ -308,22 +292,12 @@ namespace Crusaders30XX.ECS.Systems
 			abc.Elapsed += dt;
 
 			// Determine current context's index among assigned cards for layout
-			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-			var pa = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-			if (pa == null) return;
-			// Only animate if for this context; otherwise keep as-is
-			bool forCurrent = abc.ContextId == pa.ContextId;
-			int indexInContext = 0;
-			int countInContext = 1;
-			if (forCurrent)
-			{
-				var list = GetRelevantEntities()
-					.Where(e => e.GetComponent<AssignedBlockCard>()?.ContextId == pa.ContextId)
-					.OrderBy(e => e.GetComponent<AssignedBlockCard>().AssignedAtTicks) // oldest to newest left->right
-					.ToList();
-				indexInContext = list.FindIndex(e => e == entity);
-				countInContext = list.Count;
-			}
+			if (!EnemyAttackFlowService.HasCurrentAttack(EntityManager)) return;
+			var list = GetRelevantEntities()
+				.OrderBy(e => e.GetComponent<AssignedBlockCard>().AssignedAtTicks)
+				.ToList();
+			int indexInContext = list.FindIndex(e => e == entity);
+			int countInContext = list.Count;
 
 			// Compute slot target from banner anchor if available, else viewport center
 			var anchorEntity = EntityManager.GetEntitiesWithComponent<EnemyAttackBannerAnchor>().FirstOrDefault();
@@ -377,7 +351,7 @@ namespace Crusaders30XX.ECS.Systems
 					float p = ImpactSeconds <= 0f ? 1f : MathHelper.Clamp(abc.Elapsed / ImpactSeconds, 0f, 1f);
 					abc.CurrentPos = abc.TargetPos + new Vector2(0, (1f - p) * 6f);
 					abc.CurrentScale = targetScale * (1f + 0.08f * (1f - p));
-					if (p >= 1f) { abc.Phase = AssignedBlockCard.PhaseState.Idle; abc.Elapsed = 0f; MaintainLatestHotKeyForContext(pa.ContextId); }
+					if (p >= 1f) { abc.Phase = AssignedBlockCard.PhaseState.Idle; abc.Elapsed = 0f; MaintainLatestHotKey(); }
 					break;
 				}
 				case AssignedBlockCard.PhaseState.Idle:
@@ -478,15 +452,14 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnBlockAssignmentAdded(BlockAssignmentAdded evt)
 		{
-			if (evt == null || string.IsNullOrEmpty(evt.ContextId)) return;
+			if (evt?.Card == null) return;
 			RemoveAssignedBlockHotKey(evt.Card);
-			// Immediately remove stale HotKeys for this context; the newest idle assignment gets B later.
-			RemovePreviousForContext(evt.ContextId, evt.Card);
+			RemovePreviousHotKey(evt.Card);
 		}
 
 		private void OnBlockAssignmentRemoved(BlockAssignmentRemoved evt)
 		{
-			if (evt == null || string.IsNullOrEmpty(evt.ContextId)) return;
+			if (evt?.Card == null) return;
 			RemoveAssignedBlockHotKey(evt.Card);
 			// Restore tooltip settings for cards (ignore equipment)
 			if (evt.Card != null && evt.Card.GetComponent<EquippedEquipment>() == null)
@@ -511,7 +484,7 @@ namespace Crusaders30XX.ECS.Systems
 					EntityManager.RemoveComponent<TooltipOverrideBackup>(evt.Card);
 				}
 			}
-			MaintainLatestHotKeyForContext(evt.ContextId);
+			MaintainLatestHotKey();
 		}
 
 		private void OnCardMoved(CardMoved evt)
@@ -521,22 +494,18 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				var removedAssignedAt = evt.Card?.GetComponent<AssignedBlockCard>()?.AssignedAtTicks ?? long.MaxValue;
 				RemoveAssignedBlockHotKey(evt.Card);
-				AssignHotKeyToPrevious(evt.Card, evt.ContextId, removedAssignedAt);
-				if (!string.IsNullOrEmpty(evt.ContextId))
-				{
-					MaintainLatestHotKeyForContext(evt.ContextId);
-				}
+				AssignHotKeyToPrevious(evt.Card, removedAssignedAt);
+				MaintainLatestHotKey();
 			}
 		}
 
-		private void AssignHotKeyToPrevious(Entity removed, string contextId, long removedAssignedAt)
+		private void AssignHotKeyToPrevious(Entity removed, long removedAssignedAt)
 		{
-			if (string.IsNullOrEmpty(contextId)) return;
 			var prev = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>()
 				.Where(e => {
 					if (e == removed) return false;
 					var a = e.GetComponent<AssignedBlockCard>();
-					return a != null && a.ContextId == contextId && a.Phase == AssignedBlockCard.PhaseState.Idle && a.AssignedAtTicks <= removedAssignedAt;
+					return a != null && a.Phase == AssignedBlockCard.PhaseState.Idle && a.AssignedAtTicks <= removedAssignedAt;
 				})
 				.OrderByDescending(e => e.GetComponent<AssignedBlockCard>().AssignedAtTicks)
 				.FirstOrDefault();
@@ -550,11 +519,8 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void MaintainLatestHotKeyForContext(string contextId)
+		private void MaintainLatestHotKey()
 		{
-			if (string.IsNullOrEmpty(contextId)) return;
-
-			// Clean up: remove B hotkeys from entities that are no longer assigned block items
 			foreach (var e in EntityManager.GetEntitiesWithComponent<HotKey>().ToList())
 			{
 				var hk = e.GetComponent<HotKey>();
@@ -563,17 +529,16 @@ namespace Crusaders30XX.ECS.Systems
 				var ui = e.GetComponent<UIElement>();
 				bool isAssignedBlockHotKey = abc != null || (ui != null && ui.EventType == UIElementEventType.UnassignCardAsBlock);
 				if (!isAssignedBlockHotKey) continue;
-				if (abc == null || abc.ContextId != contextId || abc.Phase != AssignedBlockCard.PhaseState.Idle)
+				if (abc == null || abc.Phase != AssignedBlockCard.PhaseState.Idle)
 				{
 					RemoveAssignedBlockHotKey(e);
 				}
 			}
 
-			// Apply B only to the newest Idle assignment for this context
 			var candidates = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>()
 				.Where(ent => {
 					var a = ent.GetComponent<AssignedBlockCard>();
-					return a != null && a.ContextId == contextId && a.Phase == AssignedBlockCard.PhaseState.Idle;
+					return a != null && a.Phase == AssignedBlockCard.PhaseState.Idle;
 				})
 				.OrderBy(ent => ent.GetComponent<AssignedBlockCard>().AssignedAtTicks)
 				.ToList();
@@ -603,14 +568,13 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void RemovePreviousForContext(string contextId, Entity exclude)
+		private void RemovePreviousHotKey(Entity exclude)
 		{
-			// Find the previous (most recent) idle assignment other than the new one and remove its HotKey
 			var prev = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>()
 				.Where(e => {
 					if (e == exclude) return false;
 					var a = e.GetComponent<AssignedBlockCard>();
-					return a != null && a.ContextId == contextId && a.Phase == AssignedBlockCard.PhaseState.Idle;
+					return a != null && a.Phase == AssignedBlockCard.PhaseState.Idle;
 				})
 				.OrderByDescending(e => e.GetComponent<AssignedBlockCard>().AssignedAtTicks)
 				.FirstOrDefault();
@@ -633,12 +597,8 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void Draw()
 		{
-			// Draw assigned cards for the current context
-			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-			var pa = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-			if (pa == null) return;
+			if (!EnemyAttackFlowService.HasCurrentAttack(EntityManager)) return;
 			var list = GetRelevantEntities()
-				.Where(e => e.GetComponent<AssignedBlockCard>()?.ContextId == pa.ContextId)
 				.OrderBy(e => e.GetComponent<AssignedBlockCard>().AssignedAtTicks)
 				.ToList();
 			if (list.Count == 0) return;

@@ -328,8 +328,6 @@ public class FallenShepherdFinalSermon : EnemyAttackBase
 
 public class FallenShepherdPhase3 : EnemyAttackBase
 {
-    private string _contextId = string.Empty;
-
     public FallenShepherdPhase3()
     {
         Id = EnemyAttackId.FallenShepherdPhase3;
@@ -340,15 +338,12 @@ public class FallenShepherdPhase3 : EnemyAttackBase
 
         OnAttackReveal = entityManager =>
         {
-            _contextId = GetComponentHelper.GetContextId(entityManager) ?? string.Empty;
             EventManager.Publish(new MarkedForSpecificDiscardEvent
             {
                 Amount = 1,
-                ContextId = _contextId,
             });
 
-            var markedCard = entityManager.GetEntitiesWithComponent<MarkedForSpecificDiscard>()
-                .FirstOrDefault(card => card.GetComponent<MarkedForSpecificDiscard>()?.ContextId == _contextId);
+            var markedCard = entityManager.GetEntitiesWithComponent<MarkedForSpecificDiscard>().FirstOrDefault();
             string cardName = markedCard?.GetComponent<CardData>()?.Card?.Name;
             if (!string.IsNullOrWhiteSpace(cardName))
             {
@@ -358,7 +353,7 @@ public class FallenShepherdPhase3 : EnemyAttackBase
 
         OnDamageThresholdMet = _ =>
         {
-            EventManager.Publish(new DiscardMarkedForSpecificDiscardEvent { ContextId = _contextId });
+            EventManager.Publish(new DiscardMarkedForSpecificDiscardEvent());
         };
     }
 }

@@ -51,14 +51,13 @@ namespace Crusaders30XX.ECS.Systems
 
 		public static int CalculateTotalIncomingDamage(EntityManager entityManager, int currentHp)
 		{
-			var activeContextIds = entityManager.GetEntitiesWithComponent<AttackIntent>()
+			var activeSequences = entityManager.GetEntitiesWithComponent<AttackIntent>()
 				.Select(entity => entity.GetComponent<AttackIntent>())
 				.Where(intent => intent?.Planned != null && intent.Planned.Count > 0)
-				.Select(intent => intent.Planned[0]?.ContextId)
-				.Where(contextId => !string.IsNullOrEmpty(contextId))
-				.ToHashSet(StringComparer.Ordinal);
+				.Select(intent => intent.ActiveAttackSequence)
+				.ToHashSet();
 
-			if (activeContextIds.Count == 0 || currentHp <= 0) return 0;
+			if (activeSequences.Count == 0 || currentHp <= 0) return 0;
 
 			long total = 0;
 			foreach (var entity in entityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
@@ -66,7 +65,7 @@ namespace Crusaders30XX.ECS.Systems
 				var progress = entity.GetComponent<EnemyAttackProgress>();
 				if (progress == null
 					|| progress.ActualDamage <= 0
-					|| !activeContextIds.Contains(progress.ContextId))
+					|| !activeSequences.Contains(progress.AttackSequence))
 				{
 					continue;
 				}

@@ -6,8 +6,8 @@ using Crusaders30XX.ECS.Events;
 namespace Crusaders30XX.ECS.Systems
 {
     /// <summary>
-    /// Queued event that kicks off the assigned-blocks-to-discard animation for the current attack context,
-    /// then waits until all flights for that context have completed.
+    /// Queued event that kicks off the assigned-blocks-to-discard animation for the current attack,
+    /// then waits until all discard flights have completed.
     /// </summary>
     public class QueuedDiscardAssignedBlocksEvent : EventQueue.IQueuedEvent
     {
@@ -16,14 +16,12 @@ namespace Crusaders30XX.ECS.Systems
         public EventQueue.EventState State { get; set; } = EventQueue.EventState.Pending;
 
         private readonly EntityManager _entityManager;
-        private readonly string _contextId;
 
-        public QueuedDiscardAssignedBlocksEvent(EntityManager entityManager, string contextId)
+        public QueuedDiscardAssignedBlocksEvent(EntityManager entityManager)
         {
             _entityManager = entityManager;
-            _contextId = contextId;
             Name = "Rule.DiscardAssignedBlocks";
-            Payload = contextId;
+            Payload = null;
         }
 
         public void StartResolving()
@@ -39,7 +37,7 @@ namespace Crusaders30XX.ECS.Systems
                 .Any(e =>
                 {
                     var f = e.GetComponent<CardToDiscardFlight>();
-                    return f != null && f.ContextId == _contextId && !f.Completed;
+                    return f != null && !f.Completed;
                 });
             if (!anyFlights)
             {
@@ -48,5 +46,4 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-
 

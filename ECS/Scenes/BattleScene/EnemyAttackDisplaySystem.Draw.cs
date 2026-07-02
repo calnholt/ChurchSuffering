@@ -69,7 +69,7 @@ namespace Crusaders30XX.ECS.Systems
 			// Build text lines
 			var lines = new List<(string text, float scale, Color color)>();
 			lines.Add((def.Name, TitleScale, Color.White));
-			var progress = FindEnemyAttackProgress(pa.ContextId);
+			var progress = FindEnemyAttackProgress();
 			if (progress != null)
 			{
 				bool conditionMet = GuidedTutorialService.IsActive(EntityManager)
@@ -330,8 +330,7 @@ namespace Crusaders30XX.ECS.Systems
 			bool showConfirm = isInteractable
 				&& EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(
 					EntityManager,
-					ctx.PlannedAttack.ContextId,
-					_confirmedForContext);
+					_confirmedAttackSequences);
 
 			if (showConfirm)
 			{

@@ -12,7 +12,7 @@ namespace Crusaders30XX.ECS.Services
 			var phase = entityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
 			return (phase != null && phase.DefeatPresentationActive)
 				|| IsEnemyDefeated(entityManager)
-				|| !string.IsNullOrEmpty(phase?.PendingBlockConfirmContextId)
+				|| phase?.PendingBlockConfirm == true
 				|| StateSingleton.IsActive;
 		}
 

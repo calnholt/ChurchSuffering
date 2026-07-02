@@ -145,8 +145,8 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 						new PledgeAvailabilityState { PledgedThisActionPhase = true });
 					break;
 				case PlayerHudSnapshotVariantId.IncomingDamage:
-					CreateIncomingAttack(ctx, "snapshot-attack-1", 4);
-					CreateIncomingAttack(ctx, "snapshot-attack-2", 7);
+					CreateIncomingAttack(ctx, 1, 4);
+					CreateIncomingAttack(ctx, 2, 7);
 					break;
 				case PlayerHudSnapshotVariantId.LowHealth:
 					hp.Current = 3;
@@ -188,17 +188,17 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 		private static void CreateIncomingAttack(
 			DisplaySnapshotContext ctx,
-			string contextId,
+			int attackSequence,
 			int actualDamage)
 		{
-			var enemy = ctx.World.CreateEntity($"Enemy_{contextId}");
-			var intent = new AttackIntent();
-			intent.Planned.Add(new PlannedAttack { ContextId = contextId });
+			var enemy = ctx.World.CreateEntity($"Enemy_{attackSequence}");
+			var intent = new AttackIntent { ActiveAttackSequence = attackSequence };
+			intent.Planned.Add(new PlannedAttack());
 			ctx.World.AddComponent(enemy, intent);
-			var progressEntity = ctx.World.CreateEntity($"AttackProgress_{contextId}");
+			var progressEntity = ctx.World.CreateEntity($"AttackProgress_{attackSequence}");
 			ctx.World.AddComponent(progressEntity, new EnemyAttackProgress
 			{
-				ContextId = contextId,
+				AttackSequence = attackSequence,
 				Enemy = enemy,
 				ActualDamage = actualDamage,
 			});

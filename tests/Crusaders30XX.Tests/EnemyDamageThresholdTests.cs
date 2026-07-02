@@ -149,21 +149,21 @@ public class EnemyDamageThresholdTests : IDisposable
         entityManager.AddComponent(player, new Player());
         entityManager.AddComponent(enemy, new AttackIntent
         {
+            ActiveAttackSequence = 1,
             Planned =
             [
                 new PlannedAttack
                 {
                     AttackId = attack.Id,
-                    ContextId = "test-context",
                     AttackDefinition = attack
                 }
             ]
         });
         entityManager.AddComponent(progressEntity, new EnemyAttackProgress
         {
-            ContextId = "test-context",
             Enemy = enemy,
             AttackId = attack.Id,
+            AttackSequence = 1,
             AssignedBlockTotal = assignedBlock,
             AegisTotal = aegis,
             BaseDamage = attack.Damage,
@@ -179,8 +179,8 @@ public class EnemyDamageThresholdTests : IDisposable
 
     private static void ResolveAttack(EntityManager entityManager)
     {
-        EventManager.Publish(new ResolveAttack { ContextId = "test-context" });
-        EventManager.Publish(new EnemyAttackImpactNow { ContextId = "test-context" });
+        EventManager.Publish(new ResolveAttack());
+        EventManager.Publish(new EnemyAttackImpactNow());
     }
 
     private sealed class ThresholdAttack : EnemyAttackBase

@@ -580,22 +580,9 @@ namespace Crusaders30XX.ECS.Systems
 
 		private EnemyAttackProgress GetCurrentProgress()
 		{
-			// Get the first planned attack's context from the enemy
-			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-			if (enemy == null) return null;
-			var intent = enemy.GetComponent<AttackIntent>();
-			if (intent == null || intent.Planned == null || intent.Planned.Count == 0) return null;
-
-			var contextId = intent.Planned[0].ContextId;
-			if (string.IsNullOrEmpty(contextId)) return null;
-
-			foreach (var e in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
-			{
-				var p = e.GetComponent<EnemyAttackProgress>();
-				if (p != null && p.ContextId == contextId)
-					return p;
-			}
-			return null;
+			return EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)
+				? progress
+				: null;
 		}
 
 		private void UpdateSegmentTooltipUi(string key, Rectangle rect, string tooltipText)

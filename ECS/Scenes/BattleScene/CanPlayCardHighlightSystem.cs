@@ -100,7 +100,7 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
             {
                 var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
                 var pa = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-                activePlannedAttack = pa != null && !string.IsNullOrEmpty(pa.ContextId) ? pa : null;
+                activePlannedAttack = pa;
             }
 
             // Build set of playable cards

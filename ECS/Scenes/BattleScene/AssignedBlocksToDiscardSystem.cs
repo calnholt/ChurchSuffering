@@ -177,7 +177,6 @@ namespace Crusaders30XX.ECS.Systems
                         Card = entity,
                         Deck = deckEntity,
                         Destination = destination,
-                        ContextId = flight.ContextId,
                         Reason = destination == CardZoneType.ExhaustPile ? "AssignedBlockToExhaust" : "AssignedBlockToDiscard"
                     });
                     // Remove animation component
@@ -218,9 +217,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             if (evt.Command != "AnimateAssignedBlocksToDiscard") return;
             // Kick off flights for all assigned block cards in the current context
-            var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-            var ctx = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault()?.ContextId;
-            if (string.IsNullOrEmpty(ctx)) return;
+            if (!EnemyAttackFlowService.HasCurrentAttack(EntityManager)) return;
 
             var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
             if (deckEntity == null) return;
@@ -233,7 +230,6 @@ namespace Crusaders30XX.ECS.Systems
             var discardTarget = new Vector2(margin + panelW * 0.5f, h - margin - panelH * 0.5f);
 
             var assigned = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>()
-                .Where(e => e.GetComponent<AssignedBlockCard>()?.ContextId == ctx)
                 .OrderBy(e => e.GetComponent<AssignedBlockCard>().AssignedAtTicks)
                 .ToList();
 
@@ -255,7 +251,6 @@ namespace Crusaders30XX.ECS.Systems
                     ArcHeightPx = ArcHeightPx,
                     StartScale = abc.CurrentScale,
                     EndScale = EndScale,
-                    ContextId = ctx
                 };
                 EntityManager.AddComponent(card, flight);
             }

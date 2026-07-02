@@ -23,17 +23,12 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	public void Brittle_sole_blocker_publishes_mill_event()
 	{
 		var entityManager = new EntityManager();
+		AddCurrentAttackProgress(entityManager, playedCards: 1);
 		var brittleCard = CreateCard(entityManager, "BrittleCard");
 		entityManager.AddComponent(brittleCard, new Brittle { Owner = brittleCard });
-		entityManager.AddComponent(brittleCard, new AssignedBlockCard { ContextId = "attack-1" });
+		entityManager.AddComponent(brittleCard, new AssignedBlockCard());
 		var normalCard = CreateCard(entityManager, "NormalCard");
-		entityManager.AddComponent(normalCard, new AssignedBlockCard { ContextId = "attack-1" });
-		var progressEntity = entityManager.CreateEntity("EnemyAttackProgress");
-		entityManager.AddComponent(progressEntity, new EnemyAttackProgress
-		{
-			ContextId = "attack-1",
-			PlayedCards = 1,
-		});
+		entityManager.AddComponent(normalCard, new AssignedBlockCard());
 		_ = new BrittleManagementSystem(entityManager);
 		int millEvents = 0;
 		EventManager.Subscribe<MillCardEvent>(_ => millEvents++);
@@ -48,17 +43,12 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	public void Brittle_noops_when_card_is_not_brittle_or_not_sole_blocker()
 	{
 		var entityManager = new EntityManager();
+		AddCurrentAttackProgress(entityManager, playedCards: 2);
 		var brittleCard = CreateCard(entityManager, "BrittleCard");
 		entityManager.AddComponent(brittleCard, new Brittle { Owner = brittleCard });
-		entityManager.AddComponent(brittleCard, new AssignedBlockCard { ContextId = "attack-1" });
+		entityManager.AddComponent(brittleCard, new AssignedBlockCard());
 		var normalCard = CreateCard(entityManager, "NormalCard");
-		entityManager.AddComponent(normalCard, new AssignedBlockCard { ContextId = "attack-1" });
-		var progressEntity = entityManager.CreateEntity("EnemyAttackProgress");
-		entityManager.AddComponent(progressEntity, new EnemyAttackProgress
-		{
-			ContextId = "attack-1",
-			PlayedCards = 2,
-		});
+		entityManager.AddComponent(normalCard, new AssignedBlockCard());
 		_ = new BrittleManagementSystem(entityManager);
 		int millEvents = 0;
 		EventManager.Subscribe<MillCardEvent>(_ => millEvents++);
@@ -147,5 +137,22 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 		var card = entityManager.CreateEntity(name);
 		entityManager.AddComponent(card, new CardData());
 		return card;
+	}
+
+	private static void AddCurrentAttackProgress(EntityManager entityManager, int playedCards)
+	{
+		var enemy = entityManager.CreateEntity("Enemy");
+		entityManager.AddComponent(enemy, new AttackIntent
+		{
+			ActiveAttackSequence = 1,
+			Planned = [new PlannedAttack()],
+		});
+		var progressEntity = entityManager.CreateEntity("EnemyAttackProgress");
+		entityManager.AddComponent(progressEntity, new EnemyAttackProgress
+		{
+			Enemy = enemy,
+			AttackSequence = 1,
+			PlayedCards = playedCards,
+		});
 	}
 }

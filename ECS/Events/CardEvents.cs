@@ -613,12 +613,10 @@ namespace Crusaders30XX.ECS.Events
     public class MarkedForSpecificDiscardEvent
     {
         public int Amount { get; set; }
-        public string ContextId { get; set; } = string.Empty;
     }
 
     public class DiscardMarkedForSpecificDiscardEvent
     {
-        public string ContextId { get; set; } = string.Empty;
     }
 
     public class ApplyCardApplicationEvent

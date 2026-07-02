@@ -59,7 +59,7 @@ public class PlayerHudHealthDisplaySystemTests
 	public void Lethal_damage_preview_equals_current_health()
 	{
 		var entityManager = new EntityManager();
-		AddActiveAttack(entityManager, "lethal", 8);
+		AddActiveAttack(entityManager, attackSequence: 1, damage: 8);
 
 		Assert.Equal(8, PlayerHudHealthRendering.CalculateTotalIncomingDamage(entityManager, 8));
 	}
@@ -68,7 +68,7 @@ public class PlayerHudHealthDisplaySystemTests
 	public void Overkill_damage_preview_is_clamped_to_current_health()
 	{
 		var entityManager = new EntityManager();
-		AddActiveAttack(entityManager, "overkill", 50);
+		AddActiveAttack(entityManager, attackSequence: 1, damage: 50);
 
 		Assert.Equal(8, PlayerHudHealthRendering.CalculateTotalIncomingDamage(entityManager, 8));
 	}
@@ -77,12 +77,12 @@ public class PlayerHudHealthDisplaySystemTests
 	public void Multiple_enemies_sum_only_their_active_attacks()
 	{
 		var entityManager = new EntityManager();
-		AddAttackIntent(entityManager, "enemy-a", "active-a", "future-a");
-		AddAttackIntent(entityManager, "enemy-b", "active-b");
-		AddProgress(entityManager, "active-a", 3);
-		AddProgress(entityManager, "active-b", 5);
-		AddProgress(entityManager, "future-a", 20);
-		AddProgress(entityManager, "orphan", 20);
+		var enemyA = AddAttackIntent(entityManager, "enemy-a", activeAttackSequence: 1, plannedCount: 2);
+		var enemyB = AddAttackIntent(entityManager, "enemy-b", activeAttackSequence: 3, plannedCount: 1);
+		AddProgress(entityManager, enemyA, attackSequence: 1, damage: 3);
+		AddProgress(entityManager, enemyB, attackSequence: 3, damage: 5);
+		AddProgress(entityManager, enemyA, attackSequence: 2, damage: 20);
+		AddProgress(entityManager, enemyA, attackSequence: 99, damage: 20);
 
 		Assert.Equal(8, PlayerHudHealthRendering.CalculateTotalIncomingDamage(entityManager, 20));
 	}
@@ -160,32 +160,35 @@ public class PlayerHudHealthDisplaySystemTests
 		#pragma warning restore CS0618
 	}
 
-	private static void AddActiveAttack(EntityManager entityManager, string contextId, int damage)
+	private static void AddActiveAttack(EntityManager entityManager, int attackSequence, int damage)
 	{
-		AddAttackIntent(entityManager, $"enemy-{contextId}", contextId);
-		AddProgress(entityManager, contextId, damage);
+		var enemy = AddAttackIntent(entityManager, $"enemy-{attackSequence}", attackSequence);
+		AddProgress(entityManager, enemy, attackSequence, damage);
 	}
 
-	private static void AddAttackIntent(
+	private static Entity AddAttackIntent(
 		EntityManager entityManager,
 		string entityName,
-		params string[] contextIds)
+		int activeAttackSequence,
+		int plannedCount = 1)
 	{
 		var enemy = entityManager.CreateEntity(entityName);
-		var intent = new AttackIntent();
-		foreach (string contextId in contextIds)
+		var intent = new AttackIntent { ActiveAttackSequence = activeAttackSequence };
+		for (int i = 0; i < plannedCount; i++)
 		{
-			intent.Planned.Add(new PlannedAttack { ContextId = contextId });
+			intent.Planned.Add(new PlannedAttack());
 		}
 		entityManager.AddComponent(enemy, intent);
+		return enemy;
 	}
 
-	private static void AddProgress(EntityManager entityManager, string contextId, int damage)
+	private static void AddProgress(EntityManager entityManager, Entity enemy, int attackSequence, int damage)
 	{
-		var progressEntity = entityManager.CreateEntity($"progress-{contextId}");
+		var progressEntity = entityManager.CreateEntity($"progress-{attackSequence}");
 		entityManager.AddComponent(progressEntity, new EnemyAttackProgress
 		{
-			ContextId = contextId,
+			Enemy = enemy,
+			AttackSequence = attackSequence,
 			ActualDamage = damage,
 		});
 	}

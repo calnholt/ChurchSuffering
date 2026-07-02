@@ -30,7 +30,7 @@ public class CardZoneSystemTests : IDisposable
 
         var card = entityManager.CreateEntity("AssignedBlockCard");
         entityManager.AddComponent(card, new CardData { Card = new Tempest() });
-        entityManager.AddComponent(card, new AssignedBlockCard { ContextId = "attack-1" });
+        entityManager.AddComponent(card, new AssignedBlockCard());
         entityManager.AddComponent(card, new HotKey { Button = FaceButton.B, Position = HotKeyPosition.Top });
         entityManager.AddComponent(card, new UIElement { EventType = UIElementEventType.UnassignCardAsBlock });
 

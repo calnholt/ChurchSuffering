@@ -123,12 +123,12 @@ public sealed class ColorlessCardTests
 			var enemy = entityManager.CreateEntity("Enemy");
 			entityManager.AddComponent(enemy, new AttackIntent
 			{
+				ActiveAttackSequence = 1,
 				Planned =
 				[
 					new PlannedAttack
 					{
 						AttackId = EnemyAttackId.Cinderbolt,
-						ContextId = "attack-1",
 						AttackDefinition = new Cinderbolt(),
 					},
 				],
@@ -140,7 +140,6 @@ public sealed class ColorlessCardTests
 			EventManager.Publish(new BlockAssignmentAdded
 			{
 				Card = card,
-				ContextId = "attack-1",
 				DeltaBlock = 3,
 				Color = CardColorQualificationService.GetQualifiedColor(card)?.ToString(),
 			});

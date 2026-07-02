@@ -55,13 +55,12 @@ namespace Crusaders30XX.ECS.Services
 			Entity enemyEntity,
 			EnemyAttackBase attack,
 			VisualEffectRecipe recipe,
-			string contextId,
 			bool isPreview = false)
 		{
 			if (entityManager == null || enemyEntity == null || attack == null) return null;
 			var resolvedRecipe = recipe ?? attack.AttackEffectRecipe ?? VisualEffectPresets.EnemyAttackLunge();
 			var target = ResolveTarget(entityManager, VisualEffectSourceKind.EnemyAttack, resolvedRecipe.TargetRole);
-			return Build(resolvedRecipe, enemyEntity, target, VisualEffectSourceKind.EnemyAttack, attack.Id.ToKey(), attack.Name, contextId, isPreview);
+			return Build(resolvedRecipe, enemyEntity, target, VisualEffectSourceKind.EnemyAttack, attack.Id.ToKey(), attack.Name, string.Empty, isPreview);
 		}
 
 		public static VisualEffectRequested ForDebugPreview(

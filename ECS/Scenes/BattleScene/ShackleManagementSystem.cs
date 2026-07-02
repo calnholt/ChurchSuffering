@@ -104,7 +104,6 @@ namespace Crusaders30XX.ECS.Systems
 							Card = card,
 							Deck = deckEntity,
 							Destination = CardZoneType.AssignedBlock,
-							ContextId = evt.ContextId,
 							Reason = "ShackleAssignBlock"
 						});
 
@@ -116,7 +115,6 @@ namespace Crusaders30XX.ECS.Systems
 					}
 					EventManager.Publish(new BlockAssignmentAdded 
 					{ 
-						ContextId = evt.ContextId, 
 						Card = card, 
 						Color = color, 
 						DeltaBlock = blockVal 

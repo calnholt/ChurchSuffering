@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Systems;
 using Microsoft.Xna.Framework;
@@ -97,7 +99,18 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 		var enemy = entityManager.CreateEntity("Enemy");
 		entityManager.AddComponent(enemy, new AttackIntent
 		{
-			Planned = [new PlannedAttack { ContextId = "attack-1" }],
+			ActiveAttackSequence = 1,
+			Planned =
+			[
+				new PlannedAttack
+				{
+					AttackDefinition = new EnemyAttackBase
+					{
+						Id = EnemyAttackId.Cinderbolt,
+						Damage = 5,
+					},
+				},
+			],
 		});
 		var display = new EquipmentDisplaySystem(entityManager, null, null, null);
 		display.Update(Frame());
@@ -174,7 +187,18 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 			var enemy = entityManager.CreateEntity("Enemy");
 			entityManager.AddComponent(enemy, new AttackIntent
 			{
-				Planned = [new PlannedAttack { ContextId = "attack-1" }],
+				ActiveAttackSequence = 1,
+				Planned =
+				[
+					new PlannedAttack
+					{
+						AttackDefinition = new EnemyAttackBase
+						{
+							Id = EnemyAttackId.Cinderbolt,
+							Damage = 5,
+						},
+					},
+				],
 			});
 		}
 		var display = new EquipmentDisplaySystem(entityManager, null, null, null);

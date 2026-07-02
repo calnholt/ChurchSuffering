@@ -305,24 +305,24 @@ public class GuidedTutorialDefinitionTests
 				Sub = SubPhase.Block,
 				TurnNumber = 4,
 				DefeatPresentationActive = true,
-				PendingBlockConfirmContextId = "old-context",
+				PendingBlockConfirm = true,
 			};
 			manager.AddComponent(phaseEntity, phase);
 
 			var card = manager.CreateEntity("Card");
 			manager.AddComponent(card, new CardData());
-			manager.AddComponent(card, new AssignedBlockCard { ContextId = "old-context" });
+			manager.AddComponent(card, new AssignedBlockCard());
 			manager.AddComponent(card, new MarkedForSpecificDiscard());
 			manager.AddComponent(card, new CannotBlockThisAttack());
 
-			var progressEntity = manager.CreateEntity("EnemyAttackProgress[old-context]");
-			manager.AddComponent(progressEntity, new EnemyAttackProgress { ContextId = "old-context" });
+			var progressEntity = manager.CreateEntity("EnemyAttackProgress[1]");
+			manager.AddComponent(progressEntity, new EnemyAttackProgress { AttackSequence = 1 });
 
 			var enemy = manager.CreateEntity("Enemy");
-			var intent = new AttackIntent();
-			intent.Planned.Add(new PlannedAttack { ContextId = "old-context", AttackId = EnemyAttackId.TutorialGleeberStrike6 });
+			var intent = new AttackIntent { ActiveAttackSequence = 1 };
+			intent.Planned.Add(new PlannedAttack { AttackId = EnemyAttackId.TutorialGleeberStrike6 });
 			var nextIntent = new NextTurnAttackIntent();
-			nextIntent.Planned.Add(new PlannedAttack { ContextId = "next-context", AttackId = EnemyAttackId.TutorialGleeberStrike8 });
+			nextIntent.Planned.Add(new PlannedAttack { AttackId = EnemyAttackId.TutorialGleeberStrike8 });
 			manager.AddComponent(enemy, intent);
 			manager.AddComponent(enemy, nextIntent);
 
@@ -335,7 +335,7 @@ public class GuidedTutorialDefinitionTests
 			var ambushEntity = manager.CreateEntity("AmbushState");
 			var ambush = new AmbushState
 			{
-				ContextId = "old-context",
+				ActiveAttackSequence = 1,
 				IsActive = true,
 				IntroActive = true,
 				TimerRemainingSeconds = 10f,
@@ -376,7 +376,7 @@ public class GuidedTutorialDefinitionTests
 			Assert.Equal(SubPhase.StartBattle, phase.Sub);
 			Assert.Equal(1, phase.TurnNumber);
 			Assert.False(phase.DefeatPresentationActive);
-			Assert.Equal(string.Empty, phase.PendingBlockConfirmContextId);
+			Assert.False(phase.PendingBlockConfirm);
 			Assert.Empty(manager.GetEntitiesWithComponent<EnemyAttackProgress>());
 			Assert.Empty(intent.Planned);
 			Assert.Empty(nextIntent.Planned);
@@ -391,7 +391,7 @@ public class GuidedTutorialDefinitionTests
 			Assert.False(ambush.IntroActive);
 			Assert.Equal(0f, ambush.TimerRemainingSeconds);
 			Assert.False(ambush.FiredAutoConfirm);
-			Assert.Equal(string.Empty, ambush.ContextId);
+			Assert.Equal(0, ambush.ActiveAttackSequence);
 			Assert.False(payment.HasData);
 			Assert.Null(payment.CardPlayed);
 			Assert.Empty(payment.PaymentCards);

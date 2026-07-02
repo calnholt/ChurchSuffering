@@ -246,10 +246,9 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     EventQueueBridge.EnqueueTriggerAction("AppliedPassivesManagementSystem.ApplyStartOfTurnPassives.Stun", () =>
                     {
-                        EventManager.Publish(new ShowStunnedOverlay { ContextId = enemy.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault()?.ContextId });
+                        EventManager.Publish(new ShowStunnedOverlay());
                         EventManager.Publish(new PassiveTriggered { Owner = enemy, Type = AppliedPassiveType.Stun });
                         EventManager.Publish(new UpdatePassive { Owner = enemy, Type = AppliedPassiveType.Stun, Delta = -1 });
-                        var ctx = intent.Planned[0].ContextId;
                         intent.Planned.RemoveAt(0);
                         if (intent.Planned.Count == 0)
                         {

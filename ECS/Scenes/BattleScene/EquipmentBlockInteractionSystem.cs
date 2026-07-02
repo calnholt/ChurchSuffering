@@ -50,7 +50,6 @@ namespace Crusaders30XX.ECS.Systems
 			// Need current context during Block phase
 			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
 			var plannedAttack = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-			var ctx = plannedAttack?.ContextId;
 			// Clicks now come from UIElement.IsClicked on equipment UI elements
 
 			// Iterate equipment visible in panel (Default zone), topmost first (Z desc just in case)
@@ -78,7 +77,7 @@ namespace Crusaders30XX.ECS.Systems
 						PublishInvalidClick("This equipment cannot block!");
 						break;
 					}
-					if (string.IsNullOrEmpty(ctx))
+					if (plannedAttack == null)
 					{
 						PublishInvalidClick("There is no attack to block!");
 						break;
@@ -158,16 +157,16 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc = new AssignedBlockCard { ContextId = ctx, BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, StartPos = t?.Position ?? Vector2.Zero, CurrentPos = t?.Position ?? Vector2.Zero, TargetPos = t?.Position ?? Vector2.Zero, StartScale = t?.Scale.X ?? 1f, TargetScale = 0.35f, Phase = AssignedBlockCard.PhaseState.Pullback, Elapsed = 0f, IsEquipment = true, ColorKey = NormalizeColorKey(color), Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
+						abc = new AssignedBlockCard { BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, StartPos = t?.Position ?? Vector2.Zero, CurrentPos = t?.Position ?? Vector2.Zero, TargetPos = t?.Position ?? Vector2.Zero, StartScale = t?.Scale.X ?? 1f, TargetScale = 0.35f, Phase = AssignedBlockCard.PhaseState.Pullback, Elapsed = 0f, IsEquipment = true, ColorKey = NormalizeColorKey(color), Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
 						EntityManager.AddComponent(eqEntity, abc);
 					}
 					else
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc.ContextId = ctx; abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.Phase = AssignedBlockCard.PhaseState.Pullback; abc.Elapsed = 0f; abc.IsEquipment = true; abc.ColorKey = NormalizeColorKey(color); abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
+						abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.Phase = AssignedBlockCard.PhaseState.Pullback; abc.Elapsed = 0f; abc.IsEquipment = true; abc.ColorKey = NormalizeColorKey(color); abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
 					}
-					EventManager.Publish(new BlockAssignmentAdded { ContextId = ctx, Card = eqEntity, DeltaBlock = blockVal, Color = color });
+					EventManager.Publish(new BlockAssignmentAdded { Card = eqEntity, DeltaBlock = blockVal, Color = color });
 					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Equip, Volume = 0.5f });
 					// Mark the assigned equipment to unassign via delegate when clicked on its assigned tile
 					{

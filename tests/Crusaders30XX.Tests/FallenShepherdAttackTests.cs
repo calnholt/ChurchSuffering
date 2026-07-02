@@ -237,7 +237,7 @@ public class FallenShepherdAttackTests : IDisposable
         });
 
         attack.OnAttackReveal(entityManager);
-        Assert.Equal("test-context", handCard.GetComponent<MarkedForSpecificDiscard>()?.ContextId);
+        Assert.NotNull(handCard.GetComponent<MarkedForSpecificDiscard>());
 
         ResolveThresholdAttack(entityManager);
 
@@ -339,22 +339,22 @@ public class FallenShepherdAttackTests : IDisposable
 
         entityManager.AddComponent(enemy, new AttackIntent
         {
+            ActiveAttackSequence = 1,
             Planned =
             [
                 new PlannedAttack
                 {
                     AttackId = attack.Id,
-                    ContextId = "test-context",
                     AttackDefinition = attack,
                 },
             ],
         });
-        var progressEntity = entityManager.CreateEntity("EnemyAttackProgress[test-context]");
+        var progressEntity = entityManager.CreateEntity("EnemyAttackProgress[1]");
         entityManager.AddComponent(progressEntity, new EnemyAttackProgress
         {
-            ContextId = "test-context",
             Enemy = enemy,
             AttackId = attack.Id,
+            AttackSequence = 1,
             AssignedBlockTotal = assignedBlock,
             BaseDamage = attack.Damage,
         });
@@ -366,8 +366,8 @@ public class FallenShepherdAttackTests : IDisposable
 
     private static void ResolveThresholdAttack(EntityManager entityManager)
     {
-        EventManager.Publish(new ResolveAttack { ContextId = "test-context" });
-        EventManager.Publish(new EnemyAttackImpactNow { ContextId = "test-context" });
+        EventManager.Publish(new ResolveAttack());
+        EventManager.Publish(new EnemyAttackImpactNow());
     }
 
     private static void AssertPassive(

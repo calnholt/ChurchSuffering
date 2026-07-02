@@ -88,10 +88,7 @@ namespace Crusaders30XX.ECS.Systems
 
             if (Enabled01 == 0) return;
 
-            // Current context
-            var intentEntity = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-            var ctx = intentEntity?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault()?.ContextId;
-            if (string.IsNullOrEmpty(ctx)) return;
+            if (!EnemyAttackFlowService.HasCurrentAttack(EntityManager)) return;
 
             foreach (var card in deck.Hand)
             {

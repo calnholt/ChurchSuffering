@@ -22,6 +22,7 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 		public List<PlannedAttack> Planned { get; set; } = new();
+		public int ActiveAttackSequence { get; set; }
 	}
 
 	/// <summary>
@@ -37,7 +38,6 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public EnemyAttackId AttackId;
 		public int ResolveStep;
-		public string ContextId;
 		public bool WasBlocked;
 		public bool IsAmbush;
 		public EnemyAttackBase AttackDefinition;
@@ -47,15 +47,15 @@ namespace Crusaders30XX.ECS.Components
 
 
 	/// <summary>
-	/// Per-attack, per-context progress data used by UI and logic. One entity per contextId.
+	/// Current active enemy attack progress snapshot used by UI and logic. One entity per enemy.
 	/// </summary>
 	public class EnemyAttackProgress : IComponent
 	{
 		public Entity Owner { get; set; }
 
-		public string ContextId { get; set; }
 		public Entity Enemy { get; set; }
 		public EnemyAttackId AttackId { get; set; }
+		public int AttackSequence { get; set; }
 
 		// Typed counters replacing generic dictionary keys
 		public int AssignedBlockTotal { get; set; }
@@ -92,7 +92,6 @@ namespace Crusaders30XX.ECS.Components
 	public class AssignedBlockCard : IComponent
 	{
 		public Entity Owner { get; set; }
-		public string ContextId { get; set; }
 		public int BlockAmount { get; set; }
 		public long AssignedAtTicks { get; set; }
 		// Display data (self-contained; systems shouldn't need to inspect card/equipment):
@@ -123,7 +122,7 @@ namespace Crusaders30XX.ECS.Components
 	public class AmbushState : IComponent
 	{
 		public Entity Owner { get; set; }
-		public string ContextId { get; set; }
+		public int ActiveAttackSequence { get; set; }
 		public bool IsActive { get; set; }
 		public bool IntroActive { get; set; }
 		public float TimerDurationSeconds { get; set; } = 20f;

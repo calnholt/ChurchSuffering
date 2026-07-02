@@ -350,7 +350,6 @@ namespace Crusaders30XX.ECS.Systems
                         var fg = ResolveFgForBg(bg);
                         abc = new AssignedBlockCard
                         {
-                            ContextId = evt.ContextId,
                             BlockAmount = BlockValueService.GetTotalBlockValue(evt.Card),
                             StartPos = t?.Position ?? Vector2.Zero,
                             CurrentPos = t?.Position ?? Vector2.Zero,

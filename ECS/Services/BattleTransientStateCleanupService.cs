@@ -55,7 +55,7 @@ namespace Crusaders30XX.ECS.Services
 				ambushState.IntroActive = false;
 				ambushState.TimerRemainingSeconds = 0f;
 				ambushState.FiredAutoConfirm = false;
-				ambushState.ContextId = string.Empty;
+				ambushState.ActiveAttackSequence = 0;
 			}
 
 			var paymentCache = entityManager.GetEntitiesWithComponent<LastPaymentCache>()

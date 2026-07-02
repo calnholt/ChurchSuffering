@@ -44,7 +44,7 @@ namespace Crusaders30XX.ECS.Systems
 		private Rectangle _bannerRect = Rectangle.Empty;
 
 		// Animation state
-		private string _lastContextId = null;
+		private int _lastAttackSequence = -1;
 		private float _shakeElapsedSeconds = 0f;
 
 		// Impact animation flow (spawn centered -> impact)
@@ -54,8 +54,8 @@ namespace Crusaders30XX.ECS.Systems
 		private float _craterElapsedSeconds = 0f;
 
 		// Prevent repeated confirm presses for the same attack context
-		private readonly HashSet<string> _confirmedForContext = [];
-		private string _pendingConfirmContextId = string.Empty;
+		private readonly HashSet<int> _confirmedAttackSequences = [];
+		private int _pendingConfirmSequence = -1;
 		private bool _showBanner = false;
 
 		// Absorb tween (panel -> enemy)
@@ -272,12 +272,14 @@ namespace Crusaders30XX.ECS.Systems
 				}
 			});
 
-			EventManager.Subscribe<TriggerEnemyAttackDisplayEvent>(evt =>
+			EventManager.Subscribe<TriggerEnemyAttackDisplayEvent>(_ =>
 			{
 				_showBanner = true;
-				var plannedAttack = FindPlannedAttack(evt.ContextId);
-				int attackDamage = plannedAttack?.AttackDefinition?.Damage ?? 0;
-				StartImpactSequence(attackDamage, evt.ContextId);
+				if (EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out Entity _, out AttackIntent _, out var plannedAttack))
+				{
+					int attackDamage = plannedAttack?.AttackDefinition?.Damage ?? 0;
+					StartImpactSequence(attackDamage);
+				}
 				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.EnemyAttackIntro });
 			});
 		}
@@ -302,15 +304,12 @@ namespace Crusaders30XX.ECS.Systems
 		private void OnConfirmPressed()
 		{
 			if (BattleInputGate.IsBattleInputFrozen(EntityManager)) return;
-			var enemy = GetRelevantEntities().FirstOrDefault();
-			var intent = enemy?.GetComponent<AttackIntent>();
-			var ctx = intent?.Planned?.FirstOrDefault()?.ContextId;
-			if (string.IsNullOrEmpty(ctx)) return;
+			if (!EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out _, out var intent, out _))
+				return;
 
 			if (!EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(
 				EntityManager,
-				ctx,
-				_confirmedForContext))
+				_confirmedAttackSequences))
 			{
 				if (!BattleInputGate.IsTutorialActionAllowed(EntityManager, TutorialAction.ConfirmBlocks))
 				{
@@ -321,28 +320,27 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (EnemyAttackConfirmAvailabilityService.CanResolveCurrentAttackConfirm(
 				EntityManager,
-				ctx,
-				_confirmedForContext))
+				_confirmedAttackSequences))
 			{
-				ExecuteConfirm(ctx);
+				ExecuteConfirm(intent.ActiveAttackSequence);
 				return;
 			}
 
-			QueueConfirm(ctx);
+			QueueConfirm(intent.ActiveAttackSequence);
 		}
 
-		private void QueueConfirm(string contextId)
+		private void QueueConfirm(int attackSequence)
 		{
-			_pendingConfirmContextId = contextId ?? string.Empty;
+			_pendingConfirmSequence = attackSequence;
 			var phase = GetPhaseState();
-			if (phase != null) phase.PendingBlockConfirmContextId = _pendingConfirmContextId;
+			if (phase != null) phase.PendingBlockConfirm = true;
 			HideConfirmButton();
 		}
 
-		private bool TryResolvePendingConfirm(string currentContextId)
+		private bool TryResolvePendingConfirm(int currentSequence)
 		{
-			if (string.IsNullOrEmpty(_pendingConfirmContextId)) return false;
-			if (_pendingConfirmContextId != currentContextId)
+			if (_pendingConfirmSequence < 0) return false;
+			if (_pendingConfirmSequence != currentSequence)
 			{
 				ClearPendingConfirm();
 				return false;
@@ -350,33 +348,30 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (!EnemyAttackConfirmAvailabilityService.CanResolveCurrentAttackConfirm(
 				EntityManager,
-				_pendingConfirmContextId,
-				_confirmedForContext))
+				_confirmedAttackSequences))
 			{
 				return false;
 			}
 
-			ExecuteConfirm(_pendingConfirmContextId);
+			ExecuteConfirm(_pendingConfirmSequence);
 			return true;
 		}
 
-		private void ExecuteConfirm(string ctx)
+		private void ExecuteConfirm(int attackSequence)
 		{
 			ClearPendingConfirm();
-			_confirmedForContext.Add(ctx);
+			_confirmedAttackSequences.Add(attackSequence);
 			HideConfirmButton();
 			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.EnemyAttack, Previous = SubPhase.Block });
-			// Defer resolution/phase to coordinator; enqueue the standard sequence
-			EventQueue.EnqueueRule(new QueuedDiscardAssignedBlocksEvent(EntityManager, ctx));
-			EventQueue.EnqueueRule(new QueuedResolveAttackEvent(ctx));
-			EventQueue.EnqueueRule(new QueuedWaitAbsorbEvent(ctx));
-			var planned = FindPlannedAttack(ctx);
-			var enemy = FindEnemyForPlannedAttack(ctx);
+			EventQueue.EnqueueRule(new QueuedDiscardAssignedBlocksEvent(EntityManager));
+			EventQueue.EnqueueRule(new QueuedResolveAttackEvent());
+			EventQueue.EnqueueRule(new QueuedWaitAbsorbEvent());
+			EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out var enemy, out _, out var planned);
 			var attack = planned?.AttackDefinition;
 			var recipe = attack?.AttackEffectRecipe ?? VisualEffectPresets.EnemyAttackLunge();
 			var request = attack == null
 				? null
-				: VisualEffectRequestFactory.ForEnemyAttack(EntityManager, enemy, attack, recipe, ctx);
+				: VisualEffectRequestFactory.ForEnemyAttack(EntityManager, enemy, attack, recipe);
 			if (request != null)
 			{
 				EventQueue.EnqueueRule(new QueuedStartVisualEffect(request));
@@ -387,14 +382,14 @@ namespace Crusaders30XX.ECS.Systems
 				LoggingService.Append("EnemyAttackDisplaySystem.ExecuteConfirm", new System.Text.Json.Nodes.JsonObject
 				{
 					["reason"] = "VisualEffectRequestFailed",
-					["contextId"] = ctx ?? string.Empty,
+					["attackSequence"] = attackSequence,
 					["attackId"] = attack?.Id.ToKey() ?? string.Empty
 				});
 				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<EnemyAttackImpactNow>(
 					"Rule.EnemyAttackImpactNow.Emergency",
-					new EnemyAttackImpactNow { ContextId = ctx }));
+					new EnemyAttackImpactNow()));
 			}
-			EventQueue.EnqueueRule(new QueuedAdvanceToNextPlannedAttackEvent(EntityManager, ctx));
+			EventQueue.EnqueueRule(new QueuedAdvanceToNextPlannedAttackEvent(EntityManager));
 		}
 
 		private void HideConfirmButton()
@@ -418,9 +413,9 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void ClearPendingConfirm()
 		{
-			_pendingConfirmContextId = string.Empty;
+			_pendingConfirmSequence = -1;
 			var phase = GetPhaseState();
-			if (phase != null) phase.PendingBlockConfirmContextId = string.Empty;
+			if (phase != null) phase.PendingBlockConfirm = false;
 		}
 
 		private void ClearAttackDisplayState()
@@ -428,7 +423,8 @@ namespace Crusaders30XX.ECS.Systems
 			_impactActive = false;
 			_absorbElapsedSeconds = 0f;
 			_absorbCompleteFired = false;
-			_lastContextId = null;
+			_lastAttackSequence = -1;
+			_confirmedAttackSequences.Clear();
 			ClearPendingConfirm();
 			_debris.Clear();
 			_showBanner = false;
@@ -461,45 +457,14 @@ namespace Crusaders30XX.ECS.Systems
 			return EntityManager.GetEntitiesWithComponent<AttackIntent>();
 		}
 
-		private PlannedAttack FindPlannedAttack(string contextId)
-		{
-			foreach (var entity in GetRelevantEntities())
-			{
-				var intent = entity.GetComponent<AttackIntent>();
-				if (intent?.Planned == null) continue;
-				if (string.IsNullOrEmpty(contextId))
-				{
-					var first = intent.Planned.FirstOrDefault();
-					if (first != null) return first;
-					continue;
-				}
-
-				var planned = intent.Planned.FirstOrDefault(pa => pa.ContextId == contextId);
-				if (planned != null) return planned;
-			}
-
-			return null;
-		}
-
-		private Entity FindEnemyForPlannedAttack(string contextId)
-		{
-			return GetRelevantEntities()
-				.FirstOrDefault(entity =>
-				{
-					var intent = entity.GetComponent<AttackIntent>();
-					if (intent?.Planned == null) return false;
-					if (string.IsNullOrEmpty(contextId)) return intent.Planned.Count > 0;
-					return intent.Planned.Any(pa => pa.ContextId == contextId);
-				});
-		}
-
 		private int GetCurrentAttackDamage()
 		{
-			var plannedAttack = FindPlannedAttack(_lastContextId);
+			if (!EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out _, out _, out var plannedAttack))
+				return 0;
 			return Math.Max(0, plannedAttack?.AttackDefinition?.Damage ?? 0);
 		}
 
-		private void StartImpactSequence(int attackDamage, string contextId = null)
+		private void StartImpactSequence(int attackDamage)
 		{
 			_impactActive = true;
 			_squashElapsedSeconds = 0f;
@@ -508,17 +473,17 @@ namespace Crusaders30XX.ECS.Systems
 			_shakeElapsedSeconds = 0f;
 			_debris.Clear();
 			SpawnDebris();
-			PublishImpactShockwave(Math.Max(0, attackDamage), contextId);
+			PublishImpactShockwave(Math.Max(0, attackDamage));
 		}
 
-		private void PublishImpactShockwave(int attackDamage, string contextId)
+		private void PublishImpactShockwave(int attackDamage)
 		{
 			if (!ImpactShockwaveEnabled) return;
 
 			float minAmp = Math.Max(0f, ImpactShockwaveMinAmp);
 			float maxAmp = Math.Max(minAmp, ImpactShockwaveMaxAmp);
 			float amp = MathHelper.Clamp(attackDamage * Math.Max(0f, ImpactShockwaveAmpMultiplier), minAmp, maxAmp);
-			Vector2 center = CalculateImpactShockwaveCenter(contextId);
+			Vector2 center = CalculateImpactShockwaveCenter();
 
 			EventManager.Publish(new RectangularShockwaveEvent
 			{
@@ -536,10 +501,9 @@ namespace Crusaders30XX.ECS.Systems
 			});
 		}
 
-		private Vector2 CalculateImpactShockwaveCenter(string contextId)
+		private Vector2 CalculateImpactShockwaveCenter()
 		{
-			var plannedAttack = FindPlannedAttack(contextId);
-			var enemy = FindEnemyForPlannedAttack(contextId);
+			EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out var enemy, out _, out var plannedAttack);
 			var phase = GetPhaseState();
 			var def = plannedAttack?.AttackDefinition;
 			if (enemy != null && def != null && phase != null && _contentFont != null && _bodyFont != null)
@@ -561,37 +525,37 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugAction("Replay Impact Animation")]
 		public void Debug_ReplayImpactAnimation()
 		{
-			StartImpactSequence(GetCurrentAttackDamage(), _lastContextId);
+			StartImpactSequence(GetCurrentAttackDamage());
 		}
 
 		[DebugAction("Test Impact 3")]
 		public void Debug_TestImpact3()
 		{
-			StartImpactSequence(3, _lastContextId);
+			StartImpactSequence(3);
 		}
 
 		[DebugAction("Test Impact 8")]
 		public void Debug_TestImpact8()
 		{
-			StartImpactSequence(8, _lastContextId);
+			StartImpactSequence(8);
 		}
 
 		[DebugAction("Test Impact 15")]
 		public void Debug_TestImpact15()
 		{
-			StartImpactSequence(15, _lastContextId);
+			StartImpactSequence(15);
 		}
 
 		[DebugAction("Test Impact 25")]
 		public void Debug_TestImpact25()
 		{
-			StartImpactSequence(25, _lastContextId);
+			StartImpactSequence(25);
 		}
 
 		[DebugActionInt("Test Impact Damage", Step = 1, Min = 0, Max = 100, Default = 10)]
 		public void Debug_TestImpactDamage(int damage)
 		{
-			StartImpactSequence(Math.Max(0, damage), _lastContextId);
+			StartImpactSequence(Math.Max(0, damage));
 		}
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
@@ -614,7 +578,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (intent == null || intent.Planned.Count == 0)
 			{
 				_impactActive = false;
-				_lastContextId = null;
+				_lastAttackSequence = -1;
 				ClearPendingConfirm();
 				_debris.Clear();
 				// Cleanup tooltip entity when no attack is planned
@@ -627,20 +591,20 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
-			var currentContextId = intent.Planned[0].ContextId;
-			if (_lastContextId != currentContextId)
+			var currentSequence = intent.ActiveAttackSequence;
+			if (_lastAttackSequence != currentSequence)
 			{
-				_lastContextId = currentContextId;
-				// New context: reset confirm lock for previous and ensure button can show again
-				_confirmedForContext.RemoveWhere(id => id != currentContextId);
-				if (!string.IsNullOrEmpty(_pendingConfirmContextId) && _pendingConfirmContextId != currentContextId)
+				_lastAttackSequence = currentSequence;
+				// A new active attack sequence always needs a fresh confirm gate.
+				_confirmedAttackSequences.Clear();
+				if (_pendingConfirmSequence >= 0 && _pendingConfirmSequence != currentSequence)
 				{
 					ClearPendingConfirm();
 				}
 			}
 
-			if (TryResolvePendingConfirm(currentContextId)) return;
-			UpdateConfirmAvailability(phaseNow, currentContextId);
+			if (TryResolvePendingConfirm(currentSequence)) return;
+			UpdateConfirmAvailability(phaseNow, currentSequence);
 
 			float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 			if (_impactActive)
@@ -657,7 +621,7 @@ namespace Crusaders30XX.ECS.Systems
 				_absorbElapsedSeconds += dt;
 				if (_absorbElapsedSeconds >= AbsorbDurationSeconds)
 				{
-					EventManager.Publish(new EnemyAbsorbComplete { ContextId = intent.Planned[0].ContextId });
+					EventManager.Publish(new EnemyAbsorbComplete());
 					_absorbCompleteFired = true;
 					ResetAnchorBounds();
 				}
@@ -717,18 +681,17 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void UpdateConfirmAvailability(SubPhase phaseNow, string contextId)
+		private void UpdateConfirmAvailability(SubPhase phaseNow, int attackSequence)
 		{
 			var confirmButton = EntityManager.GetEntity("UIButton_ConfirmEnemyAttack");
 			var ui = confirmButton?.GetComponent<UIElement>();
 			var hotkey = confirmButton?.GetComponent<HotKey>();
 			if (ui == null) return;
 
-			bool pending = string.Equals(_pendingConfirmContextId, contextId, StringComparison.Ordinal);
+			bool pending = _pendingConfirmSequence == attackSequence;
 			bool available = !pending && EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(
 				EntityManager,
-				contextId,
-				_confirmedForContext);
+				_confirmedAttackSequences);
 
 			ui.IsInteractable = available;
 			if (!available) ui.Bounds = Rectangle.Empty;
@@ -738,14 +701,11 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private EnemyAttackProgress FindEnemyAttackProgress(string contextId)
+		private EnemyAttackProgress FindEnemyAttackProgress()
 		{
-			foreach (var e in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
-			{
-				var p = e.GetComponent<EnemyAttackProgress>();
-				if (p != null && p.ContextId == contextId) return p;
-			}
-			return null;
+			return EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)
+				? progress
+				: null;
 		}
 
 		private bool IsAnyBlockAssignmentAnimating()

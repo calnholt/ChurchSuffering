@@ -12,7 +12,7 @@ using Crusaders30XX.ECS.Services;
 namespace Crusaders30XX.ECS.Systems
 {
 	/// <summary>
-	/// Tracks per-context EnemyAttackProgress from block assignment events and planned attacks,
+	/// Tracks current active EnemyAttackProgress from block assignment events and planned attacks,
 	/// and precomputes IsBlocked, ActualDamage, and PreventedDamage for UI/logic.
 	/// </summary>
 	[DebugTab("EnemyAttackProgress")]
@@ -25,10 +25,9 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Subscribe<ApplyPassiveEvent>(OnApplyPassive);
 			EventManager.Subscribe<RemovePassive>(OnRemovePassive);
 			EventManager.Subscribe<UpdatePassive>(OnUpdatePassive);
-		EventManager.Subscribe<ChangeBattlePhaseEvent>(_ => { if (_.Current == SubPhase.Block || _.Current == SubPhase.EnemyAttack) RecomputeAll(); });
-		EventManager.Subscribe<LoadSceneEvent>(OnLoadSceneEvent);
-
-	}
+			EventManager.Subscribe<ChangeBattlePhaseEvent>(_ => { if (_.Current == SubPhase.Block || _.Current == SubPhase.EnemyAttack) RecomputeAll(); });
+			EventManager.Subscribe<LoadSceneEvent>(OnLoadSceneEvent);
+		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
 		{
@@ -40,74 +39,66 @@ namespace Crusaders30XX.ECS.Systems
 			var intent = enemy.GetComponent<AttackIntent>();
 			if (intent == null) return;
 
-			// Ensure a progress entity exists for each planned attack context
-			var activeContextIds = new HashSet<string>();
-			foreach (var pa in intent.Planned)
+			var planned = intent.Planned.FirstOrDefault();
+			if (planned == null)
 			{
-				if (string.IsNullOrEmpty(pa.ContextId)) continue;
-				activeContextIds.Add(pa.ContextId);
-				var progress = FindOrCreateProgress(pa.ContextId, enemy, pa.AttackId);
-				// Keep AttackId in sync in case it changes
-				progress.AttackId = pa.AttackId;
-				// Recompute(progress);
+				DestroyProgressForEnemy(enemy);
+				return;
 			}
 
-			// Remove any progress entities whose contextId is no longer present
+			var progress = EnemyAttackFlowService.GetOrCreateCurrentProgress(EntityManager, enemy, intent, planned);
+			if (progress == null) return;
+
+			progress.AttackId = planned.AttackId;
+			Recompute(progress);
+		}
+
+		private void DestroyProgressForEnemy(Entity enemy)
+		{
 			var all = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>().ToList();
 			foreach (var e in all)
 			{
 				var p = e.GetComponent<EnemyAttackProgress>();
-				if (p == null) continue;
-				if (p.Enemy == enemy && !string.IsNullOrEmpty(p.ContextId) && !activeContextIds.Contains(p.ContextId))
-				{
+				if (p != null && p.Enemy == enemy)
 					EntityManager.DestroyEntity(e.Id);
-				}
-			}
-		// RecomputeAll();
-	}
-
-	private void OnLoadSceneEvent(LoadSceneEvent e)
-	{
-		// Clean up all EnemyAttackProgress entities when loading/reloading battle scene
-		// This ensures fresh state for each enemy in a quest
-		if (e.Scene == SceneId.Battle)
-		{
-			LoggingService.Append("EnemyAttackProgressManagementSystem.OnLoadSceneEvent", new System.Text.Json.Nodes.JsonObject { ["message"] = "cleaning up all EnemyAttackProgress entities for new battle" });
-			var allProgress = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>().ToList();
-			foreach (var entity in allProgress)
-			{
-				EntityManager.DestroyEntity(entity.Id);
 			}
 		}
-	}
 
-	private void PrintProgress(EnemyAttackProgress p)
-	{
-		LoggingService.Append("EnemyAttackProgressManagementSystem.PrintProgress", new System.Text.Json.Nodes.JsonObject { ["contextId"] = p.ContextId, ["playedCards"] = p.PlayedCards, ["playedRed"] = p.PlayedRed, ["playedWhite"] = p.PlayedWhite, ["playedBlack"] = p.PlayedBlack, ["assignedBlockTotal"] = p.AssignedBlockTotal, ["additionalConditionalDamageTotal"] = p.AdditionalConditionalDamageTotal, ["isConditionMet"] = p.IsConditionMet, ["actualDamage"] = p.ActualDamage, ["preventedDamage"] = p.AegisTotal, ["baseDamage"] = p.BaseDamage, ["totalPreventedDamage"] = p.TotalPreventedDamage });
-	}
+		private void OnLoadSceneEvent(LoadSceneEvent e)
+		{
+			if (e.Scene == SceneId.Battle)
+			{
+				LoggingService.Append("EnemyAttackProgressManagementSystem.OnLoadSceneEvent", new System.Text.Json.Nodes.JsonObject { ["message"] = "cleaning up all EnemyAttackProgress entities for new battle" });
+				var allProgress = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>().ToList();
+				foreach (var entity in allProgress)
+				{
+					EntityManager.DestroyEntity(entity.Id);
+				}
+			}
+		}
+
+		private void PrintProgress(EnemyAttackProgress p)
+		{
+			LoggingService.Append("EnemyAttackProgressManagementSystem.PrintProgress", new System.Text.Json.Nodes.JsonObject { ["attackSequence"] = p.AttackSequence, ["playedCards"] = p.PlayedCards, ["playedRed"] = p.PlayedRed, ["playedWhite"] = p.PlayedWhite, ["playedBlack"] = p.PlayedBlack, ["assignedBlockTotal"] = p.AssignedBlockTotal, ["additionalConditionalDamageTotal"] = p.AdditionalConditionalDamageTotal, ["isConditionMet"] = p.IsConditionMet, ["actualDamage"] = p.ActualDamage, ["preventedDamage"] = p.AegisTotal, ["baseDamage"] = p.BaseDamage, ["totalPreventedDamage"] = p.TotalPreventedDamage });
+		}
 
 		[DebugAction("Print Progress")]
 		public void Debug_PrintProgress()
 		{
-			var e = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-			var progress = FindProgressByContext(e.GetComponent<AttackIntent>().Planned.First().ContextId);
+			if (!EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)) return;
 			PrintProgress(progress);
 		}
 
-
 		private void OnBlockAssignmentAdded(BlockAssignmentAdded e)
 		{
-			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentAdded", new System.Text.Json.Nodes.JsonObject { ["contextId"] = e.ContextId, ["color"] = e.Color, ["deltaBlock"] = e.DeltaBlock });
+			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentAdded", new System.Text.Json.Nodes.JsonObject { ["color"] = e.Color, ["deltaBlock"] = e.DeltaBlock });
 			if (e == null) return;
-			string color = NormalizeColorKey(e.Color);
-			if (string.IsNullOrEmpty(e.ContextId)) return;
+			if (!EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out var enemy, out var intent, out var planned)) return;
 
-			// Update only the specific context this assignment targets
-			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>()
-				.FirstOrDefault(en => en.GetComponent<AttackIntent>()?.Planned?.Any(pa => pa.ContextId == e.ContextId) == true);
-			if (enemy == null) return;
-			var attackId = enemy.GetComponent<AttackIntent>().Planned.First(pa => pa.ContextId == e.ContextId).AttackId;
-			var p = FindOrCreateProgress(e.ContextId, enemy, attackId);
+			string color = NormalizeColorKey(e.Color);
+			var p = EnemyAttackFlowService.GetOrCreateCurrentProgress(EntityManager, enemy, intent, planned);
+			if (p == null) return;
+
 			p.PlayedCards = SafeInc(p.PlayedCards);
 			if (e.DeltaBlock > 0)
 			{
@@ -119,25 +110,19 @@ namespace Crusaders30XX.ECS.Systems
 				case "White": p.PlayedWhite = SafeInc(p.PlayedWhite); break;
 				case "Black": p.PlayedBlack = SafeInc(p.PlayedBlack); break;
 			}
-			// if (e.DeltaBlock > 0) p.AssignedBlockTotal = SafeInc(p.AssignedBlockTotal, e.DeltaBlock);
 			Recompute(p);
 			PrintProgress(p);
 		}
 
 		private void OnBlockAssignmentRemoved(BlockAssignmentRemoved e)
 		{
-			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentRemoved", new System.Text.Json.Nodes.JsonObject { ["contextId"] = e.ContextId, ["color"] = e.Color, ["deltaBlock"] = e.DeltaBlock });
-			if (e == null || string.IsNullOrEmpty(e.ContextId)) return;
+			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentRemoved", new System.Text.Json.Nodes.JsonObject { ["color"] = e.Color, ["deltaBlock"] = e.DeltaBlock });
+			if (e == null) return;
+			if (!EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)) return;
 
-			// Find the owning enemy and attack for this context
-			var progress = FindProgressByContext(e.ContextId);
-			if (progress == null) return;
-
-			// Maintain running totals
 			long nextAssigned = (long)progress.AssignedBlockTotal + e.DeltaBlock;
 			progress.AssignedBlockTotal = nextAssigned < 0 ? 0 : (int)nextAssigned;
 
-			// Adjust color play counters and played cards like previous system
 			if (!string.IsNullOrWhiteSpace(e.Color) && e.DeltaBlock < 0)
 			{
 				string color = NormalizeColorKey(e.Color);
@@ -154,45 +139,6 @@ namespace Crusaders30XX.ECS.Systems
 			PrintProgress(progress);
 		}
 
-		private EnemyAttackProgress FindOrCreateProgress(string contextId, Entity enemy, EnemyAttackId attackId)
-		{
-			var existing = FindProgressByContext(contextId);
-			if (existing != null)
-			{
-				existing.Enemy = enemy;
-				return existing;
-			}
-			var entity = EntityManager.CreateEntity($"EnemyAttackProgress[{contextId}]");
-			var comp = new EnemyAttackProgress
-			{
-				ContextId = contextId,
-				Enemy = enemy,
-				AttackId = attackId,
-				AssignedBlockTotal = 0,
-				PlayedCards = 0,
-				PlayedRed = 0,
-				PlayedWhite = 0,
-				PlayedBlack = 0,
-				IsConditionMet = false,
-				ActualDamage = 0,
-				// Seed Aegis snapshot from current passives when the progress row is created
-				AegisTotal = DamagePredictionService.GetAegisAmount(EntityManager)
-			};
-			EntityManager.AddComponent(entity, comp);
-			return comp;
-		}
-
-		private EnemyAttackProgress FindProgressByContext(string contextId)
-		{
-			var list = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>().ToList();
-			foreach (var e in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
-			{
-				var p = e.GetComponent<EnemyAttackProgress>();
-				if (p != null && p.ContextId == contextId) return p;
-			}
-			return null;
-		}
-
 		private void RecomputeAll()
 		{
 			foreach (var e in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
@@ -205,30 +151,17 @@ namespace Crusaders30XX.ECS.Systems
 		private void Recompute(EnemyAttackProgress p)
 		{
 			if (p == null) return;
-			// Resolve owning enemy and planned attack for this context
 			var enemy = p.Enemy ?? EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
 			if (enemy == null) return;
 			var attackIntent = enemy.GetComponent<AttackIntent>();
 			if (attackIntent == null || attackIntent.Planned == null || attackIntent.Planned.Count == 0) return;
 
-			PlannedAttack planned = null;
-			if (!string.IsNullOrEmpty(p.ContextId))
-			{
-				planned = attackIntent.Planned.FirstOrDefault(pa => pa.ContextId == p.ContextId);
-			}
-			if (planned == null)
-			{
-				planned = attackIntent.Planned.FirstOrDefault(pa => pa.AttackId == p.AttackId);
-			}
-			planned ??= attackIntent.Planned[0];
+			var planned = attackIntent.Planned[0];
 			var def = planned.AttackDefinition;
 			if (def == null) return;
 
 			int full = DamagePredictionService.ComputeFullDamage(def);
-			// Copy IgnoresAegis flag from attack definition
 			p.IgnoresAegis = def.IgnoresAegis;
-			// Use the snapshot value maintained from passive events rather than re-reading passives here
-			// When attack ignores aegis, treat it as 0 for damage calculation
 			int aegis = p.IgnoresAegis ? 0 : Math.Max(0, p.AegisTotal);
 			p.DamageBeforePrevention = full;
 
@@ -252,19 +185,18 @@ namespace Crusaders30XX.ECS.Systems
 			p.TotalPreventedDamage = aegis + p.AssignedBlockTotal;
 			p.FullyPreventedBySpecial = false;
 
-			// Optional: sanity check for desync between snapshot and live AssignedBlockCard state (debug only)
 			try
 			{
 				var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
-				if (phase != null && phase.Sub == SubPhase.Block && !string.IsNullOrEmpty(p.ContextId))
+				if (phase != null && phase.Sub == SubPhase.Block)
 				{
 					int liveAssigned = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>()
 						.Select(e => e.GetComponent<AssignedBlockCard>())
-						.Where(abc => abc != null && abc.ContextId == p.ContextId)
+						.Where(abc => abc != null)
 						.Sum(abc => abc.BlockAmount);
 					if (liveAssigned != p.AssignedBlockTotal)
 					{
-						LoggingService.Append("EnemyAttackProgressManagementSystem.Recompute.desync", new System.Text.Json.Nodes.JsonObject { ["contextId"] = p.ContextId, ["snapshot"] = p.AssignedBlockTotal, ["live"] = liveAssigned });
+						LoggingService.Append("EnemyAttackProgressManagementSystem.Recompute.desync", new System.Text.Json.Nodes.JsonObject { ["attackSequence"] = p.AttackSequence, ["snapshot"] = p.AssignedBlockTotal, ["live"] = liveAssigned });
 					}
 				}
 			}
@@ -275,8 +207,6 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (e == null || e.Type != AppliedPassiveType.Aegis) return;
 			if (e.Target == null || !e.Target.HasComponent<Player>()) return;
-			// Increment snapshot Aegis for all contexts and recompute from the snapshot,
-			// so we are not sensitive to the ordering of passive update systems.
 			foreach (var ent in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
 			{
 				var p = ent.GetComponent<EnemyAttackProgress>();

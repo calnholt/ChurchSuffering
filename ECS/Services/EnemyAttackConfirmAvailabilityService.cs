@@ -11,51 +11,53 @@ namespace Crusaders30XX.ECS.Services
 	{
 		public static bool CanConfirmCurrentAttack(
 			EntityManager entityManager,
-			string contextId,
-			ISet<string> confirmedContextIds = null)
+			ISet<int> confirmedAttackSequences = null)
 		{
-			return CanResolveCurrentAttackConfirm(entityManager, contextId, confirmedContextIds);
+			return CanResolveCurrentAttackConfirm(entityManager, confirmedAttackSequences);
 		}
 
 		public static bool CanRequestCurrentAttackConfirm(
 			EntityManager entityManager,
-			string contextId,
-			ISet<string> confirmedContextIds = null)
+			ISet<int> confirmedAttackSequences = null)
 		{
-			if (entityManager == null || string.IsNullOrEmpty(contextId)) return false;
+			if (entityManager == null) return false;
 			if (BattleInputGate.IsBattleInputFrozen(entityManager)) return false;
 
 			var phase = entityManager.GetEntitiesWithComponent<PhaseState>()
 				.FirstOrDefault()
 				?.GetComponent<PhaseState>();
 			if (phase?.Sub != SubPhase.Block) return false;
-			if (confirmedContextIds != null && confirmedContextIds.Contains(contextId)) return false;
-			if (!BattleInputGate.IsTutorialActionAllowed(entityManager, TutorialAction.ConfirmBlocks)) return false;
 
-			var planned = GetPlannedAttack(entityManager, contextId);
+			if (!EnemyAttackFlowService.TryGetCurrentEnemyAttack(entityManager, out _, out var intent, out var planned))
+				return false;
+
+			if (confirmedAttackSequences != null && confirmedAttackSequences.Contains(intent.ActiveAttackSequence))
+				return false;
+
+			if (!BattleInputGate.IsTutorialActionAllowed(entityManager, TutorialAction.ConfirmBlocks))
+				return false;
+
 			if (planned?.AttackDefinition == null) return false;
 
-			int activeBlockCount = CountActiveAssignedBlockers(entityManager, contextId);
+			int activeBlockCount = CountActiveAssignedBlockers(entityManager);
 			return MeetsAttackBlockRequirement(planned.AttackDefinition.ConditionType, activeBlockCount);
 		}
 
 		public static bool CanResolveCurrentAttackConfirm(
 			EntityManager entityManager,
-			string contextId,
-			ISet<string> confirmedContextIds = null)
+			ISet<int> confirmedAttackSequences = null)
 		{
-			return CanRequestCurrentAttackConfirm(entityManager, contextId, confirmedContextIds)
+			return CanRequestCurrentAttackConfirm(entityManager, confirmedAttackSequences)
 				&& !IsAnyBlockAssignmentAnimating(entityManager);
 		}
 
-		public static int CountActiveAssignedBlockers(EntityManager entityManager, string contextId)
+		public static int CountActiveAssignedBlockers(EntityManager entityManager)
 		{
-			if (entityManager == null || string.IsNullOrEmpty(contextId)) return 0;
+			if (entityManager == null) return 0;
 
 			return entityManager.GetEntitiesWithComponent<AssignedBlockCard>()
 				.Select(entity => entity.GetComponent<AssignedBlockCard>())
 				.Count(assignment => assignment != null
-					&& assignment.ContextId == contextId
 					&& assignment.Phase != AssignedBlockCard.PhaseState.Returning);
 		}
 
@@ -67,19 +69,6 @@ namespace Crusaders30XX.ECS.Services
 				.Select(entity => entity.GetComponent<AssignedBlockCard>())
 				.Any(assignment => assignment != null
 					&& assignment.Phase != AssignedBlockCard.PhaseState.Idle);
-		}
-
-		private static PlannedAttack GetPlannedAttack(EntityManager entityManager, string contextId)
-		{
-			var enemy = entityManager.GetEntitiesWithComponent<AttackIntent>()
-				.FirstOrDefault(entity => entity.GetComponent<AttackIntent>()
-					?.Planned
-					?.Any(attack => attack.ContextId == contextId) == true);
-
-			return enemy
-				?.GetComponent<AttackIntent>()
-				?.Planned
-				?.FirstOrDefault(attack => attack.ContextId == contextId);
 		}
 
 		private static bool MeetsAttackBlockRequirement(ConditionType conditionType, int activeBlockCount)

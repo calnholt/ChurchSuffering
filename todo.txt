@@ -52,3 +52,5 @@ keywords
 - indulgence for additional cost?
 - vigor reduction
 
+cards that need art:
+- steel the spirit

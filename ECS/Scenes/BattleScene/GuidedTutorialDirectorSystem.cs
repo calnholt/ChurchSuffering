@@ -85,7 +85,7 @@ namespace Crusaders30XX.ECS.Systems
 			phase.Sub = SubPhase.StartBattle;
 			phase.TurnNumber = 1;
 			phase.DefeatPresentationActive = false;
-			phase.PendingBlockConfirmContextId = string.Empty;
+			phase.PendingBlockConfirm = false;
 		}
 
 		private void ClearEnemyAttackState()

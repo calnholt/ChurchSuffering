@@ -471,7 +471,6 @@ namespace Crusaders30XX.ECS.Components
     public class MarkedForSpecificDiscard : IComponent
     {
         public Entity Owner { get; set; }
-        public string ContextId { get; set; }
     }
     
     /// <summary>
@@ -938,7 +937,7 @@ namespace Crusaders30XX.ECS.Components
         public SubPhase Sub { get; set; } = SubPhase.StartBattle;
         public int TurnNumber { get; set; } = 1; // enemy turn counter
         public bool DefeatPresentationActive { get; set; }
-        public string PendingBlockConfirmContextId { get; set; } = string.Empty;
+        public bool PendingBlockConfirm { get; set; }
     }
 
     /// <summary>
@@ -1117,7 +1116,6 @@ namespace Crusaders30XX.ECS.Components
         public bool Started { get; set; }
         public float StartScale { get; set; } = 0.35f;
         public float EndScale { get; set; } = 0.3f;
-        public string ContextId { get; set; }
         public bool Completed { get; set; }
     }
 

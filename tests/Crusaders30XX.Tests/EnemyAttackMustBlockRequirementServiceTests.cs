@@ -20,9 +20,7 @@ public class EnemyAttackMustBlockRequirementServiceTests
 		var (entityManager, planned) = CreateCombat(attack);
 
 		bool changed = EnemyAttackMustBlockRequirementService.NormalizeIfImpossible(entityManager, planned);
-		bool canConfirm = EnemyAttackConfirmAvailabilityService.CanConfirmCurrentAttack(
-			entityManager,
-			planned.ContextId);
+		bool canConfirm = EnemyAttackConfirmAvailabilityService.CanConfirmCurrentAttack(entityManager);
 
 		Assert.True(changed);
 		Assert.Equal(ConditionType.None, attack.ConditionType);
@@ -119,7 +117,6 @@ public class EnemyAttackMustBlockRequirementServiceTests
 		var planned = new PlannedAttack
 		{
 			AttackId = attack.Id,
-			ContextId = "test-context",
 			AttackDefinition = attack
 		};
 
@@ -127,6 +124,7 @@ public class EnemyAttackMustBlockRequirementServiceTests
 		entityManager.AddComponent(deck, new Deck());
 		entityManager.AddComponent(enemy, new AttackIntent
 		{
+			ActiveAttackSequence = 1,
 			Planned = [planned]
 		});
 
