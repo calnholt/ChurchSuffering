@@ -21,6 +21,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<CardMoved>(OnCardMoved);
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
             EventManager.Subscribe<CardMoveFinalizeRequested>(OnCardMoveFinalizeRequested);
+            EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -637,6 +638,14 @@ namespace Crusaders30XX.ECS.Systems
             EntityManager.RemoveComponent<TooltipOverrideBackup>(card);
         }
 
+        private void OnBeginDefeatPresentation(BeginDefeatPresentationEvent evt)
+        {
+            if (evt?.IsPreview == true) return;
+            QueuedDiscardAssignedBlocksEvent.ResolveImmediately(
+                EntityManager,
+                QueuedDiscardAssignedBlocksEvent.ShouldDiscardSpentBlocks(EntityManager));
+        }
+
         private void ClearTransientStateForStableZone(Entity card, CardZoneType source, CardZoneType destination)
         {
             if (!IsStableZone(destination)) return;
@@ -645,6 +654,11 @@ namespace Crusaders30XX.ECS.Systems
             if (source == CardZoneType.AssignedBlock)
             {
                 CardTransientStateService.ClearAssignedBlockHotKey(EntityManager, card);
+                if (card.GetComponent<AssignedBlockCard>() != null)
+                {
+                    EntityManager.RemoveComponent<AssignedBlockCard>(card);
+                }
+                RestoreTooltipOverride(card);
             }
         }
 
