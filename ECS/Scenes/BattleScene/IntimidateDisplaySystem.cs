@@ -36,7 +36,7 @@ namespace Crusaders30XX.ECS.Systems
 		public int OverlayAlpha { get; set; } = 155;
 
 		[DebugEditable(DisplayName = "Overlay Corner Radius", Step = 1, Min = 0, Max = 64)]
-		public int OverlayCornerRadius { get; set; } = 16;
+		public int OverlayCornerRadius { get; set; } = 10;
 
 		[DebugEditable(DisplayName = "Shadow Red", Step = 5, Min = 0, Max = 255)]
 		public int ShadowRed { get; set; } = 0;

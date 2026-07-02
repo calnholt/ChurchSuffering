@@ -742,10 +742,73 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            var texture = new Texture2D(_graphicsDevice, texW, texH);
-            texture.SetData(clippedData);
+            var texture = new Texture2D(_graphicsDevice, texW, texH, true, SurfaceFormat.Color);
+            texture.SetData(0, null, clippedData, 0, clippedData.Length);
+            SetMipData(texture, clippedData, texW, texH);
             _clippedArtCache[key] = texture;
             return texture;
+        }
+
+        private static void SetMipData(Texture2D texture, Color[] baseData, int baseWidth, int baseHeight)
+        {
+            var previousData = baseData;
+            int previousWidth = baseWidth;
+            int previousHeight = baseHeight;
+
+            for (int level = 1; level < texture.LevelCount; level++)
+            {
+                int width = Math.Max(1, previousWidth / 2);
+                int height = Math.Max(1, previousHeight / 2);
+                var data = DownsamplePremultiplied(previousData, previousWidth, previousHeight, width, height);
+                texture.SetData(level, null, data, 0, data.Length);
+
+                previousData = data;
+                previousWidth = width;
+                previousHeight = height;
+            }
+        }
+
+        private static Color[] DownsamplePremultiplied(Color[] source, int sourceWidth, int sourceHeight, int width, int height)
+        {
+            var result = new Color[width * height];
+
+            for (int y = 0; y < height; y++)
+            {
+                int yStart = y * sourceHeight / height;
+                int yEnd = Math.Max(yStart + 1, (y + 1) * sourceHeight / height);
+
+                for (int x = 0; x < width; x++)
+                {
+                    int xStart = x * sourceWidth / width;
+                    int xEnd = Math.Max(xStart + 1, (x + 1) * sourceWidth / width);
+
+                    int r = 0;
+                    int g = 0;
+                    int b = 0;
+                    int a = 0;
+                    int count = 0;
+                    for (int sy = yStart; sy < yEnd; sy++)
+                    {
+                        for (int sx = xStart; sx < xEnd; sx++)
+                        {
+                            Color color = source[sy * sourceWidth + sx];
+                            r += color.R;
+                            g += color.G;
+                            b += color.B;
+                            a += color.A;
+                            count++;
+                        }
+                    }
+
+                    result[y * width + x] = new Color(
+                        (byte)(r / count),
+                        (byte)(g / count),
+                        (byte)(b / count),
+                        (byte)(a / count));
+                }
+            }
+
+            return result;
         }
 
         private static Color SampleBilinear(Color[] data, int width, int height, float x, float y)
