@@ -412,8 +412,7 @@ namespace Crusaders30XX.ECS.Systems
                 var request = VisualEffectRequestFactory.ForCard(EntityManager, evt.Card, card.VisualEffectRecipe);
                 if (request != null)
                 {
-                    EventQueue.EnqueueRule(new QueuedStartVisualEffect(request));
-                    EventQueue.EnqueueRule(new QueuedWaitVisualEffectComplete(request.RequestId));
+                    EventManager.Publish(request);
                 }
                 else
                 {
@@ -425,18 +424,31 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            ComponentLoggerService.LogEntity(evt.Card, "Executing card OnPlay effect");
-            int vigorStacksAtPlay = VigorService.GetPlayerVigorStacks(EntityManager);
-            AttachPlayStatContext(evt.Card, evt.PaymentCards);
+            ResolveAcceptedCardPlay(evt.Card, evt.PaymentCards, sealCount, VigorService.GetPlayerVigorStacks(EntityManager));
+        }
+
+        private void ResolveAcceptedCardPlay(
+            Entity cardEntity,
+            List<Entity> paymentCards,
+            int sealCount,
+            int vigorStacksAtPlay)
+        {
+            if (cardEntity == null) return;
+            var data = cardEntity.GetComponent<CardData>();
+            var card = data?.Card;
+            if (card == null || string.IsNullOrEmpty(card.CardId)) return;
+
+            ComponentLoggerService.LogEntity(cardEntity, "Executing card OnPlay effect");
+            AttachPlayStatContext(cardEntity, paymentCards);
             try
             {
-                card.OnPlay?.Invoke(EntityManager, evt.Card);
+                card.OnPlay?.Invoke(EntityManager, cardEntity);
             }
             finally
             {
-                RemovePlayStatContext(evt.Card);
+                RemovePlayStatContext(cardEntity);
             }
-            EventManager.Publish(new CardPlayedEvent { Card = evt.Card, VigorStacksAtPlay = vigorStacksAtPlay });
+            EventManager.Publish(new CardPlayedEvent { Card = cardEntity, VigorStacksAtPlay = vigorStacksAtPlay });
             bool isCurseCard = string.Equals(card.CardId, Curse.CardIdValue, StringComparison.OrdinalIgnoreCase);
             if (!isCurseCard && !GuidedTutorialService.IsActive(EntityManager))
                 EventManager.Publish(new TrackingEvent { Type = card.CardId, Delta = 1 });
@@ -444,6 +456,7 @@ namespace Crusaders30XX.ECS.Systems
             // If the card was sealed, apply HP cost and remove the seal
             if (sealCount > 0)
             {
+                var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
                 EventManager.Publish(new ModifyHpRequestEvent
                 {
                     Source = player,
@@ -452,8 +465,9 @@ namespace Crusaders30XX.ECS.Systems
                     DamageType = ModifyTypeEnum.Effect,
                     IgnoresAegis = true
                 });
+                var sealedComp = cardEntity.GetComponent<Sealed>();
                 if (sealedComp != null)
-                    EntityManager.RemoveComponent<Sealed>(evt.Card);
+                    EntityManager.RemoveComponent<Sealed>(cardEntity);
                 LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
                 {
                     ["reason"] = "SealRemoved",
@@ -463,9 +477,9 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             // Remove Pledge if present when playing
-            if (evt.Card.HasComponent<Pledge>())
+            if (cardEntity.HasComponent<Pledge>())
             {
-                EventManager.Publish(new RemovePledgeFromCardRequested { Card = evt.Card });
+                EventManager.Publish(new RemovePledgeFromCardRequested { Card = cardEntity });
                 LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
                 {
                     ["reason"] = "PledgeRemoved",
@@ -486,6 +500,7 @@ namespace Crusaders30XX.ECS.Systems
             var destination = CardZoneType.DiscardPile;
 
             // Consume 1 AP if not a free action
+            bool isFree = card.IsFreeAction;
             if (!isFree)
             {
                 EventManager.Publish(new ModifyActionPointsEvent { Delta = -1 });
@@ -499,33 +514,35 @@ namespace Crusaders30XX.ECS.Systems
             if (deckEntity != null)
             {
                 // Apply Frostbite when playing any Frozen card (including weapons)
-                if (evt.Card.GetComponent<Frozen>() != null)
+                var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+                if (cardEntity.GetComponent<Frozen>() != null)
                 {
                     EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Frostbite, Delta = 1 });
                 }
 
+                bool isWeapon = card.IsWeapon;
                 if (isWeapon)
                 {
                     // Remove from hand without adding to discard/exhaust; stays out until re-added by phase rules
                     // CardZoneSystem will remove from lists when destination not specified; emulate by not re-adding
                     var deck = deckEntity.GetComponent<Deck>();
                     int handCountBeforeWeaponRemove = deck?.Hand.Count ?? 0;
-                    deck?.Hand.Remove(evt.Card);
+                    deck?.Hand.Remove(cardEntity);
                     LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
                     {
                         ["reason"] = "WeaponUsed",
                         ["cardId"] = card.CardId,
-                        ["entityId"] = evt.Card.Id,
+                        ["entityId"] = cardEntity.Id,
                         ["handCountBeforeMove"] = handCountBeforeWeaponRemove,
                         ["handCountAfterMove"] = deck?.Hand.Count ?? 0,
-                        ["stillInHandAfterMove"] = deck?.Hand.Contains(evt.Card) ?? false,
-                        ["card"] = HandStateLoggingService.BuildCardSnapshot(evt.Card)
+                        ["stillInHandAfterMove"] = deck?.Hand.Contains(cardEntity) ?? false,
+                        ["card"] = HandStateLoggingService.BuildCardSnapshot(cardEntity)
                     });
-                    EntityManager.DestroyEntity(evt.Card.Id);
+                    EntityManager.DestroyEntity(cardEntity.Id);
                     return;
                 }
                 else {
-                    if (evt.Card.GetComponent<MarkedForReturnToDeck>() != null)
+                    if (cardEntity.GetComponent<MarkedForReturnToDeck>() != null)
                     {
                         destination = CardZoneType.DrawPile;
                         EventManager.Publish(new DeckShuffleEvent { Deck = deckEntity });
@@ -534,9 +551,9 @@ namespace Crusaders30XX.ECS.Systems
                             ["reason"] = "CardReturnedToDeck",
                             ["cardId"] = card.CardId
                         });
-                        EntityManager.RemoveComponent<MarkedForReturnToDeck>(evt.Card);
+                        EntityManager.RemoveComponent<MarkedForReturnToDeck>(cardEntity);
                     }
-                    else if (evt.Card.GetComponent<MarkedForBottomOfDrawPile>() != null)
+                    else if (cardEntity.GetComponent<MarkedForBottomOfDrawPile>() != null)
                     {
                         destination = CardZoneType.DrawPile;
                         LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
@@ -545,7 +562,7 @@ namespace Crusaders30XX.ECS.Systems
                             ["cardId"] = card.CardId
                         });
                     }
-                    if (evt.Card.GetComponent<MarkedForExhaust>() != null)
+                    if (cardEntity.GetComponent<MarkedForExhaust>() != null)
                     {
                         destination = CardZoneType.ExhaustPile;
                         LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
@@ -553,7 +570,7 @@ namespace Crusaders30XX.ECS.Systems
                             ["reason"] = "CardExhausted",
                             ["cardId"] = card.CardId
                         });
-                        EntityManager.RemoveComponent<MarkedForExhaust>(evt.Card);
+                        EntityManager.RemoveComponent<MarkedForExhaust>(cardEntity);
                     }
                 }
                 var deckBeforeMove = deckEntity.GetComponent<Deck>();
@@ -561,13 +578,13 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     ["reason"] = "PlayCard",
                     ["cardId"] = card.CardId,
-                    ["entityId"] = evt.Card.Id,
+                    ["entityId"] = cardEntity.Id,
                     ["destination"] = destination.ToString(),
                     ["handCountBeforeMove"] = deckBeforeMove?.Hand.Count ?? 0,
-                    ["stillInHandBeforeMove"] = deckBeforeMove?.Hand.Contains(evt.Card) ?? false,
-                    ["card"] = HandStateLoggingService.BuildCardSnapshot(evt.Card)
+                    ["stillInHandBeforeMove"] = deckBeforeMove?.Hand.Contains(cardEntity) ?? false,
+                    ["card"] = HandStateLoggingService.BuildCardSnapshot(cardEntity)
                 });
-                EventManager.Publish(new CardMoveRequested { Card = evt.Card, Deck = deckEntity, Destination = destination, Reason = "PlayCard" });
+                EventManager.Publish(new CardMoveRequested { Card = cardEntity, Deck = deckEntity, Destination = destination, Reason = "PlayCard" });
             }
         }
 

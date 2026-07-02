@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Systems;
+using Microsoft.Xna.Framework;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -108,6 +110,30 @@ public sealed class CardPlayUpgradeTests : IDisposable
 		Assert.Equal(1, Assert.Single(courageRequests).Delta);
 	}
 
+	[Fact]
+	public void Visual_card_starts_modular_effect_before_lethal_resolution_can_clear_queue()
+	{
+		var entityManager = BuildActionBattle(1, "smite", out var deck);
+		var smite = AddCard(entityManager, deck, "smite", CardData.CardColor.White);
+		var enemy = entityManager.GetEntity("Enemy");
+		entityManager.AddComponent(enemy, new HP { Current = 3, Max = 3 });
+		_ = new CardPlaySystem(entityManager);
+		var modularCoordinator = new ModularEffectCoordinatorSystem(entityManager);
+		_ = new HpManagementSystem(entityManager);
+		var damageRequests = new List<ModifyHpRequestEvent>();
+		EventManager.Subscribe<ModifyHpRequestEvent>(damageRequests.Add);
+		EventManager.Subscribe<BeginDefeatPresentationEvent>(_ => EventQueue.Clear());
+		EventQueue.EnqueueRule(new EventQueue.LogEvent("stale", "stale"));
+
+		EventManager.Publish(new PlayCardRequested { Card = smite });
+
+		Assert.Equal(-3, Assert.Single(damageRequests).Delta);
+		Assert.True(EventQueue.IsIdle);
+		Assert.True(entityManager.GetEntitiesWithComponent<ActiveVisualEffect>().Any());
+		modularCoordinator.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.05)));
+		Assert.True(entityManager.GetEntitiesWithComponent<ActiveVisualEffect>().Any());
+	}
+
 	private static EntityManager BuildActionBattle(
 		int actionPoints,
 		string playableCardId,
@@ -129,9 +155,11 @@ public sealed class CardPlayUpgradeTests : IDisposable
 		entityManager.AddComponent(player, new Player { DeckEntity = deckEntity });
 		entityManager.AddComponent(player, new ActionPoints { Current = actionPoints });
 		entityManager.AddComponent(player, new Courage());
+		entityManager.AddComponent(player, new Transform { Position = new Vector2(220, 520) });
 
 		var enemy = entityManager.CreateEntity("Enemy");
 		entityManager.AddComponent(enemy, new Enemy());
+		entityManager.AddComponent(enemy, new Transform { Position = new Vector2(920, 260) });
 
 		var tutorial = entityManager.CreateEntity("GuidedTutorial");
 		entityManager.AddComponent(tutorial, new GuidedTutorial { Section = 1 });
