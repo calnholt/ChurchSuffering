@@ -19,6 +19,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteBatch _spriteBatch;
 		private Texture2D _cachedButtonTexture;
 		private string _cachedButtonText;
+		private bool _retryRequested;
 
 		[DebugEditable(DisplayName = "Button Width", Step = 1, Min = 40, Max = 400)]
 		public int ButtonWidth { get; set; } = 140;
@@ -45,20 +46,27 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			EventManager.Subscribe<LoadSceneEvent>(_ => DestroyButton());
+			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
 			EventManager.Subscribe<HotKeyHoldCompletedEvent>(OnHotKeyHoldCompleted);
+		}
+
+		private void OnLoadScene(LoadSceneEvent evt)
+		{
+			_retryRequested = false;
+			DestroyButton();
 		}
 
 		private void OnHotKeyHoldCompleted(HotKeyHoldCompletedEvent evt)
 		{
 			if (evt.Entity?.Name != RetryButtonEntityName) return;
-			GuidedTutorialService.RestartSection(EntityManager);
+			TryRequestRetry();
 		}
 
 		public override void Update(GameTime gameTime)
 		{
 			base.Update(gameTime);
 			if (!GuidedTutorialService.IsActive(EntityManager)) return;
+			if (_retryRequested) return;
 			if (!Game1.WindowIsActive || StateSingleton.IsActive) return;
 
 			EnsureButton();
@@ -67,13 +75,13 @@ namespace Crusaders30XX.ECS.Systems
 			if (retryBtn?.GetComponent<UIElement>()?.IsClicked == true)
 			{
 				retryBtn.GetComponent<UIElement>().IsClicked = false;
-				GuidedTutorialService.RestartSection(EntityManager);
+				TryRequestRetry();
 			}
 		}
 
 		public void Draw()
 		{
-			if (!GuidedTutorialService.IsActive(EntityManager))
+			if (!GuidedTutorialService.IsActive(EntityManager) || _retryRequested || StateSingleton.IsActive)
 			{
 				DestroyButton();
 				return;
@@ -143,6 +151,27 @@ namespace Crusaders30XX.ECS.Systems
 		private Rectangle GetButtonRect()
 		{
 			return new Rectangle(ButtonX, ButtonY, ButtonWidth, ButtonHeight);
+		}
+
+		private void TryRequestRetry()
+		{
+			if (_retryRequested || StateSingleton.IsActive || !GuidedTutorialService.IsActive(EntityManager)) return;
+			_retryRequested = true;
+			var btn = EntityManager.GetEntity(RetryButtonEntityName);
+			var ui = btn?.GetComponent<UIElement>();
+			if (ui != null)
+			{
+				ui.IsClicked = false;
+				ui.IsInteractable = false;
+				ui.IsHidden = true;
+				ui.Bounds = Rectangle.Empty;
+			}
+			var hotKey = btn?.GetComponent<HotKey>();
+			if (hotKey != null)
+			{
+				hotKey.IsActive = false;
+			}
+			EventManager.Publish(new GuidedTutorialRestartRequested());
 		}
 
 		private void DestroyButton()

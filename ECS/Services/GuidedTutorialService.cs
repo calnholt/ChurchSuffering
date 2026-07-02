@@ -162,6 +162,8 @@ namespace Crusaders30XX.ECS.Services
 			state.IsRestart = true;
 			state.TurnWithinSection = 1;
 			state.StockHandPrepared = false;
+			state.BlockedCardIdsThisTurn.Clear();
+			state.ConfirmedAttackCountThisTurn = 0;
 			EventManager.Publish(new ShowTransition { Scene = SceneId.Battle, SkipHold = true });
 		}
 

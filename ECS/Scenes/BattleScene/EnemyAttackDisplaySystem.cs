@@ -253,6 +253,11 @@ namespace Crusaders30XX.ECS.Systems
                 LoggingService.Append("EnemyAttackDisplaySystem.OnConfirmBlocksRequested", new System.Text.Json.Nodes.JsonObject { ["event"] = "ConfirmBlocksRequested" });
 				OnConfirmPressed();
 			});
+			EventManager.Subscribe<DeleteCachesEvent>(_ =>
+			{
+				ClearAttackDisplayState();
+				HideConfirmButton();
+			});
 
 			// Clear any transient visuals when leaving Enemy phases
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(evt =>

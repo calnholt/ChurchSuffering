@@ -248,21 +248,159 @@ public class GuidedTutorialDefinitionTests
 	[Fact]
 	public void Restart_section_sets_flag_and_resets_turn()
 	{
-		var manager = new EntityManager();
-		var stateEntity = manager.CreateEntity("GuidedTutorial");
-		var state = new GuidedTutorial
+		EventManager.Clear();
+		try
 		{
-			Section = 3,
-			TurnWithinSection = 2,
-			StockHandPrepared = true,
-		};
-		manager.AddComponent(stateEntity, state);
+			var manager = new EntityManager();
+			var stateEntity = manager.CreateEntity("GuidedTutorial");
+			var state = new GuidedTutorial
+			{
+				Section = 3,
+				TurnWithinSection = 2,
+				StockHandPrepared = true,
+				ConfirmedAttackCountThisTurn = 1,
+			};
+			state.BlockedCardIdsThisTurn.Add("smite");
+			manager.AddComponent(stateEntity, state);
 
-		GuidedTutorialService.RestartSection(manager);
+			GuidedTutorialService.RestartSection(manager);
 
-		Assert.True(state.IsRestart);
-		Assert.Equal(1, state.TurnWithinSection);
-		Assert.False(state.StockHandPrepared);
+			Assert.True(state.IsRestart);
+			Assert.Equal(1, state.TurnWithinSection);
+			Assert.False(state.StockHandPrepared);
+			Assert.Empty(state.BlockedCardIdsThisTurn);
+			Assert.Equal(0, state.ConfirmedAttackCountThisTurn);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Restart_request_cleans_transient_battle_state_and_ignores_spam()
+	{
+		EventManager.Clear();
+		EventQueue.Clear();
+		TimerScheduler.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			var stateEntity = manager.CreateEntity("GuidedTutorial");
+			var state = new GuidedTutorial
+			{
+				Section = 6,
+				TurnWithinSection = 2,
+				StockHandPrepared = true,
+				ConfirmedAttackCountThisTurn = 1,
+			};
+			state.BlockedCardIdsThisTurn.Add("smite");
+			manager.AddComponent(stateEntity, state);
+
+			var phaseEntity = manager.CreateEntity("PhaseState");
+			var phase = new PhaseState
+			{
+				Main = MainPhase.EnemyTurn,
+				Sub = SubPhase.Block,
+				TurnNumber = 4,
+				DefeatPresentationActive = true,
+				PendingBlockConfirmContextId = "old-context",
+			};
+			manager.AddComponent(phaseEntity, phase);
+
+			var card = manager.CreateEntity("Card");
+			manager.AddComponent(card, new CardData());
+			manager.AddComponent(card, new AssignedBlockCard { ContextId = "old-context" });
+			manager.AddComponent(card, new MarkedForSpecificDiscard());
+			manager.AddComponent(card, new CannotBlockThisAttack());
+
+			var progressEntity = manager.CreateEntity("EnemyAttackProgress[old-context]");
+			manager.AddComponent(progressEntity, new EnemyAttackProgress { ContextId = "old-context" });
+
+			var enemy = manager.CreateEntity("Enemy");
+			var intent = new AttackIntent();
+			intent.Planned.Add(new PlannedAttack { ContextId = "old-context", AttackId = "tutorial_gleeber_strike_6" });
+			var nextIntent = new NextTurnAttackIntent();
+			nextIntent.Planned.Add(new PlannedAttack { ContextId = "next-context", AttackId = "tutorial_gleeber_strike_8" });
+			manager.AddComponent(enemy, intent);
+			manager.AddComponent(enemy, nextIntent);
+
+			var payCostEntity = manager.CreateEntity("PayCostOverlayState");
+			var payCost = new PayCostOverlayState { IsOpen = true, CardToPlay = card };
+			payCost.SelectedCards.Add(card);
+			payCost.ConsumedCostByCardId[card.Id] = "Black";
+			manager.AddComponent(payCostEntity, payCost);
+
+			var ambushEntity = manager.CreateEntity("AmbushState");
+			var ambush = new AmbushState
+			{
+				ContextId = "old-context",
+				IsActive = true,
+				IntroActive = true,
+				TimerRemainingSeconds = 10f,
+				FiredAutoConfirm = true,
+			};
+			manager.AddComponent(ambushEntity, ambush);
+
+			var paymentEntity = manager.CreateEntity("LastPaymentCache");
+			var payment = new LastPaymentCache { CardPlayed = card, HasData = true };
+			payment.PaymentCards.Add(card);
+			manager.AddComponent(paymentEntity, payment);
+
+			EventQueue.EnqueueRule(new EventQueue.LogEvent("stale", "stale"));
+			bool timerFired = false;
+			TimerScheduler.Schedule(0.1f, () => timerFired = true);
+
+			int transitionCount = 0;
+			int deleteCachesCount = 0;
+			EventManager.Subscribe<ShowTransition>(_ => transitionCount++);
+			EventManager.Subscribe<DeleteCachesEvent>(_ => deleteCachesCount++);
+
+			_ = new GuidedTutorialDirectorSystem(manager);
+
+			EventManager.Publish(new GuidedTutorialRestartRequested());
+			EventManager.Publish(new GuidedTutorialRestartRequested());
+			TimerScheduler.Update(1f);
+
+			Assert.Equal(1, transitionCount);
+			Assert.Equal(1, deleteCachesCount);
+			Assert.False(timerFired);
+			Assert.True(EventQueue.IsIdle);
+			Assert.True(state.IsRestart);
+			Assert.Equal(1, state.TurnWithinSection);
+			Assert.False(state.StockHandPrepared);
+			Assert.Empty(state.BlockedCardIdsThisTurn);
+			Assert.Equal(0, state.ConfirmedAttackCountThisTurn);
+			Assert.Equal(MainPhase.StartBattle, phase.Main);
+			Assert.Equal(SubPhase.StartBattle, phase.Sub);
+			Assert.Equal(1, phase.TurnNumber);
+			Assert.False(phase.DefeatPresentationActive);
+			Assert.Equal(string.Empty, phase.PendingBlockConfirmContextId);
+			Assert.Empty(manager.GetEntitiesWithComponent<EnemyAttackProgress>());
+			Assert.Empty(intent.Planned);
+			Assert.Empty(nextIntent.Planned);
+			Assert.False(card.HasComponent<AssignedBlockCard>());
+			Assert.False(card.HasComponent<MarkedForSpecificDiscard>());
+			Assert.False(card.HasComponent<CannotBlockThisAttack>());
+			Assert.False(payCost.IsOpen);
+			Assert.Null(payCost.CardToPlay);
+			Assert.Empty(payCost.SelectedCards);
+			Assert.Empty(payCost.ConsumedCostByCardId);
+			Assert.False(ambush.IsActive);
+			Assert.False(ambush.IntroActive);
+			Assert.Equal(0f, ambush.TimerRemainingSeconds);
+			Assert.False(ambush.FiredAutoConfirm);
+			Assert.Equal(string.Empty, ambush.ContextId);
+			Assert.False(payment.HasData);
+			Assert.Null(payment.CardPlayed);
+			Assert.Empty(payment.PaymentCards);
+		}
+		finally
+		{
+			EventManager.Clear();
+			EventQueue.Clear();
+			TimerScheduler.Clear();
+		}
 	}
 
 	[Fact]

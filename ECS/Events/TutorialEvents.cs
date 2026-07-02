@@ -27,5 +27,9 @@ namespace Crusaders30XX.ECS.Events
     /// Request to advance to the next tutorial in the queue.
     /// </summary>
     public class AdvanceTutorialEvent { }
-}
 
+    /// <summary>
+    /// Request to restart the current guided tutorial section.
+    /// </summary>
+    public class GuidedTutorialRestartRequested { }
+}
