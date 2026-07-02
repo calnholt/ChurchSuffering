@@ -8,7 +8,6 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Rarity = Rarity.Common;
             Name = "Protect";
             Block = 3;
-            Animation = "Block";
             Type = CardType.Block;
             CanAddToLoadout = false;
         }

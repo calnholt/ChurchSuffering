@@ -41,6 +41,25 @@ namespace Crusaders30XX.Diagnostics
 	/// Method signature must be: void ActionName(int value)
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
+	public sealed class DebugActionListAttribute : Attribute
+	{
+		public string DisplayName { get; }
+		public int Order { get; set; }
+
+		public DebugActionListAttribute(string displayName)
+		{
+			DisplayName = displayName;
+		}
+	}
+
+	public sealed class DebugNamedAction
+	{
+		public string Label { get; init; } = string.Empty;
+		public Action Invoke { get; init; }
+		public bool IsEnabled { get; init; } = true;
+	}
+
+	[AttributeUsage(AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
 	public sealed class DebugActionIntAttribute : Attribute
 	{
 		public string DisplayName { get; }
@@ -56,5 +75,4 @@ namespace Crusaders30XX.Diagnostics
 		}
 	}
 }
-
 

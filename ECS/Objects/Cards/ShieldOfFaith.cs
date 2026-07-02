@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Cost = ["Any"];
             Text = $"Gain {GetAegisGained(IsUpgraded)} aegis.";
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Block = 3;
             IsFreeAction = true;
             Type = CardType.Prayer;

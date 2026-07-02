@@ -86,24 +86,6 @@ namespace Crusaders30XX.ECS.Components
 	}
 
 	/// <summary>
-	/// Holds transient animation state for the player portrait (offsets, timers).
-	/// Read by display; mutated by PlayerAnimationSystem.
-	/// </summary>
-	public class PlayerAnimationState : IComponent
-	{
-		public Entity Owner { get; set; }
-		public Vector2 DrawOffset { get; set; }
-		public Vector2 ScaleMultiplier { get; set; } = new Vector2(1f, 1f);
-		public float AttackAnimTimer { get; set; }
-		public float AttackAnimDuration { get; set; } = 0.2f;
-		public Vector2 AttackTargetPos { get; set; }
-		public Color TintColor { get; set; } = Color.White;
-		public float DamageFlashTimer { get; set; }
-	}
-
-
-
-	/// <summary>
 	/// Marks a card as currently assigned as block to a specific attack context and carries its animation state.
 	/// </summary>
 	public class AssignedBlockCard : IComponent
@@ -167,4 +149,3 @@ namespace Crusaders30XX.ECS.Components
 		public Entity Owner { get; set; }
 	}
 }
-

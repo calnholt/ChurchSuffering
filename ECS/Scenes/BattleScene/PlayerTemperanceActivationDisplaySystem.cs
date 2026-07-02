@@ -89,9 +89,9 @@ namespace Crusaders30XX.ECS.Systems
 			float rippleScale = MathHelper.Lerp(1f, RippleMaxScale, progress);
 			float alpha = MathHelper.Lerp(MaskMaxAlpha, RippleMinAlpha, progress);
 
-			// Compute current draw parameters matching PlayerDisplaySystem (position + anim offsets, scale + anim multiplier)
+			// Compute current draw parameters matching PlayerDisplaySystem (position + presentation offsets, scale + multiplier)
 			var origin = new Vector2(_crusaderTexture.Width / 2f, _crusaderTexture.Height / 2f);
-			var anim = player.GetComponent<PlayerAnimationState>();
+			var anim = player.GetComponent<ActorPresentationState>();
 			var position = t.Position + (anim?.DrawOffset ?? Vector2.Zero) + new Vector2(OffsetX, OffsetY);
 			var scaleVec = new Vector2(pinfo.CurrentScale, pinfo.CurrentScale);
 			if (anim != null)
@@ -153,4 +153,3 @@ namespace Crusaders30XX.ECS.Systems
 
 	}
 }
-

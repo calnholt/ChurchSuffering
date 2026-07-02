@@ -14,7 +14,6 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Hold the Line";
             Text = $"Gain {Courage} courage.";
             Block = 3;
-            Animation = "Block";
             Type = CardType.Block;
 
             OnBlock = (entityManager, card) =>

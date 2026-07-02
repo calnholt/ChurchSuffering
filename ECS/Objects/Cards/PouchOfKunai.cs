@@ -20,7 +20,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"Put {GetMinKunai(IsUpgraded)} to {GetMaxKunai(IsUpgraded)} Kunai cards in your hand.";
             Cost = ["Black"];
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
 

@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Consecrate";
             Target = "Enemy";
             Cost = ["Black"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 6;
             Block = 3;
             Text = $"If this card is pledged when played, it gains +{DamageBonus} damage and gain {CourageGain} courage.";

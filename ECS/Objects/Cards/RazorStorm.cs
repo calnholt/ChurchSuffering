@@ -15,7 +15,7 @@ public class RazorStorm : CardBase
     Name = "Razor Storm";
     Target = "Enemy";
     Text = $"Attacks {GetNumOfHits(IsUpgraded)} times.";
-    Animation = "Attack";
+    VisualEffectRecipe = PlayerAttackEffect();
     Damage = 1;
     Block = 2;
     IsFreeAction = true;

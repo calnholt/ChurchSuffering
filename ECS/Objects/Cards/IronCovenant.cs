@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"When this is pledged, gain {VigorGained} vigor.";
             Cost = ["Red", "Black", "Any", "Any", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 15;
             Block = 3;
 

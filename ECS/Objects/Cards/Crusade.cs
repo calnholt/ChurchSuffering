@@ -19,7 +19,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"If this card is pledged when played, gain {ActionPointGain} action point and {MightGain} might.";
             Cost = ["Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 5;
             Block = 2;
 

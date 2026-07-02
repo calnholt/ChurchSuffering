@@ -15,7 +15,6 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Hidden Kunai";
             Text = $"Add {KunaiAmount} Kunai to your hand.";
             Block = 3;
-            Animation = "Block";
             Type = CardType.Block;
 
             OnBlock = (entityManager, card) =>

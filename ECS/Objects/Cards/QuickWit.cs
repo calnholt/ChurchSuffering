@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Quick Wit";
             Target = "Enemy";
             Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Resurrect {GetCardDrawAmount(IsUpgraded)}.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 2;
             Block = 3;
             IsFreeAction = true;

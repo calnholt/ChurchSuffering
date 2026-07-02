@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"Gain {VigorGained} vigor.";
             Cost = ["Black", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = HeavyHammerEffect().WithIntensity(0.9f);
             Damage = 3;
             IsWeapon = true;
 

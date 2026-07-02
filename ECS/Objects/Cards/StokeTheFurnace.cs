@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Stoke the Furnace";
             Target = "Player";
             Text = $"Lose {CourageCost} courage, gain {VigorGained} vigor. Repeat up to {MaxRepeats} times if possible.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Type = CardType.Attack;
             Damage = 2;
             Block = 3;

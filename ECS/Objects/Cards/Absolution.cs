@@ -14,7 +14,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Absolution";
             Target = "Enemy";
             Cost = ["Any", "Any", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 10;
             Block = 3;
 

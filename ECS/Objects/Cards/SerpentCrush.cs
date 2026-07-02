@@ -20,7 +20,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Gain {ActionPointAmount} action point and resurrect {DrawAmount}.";
             IsFreeAction = true;
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 3;
             Type = CardType.Attack;
             Block = 3;

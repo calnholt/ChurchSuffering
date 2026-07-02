@@ -58,6 +58,7 @@ public class FrozenClaw : EnemyAttackBase
     Id = "frozen_claw";
     Name = "Frozen Claw";
     Damage = 10;
+    AttackEffectRecipe = EnemyClawSlashEffect();
     BlockRequiredToPreventEffect = 6;
     Text = $"On attack - Intimidate 1 card.\n\n{EnemyAttackTextHelper.GetBlockThresholdText(Damage - BlockRequiredToPreventEffect.Value, "Freeze the top card of your draw pile.")}";
 

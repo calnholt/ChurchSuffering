@@ -26,5 +26,6 @@ public class TrainingStrike : EnemyAttackBase
         Id = "training_strike";
         Name = "Training Strike";
         Damage = 9;
+        AttackEffectRecipe = EnemySlashEffect();
     }
 }

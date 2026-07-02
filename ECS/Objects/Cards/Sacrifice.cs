@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"Gain {ScarAmount} scar, {TemperanceAmount} temperance, and resurrect {ResurrectAmount}.";
             IsFreeAction = true;
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
 

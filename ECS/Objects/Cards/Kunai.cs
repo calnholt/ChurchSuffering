@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"Wounds the enemy if you have dealt attack damage {RequiredAttackHits} times this action phase. Exhaust on play or at the end of your turn";
             IsFreeAction = true;
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 1;
             ExhaustsOnEndTurn = true;
             CanAddToLoadout = false;

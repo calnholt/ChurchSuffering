@@ -14,7 +14,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"Gain {CourageGained} courage.";
             Cost = ["Black", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = LightSlashEffect();
             Damage = 5;
             IsWeapon = true;
 

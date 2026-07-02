@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage.";
             IsFreeAction = true;
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 5;
             Block = 2;
 

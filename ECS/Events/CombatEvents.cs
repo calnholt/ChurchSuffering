@@ -65,27 +65,6 @@ namespace Crusaders30XX.ECS.Events
 		public bool WasHit;
 	}
 
-	// New: explicit signal to start the enemy's attack animation
-	public class StartEnemyAttackAnimation
-	{
-		public string ContextId;
-	}
-
-	// Player attack animation start and impact events
-	public class StartPlayerAttackAnimation { }
-	public class PlayerAttackImpactNow { }
-
-	// Generic buff animation start for either player or enemy
-	public class StartBuffAnimation
-	{
-		public bool TargetIsPlayer;
-	}
-
-	public class BuffAnimationComplete
-	{
-		public bool TargetIsPlayer;
-	}
-
 	// Enemy debuff animation when applying negative effects to player
 	public class StartDebuffAnimation
 	{

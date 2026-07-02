@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"As an additional cost, mill {GetMillAmount(IsUpgraded)} cards.";
             Cost = ["Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 8;
             Block = 3;
 

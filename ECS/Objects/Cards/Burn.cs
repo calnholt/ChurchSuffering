@@ -19,7 +19,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Text = $"Apply {BurnAmount} burn to the enemy. If you have {CourageThreshold}+ courage, gain {ActionPointBonus} action point.";
             Block = 2;
             Type = CardType.Prayer;
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
 
             OnPlay = (entityManager, card) =>
             {

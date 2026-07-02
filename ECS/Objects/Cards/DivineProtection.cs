@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"Gain {AegisGained} aegis.";
             IsFreeAction = true;
-            Animation = "Buff";
+            VisualEffectRecipe = DefensiveGuardEffect();
             Type = CardType.Prayer;
             Block = 2;
 

@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"If you have {CourageThreshold}+ courage, gain {GetMight(IsUpgraded)} might.";
             IsFreeAction = true;
-            Animation = "Buff";
+            VisualEffectRecipe = HolySupportEffect();
             Type = CardType.Prayer;
             Block = 3;
 

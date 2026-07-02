@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Data.VisualEffects;
 using System.Collections.Generic;
 using System;
 using Crusaders30XX.ECS.Singletons;
@@ -367,8 +368,30 @@ namespace Crusaders30XX.ECS.Systems
 			EventQueue.EnqueueRule(new QueuedDiscardAssignedBlocksEvent(EntityManager, ctx));
 			EventQueue.EnqueueRule(new QueuedResolveAttackEvent(ctx));
 			EventQueue.EnqueueRule(new QueuedWaitAbsorbEvent(ctx));
-			EventQueue.EnqueueRule(new QueuedStartEnemyAttackAnimation(ctx));
-			EventQueue.EnqueueRule(new QueuedWaitImpactEvent(ctx));
+			var planned = FindPlannedAttack(ctx);
+			var enemy = FindEnemyForPlannedAttack(ctx);
+			var attack = planned?.AttackDefinition;
+			var recipe = attack?.AttackEffectRecipe ?? VisualEffectPresets.EnemyAttackLunge();
+			var request = attack == null
+				? null
+				: VisualEffectRequestFactory.ForEnemyAttack(EntityManager, enemy, attack, recipe, ctx);
+			if (request != null)
+			{
+				EventQueue.EnqueueRule(new QueuedStartVisualEffect(request));
+				EventQueue.EnqueueRule(new QueuedWaitVisualEffectImpact(request.RequestId));
+			}
+			else
+			{
+				LoggingService.Append("EnemyAttackDisplaySystem.ExecuteConfirm", new System.Text.Json.Nodes.JsonObject
+				{
+					["reason"] = "VisualEffectRequestFailed",
+					["contextId"] = ctx ?? string.Empty,
+					["attackId"] = attack?.Id ?? string.Empty
+				});
+				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<EnemyAttackImpactNow>(
+					"Rule.EnemyAttackImpactNow.Emergency",
+					new EnemyAttackImpactNow { ContextId = ctx }));
+			}
 			EventQueue.EnqueueRule(new QueuedAdvanceToNextPlannedAttackEvent(EntityManager, ctx));
 		}
 

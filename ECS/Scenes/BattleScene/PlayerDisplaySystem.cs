@@ -22,7 +22,7 @@ namespace Crusaders30XX.ECS.Systems
         private Texture2D _crusaderTexture;
         private string _loadedWeaponId;
         private float _elapsedSeconds;
-        private Vector2 _attackDrawOffset = Vector2.Zero; // now sourced from PlayerAnimationState
+        private Vector2 _actorDrawOffset = Vector2.Zero;
 
         // Visual tuning
         [DebugEditable(DisplayName = "Portrait Height (% of screen height)", Step = 0.01f, Min = 0.05f, Max = 1.0f)]
@@ -69,8 +69,8 @@ namespace Crusaders30XX.ECS.Systems
                     viewportW * (0.5f + CenterOffsetXPct),
                     viewportH * (0.5f + CenterOffsetYPct)
                 );
-                var anim = player.GetComponent<PlayerAnimationState>();
-                _attackDrawOffset = anim?.DrawOffset ?? Vector2.Zero;
+                var anim = player.GetComponent<ActorPresentationState>();
+                _actorDrawOffset = anim?.DrawOffset ?? Vector2.Zero;
                 transform.Position = basePosition;
                 transform.Scale = new Vector2(scale, scale);
                 var pinfo = player.GetComponent<PortraitInfo>();
@@ -97,13 +97,26 @@ namespace Crusaders30XX.ECS.Systems
             float texW = _crusaderTexture.Width;
             float texH = _crusaderTexture.Height;
             var origin = new Vector2(texW / 2f, texH / 2f); // center pivot
-            var position = transform.Position + _attackDrawOffset;
+            var position = transform.Position + _actorDrawOffset;
             var scaleVec = transform.Scale; // base scale
-            var animState = player.GetComponent<PlayerAnimationState>();
+            var animState = player.GetComponent<ActorPresentationState>();
+            var battleTransform = EntityManager.GetEntity("BattlePresentationTransform")?.GetComponent<BattlePresentationTransform>();
+            if (battleTransform != null)
+            {
+                position += battleTransform.Offset;
+                scaleVec *= battleTransform.Scale;
+            }
             if (animState != null)
             {
                 scaleVec.X *= animState.ScaleMultiplier.X;
                 scaleVec.Y *= animState.ScaleMultiplier.Y;
+            }
+            var info = player.GetComponent<PortraitInfo>();
+            if (info != null)
+            {
+                info.LastDrawCenter = position;
+                info.LastDrawTopLeft = position - origin * scaleVec;
+                info.LastDrawScale = scaleVec;
             }
 
             _spriteBatch.Draw(
@@ -138,4 +151,3 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-

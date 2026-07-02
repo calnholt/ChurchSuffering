@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Events;
 
 namespace Crusaders30XX.ECS.Objects.Medals
@@ -12,6 +13,7 @@ namespace Crusaders30XX.ECS.Objects.Medals
         public string Text { get; set; } = "";
         public EntityManager EntityManager { get; set; }
         public Entity MedalEntity { get; set; }
+        public VisualEffectRecipe ActivationEffectRecipe { get; protected set; }
 
         public int CurrentCount { get; set; } = 0;
         public int MaxCount { get; set; } = 0;
@@ -29,6 +31,11 @@ namespace Crusaders30XX.ECS.Objects.Medals
         public virtual void OnAcquire()
         {
             Console.WriteLine($"[MedalBase] OnAcquire: {Id}");
+        }
+
+        protected static VisualEffectRecipe HolySupportEffect()
+        {
+            return VisualEffectPresets.HolySupport();
         }
 
         public virtual void Dispose()

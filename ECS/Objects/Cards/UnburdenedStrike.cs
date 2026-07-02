@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"If no cards were discarded to play this, this gains +{GetDamageBonus(IsUpgraded)} damage.";
             Cost = ["White", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 8;
             Block = 2;
 

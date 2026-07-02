@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Gain {VigorGained} vigor.";
             IsFreeAction = true;
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 2;
 

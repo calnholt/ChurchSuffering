@@ -47,6 +47,7 @@ public class SandBlast : EnemyAttackBase
     Id = "sand_blast";
     Name = "Sand Blast";
     Damage = 4;
+    AttackEffectRecipe = EnemyRockBlastEffect();
     GuardConversionChance = 0f;
   }
 }

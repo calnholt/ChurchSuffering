@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             IsFreeAction = true;
             Type = CardType.Prayer;
             Block = 2;
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
 
             OnPlay = (entityManager, card) =>
             {

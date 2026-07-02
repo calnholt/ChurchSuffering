@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Relentless Strike";
             Target = "Enemy";
             Text = $"The first time you play this each battle, it goes to the bottom of your deck. It gains +{GetBattleDamageBonus(IsUpgraded)} damage for the rest of the battle.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 9;
             Block = 3;
             Cost = ["White", "Any"];

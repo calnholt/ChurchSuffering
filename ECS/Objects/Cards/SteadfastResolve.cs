@@ -19,7 +19,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Steadfast Resolve";
             Target = "Player";
             Text = $"Gain {GetVigorGained(IsUpgraded)} vigor.";
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
             IsFreeAction = false;

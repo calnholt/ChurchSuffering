@@ -61,6 +61,7 @@ public class StoneBarrage : EnemyAttackBase
         Id = "stone_barrage";
         Name = "Stone Barrage";
         Damage = 10;
+        AttackEffectRecipe = EnemyRockBlastEffect();
         ConditionType = ConditionType.None;
 
         OnAttackReveal = (entityManager) =>

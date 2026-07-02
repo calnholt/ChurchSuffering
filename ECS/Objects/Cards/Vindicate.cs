@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"If you have {CourageThreshold} or more courage, this attack gains +{DamageBonus} damage and lose all courage.";
             Cost = ["Red", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 8;
             Block = 3;
 

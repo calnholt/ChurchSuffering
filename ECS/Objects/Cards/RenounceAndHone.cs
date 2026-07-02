@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Renounce and Hone";
             Target = "Player";
             Text = $"As an additional cost, discard your pledged card that was not pledged this turn. Gain {VigorAmount} vigor and {GetCourageAmount(IsUpgraded)} courage.";
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
             IsFreeAction = true;

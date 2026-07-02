@@ -407,20 +407,22 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            // If this card has an attack animation, enqueue a player attack animation sequence that will play serially
-            if (string.Equals(card.Animation, "Attack", StringComparison.OrdinalIgnoreCase))
+            if (card.VisualEffectRecipe != null)
             {
-                EventQueue.EnqueueRule(new QueuedStartPlayerAttackAnimation());
-                EventQueue.EnqueueRule(new QueuedWaitPlayerImpactEvent());
-            }
-            else if (string.Equals(card.Animation, "Buff", StringComparison.OrdinalIgnoreCase))
-            {
-                LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
+                var request = VisualEffectRequestFactory.ForCard(EntityManager, evt.Card, card.VisualEffectRecipe);
+                if (request != null)
                 {
-                    ["animation"] = "Buff"
-                });
-                EventQueue.EnqueueRule(new QueuedStartBuffAnimation(true));
-                EventQueue.EnqueueRule(new QueuedWaitBuffComplete(true));
+                    EventQueue.EnqueueRule(new QueuedStartVisualEffect(request));
+                    EventQueue.EnqueueRule(new QueuedWaitVisualEffectComplete(request.RequestId));
+                }
+                else
+                {
+                    LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["reason"] = "VisualEffectRequestFailed",
+                        ["cardId"] = card.CardId
+                    });
+                }
             }
 
             ComponentLoggerService.LogEntity(evt.Card, "Executing card OnPlay effect");

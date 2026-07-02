@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Tempest";
             Target = "Enemy";
             Text = $"Gain {TemperanceAmount} temperance.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Cost = ["White"];
             Damage = 2;
             Block = 2;

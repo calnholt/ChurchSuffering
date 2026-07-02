@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Fervor";
             Target = "Enemy";
             Cost = ["Red"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 6;
             Block = 2;
             Type = CardType.Attack;

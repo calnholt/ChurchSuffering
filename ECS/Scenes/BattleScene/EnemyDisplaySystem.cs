@@ -19,8 +19,6 @@ namespace Crusaders30XX.ECS.Systems
 		private Texture2D _enemyTexture;
 		private float _pulseTimerSeconds;
 		private readonly float _pulseDurationSeconds = 0.25f;
-		private Vector2 _attackOffset = new Vector2(-80f, -20f);
-		private Vector2 _attackTargetPos;
 
 		[DebugEditable(DisplayName = "Screen Height Coverage", Step = 0.02f, Min = 0.05f, Max = 1f)]
 		public float ScreenHeightCoverage { get; set; } = 0.44f;
@@ -28,29 +26,12 @@ namespace Crusaders30XX.ECS.Systems
 		public float CenterOffsetXPct { get; set; } = 0.3f; // positive = right, negative = left
 		[DebugEditable(DisplayName = "Center Offset Y (% of height)", Step = 0.01f, Min = -1.0f, Max = 1.0f)]
 		public float CenterOffsetYPct { get; set; } = -0.09f; // positive = down, negative = up
-		[DebugEditable(DisplayName = "Attack Animation Duration (s)", Step = .01f, Min = 0.01f, Max = 2f)]
-		public float _attackAnimDuration = 0.2f;
-		[DebugEditable(DisplayName = "Attack Nudge Distance (px)", Step = 1f, Min = 0f, Max = 200f)]
-		public float AttackNudgePixels { get; set; } = 36f;
-
 		public EnemyDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_content = content;
-			EventManager.Subscribe<StartEnemyAttackAnimation>(evt =>
-			{
-				// Start a brief attack animation timer; on completion, signal impact
-				_attackAnimTimer = _attackAnimDuration;
-				_pendingContextId = evt.ContextId;
-				LoggingService.Append("EnemyDisplaySystem.OnStartEnemyAttackAnimation", new System.Text.Json.Nodes.JsonObject { ["contextId"] = evt.ContextId });
-				// Capture current player position as target (find Player Transform)
-				var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-				var pt = player?.GetComponent<Transform>();
-				_attackTargetPos = pt?.Position ?? Vector2.Zero;
-				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.SwordImpact, Volume = 0.5f });
-			});
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -58,23 +39,11 @@ namespace Crusaders30XX.ECS.Systems
 			return EntityManager.GetEntitiesWithComponent<Enemy>();
 		}
 
-		private float _attackAnimTimer;
-		private string _pendingContextId;
-
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
 			if (_pulseTimerSeconds > 0f)
 			{
 				_pulseTimerSeconds = System.Math.Max(0f, _pulseTimerSeconds - (float)gameTime.ElapsedGameTime.TotalSeconds);
-			}
-			if (_attackAnimTimer > 0f)
-			{
-				_attackAnimTimer = System.Math.Max(0f, _attackAnimTimer - (float)gameTime.ElapsedGameTime.TotalSeconds);
-				if (_attackAnimTimer == 0f && !string.IsNullOrEmpty(_pendingContextId))
-				{
-                    EventManager.Publish(new EnemyAttackImpactNow { ContextId = _pendingContextId });
-					_pendingContextId = null;
-				}
 			}
 
 			// Write base position so parallax system can adjust it before Draw
@@ -110,8 +79,7 @@ namespace Crusaders30XX.ECS.Systems
 					float bump = 1f + 0.15f * (float)System.Math.Sin(tp * System.Math.PI);
 					scale *= bump;
 				}
-				// Apply scale multiplier from PlayerAnimationState (used for buff/debuff animations)
-				var animState = e.GetComponent<PlayerAnimationState>();
+				var animState = e.GetComponent<ActorPresentationState>();
 				Vector2 scaleVec = new Vector2(scale, scale);
 				if (animState != null)
 				{
@@ -129,25 +97,12 @@ namespace Crusaders30XX.ECS.Systems
 				info.CurrentScale = scale;
 				info.BaseScale = desiredHeight / tex.Height;
 				// t.Position is parallax-adjusted (written in Update, offset by ParallaxLayerSystem)
-				var drawPos = t.Position;
-				if (_attackAnimTimer > 0f)
+				var drawPos = t.Position + (animState?.DrawOffset ?? Vector2.Zero);
+				var battleTransform = EntityManager.GetEntity("BattlePresentationTransform")?.GetComponent<BattlePresentationTransform>();
+				if (battleTransform != null)
 				{
-					float ta = 1f - (_attackAnimTimer / _attackAnimDuration); // 0->1
-					float outPhase = System.Math.Min(0.5f, ta) * 2f; // 0..1 over first half
-					float backPhase = System.Math.Max(0f, ta - 0.5f) * 2f; // 0..1 over second half
-					Vector2 desired = _attackTargetPos + _attackOffset;
-					Vector2 dir = desired - t.Position;
-					if (dir.LengthSquared() > 0.0001f)
-					{
-						dir = Vector2.Normalize(dir);
-					}
-					else
-					{
-						dir = Vector2.Normalize(_attackOffset);
-					}
-					Vector2 outPos = t.Position + dir * AttackNudgePixels;
-					Vector2 mid = Vector2.Lerp(t.Position, outPos, 1f - (float)System.Math.Pow(1f - outPhase, 3));
-					drawPos = Vector2.Lerp(mid, t.Position, backPhase);
+					drawPos += battleTransform.Offset;
+					scaleVec *= battleTransform.Scale;
 				}
 				info.LastDrawCenter = drawPos;
 				info.LastDrawTopLeft = drawPos - origin * scaleVec;
@@ -185,5 +140,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-
-

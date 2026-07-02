@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = "Gain 1 aggression, then double your aggression.";
             IsFreeAction = true;
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Block = 3;
             Type = CardType.Prayer;
 

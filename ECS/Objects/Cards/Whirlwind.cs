@@ -19,7 +19,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"Attacks {GetNumOfHits(IsUpgraded)} times.";
             Cost = ["Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 3;
             Block = 3;
 

@@ -55,9 +55,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			portraitInfo.TextureHeight = _portrait.Height;
 			portraitInfo.BaseScale = _portraitScale;
 			portraitInfo.CurrentScale = _portraitScale;
-			if (!_player.HasComponent<PlayerAnimationState>())
+			if (!_player.HasComponent<ActorPresentationState>())
 			{
-				ctx.World.AddComponent(_player, new PlayerAnimationState());
+				ctx.World.AddComponent(_player, new ActorPresentationState());
 			}
 
 			var deckEntity = ctx.World.CreateEntity("Deck");

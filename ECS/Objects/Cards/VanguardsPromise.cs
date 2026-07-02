@@ -14,7 +14,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Vanguard's Promise";
             Target = "Enemy";
             Text = "If you have no pledged card, pledge a random card from your discard pile.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 2;
             Block = 2;
             IsFreeAction = true;

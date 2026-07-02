@@ -37,9 +37,15 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				["entityId"] = e.MedalEntity?.Id ?? -1
 			});
+			var medal = e.MedalEntity?.GetComponent<EquippedMedal>()?.Medal;
+			if (medal == null) return;
+			if (medal.ActivationEffectRecipe != null)
+			{
+				EventQueue.EnqueueTrigger(new QueuedActivateMedalWithVisual(EntityManager, e.MedalEntity));
+				return;
+			}
 			EventQueueBridge.EnqueueTriggerAction(() =>
 			{
-				var medal = e.MedalEntity.GetComponent<EquippedMedal>().Medal;
 				EventManager.Publish(new MedalTriggered { MedalEntity = e.MedalEntity, MedalId = medal.Id });
 				medal.Activate();
 			}, ActivationDelaySeconds);
@@ -47,6 +53,5 @@ namespace Crusaders30XX.ECS.Systems
 
 	}
 }
-
 
 

@@ -43,10 +43,14 @@ namespace Crusaders30XX.ECS.Systems
 				equipment.Equipment.CantActivateMessage();
 				return;
 			}
+			if (equipment.Equipment.ActivationEffectRecipe != null)
+			{
+				EventQueue.EnqueueTrigger(new QueuedActivateEquipmentWithVisual(EntityManager, e.EquipmentEntity));
+				return;
+			}
 			equipment.Equipment.OnActivate(EntityManager, e.EquipmentEntity);
 			EventManager.Publish(new EquipmentAbilityTriggered { Equipment = e.EquipmentEntity, EquipmentId = equipment.Equipment.Id });
 		}
 
 	}
 }
-

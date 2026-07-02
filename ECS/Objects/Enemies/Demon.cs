@@ -41,6 +41,7 @@ public class RazorMaw : EnemyAttackBase
     Id = "razor_maw";
     Name = "Razor Maw";
     Damage = 9;
+    AttackEffectRecipe = EnemyBiteEffect();
     BlockRequiredToPreventEffect = 7;
     Text = $"{EnemyAttackTextHelper.GetBlockThresholdText(Damage - BlockRequiredToPreventEffect.Value, EnemyAttackTextHelper.GetText(EnemyAttackTextType.Burn, Burn, ConditionType))}";
 
@@ -59,6 +60,7 @@ public class ScorchingClaw : EnemyAttackBase
     Id = "scorching_claw";
     Name = "Scorching Claw";
     Damage = 10;
+    AttackEffectRecipe = EnemyClawSlashEffect();
     ConditionType = ConditionType.OnBlockedByAtLeast2Cards;
     Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Burn, Burn, ConditionType);
 

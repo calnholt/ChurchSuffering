@@ -13,7 +13,6 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Rarity = Rarity.Common;
             Name = "Mantlet";
             Block = 4;
-            Animation = "Block";
             Type = CardType.Block;
 
             OnDiscardedForCost = (entityManager, card) =>

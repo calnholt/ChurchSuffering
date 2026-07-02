@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Reckoning";
             Target = "Enemy";
             Cost = ["Any", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 8;
             Block = 2;
 

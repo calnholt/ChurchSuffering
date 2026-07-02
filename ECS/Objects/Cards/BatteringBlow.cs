@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"If no cards were discarded to play this, gain {CourageGain} courage.";
             Cost = ["White"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 6;
             Block = 3;
             IsFreeAction = false;

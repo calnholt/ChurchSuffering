@@ -30,6 +30,7 @@ public class SandPound : EnemyAttackBase
     Id = "sand_pound";
     Name = "Sand Pound";
     Damage = 7;
+    AttackEffectRecipe = EnemyRockBlastEffect();
     ConditionType = ConditionType.MustBeBlockedByExactly1Card;
     Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.MustBeBlockedExactly, Threshold);
 

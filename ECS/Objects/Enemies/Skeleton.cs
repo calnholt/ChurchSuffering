@@ -65,6 +65,7 @@ public class BoneStrike : EnemyAttackBase
     Id = "bone_strike";
     Name = "Bone Strike";
     Damage = 2;
+    AttackEffectRecipe = EnemySlashEffect();
     ConditionType = ConditionType.OnHit;
     Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Scar, Scar, ConditionType.OnHit);
 
