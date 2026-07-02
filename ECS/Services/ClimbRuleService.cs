@@ -685,13 +685,13 @@ namespace Crusaders30XX.ECS.Services
 			if (string.Equals(kind, ClimbShopSlotKinds.Medal, StringComparison.OrdinalIgnoreCase))
 			{
 				dominant = CardData.CardColor.White;
-				baseline = 6;
+				baseline = 5;
 				reductionPerExtraTime = 2;
 			}
 			else if (string.Equals(kind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase))
 			{
 				dominant = CardData.CardColor.Black;
-				baseline = 8;
+				baseline = 6;
 				reductionPerExtraTime = 2;
 			}
 

@@ -437,13 +437,13 @@ public class ClimbRuleServiceTests
 		AssertShopCost(ClimbShopSlotKinds.Replacement, 2, expectedTotal: 2, expectedDominant: "red");
 		AssertShopCost(ClimbShopSlotKinds.Replacement, 3, expectedTotal: 1, expectedDominant: "red");
 
-		AssertShopCost(ClimbShopSlotKinds.Medal, 1, expectedTotal: 6, expectedDominant: "white");
-		AssertShopCost(ClimbShopSlotKinds.Medal, 2, expectedTotal: 4, expectedDominant: "white");
-		AssertShopCost(ClimbShopSlotKinds.Medal, 3, expectedTotal: 2, expectedDominant: "white");
+		AssertShopCost(ClimbShopSlotKinds.Medal, 1, expectedTotal: 5, expectedDominant: "white");
+		AssertShopCost(ClimbShopSlotKinds.Medal, 2, expectedTotal: 3, expectedDominant: "white");
+		AssertShopCost(ClimbShopSlotKinds.Medal, 3, expectedTotal: 1, expectedDominant: "white");
 
-		AssertShopCost(ClimbShopSlotKinds.Equipment, 1, expectedTotal: 8, expectedDominant: "black");
-		AssertShopCost(ClimbShopSlotKinds.Equipment, 2, expectedTotal: 6, expectedDominant: "black");
-		AssertShopCost(ClimbShopSlotKinds.Equipment, 3, expectedTotal: 4, expectedDominant: "black");
+		AssertShopCost(ClimbShopSlotKinds.Equipment, 1, expectedTotal: 6, expectedDominant: "black");
+		AssertShopCost(ClimbShopSlotKinds.Equipment, 2, expectedTotal: 4, expectedDominant: "black");
+		AssertShopCost(ClimbShopSlotKinds.Equipment, 3, expectedTotal: 2, expectedDominant: "black");
 	}
 
 	[Fact]
