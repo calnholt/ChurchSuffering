@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Services
 		{
 			if (entityManager == null || cardEntity == null || recipe == null) return null;
 			var card = cardEntity.GetComponent<CardData>()?.Card;
-			var source = HasTransform(cardEntity) ? cardEntity : FindPlayer(entityManager);
+			var source = FindPlayer(entityManager);
 			var target = ResolveTarget(entityManager, VisualEffectSourceKind.Card, recipe.TargetRole);
 			return Build(recipe, source, target, VisualEffectSourceKind.Card, card?.CardId, card?.DisplayName, string.Empty, isPreview);
 		}
@@ -127,9 +127,5 @@ namespace Crusaders30XX.ECS.Services
 			return entityManager.GetEntitiesWithComponent<Enemy>().FirstOrDefault();
 		}
 
-		private static bool HasTransform(Entity entity)
-		{
-			return entity?.GetComponent<Transform>() != null;
-		}
 	}
 }

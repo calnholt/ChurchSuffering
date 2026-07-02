@@ -1,0 +1,69 @@
+using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.VisualEffects;
+using Crusaders30XX.ECS.Objects.Cards;
+using Crusaders30XX.ECS.Services;
+using Microsoft.Xna.Framework;
+using Xunit;
+
+namespace Crusaders30XX.Tests;
+
+public sealed class VisualEffectRequestFactoryTests
+{
+	[Fact]
+	public void Card_attack_effect_uses_player_as_source_and_enemy_as_target()
+	{
+		var entityManager = BuildBattleActors(out var player, out var enemy);
+		var card = CreateCard(entityManager, new Smite(), new Vector2(900f, 700f));
+
+		var request = VisualEffectRequestFactory.ForCard(
+			entityManager,
+			card,
+			card.GetComponent<CardData>().Card.VisualEffectRecipe);
+
+		Assert.NotNull(request);
+		Assert.Same(player, request.Source);
+		Assert.Same(enemy, request.Target);
+		Assert.Equal("smite", request.SourceId);
+		Assert.Equal(VisualEffectSourceKind.Card, request.SourceKind);
+	}
+
+	[Fact]
+	public void Player_targeted_card_effect_uses_player_as_source_and_target()
+	{
+		var entityManager = BuildBattleActors(out var player, out _);
+		var card = CreateCard(entityManager, new Smite(), new Vector2(900f, 700f));
+
+		var request = VisualEffectRequestFactory.ForCard(
+			entityManager,
+			card,
+			VisualEffectPresets.PlayerBuff());
+
+		Assert.NotNull(request);
+		Assert.Same(player, request.Source);
+		Assert.Same(player, request.Target);
+		Assert.Equal(VisualEffectSourceKind.Card, request.SourceKind);
+	}
+
+	private static EntityManager BuildBattleActors(out Entity player, out Entity enemy)
+	{
+		var entityManager = new EntityManager();
+		player = entityManager.CreateEntity("Player");
+		entityManager.AddComponent(player, new Player());
+		entityManager.AddComponent(player, new Transform { Position = new Vector2(100f, 300f) });
+
+		enemy = entityManager.CreateEntity("Enemy");
+		entityManager.AddComponent(enemy, new Enemy());
+		entityManager.AddComponent(enemy, new Transform { Position = new Vector2(700f, 300f) });
+
+		return entityManager;
+	}
+
+	private static Entity CreateCard(EntityManager entityManager, CardBase cardBase, Vector2 position)
+	{
+		var card = entityManager.CreateEntity("Card");
+		entityManager.AddComponent(card, new CardData { Card = cardBase });
+		entityManager.AddComponent(card, new Transform { Position = position });
+		return card;
+	}
+}
