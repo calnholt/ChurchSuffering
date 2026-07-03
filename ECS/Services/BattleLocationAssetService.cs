@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Crusaders30XX.ECS.Events;
 
 namespace Crusaders30XX.ECS.Services
@@ -18,8 +20,22 @@ namespace Crusaders30XX.ECS.Services
 
 		public static BattleLocation RollClimbEncounterLocation(Random rng)
 		{
+			return RollClimbEncounterLocation(rng, excludedLocations: null);
+		}
+
+		public static BattleLocation RollClimbEncounterLocation(Random rng, IEnumerable<BattleLocation> excludedLocations)
+		{
 			rng ??= Random.Shared;
-			return ClimbEncounterLocations[rng.Next(ClimbEncounterLocations.Length)];
+			var pool = ClimbEncounterLocations.ToList();
+			if (pool.Count == 0) return BattleLocation.Desert;
+
+			var excluded = excludedLocations?.ToHashSet() ?? new HashSet<BattleLocation>();
+			if (excluded.Count > 0 && pool.Count > excluded.Count)
+			{
+				pool = pool.Where(location => !excluded.Contains(location)).ToList();
+			}
+
+			return pool[rng.Next(pool.Count)];
 		}
 
 		public static string GetBackgroundAsset(BattleLocation location)

@@ -138,6 +138,61 @@ public class ClimbRuleServiceTests
 	}
 
 	[Fact]
+	public void Generated_encounters_have_minimum_enemy_and_location_diversity()
+	{
+		for (int seed = 1; seed <= 500; seed++)
+		{
+			var state = ClimbRuleService.CreateInitialState(seed, TestLoadout());
+			AssertEncounterSlotDiversity(state.encounterSlots);
+		}
+	}
+
+	[Fact]
+	public void Replenish_encounters_maintains_minimum_diversity()
+	{
+		var state = new ClimbSaveState
+		{
+			time = 0,
+			encounterSlots = new List<ClimbEncounterSlotSave>
+			{
+				new()
+				{
+					id = "encounter_a",
+					enemyId = "skeleton",
+					generatedAtTime = 0,
+					duration = 1,
+					timeCost = 1,
+					battleLocation = BattleLocation.Desert,
+					rewardResources = new ClimbResourceSave { red = 1, white = 0, black = 0 },
+				},
+				new()
+				{
+					id = "encounter_b",
+					enemyId = "skeleton",
+					generatedAtTime = 0,
+					duration = 1,
+					timeCost = 1,
+					battleLocation = BattleLocation.Desert,
+					rewardResources = new ClimbResourceSave { red = 1, white = 0, black = 0 },
+				},
+				new()
+				{
+					id = "encounter_c",
+					enemyId = "skeleton",
+					generatedAtTime = 0,
+					duration = 1,
+					timeCost = 1,
+					battleLocation = BattleLocation.Desert,
+					rewardResources = new ClimbResourceSave { red = 1, white = 0, black = 0 },
+				},
+			},
+		};
+
+		Assert.True(ClimbRuleService.ReplenishEncounterSlots(state, 123, TestLoadout()));
+		AssertEncounterSlotDiversity(state.encounterSlots);
+	}
+
+	[Fact]
 	public void Generated_encounter_locations_are_uniform_rollable_locations_only()
 	{
 		var rolledLocations = Enumerable.Range(1, 200)
@@ -217,6 +272,7 @@ public class ClimbRuleServiceTests
 		Assert.Equal(state.time, rerolled.generatedAtTime);
 		Assert.InRange(rerolled.duration, ClimbRuleService.EncounterMinDuration, ClimbRuleService.EncounterMaxDuration);
 		Assert.False(ClimbRuleService.IsEncounterExpired(rerolled, state.time));
+		AssertEncounterSlotDiversity(state.encounterSlots);
 	}
 
 	[Fact]
@@ -542,6 +598,23 @@ public class ClimbRuleServiceTests
 					$"Starter rarity card '{cardId}' in climb shop should NOT be auto-upgraded but was: {key}");
 			}
 		}
+	}
+
+	private static void AssertEncounterSlotDiversity(IReadOnlyList<ClimbEncounterSlotSave> slots)
+	{
+		var activeSlots = slots
+			.Where(slot => slot != null && !slot.isFinal && !string.IsNullOrWhiteSpace(slot.enemyId))
+			.ToList();
+		if (activeSlots.Count < ClimbRuleService.EncounterSlotCount) return;
+
+		Assert.True(activeSlots
+			.Select(slot => slot.enemyId)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.Count() >= 2);
+		Assert.True(activeSlots
+			.Select(slot => slot.battleLocation)
+			.Distinct()
+			.Count() >= 2);
 	}
 
 	private static LoadoutDefinition TestLoadout()

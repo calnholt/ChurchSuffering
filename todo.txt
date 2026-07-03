@@ -42,7 +42,7 @@ weapons
 
 tech debt
 - researching removing isclicked and ishovered from UIElement, handle through PlayerInputEvent + enity ids
-- contextId
+- Fable - screen sizes
 
 
 persistent card states:
@@ -54,3 +54,6 @@ keywords
 
 cards that need art:
 - steel the spirit
+
+bugs:
+- 
