@@ -10,7 +10,6 @@ using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -53,53 +52,17 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Event ? Scale", Step = 0.01f, Min = 0.05f, Max = 2f)]
 		public float EventQuestionMarkScale { get; set; } = 0.35f;
 
-		public PointOfInterestDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public PointOfInterestDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
-			try
-			{
-				_questIconTexture = content.Load<Texture2D>("Quest_poi");
-			}
-			catch
-			{
-				_questIconTexture = null;
-			}
-			try
-			{
-				_hellriftIconTexture = content.Load<Texture2D>("Hellrift_poi");
-			}
-			catch
-			{
-				_hellriftIconTexture = null;
-			}
-			try
-			{
-				_shopIconTexture = content.Load<Texture2D>("Shop_poi");
-			}
-			catch
-			{
-				_shopIconTexture = null;
-			}
-			try
-			{
-				_treasureIconTexture = content.Load<Texture2D>("treasure_chest");
-			}
-			catch
-			{
-				_treasureIconTexture = null;
-			}
-			try
-			{
-				_skullTexture = content.Load<Texture2D>("skull");
-			}
-			catch
-			{
-				_skullTexture = null;
-			}
+			_pixel = imageAssets.GetPixel(Color.White);
+			_questIconTexture = imageAssets.TryGetTexture("Quest_poi");
+			_hellriftIconTexture = imageAssets.TryGetTexture("Hellrift_poi");
+			_shopIconTexture = imageAssets.TryGetTexture("Shop_poi");
+			_treasureIconTexture = imageAssets.TryGetTexture("treasure_chest");
+			_skullTexture = imageAssets.TryGetTexture("skull");
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()

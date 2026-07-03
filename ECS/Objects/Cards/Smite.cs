@@ -13,10 +13,10 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Rarity = Rarity.Starter;
             Name = "Smite";
             Target = "Enemy";
-            Animation = "Attack";
+            VisualEffectRecipe = HolyStrikeEffect();
             Damage = 3;
             Block = 3;
-
+            Type = CardType.Attack;
             OnPlay = (entityManager, card) =>
             {
                 var player = entityManager.GetEntity("Player");
@@ -29,12 +29,6 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
                     DamageType = ModifyTypeEnum.Attack
                 });
-                if (IsUpgraded)
-                {
-                    EventManager.Publish(new ModifyTemperanceEvent {
-                        Delta = TemperanceUpgradeAmount
-                    });
-                }
             };
 
             OnPledged = (entityManager, card) =>

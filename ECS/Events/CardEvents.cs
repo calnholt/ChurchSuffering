@@ -24,6 +24,7 @@ namespace Crusaders30XX.ECS.Events
         public Entity Card { get; set; }
         public Vector2 Position { get; set; }
         public float Scale { get; set; } = 1f;
+        public float Alpha { get; set; } = 1f;
         /// <summary>
         /// Optional clip rectangle. If set, the card will be clipped to this region using scissor test.
         /// </summary>
@@ -38,6 +39,28 @@ namespace Crusaders30XX.ECS.Events
         public Entity Card { get; set; }
         public Vector2 Position { get; set; }
         public float Scale { get; set; } = 1f;
+    }
+
+    /// <summary>
+    /// Event published immediately before the base card art is rendered.
+    /// </summary>
+    public class CardBaseRenderStartedEvent
+    {
+        public Entity Card { get; set; }
+        public Vector2 Position { get; set; }
+        public float Scale { get; set; } = 1f;
+        public float Rotation { get; set; }
+    }
+
+    /// <summary>
+    /// Event published immediately after the base card art is rendered.
+    /// </summary>
+    public class CardBaseRenderCompletedEvent
+    {
+        public Entity Card { get; set; }
+        public Vector2 Position { get; set; }
+        public float Scale { get; set; } = 1f;
+        public float Rotation { get; set; }
     }
 
     /// <summary>
@@ -113,9 +136,24 @@ namespace Crusaders30XX.ECS.Events
     {
         public string Title { get; set; }
         public List<Entity> Cards { get; set; }
+        public bool IsSelectable { get; set; } = false;
+        public string SelectionContext { get; set; } = string.Empty;
+        public CardListModalMode Mode { get; set; } = CardListModalMode.Auto;
+    }
+
+    public static class CardListSelectionContexts
+    {
+        public const string ClimbReplacement = "climb.replacement";
     }
 
     public class CloseCardListModalEvent { }
+
+    public class CardListModalCardSelectedEvent
+    {
+        public Entity Card { get; set; }
+        public int CardIndex { get; set; } = -1;
+        public string SelectionContext { get; set; } = string.Empty;
+    }
     
     /// <summary>
     /// Event published when deck shuffling and drawing is requested
@@ -150,6 +188,17 @@ namespace Crusaders30XX.ECS.Events
     {
         public Entity Deck { get; set; }
         public System.Collections.Generic.List<Entity> DrawnCards { get; set; }
+    }
+
+    /// <summary>
+    /// Event published after the start-of-turn draw request sequence has attempted to resolve.
+    /// </summary>
+    public class StartOfTurnDrawResolvedEvent
+    {
+        public Entity Player { get; set; }
+        public Entity Deck { get; set; }
+        public SubPhase Phase { get; set; }
+        public int RequestedDrawCount { get; set; }
     }
 
     /// <summary>
@@ -321,6 +370,11 @@ namespace Crusaders30XX.ECS.Events
     }
 
     /// <summary>
+    /// Request that the pledge owner system move a random discard card to hand and pledge it.
+    /// </summary>
+    public class PledgeRandomCardFromDiscardRequested { }
+
+    /// <summary>
     /// Request that the pledge owner system removes pledge state from a card.
     /// </summary>
     public class RemovePledgeFromCardRequested
@@ -401,6 +455,12 @@ namespace Crusaders30XX.ECS.Events
         QuestComplete = 5,
         Achievements = 6,
         FrozenBattle = 7,
+        TundraBattle = 8,
+        JungleBattle = 9,
+        TheGateBattle = 10,
+        Climb = 11,
+        VolcanoBattle = 12,
+        GothicBattle = 13,
     }
 
     /// <summary>
@@ -555,6 +615,10 @@ namespace Crusaders30XX.ECS.Events
         public int Amount { get; set; }
     }
 
+    public class DiscardMarkedForSpecificDiscardEvent
+    {
+    }
+
     public class ApplyCardApplicationEvent
     {
         public Entity Card { get; set; }
@@ -580,7 +644,10 @@ namespace Crusaders30XX.ECS.Events
     {
         Frozen,
         Brittle,
+        Scorched,
+        Thorned,
         Colorless,
+        Cursed,
     }
 
     public class RemoveRandomCardEvent
@@ -639,7 +706,8 @@ namespace Crusaders30XX.ECS.Events
 
     public class CardPlayedEvent
     {
-        public Entity Card {get; set;}
+        public Entity Card { get; set; }
+        public int VigorStacksAtPlay { get; set; }
     }
 
     public class CardBlockedEvent

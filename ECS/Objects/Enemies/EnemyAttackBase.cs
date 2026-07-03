@@ -6,13 +6,15 @@ using System.ComponentModel;
 using System.Text.RegularExpressions;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
+using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Services;
 
 namespace Crusaders30XX.ECS.Objects.EnemyAttacks
 {
   public class EnemyAttackBase
   {
-    public string Id { get; set; }
+    public EnemyAttackId Id { get; set; }
     public string Name { get; set; }
     public int Damage { get; set; }
     public int AdditionalDamage { get; set; } = 0;
@@ -26,6 +28,7 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
     public bool IgnoresAegis { get; set; } = false;
     public static EntityManager EntityManager { get; set; }
     public int? BlockRequiredToPreventEffect { get; protected set; }
+    public VisualEffectRecipe AttackEffectRecipe { get; protected set; }
 
     // Probability (0.0–1.0) that guard conversion is attempted. Set to 0f to opt out.
     public float GuardConversionChance { get; protected set; } = 0.75f;
@@ -35,6 +38,26 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
 
     // Max conversion as a ratio of damage (exclusive upper bound, floor applied)
     public float GuardConversionMaxRatio { get; protected set; } = 0.5f;
+
+    protected static VisualEffectRecipe EnemySlashEffect()
+    {
+      return VisualEffectPresets.EnemySlash();
+    }
+
+    protected static VisualEffectRecipe EnemyClawSlashEffect()
+    {
+      return VisualEffectPresets.EnemyClawSlash();
+    }
+
+    protected static VisualEffectRecipe EnemyBiteEffect()
+    {
+      return VisualEffectPresets.EnemyBite();
+    }
+
+    protected static VisualEffectRecipe EnemyRockBlastEffect()
+    {
+      return VisualEffectPresets.EnemyRockBlast();
+    }
 
     public virtual int RollGuardConversion(int damage)
     {

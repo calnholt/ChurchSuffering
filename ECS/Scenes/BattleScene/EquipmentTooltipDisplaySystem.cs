@@ -10,7 +10,6 @@ using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Utils;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -27,10 +26,10 @@ namespace Crusaders30XX.ECS.Systems
 
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly Texture2D _pixel;
-		private readonly Dictionary<string, Texture2D> _iconCache = new();
 		private readonly Dictionary<(int Width, int Height, int Radius), Texture2D> _roundedRectCache = new();
+		private readonly string _tooltipEntityName;
 
 		[DebugEditable(DisplayName = "Tooltip Width", Step = 1, Min = 180, Max = 600)]
 		public int TooltipWidth { get; set; } = 300;
@@ -96,15 +95,16 @@ namespace Crusaders30XX.ECS.Systems
 			EntityManager entityManager,
 			GraphicsDevice graphicsDevice,
 			SpriteBatch spriteBatch,
-			ContentManager content) : base(entityManager)
+			ImageAssetService imageAssets,
+			string tooltipEntityName = null) : base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
+			_imageAssets = imageAssets;
+			_tooltipEntityName = tooltipEntityName ?? string.Empty;
 			if (graphicsDevice != null)
 			{
-				_pixel = new Texture2D(graphicsDevice, 1, 1);
-				_pixel.SetData(new[] { Color.White });
+				_pixel = _imageAssets.GetPixel(Color.White);
 			}
 		}
 
@@ -117,11 +117,11 @@ namespace Crusaders30XX.ECS.Systems
 
 		public override void Update(GameTime gameTime)
 		{
-			var tooltipEntity = EntityManager.GetEntitiesWithComponent<EquipmentTooltipState>()
-				.FirstOrDefault();
-			var root = EntityManager.GetEntitiesWithComponent<EquipmentDisplayRoot>()
-				.FirstOrDefault();
-			if (tooltipEntity == null || root == null) return;
+			var tooltipEntity = GetTooltipEntity();
+			var root = string.IsNullOrWhiteSpace(_tooltipEntityName)
+				? EntityManager.GetEntitiesWithComponent<EquipmentDisplayRoot>().FirstOrDefault()
+				: null;
+			if (tooltipEntity == null) return;
 
 			var state = tooltipEntity.GetComponent<EquipmentTooltipState>();
 			var hovered = FindHoveredEquipment();
@@ -148,8 +148,7 @@ namespace Crusaders30XX.ECS.Systems
 		public void Draw()
 		{
 			if (_graphicsDevice == null || _spriteBatch == null || _pixel == null) return;
-			var tooltipEntity = EntityManager.GetEntitiesWithComponent<EquipmentTooltipState>()
-				.FirstOrDefault();
+			var tooltipEntity = GetTooltipEntity();
 			var state = tooltipEntity?.GetComponent<EquipmentTooltipState>();
 			var equipped = state?.EquipmentEntity?.GetComponent<EquippedEquipment>();
 			if (tooltipEntity == null || state == null || equipped?.Equipment == null || state.Alpha01 <= 0f)
@@ -167,8 +166,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		public Rectangle GetTooltipWorldBounds()
 		{
-			var tooltipEntity = EntityManager.GetEntitiesWithComponent<EquipmentTooltipState>()
-				.FirstOrDefault();
+			var tooltipEntity = GetTooltipEntity();
 			var state = tooltipEntity?.GetComponent<EquipmentTooltipState>();
 			return tooltipEntity == null || state == null
 				? Rectangle.Empty
@@ -207,7 +205,9 @@ namespace Crusaders30XX.ECS.Systems
 				EntityManager,
 				equipmentEntity,
 				equipmentEntity.GetComponent<UIElement>());
-			Vector2 rootWorld = TransformResolverService.ResolveWorldPosition(EntityManager, root);
+			Vector2 rootWorld = root == null
+				? Vector2.Zero
+				: TransformResolverService.ResolveWorldPosition(EntityManager, root);
 			int worldX = panelBounds.Right + TooltipGap;
 			int worldY = panelBounds.Center.Y - height / 2;
 			worldX = Math.Max(0, Math.Min(worldX, Game1.VirtualWidth - TooltipWidth));
@@ -221,11 +221,23 @@ namespace Crusaders30XX.ECS.Systems
 			state.Bounds = new Rectangle(0, 0, TooltipWidth, height);
 		}
 
+		private Entity GetTooltipEntity()
+		{
+			var tooltips = EntityManager.GetEntitiesWithComponent<EquipmentTooltipState>();
+			if (string.IsNullOrWhiteSpace(_tooltipEntityName))
+			{
+				return tooltips.FirstOrDefault();
+			}
+			return tooltips.FirstOrDefault(entity =>
+				string.Equals(entity.Name, _tooltipEntityName, StringComparison.OrdinalIgnoreCase));
+		}
+
 		private int CalculateHeight(EquipmentBase equipment)
 		{
 			var titleFont = FontSingleton.TitleFont;
 			var bodyFont = FontSingleton.ChakraPetchFont;
-			if (titleFont == null || bodyFont == null) return TooltipMinHeight;
+			var flavorFont = FontSingleton.ChakraPetchBoldItalicFont;
+			if (titleFont == null || bodyFont == null || flavorFont == null) return TooltipMinHeight;
 
 			int bodyWidth = Math.Max(
 				1,
@@ -239,7 +251,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				height += 6;
 			}
-			height += MeasureWrappedHeight(bodyFont, equipment.FlavorText, BodyFontScale, bodyWidth);
+			height += MeasureWrappedHeight(flavorFont, equipment.FlavorText, BodyFontScale, bodyWidth);
 			if (equipment.CanActivateDuringActionPhase)
 			{
 				height += TagRowPaddingTop
@@ -346,7 +358,8 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var titleFont = FontSingleton.TitleFont;
 			var bodyFont = FontSingleton.ChakraPetchFont;
-			if (titleFont == null || bodyFont == null) return;
+			var flavorFont = FontSingleton.ChakraPetchBoldItalicFont;
+			if (titleFont == null || bodyFont == null || flavorFont == null) return;
 
 			int contentWidth = Math.Max(1, body.Width - BodyPadding * 2);
 			float x = body.X + BodyPadding;
@@ -381,7 +394,7 @@ namespace Crusaders30XX.ECS.Systems
 				y += 6f;
 			}
 			y = DrawWrappedText(
-				bodyFont,
+				flavorFont,
 				equipment.FlavorText,
 				new Vector2(x, y),
 				contentWidth,
@@ -483,17 +496,7 @@ namespace Crusaders30XX.ECS.Systems
 		private Texture2D GetIcon(EquipmentSlot slot)
 		{
 			string key = slot.ToString().ToLowerInvariant();
-			if (_iconCache.TryGetValue(key, out var cached)) return cached;
-			try
-			{
-				cached = _content?.Load<Texture2D>(key);
-			}
-			catch
-			{
-				cached = null;
-			}
-			_iconCache[key] = cached;
-			return cached;
+			return _imageAssets.TryGetTexture(key);
 		}
 
 		private void DrawRoundedRect(Rectangle bounds, Color color)

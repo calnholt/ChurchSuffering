@@ -20,19 +20,18 @@ All available passives in the game:
 - **Burn**: Deals X damage to owner at start of their turn
 - **Power**: Owner's attacks deal +X damage (battle passive)
 - **DowseWithHolyWater**: Removes all effects (turn passive)
-- **Slow**: Ambush attacks are X seconds faster
+- **Slow**: Ambush attacks are X seconds faster. At the end of your turn, lose 1 slow (battle passive)
 - **Aegis**: Prevents the next X damage from any source (battle passive)
 - **Stun**: Skips the next X attacks (battle passive)
 - **Armor**: Takes X less damage from attacks (battle passive)
 - **Wounded**: Takes X more damage from all sources (battle passive)
 - **Webbing**: At start of turn, gain X slow (quest passive)
 - **Inferno**: At start of turn, gain X burn stacks (battle passive)
-- **Penance**: Attacks deal X less damage. Converted to scars at next battle (quest passive)
 - **Aggression**: Next non-weapon attack this turn gains X damage (turn passive)
 - **Stealth**: Cannot see number of attacks planned (battle passive)
 - **Poison**: Every 60 seconds, lose 1 HP (battle passive)
 - **Shield**: Prevent all damage from first source each turn (battle passive)
-- **Fear**: Attacks have X*10% chance to become ambush (quest passive)
+- **Fear**: All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear (quest passive)
 - **Siphon**: Enemy heals X*SuccubusMultiplier HP per courage removed (battle passive)
 - **Thorns**: Attacker gains X bleed when attacking owner (battle passive)
 - **Bleed**: Lose 1 HP at start of turn, then remove 1 bleed (quest passive)
@@ -40,11 +39,11 @@ All available passives in the game:
 - **Intellect**: Max hand size and cards drawn increased by X
 - **Intimidated**: X cards intimidated at start of block phase (battle passive)
 - **MindFog**: Discard all cards at end of action phase (battle passive)
-- **Scar**: Lose X max HP (run-long passive). Remove one scar when leaving battle after a quest node
+- **Scar**: Lose X max HP immediately (run-long passive). At battle start, lose one scar stack, but max HP is not restored until the next battle recalculates from remaining scars
 - **Channel**: Increases potency of attacks (battle passive)
 - **Frostbite**: At 3 stacks, take 3 damage and lose 3 frostbite (quest passive)
 - **Frozen**: Frozen cards give 1 frostbite and 50% exhaust chance on play. Remove by blocking (quest passive)
-- **Windchill**: Gain 1 penance when blocking with frozen card (battle passive)
+- **Windchill**: Gain 1 scar when blocking with frozen card (battle passive)
 - **SubZero**: Freeze one card from player hand at start of enemy turn (battle passive)
 - **Enflamed**: Take X damage if 4+ courage at end of action phase (quest passive)
 - **Shackled**: Shackle 2 cards at start of block phase. Remove 1 by blocking (quest passive)
@@ -52,8 +51,8 @@ All available passives in the game:
 ### Passive Duration Categories
 - **Turn passives**: Removed at end of player turn (Aggression, DowseWithHolyWater)
 - **Battle passives**: Persist through battle, removed when battle ends (Stun, Burn, Power, Armor, Wounded, Inferno, Stealth, Poison, Siphon, Thorns, Rage, Intimidated, MindFog, Channel, Windchill, SubZero, Aegis, Shield)
-- **Quest passives**: Persist through queued encounters in a quest node, cleared when leaving battle (Shackled, Webbing, Penance, Fear, Bleed, Enflamed)
-- **Run-long passives**: Persist for the whole run in save (Frostbite, Scar). Scar loses one stack when leaving battle after a quest node
+- **Quest passives**: Persist through queued encounters in a quest node, cleared when leaving battle (Shackled, Webbing, Fear, Bleed, Enflamed)
+- **Run-long passives**: Persist for the whole run in save (Frostbite, Scar). Scar loses one stack at battle start
 
 ### How to Apply Passives
 Use ApplyPassiveEvent:
@@ -136,7 +135,7 @@ public override void OnExecute(EntityManager entityManager)
   - Listens to ApplyPassiveEvent, RemovePassive, UpdatePassive
   - Applies start-of-turn effects (Burn, Webbing, Bleed, Inferno)
   - Applies pre-block effects (Stun, Aggression, Power)
-  - Converts Penance to Scar at battle start
+  - Removes one Scar stack at battle start without restoring max HP in the current battle
 - **PassiveTooltipTextService**: Provides tooltip text for all passives
 - **HpManagementSystem**: Handles damage modifications based on Armor, Wounded, Aegis
 - **CardPlaySystem**: Handles Frozen cards gaining Frostbite
@@ -144,7 +143,6 @@ public override void OnExecute(EntityManager entityManager)
 ### Special Cases
 - **Aegis**: Has special Sfx event when gained
 - **Frostbite**: Triggers damage when threshold (3) is reached
-- **Penance**: Converted to Scars at StartBattle phase
 - **Stun**: Removes attacks from enemy AttackIntent
 - **Shield**: Decremented by 1 each enemy turn
 - **Aggression**: Only affects next non-weapon attack in turn, then removed; weapon attacks do not consume it

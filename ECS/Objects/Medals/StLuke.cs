@@ -12,6 +12,7 @@ namespace Crusaders30XX.ECS.Objects.Medals
             Id = "st_luke";
             Name = "St. Luke the Evangelist";
             Text = "At the start of battle, gain 1 aegis.";
+            ActivationEffectRecipe = HolySupportEffect();
         }
 
         public override void Initialize(EntityManager entityManager, Entity medalEntity)

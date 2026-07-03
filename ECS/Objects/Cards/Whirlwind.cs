@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
@@ -8,22 +9,24 @@ namespace Crusaders30XX.ECS.Objects.Cards
     public class Whirlwind : CardBase
     {
         private int NumOfHits = 2;
+        private int NumOfHitsUpgrade = 1;
+        private List<string> CostUpgrade = ["Red"];
         public Whirlwind()
         {
             CardId = "whirlwind";
             Rarity = Rarity.Common;
             Name = "Whirlwind";
             Target = "Enemy";
-            Text = $"Attacks {NumOfHits} times.";
+            Text = $"Attacks {GetNumOfHits(IsUpgraded)} times.";
             Cost = ["Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 3;
             Block = 3;
 
             OnPlay = (entityManager, card) =>
             {
                 var time = 0.5f;
-                var numOfHits = NumOfHits;
+                var numOfHits = GetNumOfHits(IsUpgraded);
                 EventManager.Publish(new EndTurnDisplayEvent { ShowButton = false });
                 TimerScheduler.Schedule(time * numOfHits, () => {
                     EventManager.Publish(new EndTurnDisplayEvent { ShowButton = true });
@@ -42,6 +45,15 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     });
                 }
             };
+            OnUpgrade = (entityManager, card) =>
+            {
+                Cost = CostUpgrade; 
+                Text = $"Attacks {GetNumOfHits(IsUpgraded)} times.";
+            };
+        }
+        private int GetNumOfHits(bool isUpgraded)
+        {
+            return isUpgraded ? NumOfHits + NumOfHitsUpgrade : NumOfHits;
         }
     }
 }

@@ -14,8 +14,7 @@ namespace Crusaders30XX.ECS.Systems
     /// At start of enemy turn, marks a random card in hand with a penalty.
     /// Playing the marked card triggers the penalty.
     /// Blocking with the marked card moves the mark to a different card.
-    /// Pledging a marked card gives 1 penance.
-    /// Holding a marked card until end of action phase gives 1 penance.
+    /// Pledging or holding a marked card clears the mark.
     /// </summary>
     public class MarkManagementSystem : Core.System
     {
@@ -24,7 +23,6 @@ namespace Crusaders30XX.ECS.Systems
         {
             MarkEffectType.Lose1HP,
             MarkEffectType.Lose2HP,
-            MarkEffectType.Gain1Penance,
             MarkEffectType.Gain2Bleed,
             MarkEffectType.Gain1Burn
         };
@@ -71,21 +69,14 @@ namespace Crusaders30XX.ECS.Systems
             }
             else if (evt.Current == SubPhase.PlayerEnd)
             {
-                // If any marked cards remain in hand, player gains 1 penance per marked card
+                // If any marked cards remain in hand, clear them at end of turn.
                 var markedCards = EntityManager.GetEntitiesWithComponent<Marked>().ToList();
                 foreach (var card in markedCards)
                 {
                     var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
                     if (deck?.Hand?.Contains(card) == true)
                     {
-                        LoggingService.Append("MarkManagementSystem.OnChangeBattlePhase.PlayerEnd", new System.Text.Json.Nodes.JsonObject { ["message"] = "marked card held until PlayerEnd, applying 1 penance" });
-                        var player = EntityManager.GetEntity("Player");
-                        EventManager.Publish(new ApplyPassiveEvent
-                        {
-                            Target = player,
-                            Type = AppliedPassiveType.Penance,
-                            Delta = 1
-                        });
+                        LoggingService.Append("MarkManagementSystem.OnChangeBattlePhase.PlayerEnd", new System.Text.Json.Nodes.JsonObject { ["message"] = "marked card held until PlayerEnd, clearing mark" });
                         EntityManager.RemoveComponent<Marked>(card);
                     }
                 }
@@ -164,15 +155,7 @@ namespace Crusaders30XX.ECS.Systems
             var marked = evt.Card.GetComponent<Marked>();
             if (marked == null) return;
 
-            // Pledging a marked card gives 1 penance
-            LoggingService.Append("MarkManagementSystem.OnPledgeAdded", new System.Text.Json.Nodes.JsonObject { ["message"] = "marked card pledged, applying 1 penance" });
-            var player = EntityManager.GetEntity("Player");
-            EventManager.Publish(new ApplyPassiveEvent
-            {
-                Target = player,
-                Type = AppliedPassiveType.Penance,
-                Delta = 1
-            });
+            LoggingService.Append("MarkManagementSystem.OnPledgeAdded", new System.Text.Json.Nodes.JsonObject { ["message"] = "marked card pledged, clearing mark" });
             EntityManager.RemoveComponent<Marked>(evt.Card);
         }
 
@@ -243,16 +226,6 @@ namespace Crusaders30XX.ECS.Systems
                     });
                     break;
 
-                case MarkEffectType.Gain1Penance:
-                    LoggingService.Append("MarkManagementSystem.ApplyMarkEffect", new System.Text.Json.Nodes.JsonObject { ["effect"] = "Gain1Penance" });
-                    EventManager.Publish(new ApplyPassiveEvent
-                    {
-                        Target = player,
-                        Type = AppliedPassiveType.Penance,
-                        Delta = 1
-                    });
-                    break;
-
                 case MarkEffectType.Gain2Bleed:
                     LoggingService.Append("MarkManagementSystem.ApplyMarkEffect", new System.Text.Json.Nodes.JsonObject { ["effect"] = "Gain2Bleed" });
                     EventManager.Publish(new ApplyPassiveEvent
@@ -281,7 +254,6 @@ namespace Crusaders30XX.ECS.Systems
             {
                 MarkEffectType.Lose1HP => "Lose 1 HP",
                 MarkEffectType.Lose2HP => "Lose 2 HP",
-                MarkEffectType.Gain1Penance => "+1 Penance",
                 MarkEffectType.Gain2Bleed => "+2 Bleed",
                 MarkEffectType.Gain1Burn => "+1 Burn",
                 _ => "Unknown"

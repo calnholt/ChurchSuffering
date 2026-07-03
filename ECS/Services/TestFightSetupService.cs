@@ -38,6 +38,7 @@ namespace Crusaders30XX.ECS.Services
 			if (hp != null)
 			{
 				hp.Max = WayStationRunSetupSingleton.PlayerMaxHp;
+				hp.UnscarredMax = hp.Max;
 				hp.Current = hp.Max;
 			}
 
@@ -55,7 +56,6 @@ namespace Crusaders30XX.ECS.Services
 			{
 				EventId = TestFightRuntime.Options.EnemyId,
 				EventType = QueuedEventType.Enemy,
-				Difficulty = EnemyDifficulty.Easy,
 			});
 			queued.CurrentIndex = -1;
 			queued.LocationId = string.Empty;
@@ -80,7 +80,7 @@ namespace Crusaders30XX.ECS.Services
 				TestFightRuntime.Options.WeaponId,
 				seed,
 				"test_fight");
-			RunDeckService.ReplaceDeckFromLoadout(entityManager, loadout, loadout.cardIds);
+			RunDeckService.ReplaceDeckFromLoadout(entityManager, loadout);
 		}
 
 		public static void ApplyEnemyHpDelta(Entity enemyEntity)
@@ -142,6 +142,7 @@ namespace Crusaders30XX.ECS.Services
 			if (hp != null)
 			{
 				hp.Max = WayStationRunSetupSingleton.PlayerMaxHp;
+				hp.UnscarredMax = hp.Max;
 				hp.Current = hp.Max;
 			}
 		}

@@ -29,13 +29,43 @@ public class DialogCatalogTests
 		Assert.Equal("Crusader", intro[7].actor);
 		Assert.Equal("Then it does not need explaining. It needs to be put down.", intro[7].message);
 
-		var victory = tutorial.ResolveSegment("gleeber_victory");
-		Assert.Equal(2, victory.Count);
-		Assert.Equal("One down. One more to go. And now I have my sword. Keep up.", victory[0].message);
-		Assert.Equal("Remiel", victory[1].actor);
-		Assert.Equal("Trying!", victory[1].message);
+		var catchBreath = tutorial.ResolveSegment("catch_breath");
+		Assert.Equal(3, catchBreath.Count);
+		Assert.Equal("Remiel", catchBreath[0].actor);
+
+		var swordRetrieved = tutorial.ResolveSegment("sword_retrieved");
+		Assert.Equal(2, swordRetrieved.Count);
+		Assert.Equal("Crusader", swordRetrieved[0].actor);
+
+		var lastOfThem = tutorial.ResolveSegment("last_of_them");
+		Assert.Equal(2, lastOfThem.Count);
+		Assert.Equal("Remiel", lastOfThem[0].actor);
 
 		Assert.Equal("guardian_angel", DialogDisplaySystem.ResolvePortraitAssetName("Remiel"));
 		Assert.Equal("crusader_sword", DialogDisplaySystem.ResolvePortraitAssetName("Crusader"));
+	}
+
+	[Theory]
+	[InlineData("nun_counsel", "Nun", "character/nun")]
+	[InlineData("reverent_crusader_counsel", "Reverent Crusader", "character/reverent_crusader")]
+	[InlineData("revered_crusader_training", "Revered Crusader", "character/revered_crusader")]
+	[InlineData("smith_forging", "Smith", "character/smith")]
+	public void Character_dialogue_has_two_lines_and_mapped_portrait(
+		string definitionId,
+		string actor,
+		string portraitAsset)
+	{
+		Assert.True(DialogCatalog.TryGet(definitionId, out var definition));
+		var lines = definition.ResolveSegment("climb_event");
+
+		Assert.Equal(2, lines.Count);
+		Assert.Equal(actor, lines[0].actor);
+		Assert.Equal("Crusader", lines[1].actor);
+		Assert.Equal(portraitAsset, DialogDisplaySystem.ResolvePortraitAssetName(actor));
+		Assert.All(lines, line =>
+		{
+			Assert.All(line.actor, character => Assert.InRange((int)character, 0, 127));
+			Assert.All(line.message, character => Assert.InRange((int)character, 0, 127));
+		});
 	}
 }

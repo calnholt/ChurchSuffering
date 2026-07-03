@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
-using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Utils;
 
 namespace Crusaders30XX.ECS.Objects.Enemies
@@ -13,52 +13,25 @@ namespace Crusaders30XX.ECS.Objects.Enemies
   public class Shadow : EnemyBase
   {
     private int StartAnathema = 4;
-    public Shadow(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public Shadow()
     {
-      Id = "shadow";
+      Id = EnemyId.Shadow;
       Name = "Shadow";
-      HealthPerCard = 2.09f;
-      StartAnathema -= (int)difficulty * 1;
-      Difficulty = difficulty;
+      HP = 42;
 
       OnStartOfBattle = (entityManager) =>
       {
-        EventManager.Subscribe<PledgeAddedEvent>(OnPledgeAddedEvent);
         EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Enemy"), Type = AppliedPassiveType.Anathema, Delta = StartAnathema });
       };
     }
 
-    private void OnPledgeAddedEvent(PledgeAddedEvent evt)
-    {
-      if (evt.Card == null) return;
-
-      var ap = GetComponentHelper.GetAppliedPassives(EntityManager, "Enemy");
-      if (ap == null || ap.Passives == null || ap.Passives.Count == 0) return;
-      if (ap.Passives.TryGetValue(AppliedPassiveType.Anathema, out int darknessStacks) && darknessStacks > 0)
-      {
-        Console.WriteLine($"[Shadow] Anathema triggered at end of action - darknessStacks={darknessStacks}");
-        EventManager.Publish(new ModifyHpRequestEvent
-        {
-          Source = EntityManager.GetEntity("Enemy"),
-          Target = EntityManager.GetEntity("Enemy"),
-          Delta = -darknessStacks,
-          DamageType = ModifyTypeEnum.Effect
-        });
-      }
-    }
-
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
       if (turnNumber % 2 == 0)
       {
-        return ArrayUtils.TakeRandomWithoutReplacement(new List<string> { "snuff_out_the_light", "night_fall", "from_the_shadows" }, 3);
+        return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.SnuffOutTheLight, EnemyAttackId.NightFall, EnemyAttackId.FromTheShadows, EnemyAttackId.UmbraSlice }, 3);
       }
-      return ArrayUtils.TakeRandomWithoutReplacement(new List<string> { "shadow_strike", "dissipating_darkness" }, 1);
-    }
-
-    public override void Dispose()
-    {
-      EventManager.Unsubscribe<PledgeAddedEvent>(OnPledgeAddedEvent);
+      return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.ShadowStrike, EnemyAttackId.DissipatingDarkness }, 1);
     }
   }
 }
@@ -68,13 +41,13 @@ public class ShadowStrike : EnemyAttackBase
   private int AnathemaLoss = 1;
   public ShadowStrike()
   {
-    Id = "shadow_strike";
+    Id = EnemyAttackId.ShadowStrike;
     Name = "Shadow Strike";
-    Damage = 9;
-    ConditionType = ConditionType.OnHit;
-    Text = $"On hit - the enemy loses {AnathemaLoss} anathema.";
+    Damage = 10;
+    BlockRequiredToPreventEffect = 7;
+    Text = $"{EnemyAttackTextHelper.GetBlockThresholdText(Damage - BlockRequiredToPreventEffect.Value, $"The enemy loses {AnathemaLoss} anathema.")}";
 
-    OnAttackHit = (entityManager) =>
+    OnDamageThresholdMet = (entityManager) =>
     {
       EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Enemy"), Type = AppliedPassiveType.Anathema, Delta = -AnathemaLoss });
     };
@@ -86,7 +59,7 @@ public class EncroachingDarkness : EnemyAttackBase
   private int AnathemaGain = 1;
   public EncroachingDarkness()
   {
-    Id = "dissipating_darkness";
+    Id = EnemyAttackId.DissipatingDarkness;
     Name = "Encroaching Darkness";
     Damage = 10;
     ConditionType = ConditionType.OnBlockedByAtLeast2Cards;
@@ -104,7 +77,7 @@ public class SnuffOutTheLight : EnemyAttackBase
   private int SilencedGain = 1;
   public SnuffOutTheLight()
   {
-    Id = "snuff_out_the_light";
+    Id = EnemyAttackId.SnuffOutTheLight;
     Name = "Snuff Out the Light";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -121,7 +94,7 @@ public class FromTheShadows : EnemyAttackBase
 {
   public FromTheShadows()
   {
-    Id = "from_the_shadows";
+    Id = EnemyAttackId.FromTheShadows;
     Name = "From the Shadows";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -140,7 +113,7 @@ public class NightFall : EnemyAttackBase
   private int AnathemaLoss = 1;
   public NightFall()
   {
-    Id = "night_fall";
+    Id = EnemyAttackId.NightFall;
     Name = "Night Fall";
     Damage = 3;
     ConditionType = ConditionType.OnHit;
@@ -149,6 +122,24 @@ public class NightFall : EnemyAttackBase
     OnAttackHit = (entityManager) =>
     {
       EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Enemy"), Type = AppliedPassiveType.Anathema, Delta = -AnathemaLoss });
+    };
+  }
+}
+
+public class UmbraSlice : EnemyAttackBase
+{
+  private int Scar = 1;
+  public UmbraSlice()
+  {
+    Id = EnemyAttackId.UmbraSlice;
+    Name = "Umbra Slice";
+    Damage = 3;
+    ConditionType = ConditionType.OnHit;
+    Text = $"On hit - gain {Scar} scar{(Scar > 1 ? "s" : "")}.";
+
+    OnAttackHit = (entityManager) =>
+    {
+      EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Scar, Delta = Scar });
     };
   }
 }

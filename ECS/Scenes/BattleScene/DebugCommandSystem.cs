@@ -72,6 +72,36 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Publish(new ChangeBattleLocationEvent { Location = BattleLocation.Cathedral });
         }
 
+        [DebugAction("Set Battlefield: Tundra")]
+        public void Debug_SetBattlefield_Tundra()
+        {
+            EventManager.Publish(new ChangeBattleLocationEvent { Location = BattleLocation.Tundra });
+        }
+
+        [DebugAction("Set Battlefield: Jungle")]
+        public void Debug_SetBattlefield_Jungle()
+        {
+            EventManager.Publish(new ChangeBattleLocationEvent { Location = BattleLocation.Jungle });
+        }
+
+        [DebugAction("Set Battlefield: Volcano")]
+        public void Debug_SetBattlefield_Volcano()
+        {
+            EventManager.Publish(new ChangeBattleLocationEvent { Location = BattleLocation.Volcano });
+        }
+
+        [DebugAction("Set Battlefield: The Gate")]
+        public void Debug_SetBattlefield_TheGate()
+        {
+            EventManager.Publish(new ChangeBattleLocationEvent { Location = BattleLocation.TheGate });
+        }
+
+        [DebugAction("Set Battlefield: Gothic")]
+        public void Debug_SetBattlefield_Gothic()
+        {
+            EventManager.Publish(new ChangeBattleLocationEvent { Location = BattleLocation.Gothic });
+        }
+
         [DebugActionInt("Player: Deal Damage", Step = 1, Min = 1, Max = 999, Default = 999)]
         public void Debug_PlayerDealDamage(int amount)
         {
@@ -157,11 +187,6 @@ namespace Crusaders30XX.ECS.Systems
         {
             EventManager.Publish(new ShowTransition { Scene = SceneId.Location });
         }
-        [DebugAction("Apply Penance")]
-        public void Debug_ApplyPenance()
-        {
-            EventManager.Publish(new ApplyPassiveEvent { Target = EntityManager.GetEntity("Player"), Type = AppliedPassiveType.Penance, Delta = 1 });
-        }
         [DebugActionInt("Apply Power", Step = 1, Min = 1, Max = 999, Default = 1)]
         public void Debug_ApplyPower(int amount)
         {
@@ -185,6 +210,39 @@ namespace Crusaders30XX.ECS.Systems
             {
                 Amount = 1,
                 Type = CardApplicationType.Brittle,
+                Target = CardApplicationTarget.Hand,
+            });
+        }
+
+        [DebugAction("Apply Frozen (hand)")]
+        public void Debug_ApplyFrozenHand()
+        {
+            EventManager.Publish(new ApplyCardApplicationEvent
+            {
+                Amount = 1,
+                Type = CardApplicationType.Frozen,
+                Target = CardApplicationTarget.Hand,
+            });
+        }
+
+        [DebugAction("Apply Scorched (hand)")]
+        public void Debug_ApplyScorchedHand()
+        {
+            EventManager.Publish(new ApplyCardApplicationEvent
+            {
+                Amount = 1,
+                Type = CardApplicationType.Scorched,
+                Target = CardApplicationTarget.Hand,
+            });
+        }
+
+        [DebugAction("Apply Thorned (hand)")]
+        public void Debug_ApplyThornedHand()
+        {
+            EventManager.Publish(new ApplyCardApplicationEvent
+            {
+                Amount = 1,
+                Type = CardApplicationType.Thorned,
                 Target = CardApplicationTarget.Hand,
             });
         }

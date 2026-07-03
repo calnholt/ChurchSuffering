@@ -36,19 +36,28 @@ namespace Crusaders30XX.ECS.Data.Save
 			return result;
 		}
 
-		public static void Save(string fileAbsPath, SaveFile data)
+		public static bool Save(string fileAbsPath, SaveFile data)
 		{
-			if (string.IsNullOrEmpty(fileAbsPath) || data == null) return;
+			if (string.IsNullOrEmpty(fileAbsPath) || data == null) return false;
+			string temporaryPath = $"{fileAbsPath}.tmp";
 			try
 			{
 				var dir = Path.GetDirectoryName(fileAbsPath);
 				if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
 				var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-				File.WriteAllText(fileAbsPath, json);
+				File.WriteAllText(temporaryPath, json);
+				File.Move(temporaryPath, fileAbsPath, overwrite: true);
+				return true;
 			}
 			catch (System.Exception ex)
 			{
 				System.Console.WriteLine($"[SaveRepository] Failed to write {fileAbsPath}: {ex.Message}");
+				try
+				{
+					if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+				}
+				catch { }
+				return false;
 			}
 		}
 	}

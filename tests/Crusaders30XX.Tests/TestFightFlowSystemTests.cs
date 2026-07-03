@@ -1,6 +1,7 @@
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Singletons;
@@ -77,12 +78,12 @@ public class TestFightFlowSystemTests
 			var enemy = world.CreateEntity("Enemy");
 			world.AddComponent(enemy, new Enemy
 			{
-				Id = "skeleton",
+				Id = EnemyId.Skeleton,
 				EnemyBase = new Skeleton(),
 			});
 			world.AddComponent(enemy, new Transform());
 
-			_ = new EnemyDefeatFlowSystem(world.EntityManager, content: null);
+			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			int rewardCount = 0;
 			ShowTransition transition = null;
@@ -98,6 +99,10 @@ public class TestFightFlowSystemTests
 			Assert.Equal(1, TestFightRuntime.HpDelta);
 			Assert.Equal(0, rewardCount);
 			Assert.Equal(-1, queued.CurrentIndex);
+			Assert.Null(transition);
+
+			EventManager.Publish(new VictoryAnimationCompleteEvent());
+
 			Assert.Equal(SceneId.Battle, transition.Scene);
 		}
 		finally

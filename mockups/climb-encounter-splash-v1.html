@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Climb Encounter Splash (Gate Break)</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: ClimbEncounterSlotSelectedEvent / ClimbEncounterService.TryQueueEncounter
+      currently publishes ShowTransition { Scene = Battle } immediately.
+      Insert ClimbEncounterSplashDisplaySystem: block input, play Gate Break once,
+      then publish ShowTransition on completion.
+    - Scene bg: desert_background_location.png, dim alpha ~0.22
+    - Fonts: TitleFont (New Rocker), ContentFont (Chakra Petch)
+    - Enemy portrait: same crop as ClimbColumnDisplaySystem (PortraitRegionHeight 172)
+    - Hand off to TransitionDisplaySystem diagonal red wipe after splash (~2.4s)
+  */
+  :root {
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #c41e3a;
+    --red-glow: rgba(196, 30, 58, 0.55);
+    --panel-border: rgba(255, 255, 255, 0.85);
+    --shop-bg: rgba(255, 255, 255, 0.1);
+    --shop-border: rgba(255, 255, 255, 0.55);
+    --enemy-bg: rgba(196, 30, 58, 0.1);
+    --enemy-border: rgba(196, 30, 58, 0.45);
+    --event-bg: rgba(0, 0, 0, 0.35);
+    --event-border: rgba(0, 0, 0, 0.75);
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --text-dim: #888;
+    --splash-duration: 2.4s;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #050505;
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    padding: 28px 24px 80px;
+  }
+
+  .page-header {
+    max-width: 920px;
+    margin: 0 auto 32px;
+    text-align: center;
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #e44, #f88, #e44);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .page-header p {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    line-height: 1.65;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .page-header code {
+    font-size: 0.72rem;
+    background: #1a1820;
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #c8a0a8;
+  }
+
+  .controls {
+    max-width: min(calc(100vw - 48px), 1320px);
+    margin: 0 auto 16px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .replay-btn {
+    padding: 10px 22px;
+    background: #1e1c24;
+    border: 1px solid #3a3644;
+    border-top: 2px solid #4a8fe0;
+    color: #f0ece6;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+
+  .replay-btn:hover { background: #2a2830; border-color: #aaa; }
+  .replay-btn:active { transform: scale(0.98); }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 48px), 1320px);
+    margin: 0 auto 40px;
+    position: relative;
+    overflow: hidden;
+    background: #0a090d;
+    border: 1px solid #2a2830;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 200px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .climb-bg {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert_background_location.png') center top / cover no-repeat;
+  }
+
+  .climb-bg-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  .climb-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 90px;
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    padding: 10px 32px 12px;
+    border-bottom: 1px solid var(--black-4);
+    background: rgba(10, 10, 10, 0.82);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    z-index: 5;
+  }
+
+  .timeline-mock {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(8, 8, 8, 0.6);
+    padding: 10px;
+    min-width: 0;
+  }
+
+  .timeline-slot {
+    flex: 1;
+    min-width: 4px;
+    height: 19px;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  }
+
+  .timeline-slot.filled { background: linear-gradient(180deg, rgba(196,30,58,0.5), rgba(196,30,58,0.15)); }
+  .timeline-slot.shop { background: rgba(255,255,255,0.18); }
+
+  .resource-mock {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 0 12px;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    background: rgba(8, 8, 8, 0.92);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .resource-mock span { color: var(--red-3); }
+
+  .weapon-btn {
+    width: 67px;
+    height: 67px;
+    border: 2px solid var(--panel-border);
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(8, 8, 8, 0.92);
+    flex-shrink: 0;
+  }
+
+  .weapon-btn img { width: 100%; height: 100%; object-fit: cover; }
+
+  .climb-columns {
+    position: absolute;
+    top: 114px;
+    left: 32px;
+    right: 32px;
+    bottom: 48px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    z-index: 4;
+  }
+
+  .climb-column {
+    flex: 1;
+    max-width: calc((1500px - 64px - 40px) / 3);
+    border: 2px solid;
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .climb-column--shop {
+    background: linear-gradient(180deg, var(--shop-bg), rgba(8, 8, 8, 0.92));
+    border-color: var(--shop-border);
+  }
+
+  .climb-column--enemies {
+    background: linear-gradient(180deg, var(--enemy-bg), rgba(8, 8, 8, 0.92));
+    border-color: var(--enemy-border);
+  }
+
+  .climb-column--events {
+    background: linear-gradient(180deg, var(--event-bg), rgba(8, 8, 8, 0.92));
+    border-color: var(--event-border);
+  }
+
+  .column-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+    border-bottom: 2px solid;
+  }
+
+  .climb-column--shop .column-title { border-color: var(--white-1); }
+  .climb-column--enemies .column-title { border-color: var(--red-3); }
+  .climb-column--events .column-title { border-color: var(--event-border); }
+
+  .column-subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 12px;
+  }
+
+  .slot-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .encounter-slot {
+    border: 2px solid rgba(196, 30, 58, 0.45);
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(8, 8, 8, 0.92);
+    cursor: pointer;
+    transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+  }
+
+  .encounter-slot:hover {
+    border-color: var(--red-3);
+    box-shadow: 0 0 14px var(--red-glow);
+    transform: translateY(-1px);
+  }
+
+  .encounter-slot.is-source {
+    border-color: var(--red-3);
+    box-shadow: 0 0 18px var(--red-glow);
+  }
+
+  .encounter-portrait {
+    height: 172px;
+    overflow: hidden;
+    background: #0a090d;
+  }
+
+  .encounter-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 7%;
+  }
+
+  .encounter-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-top: 1px solid rgba(196, 30, 58, 0.25);
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .encounter-meta .gain { color: var(--red-3); font-weight: 600; }
+
+  .placeholder-slot {
+    flex: 1;
+    min-height: 80px;
+    border: 2px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.2);
+  }
+
+  .event-glyph-slot {
+    flex: 1;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(0, 0, 0, 0.55);
+    border-radius: 3px;
+    background: rgba(8, 8, 8, 0.92);
+    font-size: 48px;
+    opacity: 0.35;
+  }
+
+  /* ── Gate Break splash ── */
+  .splash-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .splash-overlay.playing {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .splash-overlay * { pointer-events: none; }
+
+  .splash-shade {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    opacity: 0;
+  }
+
+  .splash-gate {
+    position: absolute;
+    inset: -10%;
+    clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%);
+    background:
+      linear-gradient(135deg, rgba(196,30,58,0.15) 0%, transparent 40%),
+      radial-gradient(ellipse 70% 60% at 50% 48%, rgba(20,10,12,0.95), #050505);
+    opacity: 0;
+  }
+
+  .splash-gate-frame {
+    position: absolute;
+    inset: 8%;
+    border: 4px solid var(--red-3);
+    box-shadow: 0 0 60px var(--red-glow), inset 0 0 80px rgba(196,30,58,0.12);
+    opacity: 0;
+  }
+
+  .splash-slash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    /* Span 1920x1080 corner to corner (diag ~114.8% of width at atan(h/w)) */
+    width: calc(100% / cos(atan(1080 / 1920)));
+    height: 8px;
+    margin: -4px 0 0 calc(-50% / cos(atan(1080 / 1920)));
+    background: linear-gradient(90deg, transparent, #fff, var(--red-3), #fff, transparent);
+    transform: rotate(atan(-1080 / 1920)) scaleX(0);
+    transform-origin: center center;
+    opacity: 0;
+    filter: blur(1px);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .splash-content {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .splash-portrait-orbit {
+    position: relative;
+    width: 300px;
+    height: 380px;
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  .splash-orbit-ring {
+    position: absolute;
+    inset: -24px;
+    border: 2px solid rgba(196, 30, 58, 0.4);
+    border-radius: 4px;
+    transform: rotate(45deg) scale(0.8);
+    opacity: 0;
+  }
+
+  .splash-portrait {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.8);
+  }
+
+  .splash-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 7%;
+  }
+
+  .splash-name-letters {
+    display: flex;
+    gap: 4px;
+    font-family: 'New Rocker', cursive;
+    font-size: 56px;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    text-shadow: 0 0 30px rgba(196,30,58,0.7);
+  }
+
+  .splash-name-letters span {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(60px) rotate(8deg);
+  }
+
+  .splash-sub {
+    font-size: 14px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    opacity: 0;
+  }
+
+  .splash-overlay.playing .splash-shade {
+    animation: splash-shade var(--splash-duration) ease forwards;
+  }
+  .splash-overlay.playing .splash-gate {
+    animation: splash-gate-open var(--splash-duration) cubic-bezier(0.15, 0.85, 0.25, 1) forwards;
+  }
+  .splash-overlay.playing .splash-gate-frame {
+    animation: splash-gate-frame var(--splash-duration) ease forwards;
+  }
+  .splash-overlay.playing .splash-slash {
+    animation: splash-slash var(--splash-duration) ease forwards;
+  }
+  .splash-overlay.playing .splash-portrait-orbit {
+    animation: splash-portrait var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .splash-overlay.playing .splash-orbit-ring {
+    animation: splash-orbit var(--splash-duration) ease forwards;
+  }
+  .splash-overlay.playing .splash-name-letters span {
+    animation: splash-letter var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .splash-overlay.playing .splash-sub {
+    animation: splash-sub var(--splash-duration) ease forwards;
+  }
+
+  @keyframes splash-shade {
+    0% { opacity: 0; }
+    6% { opacity: 1; }
+    84% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes splash-gate-open {
+    0%, 4% { opacity: 0; clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%); }
+    8% { opacity: 1; }
+    24% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+    78% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes splash-gate-frame {
+    0%, 18% { opacity: 0; transform: scale(1.2); }
+    28% { opacity: 1; transform: scale(1); }
+    78% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes splash-slash {
+    0%, 14% { opacity: 0; transform: rotate(atan(-1080 / 1920)) scaleX(0); }
+    22% { opacity: 1; transform: rotate(atan(-1080 / 1920)) scaleX(1); }
+    32% { opacity: 0; transform: rotate(atan(-1080 / 1920)) scaleX(1.1); }
+    100% { opacity: 0; }
+  }
+  @keyframes splash-portrait {
+    0%, 16% { opacity: 0; transform: scale(0.2); }
+    30% { opacity: 1; transform: scale(1.1); }
+    40% { transform: scale(0.97); }
+    48%, 76% { opacity: 1; transform: scale(1); }
+    84% { opacity: 0; transform: scale(1.04); }
+    100% { opacity: 0; }
+  }
+  @keyframes splash-orbit {
+    0%, 24% { opacity: 0; transform: rotate(45deg) scale(0.8); }
+    36% { opacity: 1; transform: rotate(0deg) scale(1); }
+    76% { opacity: 0.6; }
+    84% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  @keyframes splash-letter {
+    0%, calc(38% + var(--i) * 1.1%) { opacity: 0; transform: translateY(48px) rotate(6deg); }
+    calc(46% + var(--i) * 1.1%) { opacity: 1; transform: translateY(-4px) rotate(-1deg); }
+    calc(52% + var(--i) * 1.1%) { opacity: 1; transform: translateY(0) rotate(0deg); }
+    76% { opacity: 1; transform: translateY(0); }
+    84% { opacity: 0; transform: translateY(-8px); }
+    100% { opacity: 0; }
+  }
+  @keyframes splash-sub {
+    0%, 36% { opacity: 0; letter-spacing: 18px; }
+    44% { opacity: 1; letter-spacing: 6px; }
+    76% { opacity: 1; letter-spacing: 6px; }
+    84% { opacity: 0; letter-spacing: 4px; }
+    100% { opacity: 0; }
+  }
+
+  .viewport.scene-dimmed {
+    animation: scene-dim var(--splash-duration) ease forwards;
+  }
+
+  @keyframes scene-dim {
+    0%, 8% { filter: brightness(1); }
+    12% { filter: brightness(0.4); }
+    84% { filter: brightness(0.35); }
+    100% { filter: brightness(1); }
+  }
+
+  .notes {
+    max-width: 920px;
+    margin: 0 auto;
+    padding-top: 8px;
+    border-top: 1px solid #2a2830;
+  }
+
+  .notes h2 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    color: var(--white-2);
+  }
+
+  .notes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+    font-size: 0.72rem;
+    line-height: 1.55;
+    color: var(--text-dim);
+  }
+
+  .notes-grid strong { color: #aaa; }
+  .notes-grid .section {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--white-3);
+  }
+
+  @media (max-width: 720px) {
+    .notes-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Climb Encounter Splash — Gate Break</h1>
+  <p>
+    Fullscreen challenger intro when clicking an encounter on the climb screen.
+    Click the <strong>Fire Skeleton</strong> card or use Replay.
+    Flow: <code>ClimbEncounterSlotSelect</code> &rarr; splash (~2.4s) &rarr; <code>ShowTransition</code> &rarr; Battle.
+  </p>
+</header>
+
+<div class="controls">
+  <button class="replay-btn" type="button" onclick="playSplash()">Replay Gate Break</button>
+</div>
+
+<main class="viewport-scaler">
+  <div class="viewport" id="viewport">
+    <div class="climb-bg"></div>
+    <div class="climb-bg-dim"></div>
+
+    <header class="climb-header">
+      <div class="timeline-mock" aria-hidden="true">
+        <div class="timeline-slot filled"></div>
+        <div class="timeline-slot filled"></div>
+        <div class="timeline-slot shop"></div>
+        <div class="timeline-slot"></div>
+        <div class="timeline-slot"></div>
+        <div class="timeline-slot"></div>
+        <div class="timeline-slot"></div>
+        <div class="timeline-slot"></div>
+      </div>
+      <div class="resource-mock">
+        <div>GOLD <span>240</span></div>
+        <div>HP <span>18</span></div>
+      </div>
+      <div class="weapon-btn">
+        <img src="../Content/crusader_sword.png" alt="">
+      </div>
+    </header>
+
+    <div class="climb-columns">
+      <section class="climb-column climb-column--shop">
+        <h2 class="column-title">Shop</h2>
+        <p class="column-subtitle">Spend gold before time runs out</p>
+        <div class="slot-stack">
+          <div class="placeholder-slot">Card offer</div>
+          <div class="placeholder-slot">Relic offer</div>
+        </div>
+      </section>
+
+      <section class="climb-column climb-column--enemies">
+        <h2 class="column-title">Encounters</h2>
+        <p class="column-subtitle">Fight for rewards</p>
+        <div class="slot-stack">
+          <div class="encounter-slot" id="encounter-source" role="button" tabindex="0" aria-label="Fight Fire Skeleton">
+            <div class="encounter-portrait">
+              <img src="../Content/Fire_Skeleton.png" alt="Fire Skeleton">
+            </div>
+            <div class="encounter-meta">
+              <span class="gain">GAIN +12 GOLD</span>
+              <span>2 TIME</span>
+            </div>
+          </div>
+          <div class="placeholder-slot">Empty slot</div>
+        </div>
+      </section>
+
+      <section class="climb-column climb-column--events">
+        <h2 class="column-title">Events</h2>
+        <p class="column-subtitle">Story and hazards</p>
+        <div class="slot-stack">
+          <div class="event-glyph-slot">?</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="splash-overlay" id="splash" aria-hidden="true">
+      <div class="splash-shade"></div>
+      <div class="splash-gate">
+        <div class="splash-gate-frame"></div>
+      </div>
+      <div class="splash-slash"></div>
+      <div class="splash-content">
+        <div class="splash-portrait-orbit">
+          <div class="splash-orbit-ring"></div>
+          <div class="splash-portrait">
+            <img src="../Content/Fire_Skeleton.png" alt="">
+          </div>
+        </div>
+        <div class="splash-name-letters" id="name-letters"></div>
+        <div class="splash-sub">Prepare for battle</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="notes">
+  <h2>MonoGame Implementation Notes</h2>
+  <div class="notes-grid">
+    <div>
+      <strong>Trigger and gating</strong><br>
+      On <code>ClimbEncounterSlotSelect</code>, queue the encounter in save state but defer
+      <code>ShowTransition</code> until splash completes. Block column input via
+      <code>StateSingleton.IsActive</code> or a dedicated splash component.
+    </div>
+    <div>
+      <strong>Data</strong><br>
+      Enemy id/name from <code>ClimbEncounterSlotAction.SlotId</code> &rarr; save slot &rarr;
+      <code>enemyId</code>. Portrait uses the same enemy texture as battle.
+      Gate origin can start at the clicked slot <code>Transform</code> bounds.
+    </div>
+
+    <div class="section"><strong>Gate Break timeline</strong> (~2.4s)</div>
+    <div>
+      <strong>0-6%</strong> Dark shade fades in.<br>
+      <strong>4-24%</strong> Gate clip expands from slot center (or screen center) to fullscreen.<br>
+      <strong>14-32%</strong> Diagonal slash accent sweeps behind portrait.<br>
+      <strong>16-48%</strong> Portrait scales in with orbit ring rotation settle.<br>
+      <strong>38-52%</strong> Enemy name letters slam in staggered (~26ms each via keyframes).<br>
+      <strong>36-44%</strong> "Prepare for battle" subtitle tracks in (with early letters).<br>
+      <strong>44-76%</strong> Name and subtitle hold on screen together.<br>
+      <strong>76-84%</strong> Portrait, name, and subtitle fade out together.<br>
+      <strong>84-100%</strong> Global fade, publish <code>ShowTransition { Scene = Battle }</code>.
+    </div>
+    <div>
+      <strong>Rendering</strong><br>
+      Gate: animate scissor/clip rect from slot bounds to full viewport, or inverse of
+      <code>TransitionDisplaySystem</code> parallelogram wipe. Slash: draw before portrait texture
+      (behind enemy image); stretched 1x1 pixel quad at atan(-vh/vw), length VirtualWidth/cos(atan(vh/vw)),
+      scaleX 0&rarr;1. Orbit ring: hollow rect with rotation lerp 45deg&rarr;0.
+      ASCII-only draw strings.
+    </div>
+
+    <div class="section"><strong>Debug / SFX</strong></div>
+    <div>
+      <strong>System</strong><br>
+      <code>ClimbEncounterSplashDisplaySystem</code> with <code>DebugEditable</code> phase timings,
+      <code>DebugAction("Preview Gate Break")</code>.
+    </div>
+    <div>
+      <strong>Audio</strong><br>
+      Sting at gate open (~8%); optional low hit on portrait land (~30%).
+      Layer with existing <code>SfxTrack.Transition</code> on handoff to battle wipe.
+    </div>
+  </div>
+</footer>
+
+<script>
+  const ENEMY_NAME = 'Fire Skeleton';
+  const SPLASH_MS = 2400;
+  let playing = false;
+  let splashTimer = null;
+
+  function buildNameLetters() {
+    const el = document.getElementById('name-letters');
+    if (!el || el.dataset.built) return;
+    el.dataset.built = '1';
+    [...ENEMY_NAME].forEach((ch, i) => {
+      const span = document.createElement('span');
+      span.textContent = ch === ' ' ? '\u00A0' : ch;
+      span.style.setProperty('--i', i);
+      el.appendChild(span);
+    });
+  }
+
+  function playSplash() {
+    if (playing) return;
+
+    buildNameLetters();
+
+    const overlay = document.getElementById('splash');
+    const viewport = document.getElementById('viewport');
+    const source = document.getElementById('encounter-source');
+    if (!overlay || !viewport) return;
+
+    playing = true;
+    source?.classList.add('is-source');
+
+    overlay.classList.remove('playing');
+    viewport.classList.remove('scene-dimmed');
+    void overlay.offsetWidth;
+    overlay.classList.add('playing');
+    viewport.classList.add('scene-dimmed');
+
+    clearTimeout(splashTimer);
+    splashTimer = setTimeout(() => {
+      overlay.classList.remove('playing');
+      viewport.classList.remove('scene-dimmed');
+      source?.classList.remove('is-source');
+      playing = false;
+    }, SPLASH_MS);
+  }
+
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const vp = document.getElementById('viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / 1920;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${1080 * scale}px`;
+  }
+
+  document.getElementById('encounter-source')?.addEventListener('click', playSplash);
+  document.getElementById('encounter-source')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      playSplash();
+    }
+  });
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', () => {
+    fitViewport();
+    buildNameLetters();
+  });
+  fitViewport();
+</script>
+
+</body>
+</html>

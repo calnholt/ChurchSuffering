@@ -4,7 +4,6 @@ namespace Crusaders30XX.ECS.Events
 {
 	public class BlockAssignmentAdded
 	{
-		public string ContextId;
 		public Entity Card;
 		public int DeltaBlock;
 		public string Color; // "Red" | "White" | "Black"
@@ -12,11 +11,9 @@ namespace Crusaders30XX.ECS.Events
 
 	public class BlockAssignmentRemoved
 	{
-		public string ContextId;
 		public Entity Card;
 		public int DeltaBlock;
 		public string Color; // optional, e.g., "Red", "White", "Black"
 	}
 }
-
 

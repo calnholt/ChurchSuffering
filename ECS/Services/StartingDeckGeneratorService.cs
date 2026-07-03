@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Singletons;
 
 namespace Crusaders30XX.ECS.Services
@@ -69,6 +70,33 @@ namespace Crusaders30XX.ECS.Services
 			return !string.IsNullOrWhiteSpace(cardId) && DefaultStarterCardPoolSet.Contains(cardId);
 		}
 
+		public static HashSet<string> GetAutoUpgradeCardIds(string equippedWeaponId)
+		{
+			var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+			var weaponPools = new Dictionary<string, List<string>>()
+			{
+				["hammer"] = HammerCommonStarterCards.Concat(HammerUncommonSingleCopyStarterCards).ToList(),
+				["dagger"] = DaggerCommonStarterCards.Concat(DaggerUncommonSingleCopyStarterCards).ToList(),
+				["sword"] = SwordCommonStarterCards.Concat(SwordUncommonSingleCopyStarterCards).ToList(),
+			};
+
+			var allCards = CardFactory.GetAllCards();
+
+			foreach (var (weapon, cards) in weaponPools)
+			{
+				if (string.Equals(weapon, equippedWeaponId, StringComparison.OrdinalIgnoreCase)) continue;
+				foreach (var cardId in cards)
+				{
+					var card = CardFactory.Create(cardId);
+					if (card?.Rarity == Rarity.Starter) continue;
+					result.Add(cardId);
+				}
+			}
+
+			return result;
+		}
+
 		public static IReadOnlyList<string> GetSwordStarterCardPool()
 		{
 			return SharedWeaponRunStarterCardPool.Concat(SwordCommonStarterCards).ToArray();
@@ -131,14 +159,21 @@ namespace Crusaders30XX.ECS.Services
 
 		public static LoadoutDefinition BuildStartingLoadout(string weaponId, int seed, string loadoutId = "loadout_1")
 		{
-			var cardIds = GenerateStartingDeck(weaponId, seed);
+			var cardKeys = GenerateStartingDeck(weaponId, seed);
 			return new LoadoutDefinition
 			{
 				id = loadoutId,
 				name = loadoutId == "test_fight" ? "Test Fight" : "Deck",
 				weaponId = string.IsNullOrWhiteSpace(weaponId) ? "sword" : weaponId,
 				temperanceId = GetDefaultTemperanceId(weaponId),
-				cardIds = cardIds,
+				cards = cardKeys.Select((cardKey, index) => new LoadoutCardEntry
+				{
+					entryId = $"temporary_card_{index}",
+					cardKey = cardKey,
+					isStarter = true,
+					countsAsTraded = false,
+					restrictions = new List<string>(),
+				}).ToList(),
 				chestId = string.Empty,
 				legsId = string.Empty,
 				armsId = string.Empty,
@@ -150,7 +185,7 @@ namespace Crusaders30XX.ECS.Services
 		public static string GetDefaultTemperanceId(string weaponId) => weaponId switch
 		{
 			"sword" => "unsheath",
-			"hammer" => "iron_resolve",
+			"hammer" => "static_surge",
 			"dagger" => "fling_fling",
 			_ => "angelic_aura",
 		};
@@ -158,7 +193,7 @@ namespace Crusaders30XX.ECS.Services
 		public static string GetDefaultTemperanceId(StartingWeapon weapon) => weapon switch
 		{
 			StartingWeapon.Sword => "unsheath",
-			StartingWeapon.Hammer => "iron_resolve",
+			StartingWeapon.Hammer => "static_surge",
 			StartingWeapon.Dagger => "fling_fling",
 			_ => "angelic_aura",
 		};
@@ -255,7 +290,8 @@ namespace Crusaders30XX.ECS.Services
 			var allPairs = new List<(string Id, string Color)>();
 			foreach (var cardId in distinctPool)
 			{
-				if (!CardFactory.GetAllCards().TryGetValue(cardId, out var card) || card == null) continue;
+				var card = CardFactory.Create(cardId);
+				if (card == null) continue;
 				if (!card.CanAddToLoadout || card.IsWeapon || card.IsToken) continue;
 
 				allPairs.Add((card.CardId, "Red"));
@@ -315,7 +351,8 @@ namespace Crusaders30XX.ECS.Services
 			foreach (var cardId in guaranteedIds)
 			{
 				if (finalDeck.Count >= DeckRules.StartingDeckSize) break;
-				if (!CardFactory.GetAllCards().TryGetValue(cardId, out var card) || card == null) continue;
+				var card = CardFactory.Create(cardId);
+				if (card == null) continue;
 				if (!card.CanAddToLoadout || card.IsWeapon || card.IsToken) continue;
 
 				cardIdUsage.TryGetValue(cardId, out int usage);

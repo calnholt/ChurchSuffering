@@ -27,6 +27,8 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged);
 			EventManager.Subscribe<CardMoved>(OnCardMoved);
 			EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCaches);
+			EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
+			EventManager.Subscribe<EnemyPhaseResetEvent>(_ => ClearEnemyTurnShackles());
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -102,7 +104,6 @@ namespace Crusaders30XX.ECS.Systems
 							Card = card,
 							Deck = deckEntity,
 							Destination = CardZoneType.AssignedBlock,
-							ContextId = evt.ContextId,
 							Reason = "ShackleAssignBlock"
 						});
 
@@ -114,7 +115,6 @@ namespace Crusaders30XX.ECS.Systems
 					}
 					EventManager.Publish(new BlockAssignmentAdded 
 					{ 
-						ContextId = evt.ContextId, 
 						Card = card, 
 						Color = color, 
 						DeltaBlock = blockVal 
@@ -130,6 +130,7 @@ namespace Crusaders30XX.ECS.Systems
 		private void OnUnassignCardAsBlockRequested(UnassignCardAsBlockRequested evt)
 		{
 			if (_isProcessing) return;
+			if (BattleInputGate.IsBattleInputFrozen(EntityManager)) return;
 			if (evt.CardEntity == null || evt.CardEntity.GetComponent<Shackle>() == null) return;
 
 			// Find other shackled cards that are currently assigned
@@ -169,10 +170,21 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			else if (evt.Current == SubPhase.EnemyEnd)
 			{
-				RemoveAllShackles();
-				_blockedWithShackledCard = false;
-				_shacklesAppliedThisEnemyTurn = false;
+				ClearEnemyTurnShackles();
 			}
+		}
+
+		private void OnBeginDefeatPresentation(BeginDefeatPresentationEvent evt)
+		{
+			if (evt?.IsPreview == true) return;
+			ClearEnemyTurnShackles();
+		}
+
+		private void ClearEnemyTurnShackles()
+		{
+			RemoveAllShackles();
+			_blockedWithShackledCard = false;
+			_shacklesAppliedThisEnemyTurn = false;
 		}
 
 		private void OnCardMoved(CardMoved evt)

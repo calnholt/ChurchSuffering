@@ -8,7 +8,6 @@ using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -35,15 +34,11 @@ namespace Crusaders30XX.ECS.Systems
 			EntityManager entityManager,
 			GraphicsDevice graphicsDevice,
 			SpriteBatch spriteBatch,
-			ContentManager content) : base(entityManager)
+			ImageAssetService imageAssets) : base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			if (content != null)
-			{
-				try { _pledgeTexture = content.Load<Texture2D>("pledge"); }
-				catch { _pledgeTexture = null; }
-			}
+			_pledgeTexture = imageAssets.TryGetTexture("pledge");
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()

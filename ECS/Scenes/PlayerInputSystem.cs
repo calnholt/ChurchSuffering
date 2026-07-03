@@ -20,8 +20,6 @@ namespace Crusaders30XX.ECS.Systems
         private Vector2 _cursorPosition;
         private int _lastViewportWidth = -1;
         private int _lastViewportHeight = -1;
-        private float _rumbleTimeRemaining;
-        private Entity _previousHoverTarget;
         private bool _inputEnabled = true;
 
         [DebugEditable(DisplayName = "Cursor Radius (px)", Step = 1f, Min = 2f, Max = 256f)]
@@ -44,15 +42,6 @@ namespace Crusaders30XX.ECS.Systems
 
         [DebugEditable(DisplayName = "UI Slowdown Multiplier", Step = 0.05f, Min = 0.05f, Max = 1f)]
         public float SlowdownMultiplier { get; set; } = 0.4f;
-
-        [DebugEditable(DisplayName = "Rumble Duration (s)", Step = 0.01f, Min = 0f, Max = 1f)]
-        public float RumbleDurationSeconds { get; set; } = 0.04f;
-
-        [DebugEditable(DisplayName = "Rumble Low Intensity", Step = 0.05f, Min = 0f, Max = 1f)]
-        public float RumbleLow { get; set; } = 0.3f;
-
-        [DebugEditable(DisplayName = "Rumble High Intensity", Step = 0.05f, Min = 0f, Max = 1f)]
-        public float RumbleHigh { get; set; } = 0.2f;
 
         public PlayerInputSystem(EntityManager entityManager, IPlayerInputSource inputSource)
             : base(entityManager)
@@ -102,7 +91,6 @@ namespace Crusaders30XX.ECS.Systems
             _state.CursorTarget = target;
             _state.IsCursorInteractionEnabled = !interactionBlocked;
 
-            UpdateRumble(target, frame, gameTime);
             PublishCommands(frame);
             EventManager.Publish(new PlayerInputEvent { Frame = frame });
             EventManager.Publish(new CursorStateEvent
@@ -297,41 +285,6 @@ namespace Crusaders30XX.ECS.Systems
             float localY = -delta.X * sin + delta.Y * cos;
             return MathF.Abs(localX) <= bounds.Width / 2f
                 && MathF.Abs(localY) <= bounds.Height / 2f;
-        }
-
-        private void UpdateRumble(
-            CursorTarget target,
-            PlayerInputFrame frame,
-            GameTime gameTime)
-        {
-            if (frame.Device != PlayerInputDevice.Gamepad)
-            {
-                if (_rumbleTimeRemaining > 0f)
-                {
-                    _rumbleTimeRemaining = 0f;
-                    _inputSource.SetVibration(0f, 0f);
-                }
-                _previousHoverTarget = target.Entity;
-                return;
-            }
-
-            if (target.Entity != _previousHoverTarget
-                && target.Entity?.GetComponent<UIElement>()?.IsInteractable == true)
-            {
-                _rumbleTimeRemaining = RumbleDurationSeconds;
-                _inputSource.SetVibration(RumbleLow, RumbleHigh);
-            }
-
-            if (_rumbleTimeRemaining > 0f)
-            {
-                _rumbleTimeRemaining -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (_rumbleTimeRemaining <= 0f)
-                {
-                    _inputSource.SetVibration(0f, 0f);
-                }
-            }
-
-            _previousHoverTarget = target.Entity;
         }
 
         private static void PublishCommands(PlayerInputFrame frame)

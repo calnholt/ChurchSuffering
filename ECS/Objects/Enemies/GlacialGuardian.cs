@@ -1,7 +1,7 @@
-using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -12,45 +12,25 @@ namespace Crusaders30XX.ECS.Objects.Enemies;
 
 public class GlacialGuardian : EnemyBase
 {
-  public GlacialGuardian(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public GlacialGuardian()
   {
-    Id = "glacial_guardian";
+    Id = EnemyId.GlacialGuardian;
     Name = "Glacial Guardian";
-    HealthPerCard = 1.21f;
+    HP = 24;
 
     OnStartOfBattle = (entityManager) =>
     {
       EventManager.Subscribe<CardMoved>(OnCardMoved, priority: 10);
-      EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
       EventQueueBridge.EnqueueTriggerAction("GlacialGuardian.OnCreate", () =>
       {
         EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Windchill, Delta = 1 });
       }, AppliedPassivesManagementSystem.Duration);
-
-      EventQueueBridge.EnqueueTriggerAction("GlacialGuardian.OnCreate", () =>
-      {
-        EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.SubZero, Delta = 1 });
-      }, AppliedPassivesManagementSystem.Duration);
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    return ArrayUtils.TakeRandomWithoutReplacement(new List<string> { "glacial_strike", "glacial_blast" }, 1);
-  }
-
-  private void OnChangeBattlePhase(ChangeBattlePhaseEvent evt)
-  {
-    Console.WriteLine($"[GlacialGuardian] OnChangeBattlePhase - {evt.Current}");
-    if (evt.Current == SubPhase.EnemyStart)
-    {
-      EventManager.Publish(new ApplyCardApplicationEvent
-      {
-        Amount = 1,
-        Type = CardApplicationType.Frozen,
-        Target = CardApplicationTarget.Hand,
-      });
-    }
+    return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.GlacialStrike, EnemyAttackId.GlacialBlast }, 1);
   }
 
   private void OnCardMoved(CardMoved evt)
@@ -64,7 +44,6 @@ public class GlacialGuardian : EnemyBase
   public override void Dispose()
   {
     EventManager.Unsubscribe<CardMoved>(OnCardMoved);
-    EventManager.Unsubscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
     base.Dispose();
   }
 }
@@ -74,7 +53,7 @@ public class GlacialStrike : EnemyAttackBase
   private int Threshold = 1;
   public GlacialStrike()
   {
-    Id = "glacial_strike";
+    Id = EnemyAttackId.GlacialStrike;
     Name = "Glacial Strike";
     Damage = 8;
     ConditionType = ConditionType.MustBeBlockedByAtLeast1Card;
@@ -92,7 +71,7 @@ public class GlacialBlast : EnemyAttackBase
   private int Threshold = 2;
   public GlacialBlast()
   {
-    Id = "glacial_blast";
+    Id = EnemyAttackId.GlacialBlast;
     Name = "Glacial Blast";
     Damage = 11;
     ConditionType = ConditionType.MustBeBlockedByAtLeast2Cards;

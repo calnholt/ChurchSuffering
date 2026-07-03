@@ -2,6 +2,7 @@ using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Achievements;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 
 namespace Crusaders30XX.ECS.Objects.Achievements
@@ -38,7 +39,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             if (evt.Enemy == null || !evt.Enemy.HasComponent<Enemy>()) return;
             
             var enemyComponent = evt.Enemy.GetComponent<Enemy>();
-            if (enemyComponent?.EnemyBase == null || enemyComponent.EnemyBase.Id != "berserker")
+            if (enemyComponent?.EnemyBase == null || enemyComponent.EnemyBase.Id != EnemyId.Berserker)
             {
                 return;
             }

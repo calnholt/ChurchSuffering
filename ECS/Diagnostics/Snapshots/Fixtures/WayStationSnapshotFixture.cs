@@ -20,7 +20,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ctx.World,
 				ctx.GraphicsDevice,
 				ctx.SpriteBatch,
-				ctx.Content);
+				ctx.ImageAssets);
 			ctx.World.AddSystem(_wayStation);
 		}
 

@@ -25,20 +25,28 @@ namespace Crusaders30XX.ECS.Services
 			if (world == null) return;
 			Cleanup(world.EntityManager);
 
+			var sectionDef = GuidedTutorialDefinitions.GetSection(1);
+
 			var stateEntity = world.CreateEntity("GuidedTutorial");
-			world.AddComponent(stateEntity, new GuidedTutorial());
+			world.AddComponent(stateEntity, new GuidedTutorial
+			{
+				Section = 1,
+				TurnWithinSection = 1,
+				PlayerHp = sectionDef.PlayerHp,
+			});
 			world.AddComponent(stateEntity, new DontDestroyOnLoad());
 
 			var deckEntity = EntityFactory.CreateDeck(world);
-			world.AddComponent(deckEntity, new StockHand { Battle = TutorialBattle.Gleeber, Turn = 1 });
+			world.AddComponent(deckEntity, new StockHand { Section = 1, TurnWithinSection = 1 });
 			world.AddComponent(deckEntity, new DontDestroyOnLoad());
 
 			var player = EntityFactory.CreatePlayer(world);
 			player.GetComponent<Player>().DeckEntity = deckEntity;
 			player.GetComponent<HP>().Max = 25;
-			player.GetComponent<HP>().Current = 25;
-			player.GetComponent<Intellect>().Value = 4;
-			player.GetComponent<MaxHandSize>().Value = 4;
+			player.GetComponent<HP>().UnscarredMax = 25;
+			player.GetComponent<HP>().Current = sectionDef.PlayerHp;
+			player.GetComponent<Intellect>().Value = sectionDef.Turns[0].StockHand.Count;
+			player.GetComponent<MaxHandSize>().Value = sectionDef.Turns[0].StockHand.Count;
 			player.GetComponent<EquippedWeapon>().WeaponId = "sword";
 			player.GetComponent<EquippedTemperanceAbility>().AbilityId = "unsheath";
 
@@ -55,7 +63,6 @@ namespace Crusaders30XX.ECS.Services
 				QuestIndex = -1,
 			};
 			queued.Events.Add(new QueuedEvent { EventId = "gleeber" });
-			queued.Events.Add(new QueuedEvent { EventId = "sand_corpse" });
 			world.AddComponent(queuedEntity, queued);
 			world.AddComponent(queuedEntity, new PendingQuestDialog
 			{
@@ -74,6 +81,10 @@ namespace Crusaders30XX.ECS.Services
 			var deckEntity = entityManager?.GetEntitiesWithComponent<StockHand>().FirstOrDefault();
 			var deck = deckEntity?.GetComponent<Deck>();
 			if (state == null || deck == null || state.StockHandPrepared) return;
+
+			var stock = deckEntity.GetComponent<StockHand>();
+			stock.Section = state.Section;
+			stock.TurnWithinSection = state.TurnWithinSection;
 
 			var retainedPledges = deck.Hand
 				.Where(card => card.HasComponent<Pledge>())
@@ -95,81 +106,99 @@ namespace Crusaders30XX.ECS.Services
 				deck.Hand.Add(retained);
 			}
 
-			var turn = GuidedTutorialDefinitions.GetTurn(state.Battle, state.Turn);
-			for (int i = 0; i < turn.StockHand.Count; i++)
-			{
-				var definition = turn.StockHand[i];
-				if (retainedPledges.Any(card =>
-					string.Equals(card.GetComponent<CardData>()?.Card?.CardId, definition.CardId, StringComparison.OrdinalIgnoreCase)))
-				{
-					continue;
-				}
+			var sectionDef = GuidedTutorialDefinitions.GetSection(state.Section);
 
-				var card = EntityFactory.CreateCardFromDefinition(
-					entityManager,
-					definition.CardId,
-					definition.Color,
-					index: i);
-				if (card == null) continue;
-				deck.Cards.Add(card);
-				deck.DrawPile.Add(card);
+			int totalTurns = sectionDef.Turns.Count;
+			int cardIndex = 0;
+			for (int t = 1; t <= totalTurns; t++)
+			{
+				var turn = GuidedTutorialDefinitions.GetTurn(stock.Section, t);
+				foreach (var definition in turn.StockHand)
+				{
+					if (retainedPledges.Any(card =>
+						string.Equals(card.GetComponent<CardData>()?.Card?.CardId, definition.CardId, StringComparison.OrdinalIgnoreCase) &&
+						card.GetComponent<CardData>()?.Color == definition.Color))
+					{
+						continue;
+					}
+
+					var card = EntityFactory.CreateCardFromDefinition(
+						entityManager,
+						definition.CardId,
+						definition.Color,
+						index: cardIndex++);
+					if (card == null) continue;
+					if (definition.IsColorless)
+					{
+						card.AddComponent(new Colorless { Owner = card });
+					}
+					deck.Cards.Add(card);
+					deck.DrawPile.Add(card);
+				}
 			}
 
-			var stock = deckEntity.GetComponent<StockHand>();
-			stock.Battle = state.Battle;
-			stock.Turn = state.Turn;
 			state.StockHandPrepared = true;
-			RefreshValidPlays(state);
 		}
 
 		public static void BeginNextTurn(EntityManager entityManager, int turn)
 		{
 			var state = GetState(entityManager);
-			if (state == null || turn <= state.Turn) return;
-			state.Turn = turn;
-			state.StockHandPrepared = false;
-			state.ActionRequirementsComplete = false;
-			state.PlayedCardIds.Clear();
-			state.PledgedCardIds.Clear();
+			if (state == null || turn <= state.TurnWithinSection) return;
+			var sectionDef = GuidedTutorialDefinitions.GetSection(state.Section);
+			state.TurnWithinSection = turn;
 			state.BlockedCardIdsThisTurn.Clear();
 			state.ConfirmedAttackCountThisTurn = 0;
-			PrepareStockHand(entityManager);
+			if (!sectionDef.ShowDrawPile)
+			{
+				state.StockHandPrepared = false;
+				PrepareStockHand(entityManager);
+			}
 		}
 
-		public static void BeginSecondBattle(EntityManager entityManager)
+		public static void RestartSection(EntityManager entityManager)
 		{
 			var state = GetState(entityManager);
 			if (state == null) return;
-			var playerHp = entityManager.GetEntity("Player")?.GetComponent<HP>();
-			int restoredHp = playerHp?.Max ?? 25;
-			if (playerHp != null)
-				playerHp.Current = restoredHp;
-			state.PlayerHp = restoredHp;
-			state.Battle = TutorialBattle.SandCorpse;
-			state.Turn = 1;
+			state.IsRestart = true;
+			state.TurnWithinSection = 1;
 			state.StockHandPrepared = false;
-			state.ActionRequirementsComplete = false;
-			state.PlayedCardIds.Clear();
-			state.PledgedCardIds.Clear();
 			state.BlockedCardIdsThisTurn.Clear();
 			state.ConfirmedAttackCountThisTurn = 0;
-			RefreshValidPlays(state);
+			EventManager.Publish(new ShowTransition { Scene = SceneId.Battle, SkipHold = true });
+		}
+
+		public static void AdvanceToNextSection(EntityManager entityManager)
+		{
+			var state = GetState(entityManager);
+			if (state == null) return;
+
+			var player = entityManager.GetEntity("Player");
+			if (player != null)
+			{
+				state.BaselineCourage = player.GetComponent<Courage>()?.Amount ?? 0;
+				state.BaselineTemperance = player.GetComponent<Temperance>()?.Amount ?? 0;
+			}
+
+			state.Section++;
+			state.TurnWithinSection = 1;
+			state.StockHandPrepared = false;
+			state.IsRestart = false;
+
+			var sectionDef = GuidedTutorialDefinitions.GetSection(state.Section);
+			state.PlayerHp = sectionDef.PlayerHp;
+
+			EventManager.Publish(new ShowTransition { Scene = SceneId.Battle, SkipHold = true });
 		}
 
 		public static void Complete(EntityManager entityManager)
 		{
 			var state = GetState(entityManager);
 			if (state != null) state.IsCompleted = true;
+			foreach (var key in GuidedTutorialDefinitions.CoveredTutorialKeys)
+				SaveCache.MarkTutorialSeen(key);
 			SaveCache.CompleteGuidedTutorial();
 			Cleanup(entityManager);
-			EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation, SkipHold = true });
-		}
-
-		public static void RefreshValidPlays(GuidedTutorial state)
-		{
-			if (state == null) return;
-			state.ValidPlayCardIds.Clear();
-			state.ValidPlayCardIds.AddRange(GuidedTutorialDefinitions.GetValidPlays(state));
+			EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation });
 		}
 
 		public static void Cleanup(EntityManager entityManager)

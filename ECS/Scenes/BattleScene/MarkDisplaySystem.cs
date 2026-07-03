@@ -4,6 +4,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
@@ -93,28 +94,20 @@ namespace Crusaders30XX.ECS.Systems
             // Drawing is handled via event subscriptions
         }
 
-        private Rectangle ComputeCardBounds(Vector2 position)
-        {
-            _settings ??= CardGeometryService.GetSettings(EntityManager);
-            return CardGeometryService.GetVisualRect(_settings, position);
-        }
-
         private void OnCardRenderEvent(CardRenderEvent evt)
         {
             if (!ShouldRenderMark(evt.Card)) return;
 
-            var transform = evt.Card.GetComponent<Transform>();
             var ui = evt.Card.GetComponent<UIElement>();
-            if (transform == null || ui == null) return;
+            if (ui == null) return;
 
-            var bounds = ComputeCardBounds(transform.Position);
-            var center = new Vector2(bounds.X + bounds.Width / 2f, bounds.Y + bounds.Height / 2f);
-
-            center.X += MarkOffsetX;
-            center.Y += MarkOffsetY + CombinedYOffset;
+            var geometry = CardGeometryService.GetVisualGeometry(EntityManager, evt.Card, evt.Position);
+            var center = geometry.Center;
+            center.X += MarkOffsetX * geometry.Scale;
+            center.Y += (MarkOffsetY + CombinedYOffset) * geometry.Scale;
 
             var marked = evt.Card.GetComponent<Marked>();
-            DrawMarkOverlay(center, bounds.Width, bounds.Height, 1f, transform.Rotation, marked?.EffectType ?? MarkEffectType.Lose1HP);
+            DrawMarkOverlay(center, geometry.Bounds.Width, geometry.Bounds.Height, geometry.Scale, geometry.Rotation, marked?.EffectType ?? MarkEffectType.Lose1HP);
         }
 
         private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
@@ -126,20 +119,22 @@ namespace Crusaders30XX.ECS.Systems
                 ["effectType"] = evt.Card?.GetComponent<Marked>()?.EffectType.ToString() ?? "None"
             });
             if (!ShouldRenderMark(evt.Card)) return;
+            using var clip = CardRenderClipScope.Apply(_graphicsDevice, evt.ClipRect);
 
-            var transform = evt.Card.GetComponent<Transform>();
-            if (transform == null) return;
+            var geometry = CardGeometryService.GetVisualGeometry(
+                EntityManager,
+                evt.Card,
+                evt.Position,
+                evt.Scale);
+            var center = geometry.Center;
+            center.X += MarkOffsetX * geometry.Scale;
+            center.Y += (MarkOffsetY + CombinedYOffset) * geometry.Scale;
 
             _settings ??= CardGeometryService.GetSettings(EntityManager);
             int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
             int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
-            var center = CardGeometryService.GetVisualCenter(_settings, evt.Position, evt.Scale);
-
-            center.X += MarkOffsetX * evt.Scale;
-            center.Y += (MarkOffsetY + CombinedYOffset) * evt.Scale;
-
             var marked = evt.Card.GetComponent<Marked>();
-            DrawMarkOverlay(center, cardWidth, cardHeight, evt.Scale, transform.Rotation, marked?.EffectType ?? MarkEffectType.Lose1HP);
+            DrawMarkOverlay(center, cardWidth, cardHeight, geometry.Scale, geometry.Rotation, marked?.EffectType ?? MarkEffectType.Lose1HP);
         }
 
         private bool ShouldRenderMark(Entity card)

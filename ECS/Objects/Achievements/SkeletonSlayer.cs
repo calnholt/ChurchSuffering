@@ -1,6 +1,7 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Achievements;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 
 namespace Crusaders30XX.ECS.Objects.Achievements
@@ -39,7 +40,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             // Only care about damage to enemies
             if (evt.Enemy == null || !evt.Enemy.HasComponent<Enemy>()) return;
             var enemyBase = evt.Enemy.GetComponent<Enemy>().EnemyBase;
-            if (enemyBase == null || enemyBase.Id != "skeleton") return;
+            if (enemyBase == null || enemyBase.Id != EnemyId.Skeleton) return;
             IncrementProgress();
         }
 

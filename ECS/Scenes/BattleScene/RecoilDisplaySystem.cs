@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
@@ -20,7 +21,6 @@ namespace Crusaders30XX.ECS.Systems
         private readonly SpriteBatch _spriteBatch;
         private readonly SpriteFont _font = FontSingleton.ContentFont;
         private readonly GraphicsDevice _graphicsDevice;
-        private CardGeometrySettings _settings;
 
         [DebugEditable(DisplayName = "Text Scale", Step = 0.05f, Min = 0.1f, Max = 2.0f)]
         public float TextScale { get; set; } = 0.3f;
@@ -66,46 +66,39 @@ namespace Crusaders30XX.ECS.Systems
 
         public void Draw() { }
 
-        private Rectangle ComputeCardBounds(Vector2 position)
-        {
-            _settings ??= CardGeometryService.GetSettings(EntityManager);
-            return CardGeometryService.GetVisualRect(_settings, position);
-        }
-
         private void OnCardRenderEvent(CardRenderEvent evt)
         {
             var card = evt.Card;
             var recoil = card?.GetComponent<Recoil>();
-            if (recoil == null) return;
+            if (recoil == null || card.GetComponent<SuppressCardVisualEffects>() != null) return;
 
-            var transform = card.GetComponent<Transform>();
             var ui = card.GetComponent<UIElement>();
-            if (transform == null || ui == null) return;
+            if (ui == null) return;
 
-            var bounds = ComputeCardBounds(transform.Position);
-            var center = new Vector2(bounds.X + bounds.Width / 2f, bounds.Y + bounds.Height / 2f);
+            var geometry = CardGeometryService.GetVisualGeometry(EntityManager, card, evt.Position);
+            var bounds = geometry.Bounds;
+            var center = geometry.Center;
 
-            // Draw semi-transparent overlay
-            var overlayKey = (bounds.Width, bounds.Height, OverlayCornerRadius);
+            int cornerRadius = (int)Math.Round(OverlayCornerRadius * geometry.Scale);
+            var overlayKey = (bounds.Width, bounds.Height, cornerRadius);
             if (!_roundedRectCache.TryGetValue(overlayKey, out var roundedRect))
             {
-                roundedRect = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, bounds.Width, bounds.Height, OverlayCornerRadius);
+                roundedRect = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, bounds.Width, bounds.Height, cornerRadius);
                 _roundedRectCache[overlayKey] = roundedRect;
             }
-            _spriteBatch.Draw(roundedRect, center, null, new Color(0, 0, 0, OverlayAlpha), transform.Rotation,
+            _spriteBatch.Draw(roundedRect, center, null, new Color(0, 0, 0, OverlayAlpha), geometry.Rotation,
                 new Vector2(bounds.Width / 2f, bounds.Height / 2f), 1f, SpriteEffects.None, 0f);
 
-            // Draw "Recoil X" text
             string text = $"Recoil {recoil.Stacks}";
             var textOrigin = _font.MeasureString(text) / 2f;
+            float textScale = TextScale * geometry.Scale;
+            var shadowOffset = new Vector2(ShadowOffsetX * geometry.Scale, ShadowOffsetY * geometry.Scale);
 
-            // Shadow
-            _spriteBatch.DrawString(_font, text, center + new Vector2(ShadowOffsetX, ShadowOffsetY),
-                Color.Black, transform.Rotation, textOrigin, TextScale, SpriteEffects.None, 0f);
+            _spriteBatch.DrawString(_font, text, center + shadowOffset,
+                Color.Black, geometry.Rotation, textOrigin, textScale, SpriteEffects.None, 0f);
 
-            // Main text
             _spriteBatch.DrawString(_font, text, center, new Color(TextRed, TextGreen, TextBlue),
-                transform.Rotation, textOrigin, TextScale, SpriteEffects.None, 0f);
+                geometry.Rotation, textOrigin, textScale, SpriteEffects.None, 0f);
         }
     }
 }

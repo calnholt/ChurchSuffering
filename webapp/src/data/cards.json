@@ -1,6 +1,5 @@
 [
   { "id": "absolution", "name": "Absolution" },
-  { "id": "anoint_the_sick", "name": "Anoint the Sick" },
   { "id": "ark_of_the_covenant", "name": "Ark of the Covenant" },
   { "id": "battering_blow", "name": "Battering Blow" },
   { "id": "burn", "name": "Burn" },
@@ -34,7 +33,6 @@
   { "id": "seize", "name": "Seize" },
   { "id": "serpent_crush", "name": "Serpent Crush" },
   { "id": "shield_of_faith", "name": "Shield of Faith" },
-  { "id": "shroud_of_turin", "name": "Shroud of Turin" },
   { "id": "smite", "name": "Smite" },
   { "id": "stab", "name": "Stab" },
   { "id": "stalwart", "name": "Stalwart" },

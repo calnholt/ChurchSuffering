@@ -5,6 +5,11 @@ namespace Crusaders30XX.ECS.Events
         Desert,
         Forest,
         Cathedral,
+        Tundra,
+        Jungle,
+        Volcano,
+        TheGate,
+        Gothic,
     }
 
     public class ChangeBattleLocationEvent

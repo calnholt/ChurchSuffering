@@ -9,6 +9,7 @@ using System.IO;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Tutorials;
+using Crusaders30XX.ECS.Data.Ids;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -23,6 +24,7 @@ namespace Crusaders30XX.ECS.Systems
 		public EnemyIntentPlanningSystem(EntityManager em) : base(em)
 		{
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(OnStartEnemyTurn);
+			EventManager.Subscribe<ApplyPassiveEvent>(OnFearApplied);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -76,7 +78,7 @@ namespace Crusaders30XX.ECS.Systems
 					var enemyCmp = enemy.GetComponent<Enemy>();
 					var arsenal = enemy.GetComponent<EnemyArsenal>();
 					if (arsenal == null || arsenal.AttackIds.Count == 0) continue;
-					string enemyId = enemyCmp?.EnemyBase?.Id ?? "demon";
+					string enemyId = enemyCmp?.EnemyBase?.Id.ToKey() ?? EnemyId.Demon.ToKey();
 					var intent = enemy.GetComponent<AttackIntent>();
 					if (intent == null)
 					{
@@ -102,6 +104,7 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						intent.Planned = next.Planned;
 						next.Planned = new List<PlannedAttack>();
+						intent.ActiveAttackSequence++;
 					}
 
 					next.Planned.Clear();
@@ -109,7 +112,7 @@ namespace Crusaders30XX.ECS.Systems
 					if (intent.Planned.Count == 0)
 					{
 						var currentIds = enemyCmp?.EnemyBase?.GetAttackIds(EntityManager, turnNumber) ?? [];
-						LoggingService.Append("EnemyIntentPlanningSystem.OnStartEnemyTurn", new System.Text.Json.Nodes.JsonObject { ["action"] = "Planning current turn", ["currentTurnIds"] = string.Join(", ", currentIds) });
+						LoggingService.Append("EnemyIntentPlanningSystem.OnStartEnemyTurn", new System.Text.Json.Nodes.JsonObject { ["action"] = "Planning current turn", ["currentTurnIds"] = string.Join(", ", currentIds.Select(id => id.ToKey())) });
 						AddPlanned(currentIds, intent, enemyId, turnNumber);
 					}
 					// Plan next-turn preview using next turn's selection
@@ -125,6 +128,7 @@ namespace Crusaders30XX.ECS.Systems
 				var intent = EntityManager.GetEntity("Enemy").GetComponent<AttackIntent>();
 				var planned = intent.Planned.FirstOrDefault();
 				if (planned == null) return;
+				EnemyAttackMustBlockRequirementService.NormalizeIfImpossible(EntityManager, planned);
 				if (planned.AttackDefinition.OnAttackReveal != null)
 				{
 					planned.AttackDefinition.OnAttackReveal(EntityManager);
@@ -132,47 +136,39 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void AddPlanned(IEnumerable<string> attackIds, dynamic target, string enemyId, int plannedTurn)
+		private void AddPlanned(IEnumerable<EnemyAttackId> attackIds, dynamic target, string enemyId, int plannedTurn)
 		{
 			int index = (target.Planned is List<PlannedAttack> l) ? l.Count : 0;
+			bool isCurrentIntent = target is AttackIntent;
+			bool wasEmpty = isCurrentIntent && index == 0;
 			foreach (var id in attackIds)
 			{
 				var attackDef = EnemyAttackFactory.Create(id);
-				var tutorialState = GuidedTutorialService.GetState(EntityManager);
-				if (tutorialState != null)
-				{
-					var turn = GuidedTutorialDefinitions.GetTurn(tutorialState.Battle, plannedTurn);
-					int ruleIndex = Math.Min(index, turn.BlockRules.Count - 1);
-					if (ruleIndex >= 0)
-					{
-						string requirement = turn.BlockRules[ruleIndex].RequirementText;
-						if (!string.IsNullOrWhiteSpace(requirement))
-							attackDef.Text = string.IsNullOrWhiteSpace(attackDef.Text)
-								? requirement
-								: $"{attackDef.Text} {requirement}";
-					}
-				}
 				attackDef.Initialize(EntityManager);
-				string ctx = Guid.NewGuid().ToString("N");
 				var passives = EntityManager.GetEntity("Player").GetComponent<AppliedPassives>().Passives;
-				int ambushChance = attackDef.AmbushPercentage + (passives.ContainsKey(AppliedPassiveType.Fear) ? passives[AppliedPassiveType.Fear] * 10 : 0);
+				bool hasFear = passives.TryGetValue(AppliedPassiveType.Fear, out int fear) && fear > 0;
+				bool isAmbush = hasFear
+					|| (attackDef.AmbushPercentage > 0 && Random.Shared.Next(0, 100) < attackDef.AmbushPercentage);
 				target.Planned.Add(new PlannedAttack
 				{
 					AttackId = id,
 					ResolveStep = Math.Max(1, index + 1),
-					ContextId = ctx,
 					WasBlocked = false,
-					IsAmbush = ambushChance > 0 && Random.Shared.Next(0, 100) < ambushChance,
+					IsAmbush = isAmbush,
 					AttackDefinition = attackDef
 				});
 				EventManager.Publish(new IntentPlanned
 				{
-					AttackId = id,
-					ContextId = ctx,
+					AttackId = id.ToKey(),
 					Step = Math.Max(1, index + 1),
 					TelegraphText = attackDef.Name
 				});
 				index++;
+			}
+			if (isCurrentIntent && wasEmpty && target.Planned.Count > 0)
+			{
+				var intent = (AttackIntent)target;
+				intent.ActiveAttackSequence++;
 			}
 		}
 
@@ -182,6 +178,28 @@ namespace Crusaders30XX.ECS.Systems
 			if (infoEntity == null) return 1;
 			var info = infoEntity.GetComponent<PhaseState>();
 			return info.TurnNumber;
+		}
+
+		private void OnFearApplied(ApplyPassiveEvent evt)
+		{
+			if (evt.Type != AppliedPassiveType.Fear || evt.Delta <= 0) return;
+
+			var enemyEntity = EntityManager.GetEntity("Enemy");
+			if (enemyEntity == null) return;
+
+			var intent = enemyEntity.GetComponent<AttackIntent>();
+			if (intent?.Planned != null)
+			{
+				foreach (var attack in intent.Planned)
+					attack.IsAmbush = true;
+			}
+
+			var nextIntent = enemyEntity.GetComponent<NextTurnAttackIntent>();
+			if (nextIntent?.Planned != null)
+			{
+				foreach (var attack in nextIntent.Planned)
+					attack.IsAmbush = true;
+			}
 		}
 
 	}

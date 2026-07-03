@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Deus Vult";
             CardId = "deus_vult";
             Text = $"You can't play this if you have not used your weapon this turn. Gain {CourageBonus} courage. This gains +X damage, where X is your courage";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 0;
             Block = 2;
             IsFreeAction = true;

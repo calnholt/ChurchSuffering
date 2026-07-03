@@ -9,6 +9,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		IncomingDamage,
 		LowHealth,
 		Expanded,
+		EnemyHealth,
 	}
 
 	public sealed class PlayerHudSnapshotVariant
@@ -35,6 +36,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				"incoming-damage" => Create(PlayerHudSnapshotVariantId.IncomingDamage),
 				"low-health" => Create(PlayerHudSnapshotVariantId.LowHealth),
 				"expanded" => Create(PlayerHudSnapshotVariantId.Expanded),
+				"enemy-health" => Create(PlayerHudSnapshotVariantId.EnemyHealth),
 				_ => throw new DisplaySnapshotSetupException(
 					$"Unknown player-hud variant: '{args[0]}'"),
 			};
@@ -46,6 +48,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				PlayerHudSnapshotVariantId.IncomingDamage => "incoming-damage",
 				PlayerHudSnapshotVariantId.LowHealth => "low-health",
+				PlayerHudSnapshotVariantId.EnemyHealth => "enemy-health",
 				_ => id.ToString().ToLowerInvariant(),
 			};
 			return new PlayerHudSnapshotVariant { Id = id, FileSlug = slug };

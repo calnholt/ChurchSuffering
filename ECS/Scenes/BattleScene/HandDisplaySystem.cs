@@ -8,7 +8,6 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Factories;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -50,11 +49,20 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Curve Offset Y", Step = 2f, Min = -1000f, Max = 1000f)]
         public float HandFanCurveOffset { get; set; } = 0f;
 
-        [DebugEditable(DisplayName = "Hover Lift", Step = 1f, Min = 0f, Max = 200f)]
-        public float HandHoverLift { get; set; } = 4f;
+        [DebugEditable(DisplayName = "Rest Scale", Step = 0.05f, Min = 0.1f, Max = 2f)]
+        public float HandHoverScale { get; set; } = 0.85f;
 
-        [DebugEditable(DisplayName = "Hover Scale", Step = 0.05f, Min = 0.1f, Max = 2f)]
-        public float HandHoverScale { get; set; } = 1.0f;
+        [DebugEditable(DisplayName = "Hovered Scale", Step = 0.05f, Min = 0.1f, Max = 2f)]
+        public float HandHoveredScale { get; set; } = 1.1f;
+
+        [DebugEditable(DisplayName = "Hover Fan Out", Step = 2f, Min = 0f, Max = 500f)]
+        public float HandHoverFanOut { get; set; } = 50f;
+
+        [DebugEditable(DisplayName = "Hover Bottom Padding", Step = 1f, Min = -100f, Max = 200f)]
+        public float HandHoverBottomPadding { get; set; } = -3f;
+
+        [DebugEditable(DisplayName = "Scale Down Speed", Step = 0.5f, Min = 0.1f, Max = 60f)]
+        public float HandScaleDownTweenSpeed { get; set; } = 12f;
 
         [DebugEditable(DisplayName = "Z Base", Step = 1, Min = -10000, Max = 10000)]
         public int HandZBase { get; set; } = 100;
@@ -66,7 +74,7 @@ namespace Crusaders30XX.ECS.Systems
         public int HandZHoverBoost { get; set; } = 1000;
 
         [DebugEditable(DisplayName = "Tween Speed", Step = 0.5f, Min = 0.1f, Max = 60f)]
-        public float HandTweenSpeed { get; set; } = 12f;
+        public float HandTweenSpeed { get; set; } = 21f;
         
 		// Root entity removed; each card owns its transform base and parallax
 
@@ -81,6 +89,7 @@ namespace Crusaders30XX.ECS.Systems
 		private int _baseCardWidth, _baseCardHeight, _baseCardGap, _baseCardCornerRadius, _baseHighlightBorderThickness, _baseCardOffsetYExtra;
 		private float _lastAppliedScale = -1f;
 		private string _lastHandReconciliationSignature = string.Empty;
+        private readonly Dictionary<int, float> _handScaleByEntityId = new();
 
 
 		private void CaptureBaselineIfNeeded(CardGeometrySettings s)
@@ -117,11 +126,11 @@ namespace Crusaders30XX.ECS.Systems
 			s.HighlightBorderThickness = Math.Max(0, (int)MathF.Round(_baseHighlightBorderThickness * scaled));
 		}
 
-		private float GetClampedCardSpacing(int count, float idealSpacing, float screenWidth, float cardWidth, float cardHeight, float maxAngleRad)
+		private float GetClampedCardSpacing(int count, float idealSpacing, float screenWidth, float cardWidth, float cardHeight, float maxAngleRad, float visualScale)
 		{
 			if (count <= 1) return idealSpacing;
 
-			float scale = MathF.Max(0.01f, HandHoverScale);
+			float scale = MathF.Max(0.01f, visualScale);
 			float rotatedFootprint = GetRotatedHorizontalFootprint(cardWidth * scale, cardHeight * scale, maxAngleRad);
 			float availableCenterSpan = MathF.Max(0f, screenWidth - (HandHorizontalScreenPadding * 2f) - rotatedFootprint);
 			float maxSpacing = availableCenterSpan / (count - 1);
@@ -173,7 +182,9 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     // Build visible hand excluding animating and filtered cards (equipped weapon at index 0 included for layout).
                     var visibleHand = deck.Hand.Where(CountsForHandLayout).ToList();
+                    PruneScaleState(visibleHand);
                     var cardIndex = visibleHand.IndexOf(entity);
+                    int hoveredIndex = GetHoveredIndex(visibleHand);
 
                     if (cardIndex >= 0)
                     {
@@ -210,8 +221,10 @@ namespace Crusaders30XX.ECS.Systems
 						float cardHeight = cvs?.CardHeight ?? CardGeometrySettings.DefaultHeight;
                         float idealCardSpacing = (cvs != null) ? (cvs.CardWidth + cvs.CardGap) : 0f;
                         if (idealCardSpacing <= 0f) { idealCardSpacing = CardGeometrySettings.DefaultWidth + CardGeometrySettings.DefaultGap; }
-						float cardSpacing = GetClampedCardSpacing(count, idealCardSpacing, screenWidth, cardWidth, cardHeight, maxAngleRad);
+						float spacingScale = MathF.Max(HandHoverScale, HandHoveredScale);
+						float cardSpacing = GetClampedCardSpacing(count, idealCardSpacing, screenWidth, cardWidth, cardHeight, maxAngleRad, spacingScale);
                         float x = pivot.X + indexDelta * cardSpacing;
+                        x += GetHoverFanOutOffset(cardIndex, hoveredIndex);
 
                         // Vertical arc
                         // If curve height is specified, scale curvature so the ends are lowered by
@@ -230,12 +243,13 @@ namespace Crusaders30XX.ECS.Systems
                             float cos = (float)Math.Cos(angleRad);
                             yArc = HandFanRadius * (1f - cos);
                         }
-                        float y = pivot.Y + HandFanCurveOffset + yArc;
-
-                        // Hover lift
                         var ui = entity.GetComponent<UIElement>();
                         bool hovered = ui?.IsHovered == true;
-                        if (hovered) { y -= HandHoverLift; }
+                        float visualScale = UpdateVisualScale(entity, hovered, gameTime);
+                        float y = hovered
+                            ? GetBottomAnchoredY(cvs, screenHeight - HandHoverBottomPadding, visualScale)
+                            : pivot.Y + HandFanCurveOffset + yArc;
+                        float rotation = hovered ? 0f : angleRad;
 
                         var tween = entity.GetComponent<PositionTween>();
                         if (tween != null)
@@ -247,41 +261,93 @@ namespace Crusaders30XX.ECS.Systems
                         {
                             transform.Position = new Vector2(x, y);
                         }
-                        transform.Rotation = angleRad; // reserved for future visual rotation support
-                        transform.Scale = new Vector2(HandHoverScale, HandHoverScale);
+                        transform.Rotation = rotation;
+                        transform.Scale = new Vector2(visualScale, visualScale);
 
                         // Z-order (ensures proper overlapping)
-                        // Special case: if this is the equipped weapon at index 0, never allow it to pop above index 1
-                        bool isWeapon = false;
-                        try
-                        {
-                            string id = cardData.Card.CardId ?? string.Empty;
-                            var cardObj = CardFactory.Create(id);
-                            if (!string.IsNullOrEmpty(id) && cardObj != null)
-                            {
-                                isWeapon = cardObj.IsWeapon;
-                            }
-                        }
-                        catch { }
-
-                        if (isWeapon && cardIndex == 0)
-                        {
-                            // Keep weapon behind the next card at all times (no hover boost)
-                            transform.ZOrder = HandZBase - 1;
-                        }
-                        else
-                        {
-                            transform.ZOrder = HandZBase + (cardIndex * HandZStep) + (hovered ? HandZHoverBoost : 0);
-                        }
+                        transform.ZOrder = HandZBase + (cardIndex * HandZStep) + (hovered ? HandZHoverBoost : 0);
 
                         // Update UI bounds to current card geometry.
                         if (ui != null)
                         {
-                            ui.Bounds = CardGeometryService.GetVisualRect(cvs, transform.Position);
+                            ui.Bounds = CardGeometryService.GetVisualRect(cvs, transform.Position, visualScale);
                         }
                     }
                 }
             }
+        }
+
+        private static int GetHoveredIndex(List<Entity> visibleHand)
+        {
+            for (int i = 0; i < visibleHand.Count; i++)
+            {
+                if (visibleHand[i].GetComponent<UIElement>()?.IsHovered == true)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private float GetHoverFanOutOffset(int cardIndex, int hoveredIndex)
+        {
+            if (hoveredIndex < 0 || cardIndex == hoveredIndex)
+            {
+                return 0f;
+            }
+
+            return cardIndex < hoveredIndex ? -HandHoverFanOut : HandHoverFanOut;
+        }
+
+        private float UpdateVisualScale(Entity entity, bool hovered, GameTime gameTime)
+        {
+            float restScale = MathF.Max(0.01f, HandHoverScale);
+            float hoveredScale = MathF.Max(0.01f, HandHoveredScale);
+
+            if (!_handScaleByEntityId.TryGetValue(entity.Id, out float currentScale))
+            {
+                currentScale = restScale;
+            }
+
+            if (hovered)
+            {
+                currentScale = hoveredScale;
+            }
+            else
+            {
+                float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                float alpha = 1f - MathF.Exp(-MathF.Max(0.1f, HandScaleDownTweenSpeed) * dt);
+                currentScale = MathHelper.Lerp(currentScale, restScale, MathHelper.Clamp(alpha, 0f, 1f));
+                if (MathF.Abs(currentScale - restScale) < 0.001f)
+                {
+                    currentScale = restScale;
+                }
+            }
+
+            _handScaleByEntityId[entity.Id] = currentScale;
+            return currentScale;
+        }
+
+        private void PruneScaleState(List<Entity> visibleHand)
+        {
+            if (_handScaleByEntityId.Count == 0) return;
+
+            var visibleIds = new HashSet<int>(visibleHand.Select(e => e.Id));
+            foreach (int entityId in _handScaleByEntityId.Keys.ToList())
+            {
+                if (!visibleIds.Contains(entityId))
+                {
+                    _handScaleByEntityId.Remove(entityId);
+                }
+            }
+        }
+
+        private static float GetBottomAnchoredY(CardGeometrySettings settings, float visualBottomY, float scale)
+        {
+            int height = settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
+            int offsetYExtra = settings?.CardOffsetYExtra ?? CardGeometrySettings.DefaultOffsetYExtra;
+            return visualBottomY - (height * scale * 0.5f) + (offsetYExtra * scale);
         }
 
         private static bool CountsForHandLayout(Entity e)
@@ -331,6 +397,7 @@ namespace Crusaders30XX.ECS.Systems
                     // Only draw cards that are actually in the hand, not animating, and not filtered out by pay-cost overlay
                     var cardsInHand = deck.Hand
                         .Where(CountsForHandLayout)
+                        .Where(ShouldDrawInHand)
                         .OrderBy(e =>
                     {
                         var transform = e.GetComponent<Transform>();
@@ -353,6 +420,12 @@ namespace Crusaders30XX.ECS.Systems
                     }
                 }
             }
+        }
+
+        private static bool ShouldDrawInHand(Entity entity)
+        {
+            var assigned = entity.GetComponent<AssignedBlockCard>();
+            return assigned == null || (!assigned.IsEquipment && assigned.Phase == AssignedBlockCard.PhaseState.Returning);
         }
 
         private void LogHandReconciliationIfChanged(Deck deck, string reason)

@@ -2,7 +2,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Services;
 using System;
@@ -18,28 +17,28 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private Texture2D _crusaderTexture;
         private string _loadedWeaponId;
         private float _elapsedSeconds;
-        private Vector2 _attackDrawOffset = Vector2.Zero; // now sourced from PlayerAnimationState
+        private Vector2 _actorDrawOffset = Vector2.Zero;
 
         // Visual tuning
         [DebugEditable(DisplayName = "Portrait Height (% of screen height)", Step = 0.01f, Min = 0.05f, Max = 1.0f)]
-        public float ScreenHeightCoverage { get; set; } = 0.30f; // relative to viewport height
+        public float ScreenHeightCoverage { get; set; } = 0.44f; // relative to viewport height
 
         [DebugEditable(DisplayName = "Center Offset X (% of width)", Step = 0.01f, Min = -1.0f, Max = 1.0f)]
         public float CenterOffsetXPct { get; set; } = -0.26f; // negative = left, positive = right
 
         [DebugEditable(DisplayName = "Center Offset Y (% of height)", Step = 0.01f, Min = -1.0f, Max = 1.0f)]
-        public float CenterOffsetYPct { get; set; } = -0.11f; // negative = up, positive = down
+        public float CenterOffsetYPct { get; set; } = -0.09f; // negative = up, positive = down
 
-        public PlayerDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public PlayerDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -69,8 +68,8 @@ namespace Crusaders30XX.ECS.Systems
                     viewportW * (0.5f + CenterOffsetXPct),
                     viewportH * (0.5f + CenterOffsetYPct)
                 );
-                var anim = player.GetComponent<PlayerAnimationState>();
-                _attackDrawOffset = anim?.DrawOffset ?? Vector2.Zero;
+                var anim = player.GetComponent<ActorPresentationState>();
+                _actorDrawOffset = anim?.DrawOffset ?? Vector2.Zero;
                 transform.Position = basePosition;
                 transform.Scale = new Vector2(scale, scale);
                 var pinfo = player.GetComponent<PortraitInfo>();
@@ -97,13 +96,26 @@ namespace Crusaders30XX.ECS.Systems
             float texW = _crusaderTexture.Width;
             float texH = _crusaderTexture.Height;
             var origin = new Vector2(texW / 2f, texH / 2f); // center pivot
-            var position = transform.Position + _attackDrawOffset;
+            var position = transform.Position + _actorDrawOffset;
             var scaleVec = transform.Scale; // base scale
-            var animState = player.GetComponent<PlayerAnimationState>();
+            var animState = player.GetComponent<ActorPresentationState>();
+            var battleTransform = EntityManager.GetEntity("BattlePresentationTransform")?.GetComponent<BattlePresentationTransform>();
+            if (battleTransform != null)
+            {
+                position += battleTransform.Offset;
+                scaleVec *= battleTransform.Scale;
+            }
             if (animState != null)
             {
                 scaleVec.X *= animState.ScaleMultiplier.X;
                 scaleVec.Y *= animState.ScaleMultiplier.Y;
+            }
+            var info = player.GetComponent<PortraitInfo>();
+            if (info != null)
+            {
+                info.LastDrawCenter = position;
+                info.LastDrawTopLeft = position - origin * scaleVec;
+                info.LastDrawScale = scaleVec;
             }
 
             _spriteBatch.Draw(
@@ -127,15 +139,9 @@ namespace Crusaders30XX.ECS.Systems
             if (_crusaderTexture != null && weaponId == _loadedWeaponId) return;
 
             _loadedWeaponId = weaponId;
-            _crusaderTexture = TryLoadPortrait(CrusaderPortraitAssets.ResolveBattlePortraitAsset(weaponId))
-                ?? TryLoadPortrait(CrusaderPortraitAssets.DialogPortraitAsset);
-        }
-
-        private Texture2D TryLoadPortrait(string assetName)
-        {
-            try { return _content.Load<Texture2D>(assetName); }
-            catch { return null; }
+            _crusaderTexture = _imageAssets.GetTextureOrFallback(
+                CrusaderPortraitAssets.ResolveBattlePortraitAsset(weaponId),
+                CrusaderPortraitAssets.DialogPortraitAsset);
         }
     }
 }
-

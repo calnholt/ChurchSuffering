@@ -6,35 +6,18 @@ using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Utils;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Services
 {
     public static class MedalIconRenderService
     {
-        private static readonly Dictionary<string, Texture2D> TextureCache = new();
         private const float PlaceholderNameScale = 0.07f;
         private const float PlaceholderMinNameScale = 0.03f;
 
-        public static Texture2D TryLoadMedalTexture(ContentManager content, string medalId)
+        public static Texture2D TryLoadMedalTexture(ImageAssetService imageAssets, string medalId)
         {
-            if (content == null || string.IsNullOrWhiteSpace(medalId)) return null;
-            if (TextureCache.TryGetValue(medalId, out var cached))
-            {
-                return cached;
-            }
-            Texture2D tex = null;
-            try
-            {
-                tex = content.Load<Texture2D>(medalId);
-            }
-            catch
-            {
-                tex = null;
-            }
-            TextureCache[medalId] = tex;
-            return tex;
+            return imageAssets?.TryGetTexture(medalId);
         }
 
         public static Rectangle DrawMedalIcon(
@@ -44,11 +27,11 @@ namespace Crusaders30XX.ECS.Services
             Vector2 center,
             int iconSize,
             string medalId,
-            ContentManager content,
+            ImageAssetService imageAssets,
             float scale = 1f,
             float rotationRad = 0f)
         {
-            var tex = TryLoadMedalTexture(content, medalId);
+            var tex = TryLoadMedalTexture(imageAssets, medalId);
             if (tex != null)
             {
                 return DrawTextureMedal(spriteBatch, center, iconSize, tex, scale, rotationRad);

@@ -4,6 +4,7 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -21,6 +22,8 @@ namespace Crusaders30XX.ECS.Systems
         private readonly ContentManager _content;
         private readonly Dictionary<MusicTrack, Song> _songCache = new();
         private MusicTrack _current = MusicTrack.None;
+        private int _musicVolumeLevel;
+        private float _authoredTargetVolume = 0.2f;
         private float _targetVolume = 0.2f;
         private bool _fading = false;
         private float _fadeElapsed = 0f;
@@ -36,8 +39,11 @@ namespace Crusaders30XX.ECS.Systems
         public MusicManagerSystem(EntityManager entityManager, ContentManager content) : base(entityManager)
         {
             _content = content;
+            _musicVolumeLevel = SaveCache.GetMusicVolumeLevel();
+            _targetVolume = ApplyUserVolume(_authoredTargetVolume);
             EventManager.Subscribe<ChangeMusicTrack>(OnChangeMusicTrack);
             EventManager.Subscribe<StopMusic>(OnStopMusic);
+            EventManager.Subscribe<AudioSettingsChangedEvent>(OnAudioSettingsChanged);
             MediaPlayer.IsRepeating = true;
             MediaPlayer.Volume = _targetVolume;
             _expectedVolume = _targetVolume;
@@ -129,7 +135,8 @@ namespace Crusaders30XX.ECS.Systems
         {
             try
             {
-                _targetVolume = MathHelper.Clamp(evt?.Volume ?? 0.5f, 0f, 1f);
+                _authoredTargetVolume = MathHelper.Clamp(evt?.Volume ?? 0.5f, 0f, 1f);
+                _targetVolume = ApplyUserVolume(_authoredTargetVolume);
                 bool loop = evt?.Loop ?? true;
                 var track = evt?.Track ?? MusicTrack.None;
 
@@ -193,12 +200,18 @@ namespace Crusaders30XX.ECS.Systems
             string assetName = track switch
             {
                 MusicTrack.Menu => "Music/clash_of_shadows", // .ogg in Content
-                MusicTrack.DesertBattle => "Music/desert_theme_battle",
+                MusicTrack.DesertBattle => "Music/desert",
                 MusicTrack.Customize => "Music/customize",
                 MusicTrack.Map => "Music/desert_map",
-                MusicTrack.QuestComplete => "Music/quest_complete",
+                MusicTrack.QuestComplete => "Music/victory",
+                MusicTrack.Climb => "Music/climb",
                 MusicTrack.Achievements => "Music/achievements",
                 MusicTrack.FrozenBattle => "Music/ice",
+                MusicTrack.TundraBattle => "Music/tundra",
+                MusicTrack.JungleBattle => "Music/jungle",
+                MusicTrack.VolcanoBattle => "Music/volcano",
+                MusicTrack.TheGateBattle => "Music/the-gate",
+                MusicTrack.GothicBattle => "Music/gothic",
                 _ => null
             };
             if (string.IsNullOrEmpty(assetName)) return null;
@@ -229,6 +242,7 @@ namespace Crusaders30XX.ECS.Systems
                     // When Update completes fade-out branch without pending, finalize stop
                     // We piggy-back on the fade-in branch completion by detecting target 0 volume
                     // Ensure target is 0 for fade-out only
+                    _authoredTargetVolume = 0f;
                     _targetVolume = 0f;
                 }
                 else
@@ -239,6 +253,25 @@ namespace Crusaders30XX.ECS.Systems
             }
             catch { }
         }
+
+        private void OnAudioSettingsChanged(AudioSettingsChangedEvent evt)
+        {
+            if (evt == null) return;
+            _musicVolumeLevel = Math.Clamp(evt.MusicVolumeLevel, 0, 100);
+            _targetVolume = ApplyUserVolume(_authoredTargetVolume);
+
+            if (_pendingSong != null) return;
+            if (_fading) return;
+            if (MediaPlayer.State != MediaState.Playing) return;
+
+            MediaPlayer.Volume = _targetVolume;
+            _expectedVolume = _targetVolume;
+        }
+
+        private float ApplyUserVolume(float authoredVolume)
+        {
+            float scalar = _musicVolumeLevel / (float)SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL;
+            return MathHelper.Clamp(authoredVolume * scalar, 0f, 1f);
+        }
     }
 }
-

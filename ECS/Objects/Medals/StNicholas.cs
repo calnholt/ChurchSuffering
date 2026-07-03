@@ -7,7 +7,7 @@ namespace Crusaders30XX.ECS.Objects.Medals
     public class StNicholas : MedalBase
     {
         public int HpIncrease { get; set; } = 2;
-        public int FrozenCards { get; set; } = 8;
+        public int FrozenCards { get; set; } = 4;
         public StNicholas()
         {
             Id = "st_nicholas";

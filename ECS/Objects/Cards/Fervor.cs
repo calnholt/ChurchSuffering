@@ -10,7 +10,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
     {
         private int CourageThreshold = 5;
         private int DamageBonus = 3;
-        private List<string> CostUpgrade = ["Any", "Any"];
+        private List<string> CostUpgrade = ["Any"];
         public Fervor()
         {
             CardId = "fervor";
@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Fervor";
             Target = "Enemy";
             Cost = ["Red"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 6;
             Block = 2;
             Type = CardType.Attack;
@@ -48,6 +48,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
             OnUpgrade = (entityManager, card) =>
             {
+                Block += 1;
                 Cost = CostUpgrade;
             };
 

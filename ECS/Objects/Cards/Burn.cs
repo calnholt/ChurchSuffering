@@ -9,32 +9,46 @@ namespace Crusaders30XX.ECS.Objects.Cards
     public class Burn : CardBase
     {
         private int BurnAmount = 1;
-        private int CourageThreshold = 3;
-        private int ActionPointBonus = 1;
         public Burn()
         {
             CardId = "burn";
             Name = "Burn";
             Target = "Enemy";
-            Text = $"Apply {BurnAmount} burn to the enemy. If you have {CourageThreshold}+ courage, gain {ActionPointBonus} action point.";
+            Text = $"If the enemy has burn, the enemy gains {BurnAmount + 1} burn, otherwise the enemy gains {BurnAmount} burn.";
             Block = 2;
             Type = CardType.Prayer;
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
+            IsFreeAction = true;
 
             OnPlay = (entityManager, card) =>
             {
-                var courage = entityManager.GetEntity("Player").GetComponent<Courage>().Amount;
-                EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Enemy"), Type = AppliedPassiveType.Burn, Delta = BurnAmount });
-                if (courage >= CourageThreshold)
+                var enemy = entityManager.GetEntity("Enemy");
+                int burnDelta;
+
+                if (IsUpgraded)
                 {
-                    EventManager.Publish(new ModifyActionPointsEvent { Delta = ActionPointBonus });
+                    bool isScorched = card.GetComponent<Scorched>() != null;
+                    burnDelta = isScorched ? BurnAmount + 2 : BurnAmount + 1;
                 }
+                else
+                {
+                    var passives = enemy.GetComponent<AppliedPassives>();
+                    bool enemyHasBurn = passives?.Passives.TryGetValue(AppliedPassiveType.Burn, out int burnStacks) == true
+                        && burnStacks > 0;
+                    burnDelta = enemyHasBurn ? BurnAmount + 1 : BurnAmount;
+                }
+
+                EventManager.Publish(new ApplyPassiveEvent
+                {
+                    Target = enemy,
+                    Type = AppliedPassiveType.Burn,
+                    Delta = burnDelta
+                });
             };
 
             OnUpgrade = (entityManager, card) =>
             {
-                IsFreeAction = true;
-                Text = $"Apply {BurnAmount} burn to the enemy.";
+                Text = $"Apply {BurnAmount + 1} burn to the enemy. If this is scorched, apply {BurnAmount + 2} burn instead.";
             };
         }
     }

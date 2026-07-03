@@ -1,12 +1,21 @@
 using System;
+using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Services;
 
 namespace Crusaders30XX.ECS.Systems
 {
     internal static class AppliedPassivesService
     {
+
+      public static int GetGalvanizeBonus(int preGalvanizeDamage)
+      {
+        if (preGalvanizeDamage <= 0) return 0;
+        return (int)Math.Ceiling(preGalvanizeDamage * TooltipTextService.GalvanizeBonusFraction);
+      }
+
       public static int GetGuardAbsorption(Entity target, int rawAttackDamage)
       {
         if (rawAttackDamage <= 0 || target == null) return 0;
@@ -42,10 +51,9 @@ namespace Crusaders30XX.ECS.Systems
           return 0;
         }
         var delta = 0;
-        var isEnemy = e.Source.HasComponent<Enemy>();
-        var sourcePassives = e.Source.GetComponent<AppliedPassives>().Passives;
-        var targetPassives = e.Target.GetComponent<AppliedPassives>().Passives;
-        // var phaseState = entityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault().GetComponent<PhaseState>();
+        var isEnemy = e.Source?.HasComponent<Enemy>() == true;
+        var targetPassives = e.Target?.GetComponent<AppliedPassives>()?.Passives
+          ?? new Dictionary<AppliedPassiveType, int>();
         if (targetPassives.ContainsKey(AppliedPassiveType.Armor) && e.DamageType == ModifyTypeEnum.Attack)
         {
           targetPassives.TryGetValue(AppliedPassiveType.Armor, out var amount);
@@ -56,41 +64,30 @@ namespace Crusaders30XX.ECS.Systems
           targetPassives.TryGetValue(AppliedPassiveType.Wounded, out var amount);
           delta += amount;
         }
-        if (sourcePassives.ContainsKey(AppliedPassiveType.Power) && e.DamageType == ModifyTypeEnum.Attack && !isEnemy)
-        {
-          sourcePassives.TryGetValue(AppliedPassiveType.Power, out var amount);
-          delta += amount;
-        }
-        if (sourcePassives.ContainsKey(AppliedPassiveType.Might) && e.DamageType == ModifyTypeEnum.Attack && !isEnemy)
-        {
-          sourcePassives.TryGetValue(AppliedPassiveType.Might, out var amount);
-          delta += amount;
-        }
         if (e.DamageType == ModifyTypeEnum.Attack && !isEnemy)
         {
-          var attackCard = e.AttackCard?.GetComponent<CardData>();
-          bool isWeaponAttack = attackCard?.Card?.IsWeapon == true;
-          if (!isWeaponAttack && sourcePassives.TryGetValue(AppliedPassiveType.Aggression, out var aggression) && aggression > 0)
+          var outgoing = CardStatModifierService.GetOutgoingAttackDamage(new CardStatQuery
           {
-            delta += aggression;
-            if (!ReadOnly)
+            Kind = CardStatKind.OutgoingAttackDamage,
+            Mode = ReadOnly ? CardStatQueryMode.Preview : CardStatQueryMode.Resolution,
+            Source = e.Source,
+            Owner = e.Source,
+            Target = e.Target,
+            Card = e.AttackCard,
+            BaseValue = Math.Abs(e.Delta),
+          });
+          delta += outgoing.TotalDelta;
+          if (!ReadOnly)
+          {
+            foreach (var consumption in outgoing.PassiveConsumptions)
             {
-              EventManager.Publish(new RemovePassive { Owner = e.Source, Type = AppliedPassiveType.Aggression });
+              EventManager.Publish(new RemovePassive
+              {
+                Owner = consumption.Owner,
+                Type = consumption.Type,
+              });
             }
           }
-          if (isWeaponAttack && sourcePassives.TryGetValue(AppliedPassiveType.Sharpen, out var sharpen) && sharpen > 0)
-          {
-            delta += sharpen;
-            if (!ReadOnly)
-            {
-              EventManager.Publish(new RemovePassive { Owner = e.Source, Type = AppliedPassiveType.Sharpen });
-            }
-          }
-        }
-        if (sourcePassives.ContainsKey(AppliedPassiveType.Penance) && e.DamageType == ModifyTypeEnum.Attack && !isEnemy)
-        {
-          sourcePassives.TryGetValue(AppliedPassiveType.Penance, out var amount);
-          delta -= 1;
         }
         return -delta;
       }

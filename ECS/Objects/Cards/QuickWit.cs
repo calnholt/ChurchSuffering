@@ -7,14 +7,17 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class QuickWit : CardBase
     {
+        private int CardDrawAmount = 1;
         private int CourageCost = 1;
+        private int CourageCostUpgrade = 1;
+        private int CardDrawAmountUpgrade = 1;
         public QuickWit()
         {
             CardId = "quick_wit";
             Name = "Quick Wit";
             Target = "Enemy";
-            Text = $"As an additional cost, lose {CourageCost} courage. Draw 1 random card from your discard pile.";
-            Animation = "Attack";
+            Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Resurrect {GetCardDrawAmount(IsUpgraded)}.";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 2;
             Block = 3;
             IsFreeAction = true;
@@ -23,7 +26,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             {
                 var player = entityManager.GetEntity("Player");
                 var enemy = entityManager.GetEntity("Enemy");
-                EventManager.Publish(new ModifyCourageRequestEvent { Delta = -CourageCost, Type = ModifyCourageType.Spent });
+                EventManager.Publish(new ModifyCourageRequestEvent { Delta = -GetCourageCost(IsUpgraded), Type = ModifyCourageType.Spent });
                 EventManager.Publish(new ModifyHpRequestEvent
                 {
                     Source = player,
@@ -33,7 +36,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
                     DamageType = ModifyTypeEnum.Attack
                 });
-                EventManager.Publish(new DrawRandomCardFromDiscardEvent { Amount = 1 });
+                EventManager.Publish(new DrawRandomCardFromDiscardEvent { Amount = GetCardDrawAmount(IsUpgraded) });
             };
 
             CanPlay = (entityManager, card) =>
@@ -41,16 +44,31 @@ namespace Crusaders30XX.ECS.Objects.Cards
                 var player = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
                 var courageCmp = player?.GetComponent<Courage>();
                 int courage = courageCmp?.Amount ?? 0;
-                return courage >= CourageCost;
+                return courage >= GetCourageCost(IsUpgraded);
             };
+
             OnCantPlay = (entityManager, card) =>
             {
                 var player = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
                 var courageCmp = player?.GetComponent<Courage>();
                 int courage = courageCmp?.Amount ?? 0;
-                if (courage < CourageCost)
+                if (courage < GetCourageCost(IsUpgraded))
                     EventManager.Publish(new CantPlayCardMessage { Message = $"Requires {CourageCost} courage!" });
             };
+
+            OnUpgrade = (entityManager, card) =>
+            {
+                Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Resurrect {GetCardDrawAmount(IsUpgraded)}.";
+            };
+
+        }
+        private int GetCourageCost(bool isUpgraded)
+        {
+            return isUpgraded ? CourageCost + CourageCostUpgrade : CourageCost;
+        }
+        private int GetCardDrawAmount(bool isUpgraded)
+        {
+            return isUpgraded ? CardDrawAmount + CardDrawAmountUpgrade : CardDrawAmount;
         }
     }
 }

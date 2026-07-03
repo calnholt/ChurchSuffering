@@ -51,7 +51,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
                 ctx.World.EntityManager,
                 ctx.GraphicsDevice,
                 ctx.SpriteBatch,
-                ctx.Content);
+                ctx.ImageAssets);
             ctx.World.AddSystem(_modal);
 
             _modal.Open(

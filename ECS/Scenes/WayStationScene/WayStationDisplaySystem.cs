@@ -7,7 +7,6 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -18,7 +17,6 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly World _world;
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
 		private readonly Texture2D _pixel;
 		private readonly Texture2D _background;
 		private readonly Texture2D _swordArt;
@@ -136,19 +134,17 @@ namespace Crusaders30XX.ECS.Systems
 			public Vector2 DifficultyLabelPosition;
 		}
 
-		public WayStationDisplaySystem(World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public WayStationDisplaySystem(World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(world.EntityManager)
 		{
 			_world = world;
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
-			_background = content.Load<Texture2D>("waystation");
-			_swordArt = content.Load<Texture2D>(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("sword"));
-			_daggerArt = content.Load<Texture2D>(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("dagger"));
-			_hammerArt = content.Load<Texture2D>(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("hammer"));
+			_pixel = imageAssets.GetPixel(Color.White);
+			_background = imageAssets.GetRequiredTexture("waystation");
+			_swordArt = imageAssets.GetRequiredTexture(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("sword"));
+			_daggerArt = imageAssets.GetRequiredTexture(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("dagger"));
+			_hammerArt = imageAssets.GetRequiredTexture(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("hammer"));
 			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
 		}
 

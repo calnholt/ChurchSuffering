@@ -50,10 +50,26 @@ to the fixture.
 |------------|----------------|---------|
 | `card` | Card display | Three color variants of one card on a green background |
 | `brittle-card` | Brittle card shader | One brittle card on a patterned backdrop for shader debugging |
+| `frozen-card` | Frozen card shader | One frozen card on a patterned backdrop, optionally composed with Brittle |
+| `thorned-card` | Thorned card shader | One thorned card on a patterned backdrop, optionally composed with Frozen |
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
+| `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
 | `waystation` | WayStation run setup | Run setup scene with default Sword/Easy selections |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
+| `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
+| `climb-hazard-event` | Climb scene | Active Hazard card with visible resource gain |
+| `climb-character-event` | Climb scene | Active Character card with portrait and visible reward |
+| `climb-hazard-hover-preview` | Climb scene | Zero-time Hazard resource projection |
+| `climb-character-hover-preview` | Climb scene | One-time Character timeline projection |
+| `climb-hazard-confirmation` | Climb scene + narrative modal | Binding Hazard effect and gain confirmation |
+| `climb-character-summary` | Climb scene + narrative modal | Character reward summary |
+| `climb-character-dialog` | Climb background + dialogue | Background-only Character exchange |
+| `climb-active-events` | Climb scene | Three columns with active event slots at T5 |
+| `climb-hover-preview` | Climb scene | Hover preview on first encounter slot |
+| `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
+| `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
+| `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
 
 ---
 
@@ -98,19 +114,56 @@ dotnet run -- snapshot brittle-card
 dotnet run -- snapshot brittle-card strike
 dotnet run -- snapshot brittle-card fireball
 
+# Transform-aware shader checks
+dotnet run -- snapshot brittle-card strike --scale 0.6 --rotation -25
+dotnet run -- snapshot brittle-card strike --scale 1.35 --rotation 30
+
+# Include an attached card decoration outside the brittle source capture
+dotnet run -- snapshot brittle-card strike --rotation 20 --pledge
+
 # Disable shaders to compare against the normal card render
 dotnet run -- snapshot brittle-card strike no-shaders
 ```
 
 ### Output file
 
-`debug/snapshots/brittle-card/<cardId>.png`
+`debug/snapshots/brittle-card/<cardId>.png` for the default transform. Transform variants append their scale, rotation, and optional pledge state to the filename.
 
 Example: `debug/snapshots/brittle-card/strike.png`
 
 ### Errors
 
 - If `<cardId>` is provided but unknown: exit `1`, no PNG
+
+---
+
+## `frozen-card`
+
+Renders one White card with the `Frozen` component attached on a high-contrast patterned backdrop.
+
+```bash
+dotnet run -- snapshot frozen-card
+dotnet run -- snapshot frozen-card strike --scale 0.6 --rotation -25
+dotnet run -- snapshot frozen-card strike --rotation 20 --brittle
+dotnet run -- snapshot frozen-card strike no-shaders
+```
+
+Transform variants append their scale, rotation, and optional Brittle state to files under `debug/snapshots/frozen-card/`.
+
+---
+
+## `thorned-card`
+
+Renders one White card with the `Thorned` component attached on a high-contrast patterned backdrop.
+
+```bash
+dotnet run -- snapshot thorned-card
+dotnet run -- snapshot thorned-card strike --scale 0.6 --rotation -25
+dotnet run -- snapshot thorned-card strike --frozen
+dotnet run -- snapshot thorned-card strike no-shaders
+```
+
+Transform variants append their scale, rotation, and optional Frozen state to files under `debug/snapshots/thorned-card/`.
 
 ---
 
@@ -181,6 +234,25 @@ Example: `'strike|white'`, `'smite|red|Upgraded'` (quote in shell so `|` is not 
 
 ---
 
+## `modular-fx`
+
+Renders one modular battle visual effect at fixed player/enemy anchors.
+
+```bash
+dotnet run -- snapshot modular-fx heavy-hammer impact
+dotnet run -- snapshot modular-fx holy-strike impact
+dotnet run -- snapshot modular-fx enemy-rock-blast impact
+dotnet run -- snapshot modular-fx enemy-bite impact
+```
+
+Preset tokens: `heavy-hammer`, `holy-strike`, `enemy-rock-blast`, `enemy-bite`, `enemy-slash`, `light-slash`.
+
+Sample tokens: `start`, `impact`, `late`.
+
+Output: `debug/snapshots/modular-fx/<preset>-<sample>.png`
+
+---
+
 ## `narrative-event-modal`
 
 Renders `NarrativeEventModalDisplaySystem` for a narrative event type and optional visible option count.
@@ -242,13 +314,42 @@ dotnet run -- snapshot player-hud unavailable
 dotnet run -- snapshot player-hud incoming-damage
 dotnet run -- snapshot player-hud low-health
 dotnet run -- snapshot player-hud expanded
+dotnet run -- snapshot player-hud enemy-health
 
 ./scripts/verify-player-hud-snapshots.sh
 ./scripts/verify-player-hud-snapshots.sh --accept
 ```
 
+The `enemy-health` variant renders the enemy full health region in isolation;
+the player HUD is placed outside the capture to avoid cursor-driven parallax.
 The verification script is read-only by default. `--accept` explicitly
-replaces all five approved baselines.
+replaces all six approved baselines.
+
+---
+
+## Climb fixtures
+
+Renders the Climb scene HUD at 1920x1080 with fixture-specific save state.
+Output PNGs are written under `debug/snapshots/<fixture-id>/<fixture-id>.png`.
+
+```bash
+dotnet run -- snapshot climb-no-events
+dotnet run -- snapshot climb-hazard-event
+dotnet run -- snapshot climb-character-event
+dotnet run -- snapshot climb-hazard-hover-preview
+dotnet run -- snapshot climb-character-hover-preview
+dotnet run -- snapshot climb-hazard-confirmation
+dotnet run -- snapshot climb-character-summary
+dotnet run -- snapshot climb-character-dialog
+dotnet run -- snapshot climb-active-events
+dotnet run -- snapshot climb-hover-preview
+dotnet run -- snapshot climb-sold-shop-slot
+dotnet run -- snapshot climb-encounter-reward-modal
+dotnet run -- snapshot climb-replacement-modal
+```
+
+Modal variants draw the Climb scene plus the open modal overlay. The Character
+dialogue variant draws only the undimmed desert background and dialogue overlay.
 
 ---
 

@@ -11,6 +11,9 @@ public class BrittleOverlay
 
     public Texture2D BackgroundTexture { get; set; }
     public float Time { get; set; }
+    public Vector2 CardCenter { get; set; }
+    public float CardScale { get; set; } = 1f;
+    public float CardRotation { get; set; }
 
     public float GridMin { get; set; } = 18f;
     public float GridMax { get; set; } = 18f;
@@ -51,6 +54,9 @@ public class BrittleOverlay
         _effect.Parameters["iResolution"]?.SetValue(new Vector2(vp.Width, vp.Height));
         _effect.Parameters["iTime"]?.SetValue(Time);
         _effect.Parameters["BackgroundTexture"]?.SetValue(BackgroundTexture);
+        _effect.Parameters["CARD_CENTER"]?.SetValue(CardCenter);
+        _effect.Parameters["CARD_SCALE"]?.SetValue(CardScale);
+        _effect.Parameters["CARD_ROTATION"]?.SetValue(CardRotation);
 
         _effect.Parameters["GRID_MIN"]?.SetValue(GridMin);
         _effect.Parameters["GRID_MAX"]?.SetValue(GridMax);

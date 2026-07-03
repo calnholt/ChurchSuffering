@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Dialog Overlay (Cinematic Rail)</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Target: DialogDisplaySystem (BattleScene overlay, archetype D — Scene HUD)
+    - Cinematic Rail: left gradient rail (clip reveal), portrait fade, text stage right
+    - Fonts: TitleFont (New Rocker) for speaker name; ChakraPetchFont for body
+    - Skip button: top-right, white fill, dark-red text (ButtonTextureFactory)
+    - Portrait assets: Content/character/*.png, crusader_sword.png, etc.
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #8b0000;
+    --red-4: #c41e3a;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 6px;
+  }
+
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    max-width: 820px;
+  }
+
+  .page-main {
+    padding: 28px 40px 60px;
+  }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .controls-row .hint {
+    font-size: 0.75rem;
+    color: var(--white-3);
+    letter-spacing: 0.5px;
+    margin-left: auto;
+  }
+
+  .action-btn {
+    padding: 8px 16px;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .action-btn:hover {
+    background: var(--black-3);
+    border-color: var(--red-4);
+  }
+
+  .action-btn.is-primary {
+    background: rgba(139, 0, 0, 0.35);
+    border-color: var(--red-4);
+  }
+
+  .design-label {
+    font-size: 0.62rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red-4);
+    margin-bottom: 6px;
+  }
+
+  .design-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+  }
+
+  .design-desc {
+    font-size: 0.78rem;
+    color: var(--white-3);
+    line-height: 1.5;
+    max-width: 720px;
+    margin-bottom: 16px;
+  }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1100px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+    cursor: pointer;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert-background-city.png') center / cover no-repeat;
+  }
+
+  .bg-vignette {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 40%, transparent 30%, rgba(0, 0, 0, 0.35) 100%),
+      linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, transparent 45%);
+    pointer-events: none;
+  }
+
+  .skip-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 50;
+    padding: 6px 14px;
+    background: var(--white-1);
+    border: 2px solid var(--red-3);
+    color: var(--red-3);
+    font-family: 'New Rocker', cursive;
+    font-size: 18px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-12px);
+    transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+    pointer-events: none;
+  }
+
+  .dialog-root.is-active .skip-btn,
+  .dialog-root.is-outro .skip-btn {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .skip-btn:hover {
+    background: #fff5f5;
+  }
+
+  .click-prompt {
+    position: absolute;
+    bottom: 18px;
+    right: 28px;
+    z-index: 40;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    animation: pulsePrompt 1.6s ease-in-out infinite;
+  }
+
+  .dialog-root.is-active .click-prompt.is-visible {
+    opacity: 1;
+  }
+
+  @keyframes pulsePrompt {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.75; }
+  }
+
+  .idle-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.25);
+    transition: opacity 0.4s;
+  }
+
+  .dialog-root.is-active .idle-overlay,
+  .dialog-root.is-intro .idle-overlay,
+  .dialog-root.is-outro .idle-overlay {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .idle-card {
+    text-align: center;
+    padding: 28px 40px;
+    background: rgba(10, 10, 10, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+  }
+
+  .idle-card h2 {
+    font-family: 'New Rocker', cursive;
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: var(--white-1);
+  }
+
+  .idle-card p {
+    font-size: 14px;
+    color: var(--white-3);
+    letter-spacing: 1px;
+  }
+
+  /* Cinematic Rail */
+  .rail {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 38%;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.55) 85%, transparent 100%);
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 0.6s var(--ease-out);
+    z-index: 10;
+    overflow: hidden;
+  }
+
+  .dialog-root.is-intro .rail,
+  .dialog-root.is-active .rail,
+  .dialog-root.is-outro .rail {
+    clip-path: inset(0 0 0 0);
+  }
+
+  .dialog-root.is-outro .rail {
+    transition-timing-function: var(--ease-in);
+    transition-duration: 0.5s;
+    clip-path: inset(0 100% 0 0);
+  }
+
+  .rail-accent {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, transparent, var(--red-4) 15%, var(--red-4) 85%, transparent);
+    transform: scaleY(0);
+    transform-origin: center center;
+    opacity: 1;
+    transition: transform 0.55s var(--ease-out) 0.25s;
+  }
+
+  .dialog-root.is-intro .rail-accent,
+  .dialog-root.is-active .rail-accent {
+    transform: scaleY(1);
+  }
+
+  .dialog-root.is-outro .rail-accent {
+    transform: scaleY(0);
+    transition-delay: 0s;
+    transition-duration: 0.4s;
+    transition-timing-function: var(--ease-in);
+  }
+
+  .portrait-slot {
+    position: absolute;
+    left: 19%;
+    bottom: 120px;
+    width: 420px;
+    height: 520px;
+    transform: translateX(-50%) translateY(0);
+    opacity: 0;
+    transition: opacity 0.35s var(--ease-in);
+    overflow: hidden;
+    z-index: 11;
+    pointer-events: none;
+  }
+
+  .dialog-root.is-intro .portrait-slot,
+  .dialog-root.is-active .portrait-slot {
+    opacity: 1;
+    transition: opacity 0.35s var(--ease-out) 0.2s;
+  }
+
+  .dialog-root.is-outro .portrait-slot {
+    opacity: 0;
+    transition-delay: 0s;
+    transition-duration: 0.35s;
+    transition-timing-function: var(--ease-in);
+  }
+
+  .portrait-img {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: bottom center;
+    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.55));
+  }
+
+  .portrait-img.is-exit {
+    opacity: 0;
+    transform: translateX(calc(-50% - 110px));
+    transition: opacity 0.2s var(--ease-in), transform 0.22s var(--ease-in);
+  }
+
+  .portrait-img.is-enter {
+    opacity: 0;
+    transform: translateX(calc(-50% - 180px));
+    transition: opacity 0.38s var(--ease-out), transform 0.4s var(--ease-out);
+  }
+
+  .portrait-img.is-enter.is-ready {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+
+  .stage {
+    position: absolute;
+    left: 38%;
+    right: 0;
+    bottom: 72px;
+    width: auto;
+    padding: 0 64px 0 48px;
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity 0.5s var(--ease-out) 0.22s, transform 0.5s var(--ease-out) 0.22s;
+    z-index: 11;
+    pointer-events: none;
+  }
+
+  .text-panel {
+    width: 100%;
+    max-width: 960px;
+    height: 248px;
+  }
+
+  .text-body {
+    height: 184px;
+    overflow: hidden;
+  }
+
+  .dialog-root.is-intro .stage,
+  .dialog-root.is-active .stage {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .dialog-root.is-outro .stage {
+    opacity: 0;
+    transform: translateX(30px);
+    transition-delay: 0s;
+    transition-duration: 0.35s;
+  }
+
+  .speaker-line {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 50px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+
+  .speaker-dash {
+    width: 48px;
+    height: 2px;
+    background: var(--red-4);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s var(--ease-out);
+  }
+
+  .dialog-root.is-intro .speaker-dash,
+  .dialog-root.is-active .speaker-dash {
+    transform: scaleX(1);
+  }
+
+  .speaker-name {
+    font-family: 'New Rocker', cursive;
+    font-size: 32px;
+    color: var(--white-1);
+    letter-spacing: 1px;
+    transition: opacity 0.22s, transform 0.22s, color 0.22s;
+  }
+
+  .speaker-name.is-swapping {
+    opacity: 0;
+    transform: translateX(-12px);
+    color: var(--red-4);
+  }
+
+  .dialog-text {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 28px;
+    line-height: 1.55;
+    color: var(--white-2);
+    max-width: 900px;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+    transition: opacity 0.25s;
+    margin: 0;
+  }
+
+  .dialog-text.is-fading {
+    opacity: 0;
+  }
+
+  .bottom-bar {
+    position: absolute;
+    left: 38%;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--red-4), transparent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.55s var(--ease-out) 0.35s;
+    z-index: 12;
+  }
+
+  .dialog-root.is-intro .bottom-bar,
+  .dialog-root.is-active .bottom-bar {
+    transform: scaleX(1);
+  }
+
+  .dialog-root.is-outro .bottom-bar {
+    transform: scaleX(0);
+    transition-delay: 0s;
+    transition-duration: 0.3s;
+  }
+
+  .status-bar {
+    margin-top: 14px;
+    font-size: 0.72rem;
+    color: var(--white-3);
+    letter-spacing: 0.5px;
+  }
+
+  .status-bar strong {
+    color: var(--white-1);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Dialog Overlay — Cinematic Rail</h1>
+  <p>
+    Battle dialog mockup with intro/outro motion, portrait fade on actor change, and fixed text panel.
+    Click the scene to advance lines (first click completes typewriter, next advances).
+    Start Dialog replays the intro sequence.
+  </p>
+</header>
+
+<main class="page-main">
+  <div class="controls-row">
+    <button type="button" class="action-btn is-primary" id="btn-start">Start Dialog</button>
+    <button type="button" class="action-btn" id="btn-replay-intro">Replay Intro</button>
+    <span class="hint">Click scene to advance | Skip ends dialog</span>
+  </div>
+
+  <div class="design-label">Cinematic Rail</div>
+  <div class="design-title">Left rail + text stage</div>
+  <p class="design-desc">
+    Gradient rail reveals via clip-path; portrait fades in/out in place on intro and outro. Speaker name with red rule;
+    body text in a fixed-height panel. Character swaps: outgoing slides left fast, incoming enters from the left.
+  </p>
+
+  <div class="viewport-scaler" id="scaler">
+    <div class="viewport" id="viewport">
+      <div class="bg-scene"></div>
+      <div class="bg-vignette"></div>
+
+      <div class="dialog-root" id="dialog-root">
+        <button type="button" class="skip-btn" data-skip>Skip</button>
+        <div class="rail">
+          <div class="rail-accent"></div>
+        </div>
+        <div class="portrait-slot">
+          <img class="portrait-img" alt="" data-portrait>
+        </div>
+        <div class="stage">
+          <div class="text-panel">
+            <div class="speaker-line">
+              <div class="speaker-dash"></div>
+              <div class="speaker-name" data-name></div>
+            </div>
+            <div class="text-body">
+              <p class="dialog-text" data-text></p>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-bar"></div>
+        <div class="click-prompt" data-prompt>Click to continue</div>
+        <div class="idle-overlay">
+          <div class="idle-card">
+            <h2>Click to begin</h2>
+            <p>Cinematic rail expands from the left</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    Line <strong>0</strong> / 5 | State: <strong>idle</strong> | Actor: <strong>—</strong>
+  </div>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+  const PORTRAIT_EXIT_MS = 220;
+  const PORTRAIT_ENTER_MS = 380;
+
+  const PORTRAITS = {
+    'Nun': '../Content/character/nun.png',
+    'Crusader': '../Content/crusader_sword.png',
+    'Reverent Crusader': '../Content/character/reverent_crusader.png',
+    'Smith': '../Content/character/smith.png',
+  };
+
+  const LINES = [
+    { actor: 'Nun', message: 'You carry every wound as if suffering were proof of purpose. Take two measured breaths before you draw steel.' },
+    { actor: 'Crusader', message: 'Pain is easier to trust than mercy. But I will take the breaths.' },
+    { actor: 'Reverent Crusader', message: 'Your guard is sound, but your heart enters battle after your blade. Courage is command over doubt. Remember that.' },
+    { actor: 'Crusader', message: 'My blade has fewer doubts. I will teach my heart to follow.' },
+    { actor: 'Smith', message: 'That card has seen hard use. I cannot mend it, but I can make it worthy of your hand.' },
+  ];
+
+  let phase = 'idle';
+  let lineIndex = 0;
+  let typewriterTimer = null;
+  let revealedChars = 0;
+  let lineComplete = false;
+  let introTimer = null;
+  let currentActor = '';
+
+  function getRoot() {
+    return document.getElementById('dialog-root');
+  }
+
+  function fitViewport() {
+    const scaler = document.getElementById('scaler');
+    const vp = document.getElementById('viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / GAME_W;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  function setPhase(next) {
+    phase = next;
+    const root = getRoot();
+    root.classList.remove('is-idle', 'is-intro', 'is-active', 'is-outro');
+    if (next === 'idle') root.classList.add('is-idle');
+    if (next === 'intro') root.classList.add('is-intro');
+    if (next === 'active') root.classList.add('is-active');
+    if (next === 'outro') root.classList.add('is-outro');
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const bar = document.getElementById('status-bar');
+    const actor = lineIndex < LINES.length ? LINES[lineIndex].actor : '—';
+    bar.innerHTML = `Line <strong>${Math.min(lineIndex + 1, LINES.length)}</strong> / ${LINES.length} | State: <strong>${phase}</strong> | Actor: <strong>${actor}</strong>`;
+  }
+
+  function clearTypewriter() {
+    if (typewriterTimer) {
+      clearInterval(typewriterTimer);
+      typewriterTimer = null;
+    }
+  }
+
+  function setPromptVisible(visible) {
+    getRoot().querySelector('[data-prompt]').classList.toggle('is-visible', visible);
+  }
+
+  function portraitSrc(actor) {
+    return PORTRAITS[actor] || PORTRAITS['Crusader'];
+  }
+
+  function formatSpeakerName(name) {
+    if (!name) return '';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  }
+
+  function introFirstPortrait() {
+    const root = getRoot();
+    const actor = LINES[0].actor;
+    const img = root.querySelector('[data-portrait]');
+    img.src = portraitSrc(actor);
+    img.alt = actor;
+    img.classList.remove('is-exit', 'is-enter', 'is-ready');
+    currentActor = actor;
+
+    const nameEl = root.querySelector('[data-name]');
+    nameEl.textContent = formatSpeakerName(actor);
+    nameEl.classList.add('is-swapping');
+    setTimeout(() => nameEl.classList.remove('is-swapping'), 220);
+  }
+
+  function swapPortrait(actor) {
+    const root = getRoot();
+    const img = root.querySelector('[data-portrait]');
+    const slot = root.querySelector('.portrait-slot');
+    const nextSrc = portraitSrc(actor);
+
+    if (!currentActor) {
+      img.src = nextSrc;
+      img.alt = actor;
+      img.classList.remove('is-exit', 'is-enter', 'is-ready');
+      currentActor = actor;
+      return;
+    }
+
+    if (currentActor === actor) return;
+
+    const oldImg = img;
+    oldImg.classList.add('is-exit');
+
+    setTimeout(() => {
+      oldImg.remove();
+
+      const newImg = document.createElement('img');
+      newImg.className = 'portrait-img is-enter';
+      newImg.setAttribute('data-portrait', '');
+      newImg.src = nextSrc;
+      newImg.alt = actor;
+      slot.appendChild(newImg);
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => newImg.classList.add('is-ready'));
+      });
+
+      setTimeout(() => {
+        newImg.classList.remove('is-enter', 'is-ready');
+        currentActor = actor;
+      }, PORTRAIT_ENTER_MS);
+    }, PORTRAIT_EXIT_MS);
+  }
+
+  function swapName(name) {
+    const el = getRoot().querySelector('[data-name]');
+    el.classList.add('is-swapping');
+    setTimeout(() => {
+      el.textContent = formatSpeakerName(name);
+      el.classList.remove('is-swapping');
+    }, 180);
+  }
+
+  function startTypewriter(fullText) {
+    clearTypewriter();
+    const root = getRoot();
+    const textEl = root.querySelector('[data-text]');
+    revealedChars = 0;
+    lineComplete = false;
+    textEl.textContent = '';
+    textEl.classList.remove('is-fading');
+    setPromptVisible(false);
+
+    const cps = 42;
+    const interval = 1000 / cps;
+
+    typewriterTimer = setInterval(() => {
+      revealedChars++;
+      textEl.textContent = fullText.slice(0, revealedChars);
+      if (revealedChars >= fullText.length) {
+        clearTypewriter();
+        lineComplete = true;
+        setPromptVisible(true);
+      }
+    }, interval);
+  }
+
+  function showLine(index, animateText = true) {
+    const root = getRoot();
+    const line = LINES[index];
+    if (!line) return;
+
+    const actorChanged = line.actor !== currentActor;
+
+    if (actorChanged) {
+      swapPortrait(line.actor);
+      swapName(line.actor);
+    } else if (!currentActor) {
+      swapPortrait(line.actor);
+      root.querySelector('[data-name]').textContent = formatSpeakerName(line.actor);
+      currentActor = line.actor;
+    }
+
+    const textEl = root.querySelector('[data-text]');
+    if (animateText) {
+      textEl.classList.add('is-fading');
+      setTimeout(() => startTypewriter(line.message), actorChanged ? PORTRAIT_EXIT_MS + 60 : 120);
+    } else {
+      textEl.classList.remove('is-fading');
+      textEl.textContent = line.message;
+      revealedChars = line.message.length;
+      lineComplete = true;
+      setPromptVisible(true);
+    }
+
+    updateStatus();
+  }
+
+  function finishIntro() {
+    if (introTimer) {
+      clearTimeout(introTimer);
+      introTimer = null;
+    }
+    if (phase !== 'intro') return;
+    setPhase('active');
+    showLine(0, true);
+  }
+
+  function resetPortraitSlot() {
+    const slot = getRoot().querySelector('.portrait-slot');
+    slot.querySelectorAll('.portrait-img').forEach(n => n.remove());
+    const img = document.createElement('img');
+    img.className = 'portrait-img';
+    img.setAttribute('data-portrait', '');
+    img.alt = '';
+    slot.appendChild(img);
+  }
+
+  function playIntro() {
+    clearTypewriter();
+    if (introTimer) clearTimeout(introTimer);
+    currentActor = '';
+    lineIndex = 0;
+    lineComplete = false;
+    setPromptVisible(false);
+
+    const root = getRoot();
+    root.querySelector('[data-text]').textContent = '';
+    root.querySelector('[data-name]').textContent = '';
+    resetPortraitSlot();
+
+    setPhase('intro');
+    introFirstPortrait();
+
+    introTimer = setTimeout(finishIntro, 620);
+  }
+
+  function playOutro() {
+    clearTypewriter();
+    setPromptVisible(false);
+    setPhase('outro');
+    setTimeout(() => {
+      currentActor = '';
+      lineIndex = 0;
+      setPhase('idle');
+    }, 520);
+  }
+
+  function advanceLine() {
+    if (phase === 'idle') {
+      playIntro();
+      return;
+    }
+    if (phase === 'intro') {
+      finishIntro();
+      return;
+    }
+    if (phase === 'outro') return;
+
+    if (!lineComplete) {
+      clearTypewriter();
+      const line = LINES[lineIndex];
+      getRoot().querySelector('[data-text]').textContent = line.message;
+      revealedChars = line.message.length;
+      lineComplete = true;
+      setPromptVisible(true);
+      return;
+    }
+
+    lineIndex++;
+    if (lineIndex >= LINES.length) {
+      playOutro();
+      return;
+    }
+
+    showLine(lineIndex, true);
+  }
+
+  document.getElementById('btn-start').addEventListener('click', e => {
+    e.stopPropagation();
+    playIntro();
+  });
+
+  document.getElementById('btn-replay-intro').addEventListener('click', e => {
+    e.stopPropagation();
+    if (phase === 'outro') return;
+    playIntro();
+  });
+
+  document.getElementById('scaler').addEventListener('click', e => {
+    if (e.target.closest('[data-skip]')) return;
+    if (e.target.closest('.action-btn')) return;
+    advanceLine();
+  });
+
+  document.querySelector('[data-skip]').addEventListener('click', e => {
+    e.stopPropagation();
+    if (phase === 'idle' || phase === 'outro') return;
+    playOutro();
+  });
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', fitViewport);
+  fitViewport();
+  updateStatus();
+</script>
+</body>
+</html>

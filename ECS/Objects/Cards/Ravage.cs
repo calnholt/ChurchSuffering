@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"As an additional cost, mill {GetMillAmount(IsUpgraded)} cards.";
             Cost = ["Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 8;
             Block = 3;
 
@@ -56,13 +56,13 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
             OnUpgrade = (entityManager, card) =>
             {
+                Damage += DamageAmountUpgrade;
                 Text = $"As an additional cost, mill {GetMillAmount(IsUpgraded)} cards.";
             };
         }
 
         private int GetMillAmount(bool isUpgraded)
         {
-            Damage += DamageAmountUpgrade;
             return isUpgraded ? MillAmount + MillAmountUpgrade : MillAmount;
         }
     }

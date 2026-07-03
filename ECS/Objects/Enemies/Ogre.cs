@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 
@@ -10,45 +11,45 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
   public class Ogre : EnemyBase
   {
     private int PummelIntoSubmissionCount = 0;
-    public Ogre(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public Ogre()
     {
-      Id = "ogre";
+      Id = EnemyId.Ogre;
       Name = "Ogre";
-      HealthPerCard = 1.54f;
+      HP = 31;
     }
 
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
       int random = Random.Shared.Next(0, 100);
       if (random <= 20)
       {
-        return ["slam_trunk", "fake_out"];
+        return [EnemyAttackId.SlamTrunk, EnemyAttackId.FakeOut];
       }
       if (random <= 40)
       {
-        return ["slam_trunk", "thud"];
+        return [EnemyAttackId.SlamTrunk, EnemyAttackId.Thud];
       }
       if (random <= 60)
       {
-        return ["tree_stomp"];
+        return [EnemyAttackId.TreeStomp];
       }
       if (random <= 80 && PummelIntoSubmissionCount < 2)
       {
         PummelIntoSubmissionCount++;
-        return ["pummel_into_submission"];
+        return [EnemyAttackId.PummelIntoSubmission];
       }
-      return ["slam_trunk", "have_no_mercy"];
+      return [EnemyAttackId.SlamTrunk, EnemyAttackId.HaveNoMercy];
     }
   }
   public class PummelIntoSubmission : EnemyAttackBase
   {
-    private int Scar = 2;
+    private int Scar = 1;
     public PummelIntoSubmission()
     {
-      Id = "pummel_into_submission";
+      Id = EnemyAttackId.PummelIntoSubmission;
       Name = "Pummel Into Submission";
       Damage = 6;
-      ConditionType = ConditionType.OnHit;
+      ConditionType = ConditionType.OnBlockedByAtLeast2Cards;
       Text = $"{EnemyAttackTextHelper.GetText(EnemyAttackTextType.Intimidate, 1)}\n\n{EnemyAttackTextHelper.GetText(EnemyAttackTextType.Scar, Scar, ConditionType)}";
       OnAttackReveal = (entityManager) =>
       {
@@ -65,7 +66,7 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
     private int IntimidateAmount = 2;
     public TreeStomp()
     {
-      Id = "tree_stomp";
+      Id = EnemyAttackId.TreeStomp;
       Name = "Tree Stomp";
       Damage = 9;
       Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Intimidate, 2);
@@ -81,7 +82,7 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
     private int IntimidateAmount = 1;
     public SlamTrunk()
     {
-      Id = "slam_trunk";
+      Id = EnemyAttackId.SlamTrunk;
       Name = "Slam Trunk";
       Damage = 4;
       Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Intimidate, 1);
@@ -97,7 +98,7 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
     private int IntimidateAmount = 2;
     public FakeOut()
     {
-      Id = "fake_out";
+      Id = EnemyAttackId.FakeOut;
       Name = "Fake Out";
       Damage = 3;
       Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Intimidate, 2);
@@ -112,7 +113,7 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
     private int WoundedAmount = 1;
     public Thud()
     {
-      Id = "thud";
+      Id = EnemyAttackId.Thud;
       Name = "Thud";
       Damage = 3;
       Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Wounded, 1);

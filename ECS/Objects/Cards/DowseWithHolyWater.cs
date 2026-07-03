@@ -6,52 +6,40 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class DowseWithHolyWater : CardBase
     {
-        private int Aggression = 1;
+        private int Might = 3;
         private int CourageThreshold = 5;
-        private int AggressionBonus = 4;
-        private int CourageOnPledgeUpgrade = 1;
+        private int MightUpgrade = 1;
         public DowseWithHolyWater()
         {
             CardId = "dowse_with_holy_water";
             Name = "Douse with Holy Water";
             Target = "Player";
-            Text = $"Gain {Aggression} aggression. If you have {CourageThreshold}+ courage, gain {AggressionBonus} aggression instead.";
+            Text = $"If you have {CourageThreshold}+ courage, gain {GetMight(IsUpgraded)} might.";
             IsFreeAction = true;
-            Animation = "Buff";
+            VisualEffectRecipe = HolySupportEffect();
             Type = CardType.Prayer;
-            Block = 2;
+            Block = 3;
 
             OnPlay = (entityManager, card) =>
             {
                 var player = entityManager.GetEntity("Player");
-                var courage = player.GetComponent<Courage>().Amount;
-                if (!IsUpgraded)
+                var courage = player?.GetComponent<Courage>()?.Amount ?? 0;
+                if (courage >= CourageThreshold)
                 {
-                    var delta = courage >= CourageThreshold ? AggressionBonus : Aggression;
-                    EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Aggression, Delta = delta });
-                }
-                else
-                {
-                    if (courage >= CourageThreshold)
-                    {
-                        EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Aggression, Delta = AggressionBonus });
-                    }
-                }
-            };
-
-            OnPledged = (entityManager, card) =>
-            {
-                if (IsUpgraded)
-                {
-                    EventManager.Publish(new ModifyCourageRequestEvent { Delta = CourageOnPledgeUpgrade, Type = ModifyCourageType.Gain });
+                    EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Might, Delta = GetMight(IsUpgraded) });
                 }
             };
 
             OnUpgrade = (entityManager, card) =>
             {
-                Text = $"When this is pledged, gain {CourageOnPledgeUpgrade} courage. Gain {Aggression} aggression. If you have {CourageThreshold}+ courage, gain {AggressionBonus} aggression instead.";
+                Text = $"If you have {CourageThreshold}+ courage, gain {GetMight(IsUpgraded)} might.";
             };
         }
+        private int GetMight(bool isUpgraded)
+        {
+            return isUpgraded ? Might + MightUpgrade : Might;
+        }
+
         
     }
 }

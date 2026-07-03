@@ -12,6 +12,7 @@ using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Data.Tutorials;
+using Crusaders30XX.ECS.Data.Climb;
 using Crusaders30XX.Diagnostics;
 
 namespace Crusaders30XX.ECS.Data.Save
@@ -28,18 +29,81 @@ namespace Crusaders30XX.ECS.Data.Save
 			return _save;
 		}
 
+		public static int GetMusicVolumeLevel()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				return ClampAudioVolumeLevel(_save?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
+			}
+		}
+
+		public static int GetSfxVolumeLevel()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				return ClampAudioVolumeLevel(_save?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
+			}
+		}
+
+		public static void SetMusicVolumeLevel(int value)
+		{
+			SetAudioVolumeLevels(musicVolumeLevel: value, sfxVolumeLevel: null);
+		}
+
+		public static void SetSfxVolumeLevel(int value)
+		{
+			SetAudioVolumeLevels(musicVolumeLevel: null, sfxVolumeLevel: value);
+		}
+
+		private static void SetAudioVolumeLevels(int? musicVolumeLevel, int? sfxVolumeLevel)
+		{
+			bool changed = false;
+			int resolvedMusic = SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL;
+			int resolvedSfx = SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL;
+			lock (_lock)
+			{
+				EnsureLoaded();
+				if (_save == null) _save = new SaveFile();
+
+				resolvedMusic = ClampAudioVolumeLevel(musicVolumeLevel ?? _save.musicVolumeLevel);
+				resolvedSfx = ClampAudioVolumeLevel(sfxVolumeLevel ?? _save.sfxVolumeLevel);
+				if (_save.musicVolumeLevel == resolvedMusic && _save.sfxVolumeLevel == resolvedSfx) return;
+
+				_save.musicVolumeLevel = resolvedMusic;
+				_save.sfxVolumeLevel = resolvedSfx;
+				changed = Persist();
+			}
+
+			if (changed)
+			{
+				EventManager.Publish(new AudioSettingsChangedEvent
+				{
+					MusicVolumeLevel = resolvedMusic,
+					SfxVolumeLevel = resolvedSfx,
+				});
+			}
+		}
+
 		public static LoadoutDefinition GetLoadout(string id)
 		{
 			EnsureLoaded();
 			if (_save == null || _save.loadouts == null) return null;
-			return _save.loadouts.FirstOrDefault(l => l.id == id);
+			lock (_lock)
+			{
+				return CloneLoadout(_save.loadouts.FirstOrDefault(l => l.id == id));
+			}
 		}
 
 		public static List<LoadoutDefinition> GetAllLoadouts()
 		{
 			EnsureLoaded();
 			if (_save == null || _save.loadouts == null) return new List<LoadoutDefinition>();
-			return _save.loadouts;
+			lock (_lock)
+			{
+				return _save.loadouts.Select(CloneLoadout).Where(loadout => loadout != null).ToList();
+			}
 		}
 
 		public static void SaveLoadout(LoadoutDefinition def)
@@ -56,7 +120,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				{
 					_save.loadouts.Remove(existing);
 				}
-				_save.loadouts.Add(def);
+				_save.loadouts.Add(CloneLoadout(def));
 				Persist();
 			}
 		}
@@ -78,9 +142,11 @@ namespace Crusaders30XX.ECS.Data.Save
 					_save.runMapSeed,
 					"loadout_1");
 
-				_save.starterCardKeys = new List<string>(loadout.cardIds);
+				_save.nextRunDeckEntryId = 0;
 				var savedLoadout = _save.loadouts[0];
-				savedLoadout.cardIds = new List<string>(loadout.cardIds);
+				savedLoadout.cards = loadout.cards
+					.Select(entry => CreateEntryLocked(entry.cardKey, isStarter: true, countsAsTraded: false))
+					.ToList();
 				savedLoadout.weaponId = resolvedWeaponId;
 				savedLoadout.temperanceId = string.IsNullOrWhiteSpace(temperanceId)
 					? loadout.temperanceId
@@ -93,6 +159,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				savedLoadout.headId ??= string.Empty;
 				savedLoadout.medalIds ??= new List<string>();
 
+				_save.climb = ClimbRuleService.CreateInitialState(_save.runMapSeed, savedLoadout);
 				Persist();
 			}
 		}
@@ -101,13 +168,14 @@ namespace Crusaders30XX.ECS.Data.Save
 		{
 			EnsureLoaded();
 			var loadout = GetLoadout("loadout_1");
-			if (loadout?.cardIds == null || loadout.cardIds.Count == 0)
+			if (loadout?.cards == null || loadout.cards.Count == 0)
 			{
 				return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			}
 			var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			foreach (var key in loadout.cardIds)
+			foreach (var entry in loadout.cards)
 			{
+				string key = entry?.cardKey;
 				string baseId = DeckRules.ParseBaseCardId(key);
 				if (!string.IsNullOrEmpty(baseId)) ids.Add(baseId);
 			}
@@ -311,30 +379,6 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
-		public static bool IsStarterCardKey(string cardKey)
-		{
-			if (string.IsNullOrWhiteSpace(cardKey)) return false;
-			EnsureLoaded();
-			var keys = _save?.starterCardKeys;
-			if (keys == null || keys.Count == 0) return false;
-			return keys.Any(k => string.Equals(k, cardKey, StringComparison.OrdinalIgnoreCase));
-		}
-
-		public static void RemoveStarterCardKey(string cardKey)
-		{
-			if (string.IsNullOrWhiteSpace(cardKey)) return;
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save?.starterCardKeys == null) return;
-				int idx = _save.starterCardKeys.FindIndex(k =>
-					string.Equals(k, cardKey, StringComparison.OrdinalIgnoreCase));
-				if (idx < 0) return;
-				_save.starterCardKeys.RemoveAt(idx);
-				Persist();
-			}
-		}
-
 		public static void Reload()
 		{
 			lock (_lock)
@@ -362,15 +406,18 @@ namespace Crusaders30XX.ECS.Data.Save
 			SetRunNodeCompleted(questId, completed);
 		}
 
-		private static void Persist()
+		private static bool Persist()
 		{
 			try
 			{
 				var path = ResolveFilePath();
-				if (string.IsNullOrEmpty(path)) return;
-				SaveRepository.Save(path, _save);
+				if (string.IsNullOrEmpty(path)) return false;
+				return SaveRepository.Save(path, _save);
 			}
-			catch { }
+			catch
+			{
+				return false;
+			}
 		}
 
 		public static void SetLastLocation(string locationId)
@@ -542,11 +589,15 @@ namespace Crusaders30XX.ECS.Data.Save
 			var mastery = prior?.cardMastery;
 			var achievements = prior?.achievements;
 			var seenTutorials = prior?.seenTutorials;
+			int musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
+			int sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
 			var save = CreateDefaultRunSave();
 			save.cardMastery = mastery ?? new Dictionary<string, CardMastery>();
 			save.achievements = achievements ?? new Dictionary<string, AchievementProgress>();
 			save.seenTutorials = seenTutorials ?? new List<string>();
 			save.guidedTutorialCompleted = prior?.guidedTutorialCompleted == true;
+			save.musicVolumeLevel = musicVolumeLevel;
+			save.sfxVolumeLevel = sfxVolumeLevel;
 			return save;
 		}
 
@@ -557,6 +608,8 @@ namespace Crusaders30XX.ECS.Data.Save
 				version = SaveFile.CURRENT_VERSION,
 				isRunActive = false,
 				gold = 0,
+				musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
+				sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
 				runMapSeed = 0,
 				runMapNodes = new List<RunMapNode>(),
 				runMapShops = new List<RunMapShop>(),
@@ -566,15 +619,20 @@ namespace Crusaders30XX.ECS.Data.Save
 				lastLocation = string.Empty,
 				pendingBattleNodeId = string.Empty,
 				loadouts = new List<LoadoutDefinition>(),
+				nextRunDeckEntryId = 0,
 				runLongPassives = new Dictionary<string, int>(),
-				runCardRestrictions = new Dictionary<string, List<string>>(),
-				starterCardKeys = new List<string>(),
 				pendingDeckRewardOffer = null,
+				climb = new ClimbSaveState(),
 				cardMastery = prior?.cardMastery ?? new Dictionary<string, CardMastery>(),
 				achievements = prior?.achievements ?? new Dictionary<string, AchievementProgress>(),
 				seenTutorials = prior?.seenTutorials ?? new List<string>(),
 				guidedTutorialCompleted = prior?.guidedTutorialCompleted == true,
 			};
+		}
+
+		private static int ClampAudioVolumeLevel(int value)
+		{
+			return Math.Clamp(value, 0, 100);
 		}
 
 		private static SaveFile CreateDefaultRunSave()
@@ -597,14 +655,21 @@ namespace Crusaders30XX.ECS.Data.Save
 				lastLocation = nodes.Count > 0 ? nodes[0].id : "run_0",
 				pendingBattleNodeId = string.Empty,
 				pendingDeckRewardOffer = null,
-				starterCardKeys = new List<string>(startingDeck),
+				nextRunDeckEntryId = startingDeck.Count,
 				loadouts = new List<LoadoutDefinition>
 				{
 					new LoadoutDefinition
 					{
 						id = "loadout_1",
 						name = "Deck",
-						cardIds = startingDeck,
+						cards = startingDeck.Select((cardKey, index) => new LoadoutCardEntry
+						{
+							entryId = $"run_card_{index}",
+							cardKey = cardKey,
+							isStarter = true,
+							countsAsTraded = false,
+							restrictions = new List<string>(),
+						}).ToList(),
 						weaponId = "sword",
 						temperanceId = "angelic_aura",
 						chestId = "",
@@ -615,6 +680,7 @@ namespace Crusaders30XX.ECS.Data.Save
 					}
 				}
 			};
+			save.climb = ClimbRuleService.CreateInitialState(seed, save.loadouts[0]);
 			return save;
 		}
 
@@ -627,7 +693,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				loadout = new LoadoutDefinition { id = "loadout_1", name = "Deck", medalIds = new List<string>() };
 				save.loadouts.Add(loadout);
 			}
-			if (loadout.cardIds == null) loadout.cardIds = new List<string>();
+			if (loadout.cards == null) loadout.cards = new List<LoadoutCardEntry>();
 			if (loadout.medalIds == null) loadout.medalIds = new List<string>();
 		}
 
@@ -655,6 +721,344 @@ namespace Crusaders30XX.ECS.Data.Save
 			EnsureLoaded();
 			EnsureRunMap();
 			return _save?.runMapShops ?? new List<RunMapShop>();
+		}
+
+		public static ClimbSaveState GetClimbState()
+		{
+			EnsureLoaded();
+			EnsureClimbState();
+			lock (_lock)
+			{
+				return CloneClimbState(_save?.climb);
+			}
+		}
+
+		public static void SaveClimbState(ClimbSaveState state)
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				if (_save == null) _save = new SaveFile();
+				_save.climb = CloneClimbState(state) ?? ClimbRuleService.CreateInitialState(_save.runMapSeed, GetLoadout("loadout_1"));
+				Persist();
+			}
+		}
+
+		public static bool TryUpdateClimbEventLifecycle(out ClimbSaveState updatedState)
+		{
+			updatedState = null;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				if (_save?.climb == null) return false;
+				var backup = CaptureClimbEventTransactionBackup();
+				bool changed = ClimbRuleService.UpdateEventLifecycle(_save.climb);
+				if (changed && !Persist())
+				{
+					RestoreClimbEventTransactionBackup(backup);
+					updatedState = CloneClimbState(_save.climb);
+					return false;
+				}
+				updatedState = CloneClimbState(_save.climb);
+				return changed;
+			}
+		}
+
+		public static bool TryBeginClimbEvent(
+			string eventSlotId,
+			ClimbEventFlowPhase phase,
+			string dialogueRequestId,
+			out ClimbEventSlotSave pendingSlot)
+		{
+			pendingSlot = null;
+			if (string.IsNullOrWhiteSpace(eventSlotId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var climb = _save?.climb;
+				if (climb?.pendingEvent != null) return false;
+				var slot = FindClimbEventSlot(climb, eventSlotId);
+				if (slot == null || slot.status != ClimbEventStatus.Active) return false;
+				if (phase == ClimbEventFlowPhase.HazardConfirmation && slot.kind != ClimbEventKind.Hazard) return false;
+				if (phase == ClimbEventFlowPhase.CharacterDialogue && slot.kind != ClimbEventKind.Character) return false;
+				if (phase != ClimbEventFlowPhase.HazardConfirmation && phase != ClimbEventFlowPhase.CharacterDialogue) return false;
+				var backup = CaptureClimbEventTransactionBackup();
+
+				slot.status = ClimbEventStatus.Pending;
+				climb.pendingEvent = new ClimbPendingEventSave
+				{
+					eventSlotId = slot.id,
+					phase = phase,
+					dialogueRequestId = dialogueRequestId ?? string.Empty,
+				};
+				if (!Persist())
+				{
+					RestoreClimbEventTransactionBackup(backup);
+					return false;
+				}
+				pendingSlot = CloneClimbEventSlot(slot);
+				return true;
+			}
+		}
+
+		public static bool TrySetClimbCharacterSummaryPhase(string eventSlotId, string dialogueRequestId)
+		{
+			if (string.IsNullOrWhiteSpace(eventSlotId) || string.IsNullOrWhiteSpace(dialogueRequestId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var climb = _save?.climb;
+				var pending = climb?.pendingEvent;
+				var slot = FindClimbEventSlot(climb, eventSlotId);
+				if (pending == null
+					|| slot == null
+					|| slot.kind != ClimbEventKind.Character
+					|| slot.status != ClimbEventStatus.Pending
+					|| pending.phase != ClimbEventFlowPhase.CharacterDialogue
+					|| !string.Equals(pending.eventSlotId, slot.id, StringComparison.OrdinalIgnoreCase)
+					|| !string.Equals(pending.dialogueRequestId, dialogueRequestId, StringComparison.OrdinalIgnoreCase))
+				{
+					return false;
+				}
+
+				var backup = CaptureClimbEventTransactionBackup();
+				pending.phase = ClimbEventFlowPhase.CharacterSummary;
+				if (!Persist())
+				{
+					RestoreClimbEventTransactionBackup(backup);
+					return false;
+				}
+				return true;
+			}
+		}
+
+		public static bool TryResolveClimbHazard(string eventSlotId, out ClimbEventMutationResult result)
+		{
+			result = new ClimbEventMutationResult();
+			if (string.IsNullOrWhiteSpace(eventSlotId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var climb = _save?.climb;
+				var slot = FindClimbEventSlot(climb, eventSlotId);
+				if (slot?.kind != ClimbEventKind.Hazard) return false;
+				if (slot.status == ClimbEventStatus.Completed)
+				{
+					result = new ClimbEventMutationResult
+					{
+						Succeeded = true,
+						AlreadyResolved = true,
+						EventSlotId = slot.id,
+					};
+					return true;
+				}
+
+				var pending = climb?.pendingEvent;
+				if (slot.status != ClimbEventStatus.Pending
+					|| pending?.phase != ClimbEventFlowPhase.HazardConfirmation
+					|| !string.Equals(pending.eventSlotId, slot.id, StringComparison.OrdinalIgnoreCase))
+				{
+					return false;
+				}
+				var backup = CaptureClimbEventTransactionBackup();
+
+				climb.resources ??= new ClimbResourceSave { red = 0, white = 0, black = 0 };
+				ClimbRuleService.AddResources(climb.resources, slot.rewardResources);
+
+				string restrictedEntryId = string.Empty;
+				string restrictionName = ClimbRuleService.GetRestrictionName(slot.hazardEffect);
+				bool runLongPassivesChanged = false;
+				string runLongPassiveType = string.Empty;
+				int runLongPassiveAmount = 0;
+				int runLongPassiveTotal = 0;
+				if (!string.IsNullOrWhiteSpace(restrictionName))
+				{
+					EnsurePrimaryLoadout(_save);
+					var loadout = _save.loadouts.First(loadout => loadout.id == RunDeckService.PrimaryLoadoutId);
+					var target = ClimbRuleService.SelectDeterministicEntry(
+						ClimbRuleService.GetEligibleRestrictionEntries(loadout, restrictionName),
+						_save.runMapSeed,
+						slot.id);
+					if (target != null)
+					{
+						target.restrictions ??= new List<string>();
+						if (!target.restrictions.Contains(restrictionName, StringComparer.OrdinalIgnoreCase))
+						{
+							target.restrictions.Add(restrictionName);
+						}
+						restrictedEntryId = target.entryId;
+					}
+				}
+				else if (slot.hazardEffect == ClimbHazardEffectType.Burn)
+				{
+					climb.nextBattlePenalty ??= new ClimbNextBattlePenaltySave();
+					climb.nextBattlePenalty.burn += Math.Max(0, slot.effectAmount);
+				}
+				else if (slot.hazardEffect == ClimbHazardEffectType.Fear)
+				{
+					climb.nextBattlePenalty ??= new ClimbNextBattlePenaltySave();
+					climb.nextBattlePenalty.fear += Math.Max(0, slot.effectAmount);
+				}
+				else if (slot.hazardEffect == ClimbHazardEffectType.Shackled)
+				{
+					runLongPassiveType = AppliedPassiveType.Shackled.ToString();
+					runLongPassiveAmount = Math.Max(0, slot.effectAmount);
+					runLongPassiveTotal = AddRunLongPassiveStacksLocked(runLongPassiveType, runLongPassiveAmount);
+					runLongPassivesChanged = true;
+				}
+				else if (slot.hazardEffect == ClimbHazardEffectType.Scar)
+				{
+					runLongPassiveType = AppliedPassiveType.Scar.ToString();
+					runLongPassiveAmount = Math.Max(0, slot.effectAmount);
+					runLongPassiveTotal = AddRunLongPassiveStacksLocked(runLongPassiveType, runLongPassiveAmount);
+					runLongPassivesChanged = true;
+				}
+
+				slot.status = ClimbEventStatus.Completed;
+				climb.pendingEvent = null;
+				if (!Persist())
+				{
+					RestoreClimbEventTransactionBackup(backup);
+					return false;
+				}
+				result = new ClimbEventMutationResult
+				{
+					Succeeded = true,
+					EventSlotId = slot.id,
+					RestrictedEntryId = restrictedEntryId,
+					RestrictionName = restrictionName,
+					RunLongPassivesChanged = runLongPassivesChanged,
+					RunLongPassiveType = runLongPassiveType,
+					RunLongPassiveAmount = runLongPassiveAmount,
+					RunLongPassiveTotal = runLongPassiveTotal,
+				};
+				return true;
+			}
+		}
+
+		public static bool TryResolveClimbCharacter(string eventSlotId, out ClimbEventMutationResult result)
+		{
+			result = new ClimbEventMutationResult();
+			if (string.IsNullOrWhiteSpace(eventSlotId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var climb = _save?.climb;
+				var slot = FindClimbEventSlot(climb, eventSlotId);
+				if (slot?.kind != ClimbEventKind.Character) return false;
+				if (slot.status == ClimbEventStatus.Completed)
+				{
+					result = new ClimbEventMutationResult
+					{
+						Succeeded = true,
+						AlreadyResolved = true,
+						EventSlotId = slot.id,
+						ReachedFinalTime = ClimbRuleService.ClampTime(climb?.time ?? 0) >= ClimbRuleService.MaxTime,
+					};
+					return true;
+				}
+
+				var pending = climb?.pendingEvent;
+				if (slot.status != ClimbEventStatus.Pending
+					|| pending?.phase != ClimbEventFlowPhase.CharacterSummary
+					|| !string.Equals(pending.eventSlotId, slot.id, StringComparison.OrdinalIgnoreCase))
+				{
+					return false;
+				}
+				var backup = CaptureClimbEventTransactionBackup();
+
+				climb.nextBattleBonus ??= new ClimbNextBattleBonusSave();
+				string upgradedEntryId = string.Empty;
+				string upgradedCardKey = string.Empty;
+				if (slot.characterReward == ClimbCharacterRewardType.Courage)
+				{
+					climb.nextBattleBonus.courage += Math.Max(0, slot.effectAmount);
+				}
+				else if (slot.characterReward == ClimbCharacterRewardType.Temperance)
+				{
+					climb.nextBattleBonus.temperance += Math.Max(0, slot.effectAmount);
+				}
+				else if (slot.characterReward == ClimbCharacterRewardType.Vigor)
+				{
+					climb.nextBattleBonus.vigor += Math.Max(0, slot.effectAmount);
+				}
+				else if (slot.characterReward == ClimbCharacterRewardType.RandomCardUpgrade)
+				{
+					EnsurePrimaryLoadout(_save);
+					var loadout = _save.loadouts.First(loadout => loadout.id == RunDeckService.PrimaryLoadoutId);
+					var target = ClimbRuleService.SelectDeterministicEntry(
+						ClimbRuleService.GetEligibleSmithEntries(loadout),
+						_save.runMapSeed,
+						slot.id);
+					if (target != null)
+					{
+						string proposedKey = RunDeckService.BuildUpgradedCardKey(target.cardKey);
+						if (!string.IsNullOrWhiteSpace(proposedKey))
+						{
+							target.cardKey = proposedKey;
+							upgradedEntryId = target.entryId;
+							upgradedCardKey = target.cardKey;
+						}
+					}
+				}
+
+				slot.status = ClimbEventStatus.Completed;
+				climb.pendingEvent = null;
+				int previousTime = climb.time;
+				int appliedTime = ClimbRuleService.ApplyTime(climb, 1);
+				EnsurePrimaryLoadout(_save);
+				var primaryLoadout = _save.loadouts.First(loadout => loadout.id == RunDeckService.PrimaryLoadoutId);
+				if (ClimbRuleService.ShouldRefreshShopAtTime(previousTime, climb.time))
+				{
+					ClimbRuleService.RefreshShopSlots(climb, _save.runMapSeed, primaryLoadout);
+				}
+				ClimbRuleService.UpdateEventLifecycle(climb);
+				ClimbRuleService.ReplenishEncounterSlots(climb, _save.runMapSeed, primaryLoadout);
+				if (appliedTime > 0)
+				{
+					ClimbRuleService.RerollEncounterMutationTargets(climb, _save.runMapSeed, primaryLoadout);
+				}
+				bool reachedFinalTime = ClimbRuleService.ClampTime(climb.time) >= ClimbRuleService.MaxTime;
+				if (!Persist())
+				{
+					RestoreClimbEventTransactionBackup(backup);
+					return false;
+				}
+
+				result = new ClimbEventMutationResult
+				{
+					Succeeded = true,
+					EventSlotId = slot.id,
+					UpgradedEntryId = upgradedEntryId,
+					UpgradedCardKey = upgradedCardKey,
+					ReachedFinalTime = reachedFinalTime,
+				};
+				return true;
+			}
+		}
+
+		public static void EnsureClimbState()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				if (_save == null) _save = new SaveFile();
+				if (!_save.isRunActive) return;
+				if (_save.climb != null
+					&& _save.climb.shopSlots != null
+					&& _save.climb.shopSlots.Count == ClimbRuleService.ShopSlotCount
+					&& _save.climb.encounterSlots != null
+					&& _save.climb.encounterSlots.Count == ClimbRuleService.EncounterSlotCount
+					&& _save.climb.eventSlots != null
+					&& _save.climb.eventSlots.Count == ClimbRuleService.EventSlotCount)
+				{
+					return;
+				}
+
+				EnsurePrimaryLoadout(_save);
+				_save.climb = ClimbRuleService.CreateInitialState(_save.runMapSeed, _save.loadouts[0]);
+				Persist();
+			}
 		}
 
 		public static bool TryGetRunShop(string shopId, out RunMapShop shop, out int index)
@@ -782,7 +1186,7 @@ namespace Crusaders30XX.ECS.Data.Save
 
 				EnsurePrimaryLoadout(_save);
 				var loadout = _save.loadouts[0];
-				if (loadout.cardIds == null) loadout.cardIds = new List<string>();
+				if (loadout.cards == null) loadout.cards = new List<LoadoutCardEntry>();
 				if (loadout.medalIds == null) loadout.medalIds = new List<string>();
 
 				if (item.IsEquipment && IsItemOwned(item.cardId, ForSaleItemType.Equipment))
@@ -803,9 +1207,10 @@ namespace Crusaders30XX.ECS.Data.Save
 				else
 				{
 					string cardKey = $"{item.cardId}|{item.color}";
-					loadout.cardIds.Add(cardKey);
+					var entry = CreateEntryLocked(cardKey, isStarter: false, countsAsTraded: false);
+					loadout.cards.Add(entry);
 					Persist();
-					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadout.id, CardKey = cardKey });
+					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadout.id, EntryId = entry.entryId, CardKey = cardKey });
 					newGold = _save.gold;
 					return true;
 				}
@@ -882,91 +1287,141 @@ namespace Crusaders30XX.ECS.Data.Save
 			return null;
 		}
 
-		public static bool AddCardToLoadout(string loadoutId, string cardKey)
+		public static string AllocateRunDeckEntryId()
 		{
-			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(cardKey)) return false;
 			EnsureLoaded();
 			lock (_lock)
 			{
-				if (_save == null) _save = new SaveFile();
-				if (_save.loadouts == null) _save.loadouts = new List<LoadoutDefinition>();
+				string entryId = AllocateRunDeckEntryIdLocked();
+				Persist();
+				return entryId;
+			}
+		}
 
+		public static LoadoutCardEntry GetRunDeckEntry(string loadoutId, string entryId)
+		{
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId)) return null;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var loadout = _save.loadouts.FirstOrDefault(l => l.id == loadoutId);
+				return CloneLoadoutEntry(FindEntry(loadout, entryId));
+			}
+		}
+
+		public static LoadoutCardEntry AddRunDeckEntry(
+			string loadoutId,
+			string cardKey,
+			bool isStarter = false,
+			bool countsAsTraded = false,
+			bool publishChange = true)
+		{
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(cardKey)) return null;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				_save ??= new SaveFile();
+				_save.loadouts ??= new List<LoadoutDefinition>();
 				var loadout = _save.loadouts.FirstOrDefault(l => l.id == loadoutId);
 				if (loadout == null)
 				{
 					loadout = new LoadoutDefinition { id = loadoutId, name = loadoutId };
 					_save.loadouts.Add(loadout);
 				}
-				if (loadout.cardIds == null) loadout.cardIds = new List<string>();
-				loadout.cardIds.Add(cardKey);
-				Persist();
-				EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadoutId, CardKey = cardKey });
-				return true;
-			}
-		}
-
-		public static bool RemoveCardFromLoadout(string loadoutId, string cardKey, bool publishChange = true)
-		{
-			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(cardKey)) return false;
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save?.loadouts == null) return false;
-				var loadout = _save.loadouts.FirstOrDefault(l => l.id == loadoutId);
-				if (loadout?.cardIds == null) return false;
-
-				int idx = loadout.cardIds.FindIndex(k =>
-					string.Equals(k, cardKey, StringComparison.OrdinalIgnoreCase));
-				if (idx < 0) return false;
-
-				loadout.cardIds.RemoveAt(idx);
-				if (!loadout.cardIds.Any(k =>
-					string.Equals(k, cardKey, StringComparison.OrdinalIgnoreCase)))
-				{
-					_save.runCardRestrictions?.Remove(cardKey);
-				}
+				loadout.cards ??= new List<LoadoutCardEntry>();
+				var entry = CreateEntryLocked(cardKey, isStarter, countsAsTraded);
+				loadout.cards.Add(entry);
 				Persist();
 				if (publishChange)
 				{
-					EventManager.Publish(new LoadoutCardRemoved { LoadoutId = loadoutId, CardKey = cardKey });
+					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadoutId, EntryId = entry.entryId, CardKey = cardKey });
 				}
-				return true;
+				return CloneLoadoutEntry(entry);
 			}
 		}
 
-		public static bool ReplaceCardInLoadoutAtIndex(
+		public static bool TryRemoveRunDeckEntry(
 			string loadoutId,
-			int index,
-			string expectedOldCardKey,
-			string newCardKey,
+			string entryId,
+			out LoadoutCardEntry removedEntry,
 			bool publishChange = true)
 		{
-			if (string.IsNullOrWhiteSpace(loadoutId) || index < 0 || string.IsNullOrWhiteSpace(newCardKey)) return false;
+			removedEntry = null;
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId)) return false;
 			EnsureLoaded();
 			lock (_lock)
 			{
-				if (_save?.loadouts == null) return false;
-				var loadout = _save.loadouts.FirstOrDefault(l => l.id == loadoutId);
-				if (loadout?.cardIds == null || index >= loadout.cardIds.Count) return false;
-
-				string oldKey = loadout.cardIds[index];
-				if (!string.IsNullOrWhiteSpace(expectedOldCardKey)
-					&& !string.Equals(oldKey, expectedOldCardKey, StringComparison.OrdinalIgnoreCase))
-				{
-					return false;
-				}
-
-				loadout.cardIds[index] = newCardKey;
-				if (!loadout.cardIds.Any(k => string.Equals(k, oldKey, StringComparison.OrdinalIgnoreCase)))
-				{
-					_save.runCardRestrictions?.Remove(oldKey);
-				}
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				int index = FindEntryIndex(loadout, entryId);
+				if (index < 0) return false;
+				var removed = loadout.cards[index];
+				loadout.cards.RemoveAt(index);
 				Persist();
 				if (publishChange)
 				{
-					EventManager.Publish(new LoadoutCardRemoved { LoadoutId = loadoutId, CardKey = oldKey });
-					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadoutId, CardKey = newCardKey });
+					EventManager.Publish(new LoadoutCardRemoved { LoadoutId = loadoutId, EntryId = removed.entryId, CardKey = removed.cardKey });
 				}
+				removedEntry = CloneLoadoutEntry(removed);
+				return true;
+			}
+		}
+
+		public static bool TryReplaceRunDeckEntry(
+			string loadoutId,
+			string outgoingEntryId,
+			string incomingCardKey,
+			out LoadoutCardEntry replacementEntry,
+			bool countsAsTraded = true,
+			bool publishChange = true)
+		{
+			replacementEntry = null;
+			if (string.IsNullOrWhiteSpace(loadoutId)
+				|| string.IsNullOrWhiteSpace(outgoingEntryId)
+				|| string.IsNullOrWhiteSpace(incomingCardKey)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				int index = FindEntryIndex(loadout, outgoingEntryId);
+				if (index < 0) return false;
+				var outgoing = loadout.cards[index];
+				var incoming = CreateEntryLocked(incomingCardKey, isStarter: false, countsAsTraded);
+				loadout.cards[index] = incoming;
+				Persist();
+				if (publishChange)
+				{
+					EventManager.Publish(new LoadoutCardRemoved { LoadoutId = loadoutId, EntryId = outgoing.entryId, CardKey = outgoing.cardKey });
+					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadoutId, EntryId = incoming.entryId, CardKey = incoming.cardKey });
+				}
+				replacementEntry = CloneLoadoutEntry(incoming);
+				return true;
+			}
+		}
+
+		public static bool TryUpgradeRunDeckEntry(
+			string loadoutId,
+			string entryId,
+			string upgradedCardKey,
+			out LoadoutCardEntry upgradedEntry)
+		{
+			upgradedEntry = null;
+			if (string.IsNullOrWhiteSpace(loadoutId)
+				|| string.IsNullOrWhiteSpace(entryId)
+				|| string.IsNullOrWhiteSpace(upgradedCardKey)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				if (entry == null || RunDeckService.IsUpgradedCardKey(entry.cardKey)) return false;
+				string expected = RunDeckService.BuildUpgradedCardKey(entry.cardKey);
+				if (!string.Equals(expected, upgradedCardKey, StringComparison.OrdinalIgnoreCase)) return false;
+				string previousCardKey = entry.cardKey;
+				entry.cardKey = upgradedCardKey;
+				Persist();
+				EventManager.Publish(new LoadoutCardRemoved { LoadoutId = loadoutId, EntryId = entry.entryId, CardKey = previousCardKey });
+				EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadoutId, EntryId = entry.entryId, CardKey = entry.cardKey });
+				upgradedEntry = CloneLoadoutEntry(entry);
 				return true;
 			}
 		}
@@ -1018,6 +1473,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				{
 					kind = option.kind ?? string.Empty,
 					loadoutIndex = option.loadoutIndex,
+					outgoingEntryId = option.outgoingEntryId ?? string.Empty,
 					outgoingCardKey = option.outgoingCardKey ?? string.Empty,
 					incomingCardKey = option.incomingCardKey ?? string.Empty,
 					upgradedCardKey = option.upgradedCardKey ?? string.Empty,
@@ -1048,7 +1504,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				string shopCardKey = null;
 				if (itemType == ForSaleItemType.Card && !string.IsNullOrWhiteSpace(itemId))
 				{
-					shopCardKey = PickShopCardKey(itemId, loadout.cardIds);
+					shopCardKey = PickShopCardKey(itemId, loadout.cards.Select(entry => entry.cardKey).ToList());
 					if (string.IsNullOrEmpty(shopCardKey)) return false;
 				}
 
@@ -1058,7 +1514,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				{
 					if (itemType == ForSaleItemType.Card)
 					{
-						loadout.cardIds.Add(shopCardKey);
+						loadout.cards.Add(CreateEntryLocked(shopCardKey, isStarter: false, countsAsTraded: false));
 					}
 					else if (itemType == ForSaleItemType.Weapon)
 					{
@@ -1092,7 +1548,8 @@ namespace Crusaders30XX.ECS.Data.Save
 				Persist();
 				if (!string.IsNullOrEmpty(shopCardKey))
 				{
-					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadout.id, CardKey = shopCardKey });
+					var added = loadout.cards.Last();
+					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadout.id, EntryId = added.entryId, CardKey = shopCardKey });
 				}
 				newGold = _save.gold;
 				return true;
@@ -1234,7 +1691,13 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				if (_save == null) _save = new SaveFile();
 				_save.runLongPassives = new Dictionary<string, int>();
-				_save.runCardRestrictions = new Dictionary<string, List<string>>();
+				foreach (var loadout in _save.loadouts ?? new List<LoadoutDefinition>())
+				{
+					foreach (var entry in loadout?.cards ?? new List<LoadoutCardEntry>())
+					{
+						entry.restrictions = new List<string>();
+					}
+				}
 				Persist();
 			}
 		}
@@ -1263,71 +1726,362 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
-		public static List<string> GetRunCardRestrictions(string cardKey)
+		public static List<string> GetRunDeckEntryRestrictions(string loadoutId, string entryId)
 		{
-			if (string.IsNullOrWhiteSpace(cardKey)) return new List<string>();
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId)) return new List<string>();
 			EnsureLoaded();
 			lock (_lock)
 			{
-				if (_save?.runCardRestrictions == null) return new List<string>();
-				if (!_save.runCardRestrictions.TryGetValue(cardKey, out var list) || list == null) return new List<string>();
-				return new List<string>(list);
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				return CloneStringList(entry?.restrictions);
 			}
 		}
 
-		public static void AddRunCardRestriction(string cardKey, string restrictionName)
+		public static bool AddRunDeckEntryRestriction(string loadoutId, string entryId, string restrictionName)
 		{
-			if (string.IsNullOrWhiteSpace(cardKey) || string.IsNullOrWhiteSpace(restrictionName)) return;
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId) || string.IsNullOrWhiteSpace(restrictionName)) return false;
 			EnsureLoaded();
 			lock (_lock)
 			{
-				if (_save == null) _save = new SaveFile();
-				if (_save.runCardRestrictions == null) _save.runCardRestrictions = new Dictionary<string, List<string>>();
-				if (!_save.runCardRestrictions.TryGetValue(cardKey, out var list) || list == null)
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				if (entry == null) return false;
+				entry.restrictions ??= new List<string>();
+				if (!entry.restrictions.Contains(restrictionName, StringComparer.OrdinalIgnoreCase))
 				{
-					list = new List<string>();
-					_save.runCardRestrictions[cardKey] = list;
+					entry.restrictions.Add(restrictionName);
+					Persist();
 				}
-				if (!list.Contains(restrictionName, StringComparer.OrdinalIgnoreCase))
-				{
-					list.Add(restrictionName);
-				}
-				Persist();
+				return true;
 			}
 		}
 
-		public static void RemoveRunCardRestriction(string cardKey, string restrictionName)
+		public static bool RemoveRunDeckEntryRestriction(string loadoutId, string entryId, string restrictionName)
 		{
-			if (string.IsNullOrWhiteSpace(cardKey) || string.IsNullOrWhiteSpace(restrictionName)) return;
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId) || string.IsNullOrWhiteSpace(restrictionName)) return false;
 			EnsureLoaded();
 			lock (_lock)
 			{
-				if (_save?.runCardRestrictions == null) return;
-				if (!_save.runCardRestrictions.TryGetValue(cardKey, out var list) || list == null) return;
-				list.RemoveAll(r => string.Equals(r, restrictionName, StringComparison.OrdinalIgnoreCase));
-				if (list.Count == 0) _save.runCardRestrictions.Remove(cardKey);
-				Persist();
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				if (entry == null) return false;
+				entry.restrictions ??= new List<string>();
+				int removed = entry.restrictions.RemoveAll(r => string.Equals(r, restrictionName, StringComparison.OrdinalIgnoreCase));
+				if (removed > 0) Persist();
+				return true;
 			}
 		}
 
-		public static void SetRunCardRestrictionsForCard(string cardKey, List<string> restrictionNames)
+		public static bool SetRunDeckEntryRestrictions(string loadoutId, string entryId, IReadOnlyCollection<string> restrictionNames)
 		{
-			if (string.IsNullOrWhiteSpace(cardKey)) return;
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId)) return false;
 			EnsureLoaded();
 			lock (_lock)
 			{
-				if (_save == null) _save = new SaveFile();
-				if (_save.runCardRestrictions == null) _save.runCardRestrictions = new Dictionary<string, List<string>>();
-				if (restrictionNames == null || restrictionNames.Count == 0)
-				{
-					_save.runCardRestrictions.Remove(cardKey);
-				}
-				else
-				{
-					_save.runCardRestrictions[cardKey] = new List<string>(restrictionNames);
-				}
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				if (entry == null) return false;
+				entry.restrictions = restrictionNames == null
+					? new List<string>()
+					: restrictionNames.Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 				Persist();
+				return true;
 			}
+		}
+
+		private static ClimbSaveState CloneClimbState(ClimbSaveState state)
+		{
+			if (state == null) return null;
+			return new ClimbSaveState
+			{
+				time = ClimbRuleService.ClampTime(state.time),
+				resources = CloneClimbResources(state.resources),
+				shopSlots = CloneClimbShopSlots(state.shopSlots),
+				encounterSlots = CloneClimbEncounterSlots(state.encounterSlots),
+				eventSlots = CloneClimbEventSlots(state.eventSlots),
+				shownMedalIds = CloneStringList(state.shownMedalIds),
+				shownEquipmentIds = CloneStringList(state.shownEquipmentIds),
+				pendingReplacementOffer = CloneClimbReplacementOffer(state.pendingReplacementOffer),
+				pendingEncounterReward = CloneClimbEncounterReward(state.pendingEncounterReward),
+				pendingEvent = CloneClimbPendingEvent(state.pendingEvent),
+				nextBattleBonus = CloneClimbNextBattleBonus(state.nextBattleBonus),
+				nextBattlePenalty = CloneClimbNextBattlePenalty(state.nextBattlePenalty),
+			};
+		}
+
+		private static ClimbResourceSave CloneClimbResources(ClimbResourceSave resources)
+		{
+			return new ClimbResourceSave
+			{
+				red = Math.Max(0, resources?.red ?? 0),
+				white = Math.Max(0, resources?.white ?? 0),
+				black = Math.Max(0, resources?.black ?? 0),
+			};
+		}
+
+		private static List<ClimbShopSlotSave> CloneClimbShopSlots(List<ClimbShopSlotSave> slots)
+		{
+			var clone = new List<ClimbShopSlotSave>();
+			if (slots == null) return clone;
+			foreach (var slot in slots)
+			{
+				if (slot == null) continue;
+				clone.Add(new ClimbShopSlotSave
+				{
+					id = slot.id ?? string.Empty,
+					kind = slot.kind ?? ClimbShopSlotKinds.Empty,
+					itemId = slot.itemId ?? string.Empty,
+					cardKey = slot.cardKey ?? string.Empty,
+					deckEntryId = slot.deckEntryId ?? string.Empty,
+					deckIndex = slot.deckIndex,
+					cost = CloneClimbResources(slot.cost),
+					timeCost = Math.Max(0, slot.timeCost),
+					isSold = slot.isSold,
+					generatedAtTime = ClimbRuleService.ClampTime(slot.generatedAtTime),
+				});
+			}
+			return clone;
+		}
+
+		private static List<ClimbEncounterSlotSave> CloneClimbEncounterSlots(List<ClimbEncounterSlotSave> slots)
+		{
+			var clone = new List<ClimbEncounterSlotSave>();
+			if (slots == null) return clone;
+			foreach (var slot in slots)
+			{
+				if (slot == null) continue;
+				clone.Add(new ClimbEncounterSlotSave
+				{
+					id = slot.id ?? string.Empty,
+					enemyId = slot.enemyId ?? string.Empty,
+					generatedAtTime = ClimbRuleService.ClampTime(slot.generatedAtTime),
+					duration = Math.Max(0, slot.duration),
+					timeCost = Math.Max(0, slot.timeCost),
+					battleLocation = slot.battleLocation,
+					rewardResources = CloneClimbResources(slot.rewardResources),
+					hasDeckReward = slot.hasDeckReward,
+					isCompleted = slot.isCompleted,
+					isFinal = slot.isFinal,
+					cardMutationRestrictionName = slot.cardMutationRestrictionName ?? string.Empty,
+					cardMutationDeckEntryId = slot.cardMutationDeckEntryId ?? string.Empty,
+					cardMutationCardKey = slot.cardMutationCardKey ?? string.Empty,
+				});
+			}
+			return clone;
+		}
+
+		private static List<ClimbEventSlotSave> CloneClimbEventSlots(List<ClimbEventSlotSave> slots)
+		{
+			var clone = new List<ClimbEventSlotSave>();
+			if (slots == null) return clone;
+			foreach (var slot in slots)
+			{
+				if (slot == null) continue;
+				clone.Add(new ClimbEventSlotSave
+				{
+					id = slot.id ?? string.Empty,
+					definitionId = slot.definitionId ?? string.Empty,
+					kind = slot.kind,
+					hazardEffect = slot.hazardEffect,
+					characterReward = slot.characterReward,
+					scheduledAppearanceTime = ClimbRuleService.ClampTime(slot.scheduledAppearanceTime),
+					activatedAtTime = slot.activatedAtTime < 0 ? -1 : ClimbRuleService.ClampTime(slot.activatedAtTime),
+					duration = Math.Max(0, slot.duration),
+					timeCost = Math.Max(0, slot.timeCost),
+					effectAmount = Math.Max(0, slot.effectAmount),
+					rewardResources = CloneClimbResources(slot.rewardResources),
+					status = slot.status,
+				});
+			}
+			return clone;
+		}
+
+		private static ClimbEventSlotSave CloneClimbEventSlot(ClimbEventSlotSave slot)
+		{
+			return CloneClimbEventSlots(slot == null ? null : new List<ClimbEventSlotSave> { slot }).FirstOrDefault();
+		}
+
+		private static ClimbEventSlotSave FindClimbEventSlot(ClimbSaveState climb, string eventSlotId)
+		{
+			return climb?.eventSlots?.FirstOrDefault(slot => slot != null
+				&& string.Equals(slot.id, eventSlotId, StringComparison.OrdinalIgnoreCase));
+		}
+
+		private sealed class ClimbEventTransactionBackup
+		{
+			public ClimbSaveState Climb { get; init; }
+			public LoadoutDefinition PrimaryLoadout { get; init; }
+			public Dictionary<string, int> RunLongPassives { get; init; }
+		}
+
+		private static ClimbEventTransactionBackup CaptureClimbEventTransactionBackup()
+		{
+			return new ClimbEventTransactionBackup
+			{
+				Climb = CloneClimbState(_save?.climb),
+				PrimaryLoadout = CloneLoadout(_save?.loadouts?.FirstOrDefault(loadout =>
+					string.Equals(loadout.id, RunDeckService.PrimaryLoadoutId, StringComparison.OrdinalIgnoreCase))),
+				RunLongPassives = _save?.runLongPassives == null
+					? new Dictionary<string, int>()
+					: new Dictionary<string, int>(_save.runLongPassives),
+			};
+		}
+
+		private static void RestoreClimbEventTransactionBackup(ClimbEventTransactionBackup backup)
+		{
+			if (_save == null || backup == null) return;
+			_save.climb = CloneClimbState(backup.Climb);
+			_save.runLongPassives = new Dictionary<string, int>(backup.RunLongPassives ?? new Dictionary<string, int>());
+			_save.loadouts ??= new List<LoadoutDefinition>();
+			int index = _save.loadouts.FindIndex(loadout => loadout != null
+				&& string.Equals(loadout.id, RunDeckService.PrimaryLoadoutId, StringComparison.OrdinalIgnoreCase));
+			if (backup.PrimaryLoadout == null)
+			{
+				if (index >= 0) _save.loadouts.RemoveAt(index);
+				return;
+			}
+
+			var restored = CloneLoadout(backup.PrimaryLoadout);
+			if (index >= 0) _save.loadouts[index] = restored;
+			else _save.loadouts.Add(restored);
+		}
+
+		private static int AddRunLongPassiveStacksLocked(string passiveTypeName, int amount)
+		{
+			if (string.IsNullOrWhiteSpace(passiveTypeName) || amount <= 0) return 0;
+			_save.runLongPassives ??= new Dictionary<string, int>();
+			string existingKey = _save.runLongPassives.Keys
+				.FirstOrDefault(key => string.Equals(key, passiveTypeName, StringComparison.OrdinalIgnoreCase));
+			string key = string.IsNullOrWhiteSpace(existingKey) ? passiveTypeName : existingKey;
+			_save.runLongPassives.TryGetValue(key, out int current);
+			int total = Math.Max(0, current) + amount;
+			_save.runLongPassives[key] = total;
+			return total;
+		}
+
+		private static ClimbReplacementOfferSave CloneClimbReplacementOffer(ClimbReplacementOfferSave offer)
+		{
+			if (offer == null) return null;
+			return new ClimbReplacementOfferSave
+			{
+				shopSlotIndex = offer.shopSlotIndex,
+				incomingCardKey = offer.incomingCardKey ?? string.Empty,
+				cost = CloneClimbResources(offer.cost),
+			};
+		}
+
+		private static ClimbEncounterRewardSave CloneClimbEncounterReward(ClimbEncounterRewardSave reward)
+		{
+			if (reward == null) return null;
+			return new ClimbEncounterRewardSave
+			{
+				encounterSlotId = reward.encounterSlotId ?? string.Empty,
+				resources = CloneClimbResources(reward.resources),
+				deckRewardOffer = CloneDeckRewardOffer(reward.deckRewardOffer),
+				pendingFinalEncounter = reward.pendingFinalEncounter,
+			};
+		}
+
+		private static ClimbPendingEventSave CloneClimbPendingEvent(ClimbPendingEventSave pending)
+		{
+			if (pending == null) return null;
+			return new ClimbPendingEventSave
+			{
+				eventSlotId = pending.eventSlotId ?? string.Empty,
+				phase = pending.phase,
+				dialogueRequestId = pending.dialogueRequestId ?? string.Empty,
+			};
+		}
+
+		private static ClimbNextBattleBonusSave CloneClimbNextBattleBonus(ClimbNextBattleBonusSave bonus)
+		{
+			return new ClimbNextBattleBonusSave
+			{
+				courage = Math.Max(0, bonus?.courage ?? 0),
+				temperance = Math.Max(0, bonus?.temperance ?? 0),
+				vigor = Math.Max(0, bonus?.vigor ?? 0),
+			};
+		}
+
+		private static ClimbNextBattlePenaltySave CloneClimbNextBattlePenalty(ClimbNextBattlePenaltySave penalty)
+		{
+			return new ClimbNextBattlePenaltySave
+			{
+				burn = Math.Max(0, penalty?.burn ?? 0),
+				fear = Math.Max(0, penalty?.fear ?? 0),
+			};
+		}
+
+		private static List<string> CloneStringList(List<string> list)
+		{
+			return list == null
+				? new List<string>()
+				: list.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+		}
+
+		private static string AllocateRunDeckEntryIdLocked()
+		{
+			_save ??= new SaveFile();
+			int next = Math.Max(0, _save.nextRunDeckEntryId);
+			_save.nextRunDeckEntryId = next + 1;
+			return $"run_card_{next}";
+		}
+
+		private static LoadoutCardEntry CreateEntryLocked(string cardKey, bool isStarter, bool countsAsTraded)
+		{
+			return new LoadoutCardEntry
+			{
+				entryId = AllocateRunDeckEntryIdLocked(),
+				cardKey = cardKey?.Trim() ?? string.Empty,
+				isStarter = isStarter,
+				countsAsTraded = countsAsTraded,
+				restrictions = new List<string>(),
+			};
+		}
+
+		private static int FindEntryIndex(LoadoutDefinition loadout, string entryId)
+		{
+			if (loadout?.cards == null || string.IsNullOrWhiteSpace(entryId)) return -1;
+			return loadout.cards.FindIndex(entry => entry != null
+				&& string.Equals(entry.entryId, entryId, StringComparison.Ordinal));
+		}
+
+		private static LoadoutCardEntry FindEntry(LoadoutDefinition loadout, string entryId)
+		{
+			int index = FindEntryIndex(loadout, entryId);
+			return index < 0 ? null : loadout.cards[index];
+		}
+
+		private static LoadoutCardEntry CloneLoadoutEntry(LoadoutCardEntry entry)
+		{
+			if (entry == null) return null;
+			return new LoadoutCardEntry
+			{
+				entryId = entry.entryId ?? string.Empty,
+				cardKey = entry.cardKey ?? string.Empty,
+				isStarter = entry.isStarter,
+				countsAsTraded = entry.countsAsTraded,
+				restrictions = CloneStringList(entry.restrictions),
+			};
+		}
+
+		private static LoadoutDefinition CloneLoadout(LoadoutDefinition loadout)
+		{
+			if (loadout == null) return null;
+			return new LoadoutDefinition
+			{
+				id = loadout.id,
+				name = loadout.name,
+				cards = (loadout.cards ?? new List<LoadoutCardEntry>()).Select(CloneLoadoutEntry).Where(entry => entry != null).ToList(),
+				weaponId = loadout.weaponId,
+				temperanceId = loadout.temperanceId,
+				chestId = loadout.chestId,
+				legsId = loadout.legsId,
+				armsId = loadout.armsId,
+				headId = loadout.headId,
+				medalIds = CloneStringList(loadout.medalIds),
+			};
 		}
 	}
 }

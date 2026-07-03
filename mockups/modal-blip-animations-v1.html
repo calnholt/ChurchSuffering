@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Modal Flash Materialize</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Target: reusable modal enter/exit for RewardModalDisplaySystem and all overlay modals
+    - Backdrop: Quest Reward split-ledger layout (quest-reward-modal-v1)
+    - Dim: rgba(0,0,0,0.55) matches DimAlpha 140 / 255
+    - Enter: dim fades in over full duration; modal materializes (reverse of modal exit)
+    - Exit: modal shrinks bright, dim holds then fades (unchanged)
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #c41e3a;
+    --gold: #e8c84a;
+    --gold-dim: #a08030;
+    --panel-border: rgba(255, 255, 255, 0.85);
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+    --anim-in-ms: 280ms;
+    --anim-out-ms: 280ms;
+    --anim-modal-ms: 220ms;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 4px;
+  }
+
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    max-width: 860px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .action-btn {
+    padding: 8px 16px;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .action-btn:hover:not(:disabled) {
+    background: var(--black-3);
+    border-color: var(--red-3);
+  }
+
+  .action-btn.is-primary {
+    background: rgba(139, 0, 0, 0.35);
+    border-color: var(--red-3);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .status-bar {
+    margin-top: 12px;
+    font-size: 0.72rem;
+    color: var(--white-3);
+    letter-spacing: 0.5px;
+  }
+
+  .status-bar strong { color: var(--white-1); font-weight: 600; }
+
+  .page-main {
+    padding: 28px 40px 60px;
+  }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1100px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert-background-city.png') center / cover no-repeat;
+  }
+
+  /* --- Reward modal (split ledger, quest-reward-modal-v1) --- */
+  .card {
+    width: 240px;
+    height: 340px;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    transform: scale(1.05);
+  }
+
+  .card .bg { position: absolute; inset: 0; border-radius: 8px; background: #1c0c0c; }
+  .card .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 6; background: #cc2222; }
+  .card .stat-gutter {
+    position: absolute; left: 6px; top: 0; bottom: 0; width: 55px; z-index: 1;
+    background: rgba(0,0,0,0.22);
+  }
+  .card .type-notch {
+    position: absolute; top: 0; right: 0; z-index: 7;
+    font-size: 0.5rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    padding: 5px 10px 5px 14px; border-radius: 0 8px 0 8px;
+    background: rgba(200,30,30,0.15); color: #884433;
+  }
+  .card .stats {
+    position: absolute; left: 14px; top: 14px; bottom: 14px; width: 42px;
+    display: flex; flex-direction: column; z-index: 5;
+  }
+  .chip-slot { height: 62px; display: flex; flex-direction: column; flex-shrink: 0; }
+  .chip-slot-ap { margin-top: auto; flex-shrink: 0; }
+  .card .chip {
+    width: 42px; height: 42px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border-radius: 4px; flex-shrink: 0;
+  }
+  .card .chip .v { font-family: 'New Rocker', cursive; font-size: 1.25rem; line-height: 1; }
+  .card .chip .l { font-size: 0.55rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+  .card .chip-atk { background: #cc2222; color: #fff; }
+  .card .chip-atk .l { color: #ffccbb; }
+  .card .chip-ap { background: #330e0e; color: #dd4433; }
+  .card .chip-ap .l { color: #993322; }
+  .card .content {
+    position: relative; z-index: 3; height: 100%; display: flex; flex-direction: column;
+    margin-left: 65px; padding: 14px 14px 14px 0;
+  }
+  .card .cost-row { display: flex; gap: 5px; margin-bottom: 4px; min-height: 13px; }
+  .card .pip { width: 13px; height: 13px; border-radius: 50%; background: #666; }
+  .card .name { font-family: 'New Rocker', cursive; font-size: 1.25rem; letter-spacing: 1px; margin-bottom: 6px; color: #f0e0d8; }
+  .card .rule { height: 2px; margin-bottom: 8px; border-radius: 1px; background: #442020; }
+  .card .desc { font-size: 14px; line-height: 1.45; flex: 1; color: #cc9988; }
+  .card .art {
+    position: absolute; bottom: -10px; right: -15px; width: 170px; height: 150px;
+    z-index: 2; pointer-events: none;
+  }
+  .card .art img { width: 100%; height: 100%; object-fit: contain; }
+
+  .modal {
+    width: 920px;
+    min-height: 520px;
+    background: rgba(8, 8, 8, 0.92);
+    border: 2px solid var(--panel-border);
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 32px 80px rgba(0,0,0,0.75);
+  }
+
+  .modal-left {
+    border-right: 1px solid rgba(255,255,255,0.15);
+    padding: 40px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    background: rgba(0,0,0,0.35);
+  }
+
+  .modal-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 36px;
+    letter-spacing: 3px;
+    color: var(--white-1);
+    text-align: center;
+    line-height: 1.1;
+    text-shadow: 0 2px 24px rgba(0,0,0,0.8);
+  }
+
+  .red-rule {
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--red-3), transparent);
+  }
+
+  .rewards-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .gold-reward {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .gold-label {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+  }
+
+  .gold-amount {
+    font-family: 'New Rocker', cursive;
+    font-size: 42px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(232, 200, 74, 0.35);
+  }
+
+  .modal-right {
+    padding: 36px 40px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .card-stage-label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--white-3);
+  }
+
+  .card-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    padding: 8px 0;
+  }
+
+  .modal-footer {
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    background: rgba(0,0,0,0.25);
+  }
+
+  .btn-proceed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 220px;
+    height: 64px;
+    padding: 0 32px;
+    background: var(--black-3);
+    border: 2px solid var(--white-1);
+    color: var(--white-1);
+    font-family: 'New Rocker', cursive;
+    font-size: 28px;
+    letter-spacing: 2px;
+    pointer-events: none;
+  }
+
+  /* --- Overlay animation layer --- */
+  .overlay-root {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .overlay-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0;
+  }
+
+  .modal-anchor {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transform-origin: center center;
+  }
+
+  .modal-drop-shadow {
+    position: absolute;
+    left: 0;
+    top: 16px;
+    width: 920px;
+    height: 504px;
+    background: rgba(0, 0, 0, 0.5);
+    filter: blur(12px);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .modal-shell {
+    position: relative;
+    opacity: 0;
+    transform: scale(0.75);
+    filter: brightness(1.5);
+  }
+
+  .overlay-root[data-state="hidden"] .overlay-dim,
+  .overlay-root[data-state="hidden"] .modal-drop-shadow,
+  .overlay-root[data-state="hidden"] .modal-shell {
+    opacity: 0;
+    animation: none;
+  }
+
+  .overlay-root[data-state="hidden"] .modal-shell {
+    transform: scale(0.75);
+    filter: brightness(1.5);
+  }
+
+  .overlay-root[data-state="visible"] .overlay-dim { opacity: 1; }
+  .overlay-root[data-state="visible"] .modal-drop-shadow { opacity: 0.65; }
+  .overlay-root[data-state="visible"] .modal-shell {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  .overlay-root[data-state="exiting"] .overlay-dim { opacity: 1; }
+  .overlay-root[data-state="exiting"] .modal-drop-shadow { opacity: 0.65; }
+  .overlay-root[data-state="exiting"] .modal-shell {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  /* Enter (reverse of exit) */
+  .overlay-root.anim-in .overlay-dim {
+    animation: dim-in var(--anim-in-ms) var(--ease-out) forwards;
+  }
+  .overlay-root.anim-in .modal-drop-shadow {
+    animation: shadow-in var(--anim-modal-ms) var(--ease-out) forwards;
+    opacity: 0;
+  }
+  .overlay-root.anim-in .modal-shell {
+    animation: pop-in var(--anim-modal-ms) var(--ease-out) forwards;
+    opacity: 0;
+    transform: scale(0.75);
+    filter: brightness(1.5);
+  }
+
+  /* Exit */
+  .overlay-root.anim-out .overlay-dim {
+    animation: dim-out var(--anim-out-ms) var(--ease-in) forwards;
+  }
+  .overlay-root.anim-out .modal-drop-shadow {
+    animation: shadow-out var(--anim-modal-ms) var(--ease-in) forwards;
+  }
+  .overlay-root.anim-out .modal-shell {
+    animation: pop-out var(--anim-modal-ms) var(--ease-in) forwards;
+  }
+
+  @keyframes dim-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes dim-out {
+    0%, 58% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes shadow-in {
+    0% { opacity: 0; }
+    100% { opacity: 0.65; }
+  }
+
+  @keyframes shadow-out {
+    0% { opacity: 0.65; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes pop-in {
+    0% { opacity: 0; transform: scale(0.75); filter: brightness(1.5); }
+    100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+  }
+
+  @keyframes pop-out {
+    0% { opacity: 1; transform: scale(1); filter: brightness(1); }
+    100% { opacity: 0; transform: scale(0.75); filter: brightness(1.5); }
+  }
+
+  .notes {
+    max-width: min(calc(100vw - 80px), 1100px);
+    margin: 32px auto 0;
+    padding: 24px 28px;
+    background: var(--black-1);
+    border: 1px solid var(--black-4);
+    border-radius: 8px;
+  }
+
+  .notes h2 {
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red-3);
+    margin-bottom: 14px;
+  }
+
+  .notes p {
+    font-size: 0.76rem;
+    color: var(--white-3);
+    line-height: 1.55;
+    max-width: 720px;
+  }
+
+  .notes code {
+    font-size: 0.72rem;
+    background: var(--black-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #c8a0a8;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Modal Flash Materialize</h1>
+  <p>
+    Enter/exit preset for overlay modals, previewed on the Quest Reward split-ledger layout.
+    <strong>Blip In</strong> and <strong>Blip Out</strong> are mirrors: dim fades in/out smoothly over 280ms; modal grows or shrinks bright over 220ms.
+  </p>
+
+  <div class="controls-row">
+    <button type="button" class="action-btn is-primary" id="btn-blip-in">Blip In</button>
+    <button type="button" class="action-btn" id="btn-blip-out">Blip Out</button>
+    <button type="button" class="action-btn" id="btn-reset">Reset</button>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    State: <strong>hidden</strong>
+  </div>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler">
+    <div class="viewport">
+      <div class="bg-scene"></div>
+
+      <div class="overlay-root" id="overlay" data-state="hidden">
+        <div class="overlay-dim"></div>
+        <div class="modal-anchor">
+          <div class="modal-drop-shadow" aria-hidden="true"></div>
+          <div class="modal-shell">
+            <div class="modal">
+              <aside class="modal-left">
+                <h2 class="modal-title">Quest<br>Complete!</h2>
+                <div class="red-rule" aria-hidden="true"></div>
+                <div class="rewards-stack">
+                  <div class="gold-reward">
+                    <span class="gold-label">Gold</span>
+                    <span class="gold-amount">+350</span>
+                  </div>
+                </div>
+              </aside>
+              <div class="modal-right">
+                <span class="card-stage-label">Reward</span>
+                <div class="card-wrap">
+                  <article class="card">
+                    <div class="bg"></div>
+                    <div class="stripe"></div>
+                    <div class="stat-gutter"></div>
+                    <div class="type-notch">Attack</div>
+                    <div class="stats">
+                      <div class="chip-slot"></div>
+                      <div class="chip-slot">
+                        <div class="chip chip-atk"><span class="v">9</span><span class="l">DMG</span></div>
+                      </div>
+                      <div class="chip-slot-ap">
+                        <div class="chip chip-ap"><span class="v">2</span><span class="l">AP</span></div>
+                      </div>
+                    </div>
+                    <div class="content">
+                      <div class="cost-row"><div class="pip"></div><div class="pip"></div></div>
+                      <div class="name">Smite</div>
+                      <div class="rule"></div>
+                      <div class="desc">Deal 9 damage. Costs 2 AP.</div>
+                    </div>
+                    <div class="art"><img src="../Content/CardArt/smite.png" alt="Smite"></div>
+                  </article>
+                </div>
+              </div>
+              <footer class="modal-footer">
+                <div class="btn-proceed">Proceed</div>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="notes">
+    <h2>MonoGame Implementation Notes</h2>
+    <p>
+      <strong>Enter:</strong> dim fades 0 to full over 280ms (ease-out); modal and shadow ease in over 220ms from scale 0.75 / brightness 1.5.
+      <strong>Exit:</strong> modal shrinks bright over 220ms; dim holds until 58% of 280ms then fades out.
+    </p>
+  </footer>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+  const ANIM_IN_MS = 280;
+  const ANIM_OUT_MS = 280;
+
+  const overlay = document.getElementById('overlay');
+  const statusBar = document.getElementById('status-bar');
+  const btnIn = document.getElementById('btn-blip-in');
+  const btnOut = document.getElementById('btn-blip-out');
+  const btnReset = document.getElementById('btn-reset');
+
+  let uiState = 'hidden';
+  let animTimer = null;
+
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const vp = document.querySelector('.viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / GAME_W;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  function updateStatus() {
+    statusBar.innerHTML = `State: <strong>${uiState}</strong>`;
+    btnIn.disabled = uiState === 'entering' || uiState === 'visible' || uiState === 'exiting';
+    btnOut.disabled = uiState === 'hidden' || uiState === 'entering' || uiState === 'exiting';
+  }
+
+  function clearAnimClasses() {
+    overlay.classList.remove('anim-in', 'anim-out');
+  }
+
+  function setState(next) {
+    uiState = next;
+    overlay.dataset.state = next;
+    updateStatus();
+  }
+
+  function finishAnim(finalState) {
+    clearAnimClasses();
+    setState(finalState);
+  }
+
+  function blipIn() {
+    if (uiState === 'visible' || uiState === 'entering') return;
+    clearTimeout(animTimer);
+    clearAnimClasses();
+    setState('entering');
+    void overlay.offsetWidth;
+    overlay.classList.add('anim-in');
+    animTimer = setTimeout(() => finishAnim('visible'), ANIM_IN_MS);
+  }
+
+  function blipOut() {
+    if (uiState === 'hidden' || uiState === 'exiting') return;
+    clearTimeout(animTimer);
+    clearAnimClasses();
+    setState('exiting');
+    void overlay.offsetWidth;
+    overlay.classList.add('anim-out');
+    animTimer = setTimeout(() => finishAnim('hidden'), ANIM_OUT_MS);
+  }
+
+  function resetOverlay() {
+    clearTimeout(animTimer);
+    clearAnimClasses();
+    setState('hidden');
+  }
+
+  btnIn.addEventListener('click', blipIn);
+  btnOut.addEventListener('click', blipOut);
+  btnReset.addEventListener('click', resetOverlay);
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', () => {
+    fitViewport();
+    updateStatus();
+  });
+  fitViewport();
+</script>
+</body>
+</html>

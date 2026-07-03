@@ -18,6 +18,12 @@ namespace Crusaders30XX.ECS.Events
 		public float ScrollStickY { get; set; }
 	}
 
+	public class UIElementHoverEnteredEvent
+	{
+		public Entity Entity { get; set; }
+		public PlayerInputDevice Source { get; set; }
+	}
+
 	public class HotKeySelectEvent
 	{
 		public Entity Entity { get; set; }

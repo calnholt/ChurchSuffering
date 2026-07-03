@@ -186,10 +186,11 @@ public class PledgeAndBlockInteractionTests : IDisposable
         entityManager.AddComponent(card, new UIElement { IsInteractable = true, IsClicked = true });
         entityManager.AddComponent(card, new Transform { Position = new Vector2(100, 200) });
         var enemy = entityManager.CreateEntity("Enemy");
-        entityManager.AddComponent(enemy, new AttackIntent
-        {
-            Planned = [new PlannedAttack { ContextId = "attack-1" }],
-        });
+		entityManager.AddComponent(enemy, new AttackIntent
+		{
+			ActiveAttackSequence = 1,
+			Planned = [new PlannedAttack()],
+		});
         var system = new HandBlockInteractionSystem(entityManager);
         int moves = 0;
         int assignments = 0;

@@ -12,6 +12,7 @@ public class PlayerHudSnapshotVariantTests
 	[InlineData("incoming-damage", PlayerHudSnapshotVariantId.IncomingDamage, "incoming-damage")]
 	[InlineData("low-health", PlayerHudSnapshotVariantId.LowHealth, "low-health")]
 	[InlineData("expanded", PlayerHudSnapshotVariantId.Expanded, "expanded")]
+	[InlineData("enemy-health", PlayerHudSnapshotVariantId.EnemyHealth, "enemy-health")]
 	public void Parses_supported_variants(
 		string token,
 		PlayerHudSnapshotVariantId expectedId,

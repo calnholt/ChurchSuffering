@@ -32,6 +32,8 @@ namespace Crusaders30XX.ECS.Services
 
 			enemy.GetComponent<AttackIntent>()?.Planned.Clear();
 			enemy.GetComponent<NextTurnAttackIntent>()?.Planned.Clear();
+			var attackIntent = enemy.GetComponent<AttackIntent>();
+			if (attackIntent != null) attackIntent.ActiveAttackSequence = 0;
 			foreach (var progress in entityManager.GetEntitiesWithComponent<EnemyAttackProgress>().ToList())
 			{
 				entityManager.DestroyEntity(progress.Id);
@@ -51,7 +53,7 @@ namespace Crusaders30XX.ECS.Services
 			ResetDeck(entityManager, random ?? Random.Shared);
 			ClearTurnPassives(entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault());
 			ClearTurnPassives(enemy);
-			ClearInteractionState(entityManager);
+			BattleTransientStateCleanupService.ClearInteractionState(entityManager);
 
 			var actionPoints = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault()?.GetComponent<ActionPoints>();
 			if (actionPoints != null) actionPoints.Current = 0;
@@ -130,69 +132,5 @@ namespace Crusaders30XX.ECS.Services
 			}
 		}
 
-		private static void ClearInteractionState(EntityManager entityManager)
-		{
-			foreach (var assigned in entityManager.GetEntitiesWithComponent<AssignedBlockCard>().ToList())
-			{
-				CardTransientStateService.ClearAssignedBlockHotKey(entityManager, assigned);
-				entityManager.RemoveComponent<AssignedBlockCard>(assigned);
-				var equipmentZone = assigned.GetComponent<EquipmentZone>();
-				if (equipmentZone != null) equipmentZone.Zone = EquipmentZoneType.Default;
-			}
-
-			foreach (var card in entityManager.GetEntitiesWithComponent<CardData>().ToList())
-			{
-				CardTransientStateService.ClearAssignedBlockHotKey(entityManager, card);
-				RemoveIfPresent<SelectedForPayment>(entityManager, card);
-				RemoveIfPresent<MarkedForSpecificDiscard>(entityManager, card);
-				RemoveIfPresent<MarkedForReturnToDeck>(entityManager, card);
-				RemoveIfPresent<MarkedForBottomOfDrawPile>(entityManager, card);
-				RemoveIfPresent<MarkedForExhaust>(entityManager, card);
-				RemoveIfPresent<MarkedForEndOfTurnDiscard>(entityManager, card);
-				RemoveIfPresent<AnimatingHandToDiscard>(entityManager, card);
-				RemoveIfPresent<AnimatingHandToZone>(entityManager, card);
-				RemoveIfPresent<AnimatingHandToDrawPile>(entityManager, card);
-				RemoveIfPresent<CardToDiscardFlight>(entityManager, card);
-				RemoveIfPresent<FilteredFromHand>(entityManager, card);
-				RemoveIfPresent<Intimidated>(entityManager, card);
-				RemoveIfPresent<CannotBlockThisAttack>(entityManager, card);
-			}
-
-			var payCostState = entityManager.GetEntitiesWithComponent<PayCostOverlayState>()
-				.FirstOrDefault()?.GetComponent<PayCostOverlayState>();
-			if (payCostState != null)
-			{
-				payCostState.IsOpen = false;
-				payCostState.CardToPlay = null;
-				payCostState.SelectedCards.Clear();
-				payCostState.ConsumedCostByCardId.Clear();
-			}
-
-			var ambushState = entityManager.GetEntitiesWithComponent<AmbushState>()
-				.FirstOrDefault()?.GetComponent<AmbushState>();
-			if (ambushState != null)
-			{
-				ambushState.IsActive = false;
-				ambushState.IntroActive = false;
-				ambushState.TimerRemainingSeconds = 0f;
-				ambushState.FiredAutoConfirm = false;
-				ambushState.ContextId = string.Empty;
-			}
-
-			var paymentCache = entityManager.GetEntitiesWithComponent<LastPaymentCache>()
-				.FirstOrDefault()?.GetComponent<LastPaymentCache>();
-			if (paymentCache != null)
-			{
-				paymentCache.CardPlayed = null;
-				paymentCache.PaymentCards.Clear();
-				paymentCache.HasData = false;
-			}
-		}
-
-		private static void RemoveIfPresent<T>(EntityManager entityManager, Entity entity)
-			where T : class, IComponent
-		{
-			if (entity.HasComponent<T>()) entityManager.RemoveComponent<T>(entity);
-		}
 	}
 }

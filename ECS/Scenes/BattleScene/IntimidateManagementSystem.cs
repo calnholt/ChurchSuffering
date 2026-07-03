@@ -21,6 +21,8 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged);
 			EventManager.Subscribe<IntimidateEvent>(OnIntimidate);
+			EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
+			EventManager.Subscribe<EnemyPhaseResetEvent>(_ => ClearEnemyTurnIntimidation());
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -35,7 +37,7 @@ namespace Crusaders30XX.ECS.Systems
 			// When entering the Block phase, apply intimidate effects
 			if (evt.Current == SubPhase.EnemyEnd)
 			{
-				RemoveAllIntimidateEffects();
+				ClearEnemyTurnIntimidation();
 			}
 			if (evt.Current == SubPhase.PreBlock)
 			{
@@ -88,6 +90,17 @@ namespace Crusaders30XX.ECS.Systems
 					EntityManager.AddComponent(card, new Intimidated { Owner = card });
 					LoggingService.Append("IntimidateManagementSystem.ApplyIntimidateEffects", new System.Text.Json.Nodes.JsonObject { ["action"] = "Card intimidated", ["cardId"] = cardData?.Card.CardId ?? "unknown" });
 				}
+		}
+
+		private void OnBeginDefeatPresentation(BeginDefeatPresentationEvent evt)
+		{
+			if (evt?.IsPreview == true) return;
+			ClearEnemyTurnIntimidation();
+		}
+
+		private void ClearEnemyTurnIntimidation()
+		{
+			RemoveAllIntimidateEffects();
 		}
 
 		private void RemoveAllIntimidateEffects()

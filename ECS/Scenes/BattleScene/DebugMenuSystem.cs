@@ -50,6 +50,8 @@ namespace Crusaders30XX.ECS.Systems
 			= new();
 		private readonly Dictionary<Type, List<(string label, MethodInfo method, DebugActionIntAttribute meta, int current)>> _debugActionsIntCache
 			= new();
+		private readonly Dictionary<Type, List<(string label, MethodInfo method)>> _debugActionListsCache
+			= new();
 		private readonly Dictionary<Type, Dictionary<string, object>> _bootSnapshots = new();
 
         // Editable layout and behavior settings
@@ -249,10 +251,12 @@ namespace Crusaders30XX.ECS.Systems
 			// Buttons section from DebugActionAttribute on the active system
 			var actionMethods = GetDebugActionsCached(active.sys);
 			var actionIntMethods = GetDebugActionsIntCached(active.sys);
-			if (_font != null && (actionMethods.Count > 0 || actionIntMethods.Count > 0))
+			var actionLists = GetDebugActionLists(active.sys);
+			int actionListCount = actionLists.Sum(list => list.actions.Count);
+			if (_font != null && (actionMethods.Count > 0 || actionIntMethods.Count > 0 || actionListCount > 0))
 			{
 				measureY += (int)(_font.LineSpacing * TextScale) + Spacing; // header
-				measureY += (actionMethods.Count + actionIntMethods.Count) * (ButtonHeight + Spacing);
+				measureY += (actionMethods.Count + actionIntMethods.Count + actionListCount) * (ButtonHeight + Spacing);
 			}
 
             int panelHeight = measureY - panelY + Padding;
@@ -561,7 +565,7 @@ namespace Crusaders30XX.ECS.Systems
             }
 
 			// Buttons section (DebugAction and DebugActionInt) - also scrollable
-			if (_font != null && (actionMethods.Count > 0 || actionIntMethods.Count > 0))
+			if (_font != null && (actionMethods.Count > 0 || actionIntMethods.Count > 0 || actionListCount > 0))
             {
                 int headerY = cursorY + yOffset;
                 if (headerY + (int)(_font.LineSpacing * TextScale) >= visibleTop && headerY <= visibleBottom)
@@ -648,6 +652,37 @@ namespace Crusaders30XX.ECS.Systems
 					}
 					cursorY += ButtonHeight + Spacing;
 				}
+
+				foreach (var actionList in actionLists)
+				{
+					foreach (var namedAction in actionList.actions)
+					{
+						var rect = new Rectangle(panelX + Padding, cursorY + yOffset, PanelWidth - Padding * 2, ButtonHeight);
+						if (rect.Bottom < visibleTop || rect.Y > visibleBottom)
+						{
+							cursorY += ButtonHeight + Spacing;
+							continue;
+						}
+						DrawFilledRect(rect, namedAction.IsEnabled ? new Color(70, 70, 70) : new Color(40, 40, 40));
+						DrawRect(rect, Color.White, 1);
+						string label = namedAction.Label ?? string.Empty;
+						DrawStringClippedScaled(label, new Vector2(rect.X + 8, rect.Y + 4), namedAction.IsEnabled ? Color.White : Color.Gray, rect.Width - 16, TextScale);
+						if (clickForContent && namedAction.IsEnabled && rect.Contains(mousePosition))
+						{
+							try
+							{
+								namedAction.Invoke?.Invoke();
+							}
+							catch (Exception ex)
+							{
+								var tie = ex as System.Reflection.TargetInvocationException;
+								var root = tie?.InnerException ?? ex;
+								Console.WriteLine($"[DebugMenu] Action-list '{label}' failed:\n{root}");
+							}
+						}
+						cursorY += ButtonHeight + Spacing;
+					}
+				}
             }
 
             // Finally, if dropdown is open, draw its list on top of everything else in the panel
@@ -714,6 +749,7 @@ namespace Crusaders30XX.ECS.Systems
                     _editableMembersCache.Clear();
                     _debugActionsCache.Clear();
                     _debugActionsIntCache.Clear();
+                    _debugActionListsCache.Clear();
                     _lastSceneId = currentScene;
                     _systemsSignatureSnapshot = sig;
                     CaptureMissingBootSnapshots();
@@ -826,6 +862,51 @@ namespace Crusaders30XX.ECS.Systems
             }
             return actions;
         }
+
+		private List<(string label, List<DebugNamedAction> actions)> GetDebugActionLists(Core.System system)
+		{
+			var type = system.GetType();
+			if (!_debugActionListsCache.TryGetValue(type, out var methods))
+			{
+				methods = GetDebugActionListMethods(system);
+				_debugActionListsCache[type] = methods;
+			}
+
+			var result = new List<(string label, List<DebugNamedAction> actions)>();
+			foreach (var (label, method) in methods)
+			{
+				try
+				{
+					var value = method.Invoke(system, Array.Empty<object>());
+					if (value is IEnumerable<DebugNamedAction> actions)
+					{
+						result.Add((label, actions.Where(action => action != null).ToList()));
+					}
+				}
+				catch (Exception ex)
+				{
+					var tie = ex as System.Reflection.TargetInvocationException;
+					var root = tie?.InnerException ?? ex;
+					Console.WriteLine($"[DebugMenu] Action-list '{label}' failed:\n{root}");
+				}
+			}
+			return result;
+		}
+
+		private static List<(string label, MethodInfo method)> GetDebugActionListMethods(Core.System system)
+		{
+			var list = new List<(string, MethodInfo)>();
+			var t = system.GetType();
+			foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+			{
+				var attr = m.GetCustomAttribute<DebugActionListAttribute>();
+				if (attr == null) continue;
+				if (m.GetParameters().Length != 0) continue;
+				if (!typeof(IEnumerable<DebugNamedAction>).IsAssignableFrom(m.ReturnType)) continue;
+				list.Add((string.IsNullOrWhiteSpace(attr.DisplayName) ? m.Name : attr.DisplayName, m));
+			}
+			return list;
+		}
 
         private List<(string label, MethodInfo method, DebugActionIntAttribute meta, int current)> GetDebugActionsIntCached(Core.System system)
         {

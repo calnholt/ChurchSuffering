@@ -231,11 +231,17 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             var endUi = endBtn?.GetComponent<UIElement>();
-            if (endUi != null && !endUi.IsHidden)
+            if (endUi != null)
             {
-                var guided = GuidedTutorialService.GetState(EntityManager);
-                endUi.IsInteractable = !frozen
-                    && (guided == null || GuidedTutorialDefinitions.AreActionRequirementsComplete(guided));
+                if (frozen)
+                {
+                    endUi.IsHidden = true;
+                    endUi.IsInteractable = false;
+                }
+                else if (!endUi.IsHidden)
+                {
+                    endUi.IsInteractable = true;
+                }
             }
         }
     }

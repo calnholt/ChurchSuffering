@@ -10,13 +10,14 @@ namespace Crusaders30XX.ECS.Objects.Cards
         private const string ModificationReason = "RelentlessStrike";
         private int BattleDamageBonus = 4;
 
+        private int BattleDamageBonusUpgrade = 4;
         public RelentlessStrike()
         {
             CardId = "relentless_strike";
             Name = "Relentless Strike";
             Target = "Enemy";
-            Text = "The first time you play this each battle, it goes to the bottom of your deck. It gains +4 damage for the rest of the battle.";
-            Animation = "Attack";
+            Text = $"The first time you play this each battle, it goes to the bottom of your deck. It gains +{GetBattleDamageBonus(IsUpgraded)} damage for the rest of the battle.";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 9;
             Block = 3;
             Cost = ["White", "Any"];
@@ -43,6 +44,15 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     AttackDamageValueService.ApplyDelta(card, BattleDamageBonus, ModificationReason);
                 }
             };
+            OnUpgrade = (entityManager, card) =>
+            {
+                Text = $"The first time you play this each battle, it goes to the bottom of your deck. It gains +{GetBattleDamageBonus(IsUpgraded)} damage for the rest of the battle.";
+            };
+        }
+
+        private int GetBattleDamageBonus(bool isUpgraded)
+        {
+            return isUpgraded ? BattleDamageBonus + BattleDamageBonusUpgrade : BattleDamageBonus;
         }
 
         public override void Initialize(EntityManager entityManager, Entity cardEntity)

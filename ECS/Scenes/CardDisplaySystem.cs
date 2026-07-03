@@ -12,7 +12,6 @@ using Crusaders30XX.ECS.Utils;
 using Crusaders30XX.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -21,14 +20,30 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
-        private readonly Dictionary<string, Texture2D> _textureCache = new();
-        private readonly Dictionary<(int w, int h, int r), Texture2D> _roundedRectCache = new();
-        private readonly Dictionary<(int w, int h, int rTL, int rTR, int rBR, int rBL), Texture2D> _perCornerRoundedRectCache = new();
+        private readonly ImageAssetService _imageAssets;
+        private readonly Dictionary<(string assetName, int artW, int artH, int artX, int artY, int cardW, int cardH, int radius), Texture2D> _clippedArtCache = new();
         private readonly Texture2D _pixelTexture;
         private SpriteFont _nameFont = FontSingleton.TitleFont;
         private SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
         private CardGeometrySettings _settings;
+
+        internal readonly struct CardDescriptionTextLayout
+        {
+            public CardDescriptionTextLayout(float contentX, float contentWidth, float wrapScale, int wrapMaxWidth, float drawScale)
+            {
+                ContentX = contentX;
+                ContentWidth = contentWidth;
+                WrapScale = wrapScale;
+                WrapMaxWidth = wrapMaxWidth;
+                DrawScale = drawScale;
+            }
+
+            public float ContentX { get; }
+            public float ContentWidth { get; }
+            public float WrapScale { get; }
+            public int WrapMaxWidth { get; }
+            public float DrawScale { get; }
+        }
 
         // Stripe
         [DebugEditable(DisplayName = "Stripe Width", Step = 1, Min = 0, Max = 30)]
@@ -73,6 +88,7 @@ namespace Crusaders30XX.ECS.Systems
         public float CostPipFlashHz { get; set; } = 0.3f;
 
         private float _elapsedTime;
+        private float _drawAlpha = 1f;
         private readonly Dictionary<CardType, Texture2D> _typeIconTextures = new();
 
         // Chip Layout
@@ -121,11 +137,11 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Content Pad Right", Step = 1, Min = 0, Max = 40)]
         public int ContentPadRight { get; set; } = 4;
         [DebugEditable(DisplayName = "Type Icon Scale", Step = 0.01f, Min = 0.01f, Max = 2.0f)]
-        public float TypeIconScale { get; set; } = 0.13f;
+        public float TypeIconScale { get; set; } = 0.06f;
         [DebugEditable(DisplayName = "Type Icon Alpha", Step = 0.01f, Min = 0.0f, Max = 1.0f)]
-        public float TypeIconAlpha { get; set; } = 0.3f;
-        [DebugEditable(DisplayName = "Type Icon Offset Y", Step = 1, Min = 0, Max = 200)]
-        public int TypeIconOffsetY { get; set; } = 20;
+        public float TypeIconAlpha { get; set; } = 0.5f;
+        [DebugEditable(DisplayName = "Type Icon Bottom Pad", Step = 1, Min = 0, Max = 120)]
+        public int TypeIconBottomPad { get; set; } = 8;
 
         // Name
         [DebugEditable(DisplayName = "Name Font Scale", Step = 0.01f, Min = 0.05f, Max = 1.0f)]
@@ -138,16 +154,24 @@ namespace Crusaders30XX.ECS.Systems
         // Description
         [DebugEditable(DisplayName = "Desc Font Scale", Step = 0.01f, Min = 0.03f, Max = 0.5f)]
         public float DescFontScale { get; set; } = 0.11f;
+        [DebugEditable(DisplayName = "Text Bg Padding X", Step = 1, Min = 0, Max = 30)]
+        public int TextBackgroundPaddingX { get; set; } = 5;
+        [DebugEditable(DisplayName = "Text Bg Padding Y", Step = 1, Min = 0, Max = 30)]
+        public int TextBackgroundPaddingY { get; set; } = 2;
+        [DebugEditable(DisplayName = "Text Bg Opacity", Step = 0.01f, Min = 0.0f, Max = 1.0f)]
+        public float TextBackgroundOpacity { get; set; } = 0.5f;
+        [DebugEditable(DisplayName = "Text Bg Border Radius", Step = 1, Min = 0, Max = 20)]
+        public int TextBackgroundBorderRadius { get; set; } = 0;
 
         // Art
         [DebugEditable(DisplayName = "Art Width", Step = 1, Min = 50, Max = 300)]
-        public int ArtWidth { get; set; } = 191;
+        public int ArtWidth { get; set; } = 204;
         [DebugEditable(DisplayName = "Art Height", Step = 1, Min = 50, Max = 300)]
-        public int ArtHeight { get; set; } = 166;
+        public int ArtHeight { get; set; } = 270;
         [DebugEditable(DisplayName = "Art Offset Right", Step = 1, Min = -60, Max = 60)]
-        public int ArtOffsetRight { get; set; } = -15;
+        public int ArtOffsetRight { get; set; } = -2;
         [DebugEditable(DisplayName = "Art Offset Bottom", Step = 1, Min = -60, Max = 60)]
-        public int ArtOffsetBottom { get; set; } = -10;
+        public int ArtOffsetBottom { get; set; } = 0;
 
         // Responsive chip scaling
         [DebugEditable(DisplayName = "Chip Scale With Title")]
@@ -249,6 +273,14 @@ namespace Crusaders30XX.ECS.Systems
             { CardData.CardColor.Black, new Color(51, 51, 51) },
         };
 
+        private static readonly Dictionary<CardData.CardColor, Color> TextBackgroundColors = new()
+        {
+            { CardData.CardColor.White, new Color(238, 233, 222) },
+            { CardData.CardColor.Red,   new Color(44, 10, 10) },
+            { CardData.CardColor.Black, new Color(8, 8, 8) },
+        };
+        private static readonly Color WeaponTextBackgroundColor = new Color(154, 112, 72);
+
         // BLK Chip Colors (solid fill)
         private static readonly Dictionary<CardData.CardColor, Color> BlkChipBgColors = new()
         {
@@ -331,14 +363,13 @@ namespace Crusaders30XX.ECS.Systems
             { CardData.CardColor.Black, new Color(136, 136, 136) },
         };
 
-        public CardDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public CardDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
-            _pixelTexture = new Texture2D(_graphicsDevice, 1, 1);
-            _pixelTexture.SetData(new[] { Color.White });
+            _imageAssets = imageAssets;
+            _pixelTexture = _imageAssets.GetPixel(Color.White);
 
             LoadTypeIconTextures();
             EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent);
@@ -370,6 +401,8 @@ namespace Crusaders30XX.ECS.Systems
         private float CW => GetSettings().CardWidth;
         private float CH => GetSettings().CardHeight;
 
+        private Color Tint(Color color) => color * _drawAlpha;
+
         private CardGeometrySettings GetSettings()
         {
             _settings ??= CardGeometryService.GetSettings(EntityManager) ?? new CardGeometrySettings
@@ -393,8 +426,8 @@ namespace Crusaders30XX.ECS.Systems
         private void DrawTextLocalScaled(Vector2 cc, float rot, Vector2 off, string txt, Color c, float sc, float os, SpriteFont font = null)
             => DrawCardTextRotatedSingleScaled(cc, rot, off, txt, c, sc, os, CW, CH, font);
 
-        private void DrawWrappedTextLocalScaled(Vector2 cc, float rot, Vector2 off, string txt, Color c, float sc, float os, SpriteFont font, float maxW)
-            => DrawCardTextWrappedRotatedScaled(cc, rot, off, txt, c, sc, os, font, maxW, CW, CH);
+        private void DrawWrappedLinesLocalScaled(Vector2 cc, float rot, Vector2 off, IReadOnlyList<string> lines, Color c, float sc, float os, SpriteFont font)
+            => DrawCardTextWrappedLinesRotatedScaled(cc, rot, off, lines, c, sc, os, font, CW, CH);
 
         private void DrawRectangleRotatedLocalScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, float width, float height, Color color, float visualScale, float cardW, float cardH)
         {
@@ -404,7 +437,7 @@ namespace Crusaders30XX.ECS.Systems
             float sin = (float)Math.Sin(rotation);
             var rotated = new Vector2(localX * cos - localY * sin, localX * sin + localY * cos);
             var world = cardCenter + rotated;
-            _spriteBatch.Draw(_pixelTexture, world, null, color, rotation, Vector2.Zero, new Vector2(width, height), SpriteEffects.None, 0f);
+            _spriteBatch.Draw(_pixelTexture, world, null, Tint(color), rotation, Vector2.Zero, new Vector2(width, height), SpriteEffects.None, 0f);
         }
 
         private void DrawTextureRotatedLocalScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, Texture2D texture, Vector2 targetSize, Color color, float visualScale, float cardW, float cardH)
@@ -417,7 +450,7 @@ namespace Crusaders30XX.ECS.Systems
             var rotated = new Vector2(localX * cos - localY * sin, localX * sin + localY * cos);
             var world = cardCenter + rotated;
             var scale = new Vector2(targetSize.X / texture.Width, targetSize.Y / texture.Height);
-            _spriteBatch.Draw(texture, world, null, color, rotation, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            _spriteBatch.Draw(texture, world, null, Tint(color), rotation, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
         private void DrawCardTextRotatedSingleScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, string text, Color color, float scale, float overallScale, float cardW, float cardH, SpriteFont font = null)
@@ -431,7 +464,7 @@ namespace Crusaders30XX.ECS.Systems
                 float sin = (float)Math.Sin(rotation);
                 var rotated = new Vector2(localX * cos - localY * sin, localX * sin + localY * cos);
                 var world = cardCenter + rotated;
-                _spriteBatch.DrawString(font, text, world, color, rotation, Vector2.Zero, scale, SpriteEffects.None, 0f);
+                _spriteBatch.DrawString(font, text, world, Tint(color), rotation, Vector2.Zero, scale, SpriteEffects.None, 0f);
             }
             catch (Exception ex)
             {
@@ -439,7 +472,7 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        private void DrawCardTextWrappedRotatedScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, string text, Color color, float scale, float overallScale, SpriteFont font, float maxWidth, float cardW, float cardH)
+        private void DrawCardTextWrappedLinesRotatedScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, IReadOnlyList<string> lines, Color color, float scale, float overallScale, SpriteFont font, float cardW, float cardH)
         {
             try
             {
@@ -448,14 +481,14 @@ namespace Crusaders30XX.ECS.Systems
                 float startLocalY = -cardH * overallScale / 2f + localOffsetFromTopLeft.Y;
 
                 float currentY = startLocalY;
-                foreach (var line in TextUtils.WrapText(font, text, scale, (int)maxWidth))
+                foreach (var line in lines)
                 {
                     var local = new Vector2(startLocalX, currentY);
                     float cos = (float)Math.Cos(rotation);
                     float sin = (float)Math.Sin(rotation);
                     var rotated = new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos);
                     var world = cardCenter + rotated;
-                    _spriteBatch.DrawString(font, line, world, color, rotation, Vector2.Zero, scale, SpriteEffects.None, 0f);
+                    _spriteBatch.DrawString(font, line, world, Tint(color), rotation, Vector2.Zero, scale, SpriteEffects.None, 0f);
                     currentY += lineHeight;
                 }
             }
@@ -465,75 +498,80 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
+        internal static CardDescriptionTextLayout CreateDescriptionTextLayout(
+            CardGeometrySettings settings,
+            float visualScale,
+            float descFontScale,
+            int contentMarginLeft,
+            int contentPadRight)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+
+            float unscaledContentWidth = Math.Max(1f, settings.CardWidth - contentMarginLeft - contentPadRight);
+            return new CardDescriptionTextLayout(
+                contentMarginLeft * visualScale,
+                unscaledContentWidth * visualScale,
+                descFontScale,
+                Math.Max(1, (int)Math.Round(unscaledContentWidth)),
+                descFontScale * visualScale);
+        }
+
         private Texture2D GetRoundedRectTexture(int width, int height, int radius)
         {
-            var key = (width, height, radius);
-            if (_roundedRectCache.TryGetValue(key, out var tex)) return tex;
-            var texture = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, width, height, radius);
-            _roundedRectCache[key] = texture;
-            return texture;
+            return _imageAssets.GetRoundedRect(width, height, radius);
         }
 
         private Texture2D GetPerCornerRoundedRectTexture(int width, int height, int rTL, int rTR, int rBR, int rBL)
         {
-            var key = (width, height, rTL, rTR, rBR, rBL);
-            if (_perCornerRoundedRectCache.TryGetValue(key, out var tex)) return tex;
-            var texture = RoundedRectTextureFactory.CreateRoundedRectPerCorner(_graphicsDevice, width, height, rTL, rTR, rBR, rBL);
-            _perCornerRoundedRectCache[key] = texture;
-            return texture;
+            return _imageAssets.GetRoundedRectPerCorner(width, height, rTL, rTR, rBR, rBL);
         }
 
         private Texture2D GetOrLoadTexture(string assetName)
         {
-            if (string.IsNullOrEmpty(assetName)) return null;
-            if (_textureCache.TryGetValue(assetName, out var tex) && tex != null) return tex;
-            try
-            {
-                var loaded = _content.Load<Texture2D>(assetName);
-                _textureCache[assetName] = loaded;
-                return loaded;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return _imageAssets.TryGetTexture(assetName);
         }
 
         // Event handlers
         private void OnCardRenderEvent(CardRenderEvent evt)
         {
-            var t = evt.Card.GetComponent<Transform>();
-            var ui = evt.Card.GetComponent<UIElement>();
-            EventManager.Publish(new HighlightRenderEvent { Entity = evt.Card, Transform = t, UI = ui });
-            DrawCard(evt.Card, evt.Position);
+            var transform = evt.Card.GetComponent<Transform>();
+            RenderCardWithLifecycle(
+                evt.Card,
+                evt.Position,
+                transform?.Scale.X ?? 1f,
+                transform?.Rotation ?? 0f);
         }
 
         private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
         {
-            var transform = evt.Card.GetComponent<Transform>();
-            Vector2 originalScale = transform?.Scale ?? Vector2.One;
-            if (transform != null)
+            _drawAlpha = MathHelper.Clamp(evt.Alpha, 0f, 1f);
+            using var clip = CardRenderClipScope.Apply(_graphicsDevice, evt.ClipRect);
+            try
             {
-                transform.Scale = new Vector2(evt.Scale, evt.Scale);
-                float originalRotation = transform.Rotation;
-                Vector2 originalPosition = transform.Position;
-                transform.Rotation = 0f;
-                transform.Position = evt.Position;
-                var t = evt.Card.GetComponent<Transform>();
-                var ui = evt.Card.GetComponent<UIElement>();
-                EventManager.Publish(new HighlightRenderEvent { Entity = evt.Card, Transform = t, UI = ui });
-                DrawCard(evt.Card, evt.Position);
-                transform.Scale = originalScale;
-                transform.Rotation = originalRotation;
-                transform.Position = originalPosition;
-                if (ui != null) ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
+                var transform = evt.Card.GetComponent<Transform>();
+                Vector2 originalScale = transform?.Scale ?? Vector2.One;
+                if (transform != null)
+                {
+                    transform.Scale = new Vector2(evt.Scale, evt.Scale);
+                    float originalRotation = transform.Rotation;
+                    Vector2 originalPosition = transform.Position;
+                    transform.Rotation = 0f;
+                    transform.Position = evt.Position;
+                    var ui = evt.Card.GetComponent<UIElement>();
+                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
+                    transform.Scale = originalScale;
+                    transform.Rotation = originalRotation;
+                    transform.Position = originalPosition;
+                    if (ui != null) ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
+                }
+                else
+                {
+                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
+                }
             }
-            else
+            finally
             {
-                var t = evt.Card.GetComponent<Transform>();
-                var ui = evt.Card.GetComponent<UIElement>();
-                EventManager.Publish(new HighlightRenderEvent { Entity = evt.Card, Transform = t, UI = ui });
-                DrawCard(evt.Card, evt.Position);
+                _drawAlpha = 1f;
             }
         }
 
@@ -546,21 +584,38 @@ namespace Crusaders30XX.ECS.Systems
                 transform.Scale = new Vector2(evt.Scale, evt.Scale);
                 Vector2 originalPosition = transform.Position;
                 transform.Position = evt.Position;
-                var t = evt.Card.GetComponent<Transform>();
                 var ui = evt.Card.GetComponent<UIElement>();
-                EventManager.Publish(new HighlightRenderEvent { Entity = evt.Card, Transform = t, UI = ui });
-                DrawCard(evt.Card, evt.Position);
+                RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, transform.Rotation);
                 transform.Scale = originalScale;
                 transform.Position = originalPosition;
                 if (ui != null) ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
             }
             else
             {
-                var t2 = evt.Card.GetComponent<Transform>();
-                var ui2 = evt.Card.GetComponent<UIElement>();
-                EventManager.Publish(new HighlightRenderEvent { Entity = evt.Card, Transform = t2, UI = ui2 });
-                DrawCard(evt.Card, evt.Position);
+                RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
             }
+        }
+
+        private void RenderCardWithLifecycle(Entity card, Vector2 position, float scale, float rotation)
+        {
+            var transform = card.GetComponent<Transform>();
+            var ui = card.GetComponent<UIElement>();
+            EventManager.Publish(new HighlightRenderEvent { Entity = card, Transform = transform, UI = ui });
+            EventManager.Publish(new CardBaseRenderStartedEvent
+            {
+                Card = card,
+                Position = position,
+                Scale = scale,
+                Rotation = rotation
+            });
+            DrawCard(card, position);
+            EventManager.Publish(new CardBaseRenderCompletedEvent
+            {
+                Card = card,
+                Position = position,
+                Scale = scale,
+                Rotation = rotation
+            });
         }
 
         public void DrawCard(Entity entity, Vector2 position)
@@ -597,7 +652,7 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch.Draw(bgTex,
                 position: cardCenter,
                 sourceRectangle: null,
-                color: bgColor,
+                color: Tint(bgColor),
                 rotation: rotation,
                 origin: new Vector2(bgTex.Width / 2f, bgTex.Height / 2f),
                 scale: Vector2.One,
@@ -633,58 +688,278 @@ namespace Crusaders30XX.ECS.Systems
             if (hasDef)
             {
                 DrawStatChips(cardCenter, rotation, vs, cc, entity, card, isColorless);
+                DrawTypeIconInChipColumn(cardCenter, rotation, vs, card);
             }
 
-            // 6. Type icon watermark + description (content area, below rule line, right of chips)
-            float contentX = ContentMarginLeft * vs;
-            float contentWidth = (settings.CardWidth - ContentMarginLeft - ContentPadRight) * vs;
+            // 6. Card art, then backed card text (content area, below rule line, right of chips)
+            var descLayout = CreateDescriptionTextLayout(settings, vs, DescFontScale, ContentMarginLeft, ContentPadRight);
+            float contentX = descLayout.ContentX;
             float contentTop = titleBandEndY + ContentPadTop * vs;
             float cursorY = contentTop;
 
             if (hasDef)
             {
-                DrawTypeIconWatermark(cardCenter, rotation, vs, card, contentX, contentTop, contentWidth);
+                DrawCardArt(cardCenter, rotation, vs, card);
             }
 
             if (hasDef)
             {
                 string desc = card.GetDisplayText();
-                var descColor = isColorless
-                    ? ColorlessPrimaryText
-                    : GetPaletteColor(NameTextColors, cc, new Color(26, 26, 26));
-                DrawWrappedTextLocalScaled(cardCenter, rotation, new Vector2(contentX, cursorY), desc, descColor, DescFontScale * vs, vs, _bodyFont, contentWidth);
-            }
-
-            // 7. Card Art
-            if (hasDef && !string.IsNullOrEmpty(card.CardId))
-            {
-                var artTex = GetOrLoadTexture($"CardArt/{card.CardId}");
-                if (artTex != null)
+                if (!string.IsNullOrWhiteSpace(desc))
                 {
-                    float artW = ArtWidth * vs;
-                    float artH = ArtHeight * vs;
-
-                    float texAspect = artTex.Width / (float)artTex.Height;
-                    float boxAspect = artW / artH;
-                    if (texAspect > boxAspect) { artH = artW / texAspect; }
-                    else { artW = artH * texAspect; }
-
-                    float artLocalX = sw - artW + ArtOffsetRight * vs;
-                    float artLocalY = sh - artH + ArtOffsetBottom * vs;
-                    DrawTextureLocalScaled(cardCenter, rotation, new Vector2(artLocalX, artLocalY), artTex, new Vector2(artW, artH), Color.White, vs);
+                    var descLines = TextUtils.WrapText(_bodyFont, desc, descLayout.WrapScale, descLayout.WrapMaxWidth);
+                    DrawTextBackground(cardCenter, rotation, vs, cc, card, isColorless, descLines, descLayout.DrawScale, contentX, cursorY);
+                    var descColor = isColorless
+                        ? ColorlessPrimaryText
+                        : GetPaletteColor(NameTextColors, cc, new Color(26, 26, 26));
+                    DrawWrappedLinesLocalScaled(cardCenter, rotation, new Vector2(contentX, cursorY), descLines, descColor, descLayout.DrawScale, vs, _bodyFont);
                 }
             }
         }
 
-        private void DrawTypeIconWatermark(Vector2 cardCenter, float rotation, float vs, CardBase card,
-            float contentX, float contentTop, float contentWidth)
+        private void DrawCardArt(Vector2 cardCenter, float rotation, float vs, CardBase card)
+        {
+            if (string.IsNullOrEmpty(card.CardId)) return;
+
+            string assetName = $"CardArt/{card.CardId}";
+            var artTex = GetOrLoadTexture(assetName);
+            if (artTex == null) return;
+
+            float artW = ArtWidth;
+            float artH = ArtHeight;
+
+            float texAspect = artTex.Width / (float)artTex.Height;
+            float boxAspect = artW / artH;
+            if (texAspect > boxAspect) { artH = artW / texAspect; }
+            else { artW = artH * texAspect; }
+
+            float artLocalX = GetSettings().CardWidth - artW + ArtOffsetRight;
+            float artLocalY = GetSettings().CardHeight - artH + ArtOffsetBottom;
+            var clippedArt = GetClippedCardArtTexture(assetName, artTex, artW, artH, artLocalX, artLocalY);
+
+            DrawTextureLocalScaled(
+                cardCenter,
+                rotation,
+                new Vector2(artLocalX * vs, artLocalY * vs),
+                clippedArt,
+                new Vector2(artW * vs, artH * vs),
+                Color.White,
+                vs);
+        }
+
+        private Texture2D GetClippedCardArtTexture(string assetName, Texture2D source, float artW, float artH, float artLocalX, float artLocalY)
+        {
+            var settings = GetSettings();
+            int texW = Math.Max(1, (int)Math.Round(artW));
+            int texH = Math.Max(1, (int)Math.Round(artH));
+            int artX = (int)Math.Round(artLocalX);
+            int artY = (int)Math.Round(artLocalY);
+            int cardW = Math.Max(1, settings.CardWidth);
+            int cardH = Math.Max(1, settings.CardHeight);
+            int radius = Math.Max(0, settings.CardCornerRadius);
+            var key = (assetName, texW, texH, artX, artY, cardW, cardH, radius);
+            if (_clippedArtCache.TryGetValue(key, out var cached)) return cached;
+
+            var sourceData = new Color[source.Width * source.Height];
+            source.GetData(sourceData);
+
+            var clippedData = new Color[texW * texH];
+            for (int y = 0; y < texH; y++)
+            {
+                for (int x = 0; x < texW; x++)
+                {
+                    float sourceX = texW == 1 ? 0f : x * (source.Width - 1f) / (texW - 1f);
+                    float sourceY = texH == 1 ? 0f : y * (source.Height - 1f) / (texH - 1f);
+                    Color sourceColor = SampleBilinear(sourceData, source.Width, source.Height, sourceX, sourceY);
+                    float cardX = artLocalX + (x + 0.5f) * artW / texW;
+                    float cardY = artLocalY + (y + 0.5f) * artH / texH;
+                    float alpha = GetRoundedCardAlpha(cardX, cardY, cardW, cardH, radius);
+                    clippedData[y * texW + x] = ApplyAlpha(sourceColor, alpha);
+                }
+            }
+
+            var texture = new Texture2D(_graphicsDevice, texW, texH, true, SurfaceFormat.Color);
+            texture.SetData(0, null, clippedData, 0, clippedData.Length);
+            SetMipData(texture, clippedData, texW, texH);
+            _clippedArtCache[key] = texture;
+            return texture;
+        }
+
+        private static void SetMipData(Texture2D texture, Color[] baseData, int baseWidth, int baseHeight)
+        {
+            var previousData = baseData;
+            int previousWidth = baseWidth;
+            int previousHeight = baseHeight;
+
+            for (int level = 1; level < texture.LevelCount; level++)
+            {
+                int width = Math.Max(1, previousWidth / 2);
+                int height = Math.Max(1, previousHeight / 2);
+                var data = DownsamplePremultiplied(previousData, previousWidth, previousHeight, width, height);
+                texture.SetData(level, null, data, 0, data.Length);
+
+                previousData = data;
+                previousWidth = width;
+                previousHeight = height;
+            }
+        }
+
+        private static Color[] DownsamplePremultiplied(Color[] source, int sourceWidth, int sourceHeight, int width, int height)
+        {
+            var result = new Color[width * height];
+
+            for (int y = 0; y < height; y++)
+            {
+                int yStart = y * sourceHeight / height;
+                int yEnd = Math.Max(yStart + 1, (y + 1) * sourceHeight / height);
+
+                for (int x = 0; x < width; x++)
+                {
+                    int xStart = x * sourceWidth / width;
+                    int xEnd = Math.Max(xStart + 1, (x + 1) * sourceWidth / width);
+
+                    int r = 0;
+                    int g = 0;
+                    int b = 0;
+                    int a = 0;
+                    int count = 0;
+                    for (int sy = yStart; sy < yEnd; sy++)
+                    {
+                        for (int sx = xStart; sx < xEnd; sx++)
+                        {
+                            Color color = source[sy * sourceWidth + sx];
+                            r += color.R;
+                            g += color.G;
+                            b += color.B;
+                            a += color.A;
+                            count++;
+                        }
+                    }
+
+                    result[y * width + x] = new Color(
+                        (byte)(r / count),
+                        (byte)(g / count),
+                        (byte)(b / count),
+                        (byte)(a / count));
+                }
+            }
+
+            return result;
+        }
+
+        private static Color SampleBilinear(Color[] data, int width, int height, float x, float y)
+        {
+            int x0 = Math.Clamp((int)Math.Floor(x), 0, width - 1);
+            int y0 = Math.Clamp((int)Math.Floor(y), 0, height - 1);
+            int x1 = Math.Clamp(x0 + 1, 0, width - 1);
+            int y1 = Math.Clamp(y0 + 1, 0, height - 1);
+            float tx = MathHelper.Clamp(x - x0, 0f, 1f);
+            float ty = MathHelper.Clamp(y - y0, 0f, 1f);
+
+            Vector4 c00 = data[y0 * width + x0].ToVector4();
+            Vector4 c10 = data[y0 * width + x1].ToVector4();
+            Vector4 c01 = data[y1 * width + x0].ToVector4();
+            Vector4 c11 = data[y1 * width + x1].ToVector4();
+            Vector4 top = Vector4.Lerp(c00, c10, tx);
+            Vector4 bottom = Vector4.Lerp(c01, c11, tx);
+            return new Color(Vector4.Lerp(top, bottom, ty));
+        }
+
+        private static float GetRoundedCardAlpha(float x, float y, int width, int height, int radius)
+        {
+            int r = Math.Max(0, Math.Min(radius, Math.Min(width, height) / 2));
+            if (x < 0f || y < 0f || x >= width || y >= height) return 0f;
+            if (r <= 0) return 1f;
+
+            bool inCorner = false;
+            float cx = 0f;
+            float cy = 0f;
+            if (x < r && y < r)
+            {
+                inCorner = true;
+                cx = r - 0.5f;
+                cy = r - 0.5f;
+            }
+            else if (x >= width - r && y < r)
+            {
+                inCorner = true;
+                cx = width - r - 0.5f;
+                cy = r - 0.5f;
+            }
+            else if (x >= width - r && y >= height - r)
+            {
+                inCorner = true;
+                cx = width - r - 0.5f;
+                cy = height - r - 0.5f;
+            }
+            else if (x < r && y >= height - r)
+            {
+                inCorner = true;
+                cx = r - 0.5f;
+                cy = height - r - 0.5f;
+            }
+
+            if (!inCorner) return 1f;
+
+            float dx = x - cx;
+            float dy = y - cy;
+            float distance = MathF.Sqrt(dx * dx + dy * dy);
+            if (distance <= r - 0.5f) return 1f;
+            if (distance >= r + 0.5f) return 0f;
+            return MathHelper.Clamp(r + 0.5f - distance, 0f, 1f);
+        }
+
+        private static Color ApplyAlpha(Color color, float alpha)
+        {
+            alpha = MathHelper.Clamp(alpha, 0f, 1f);
+            return new Color(
+                (byte)Math.Clamp((int)MathF.Round(color.R * alpha), 0, 255),
+                (byte)Math.Clamp((int)MathF.Round(color.G * alpha), 0, 255),
+                (byte)Math.Clamp((int)MathF.Round(color.B * alpha), 0, 255),
+                (byte)Math.Clamp((int)MathF.Round(color.A * alpha), 0, 255));
+        }
+
+        private void DrawTextBackground(Vector2 cardCenter, float rotation, float vs,
+            CardData.CardColor cc, CardBase card, bool isColorless, IReadOnlyList<string> lines, float textScale,
+            float textX, float textY)
+        {
+            float maxLineWidth = lines.Select(line => _bodyFont.MeasureString(line).X * textScale).DefaultIfEmpty(0f).Max();
+            if (maxLineWidth <= 0f) return;
+
+            float padX = TextBackgroundPaddingX * vs;
+            float padY = TextBackgroundPaddingY * vs;
+            float bgX = Math.Max(0f, textX - padX);
+            float bgY = Math.Max(0f, textY - padY);
+            float cardRight = GetSettings().CardWidth * vs;
+            float bgW = Math.Max(1f, cardRight - bgX - ContentPadRight * vs);
+            float bgH = lines.Count * _bodyFont.LineSpacing * textScale + padY * 2f;
+
+            int texW = Math.Max(1, (int)Math.Ceiling(bgW));
+            int texH = Math.Max(1, (int)Math.Ceiling(bgH));
+            int radius = Math.Min(
+                Math.Max(0, (int)Math.Round(TextBackgroundBorderRadius * vs)),
+                Math.Min(texW, texH) / 2);
+            var bgTex = GetRoundedRectTexture(texW, texH, radius);
+            bool usesWeaponPalette = (card.IsWeapon || card.IsToken) && !isColorless;
+            var bgColor = usesWeaponPalette
+                ? WeaponTextBackgroundColor
+                : isColorless
+                ? ColorlessSurface
+                : GetPaletteColor(TextBackgroundColors, cc, new Color(8, 8, 8));
+
+            DrawTextureLocalScaled(cardCenter, rotation, new Vector2(bgX, bgY), bgTex, new Vector2(bgW, bgH),
+                bgColor * TextBackgroundOpacity, vs);
+        }
+
+        private void DrawTypeIconInChipColumn(Vector2 cardCenter, float rotation, float vs, CardBase card)
         {
             if (!_typeIconTextures.TryGetValue(card.Type, out var tex) || tex == null) return;
 
             float iconW = tex.Width * TypeIconScale * vs;
             float iconH = tex.Height * TypeIconScale * vs;
-            float iconX = contentX + (contentWidth - iconW) / 2f;
-            float iconY = contentTop + TypeIconOffsetY * vs;
+            float chipColumnW = ChipWidth * vs;
+            float iconX = ChipColumnX * vs + (chipColumnW - iconW) / 2f;
+            float iconY = GetSettings().CardHeight * vs - TypeIconBottomPad * vs - iconH;
             var iconColor = Color.White * TypeIconAlpha;
             DrawTextureLocalScaled(cardCenter, rotation, new Vector2(iconX, iconY), tex, new Vector2(iconW, iconH), iconColor, vs);
         }
@@ -814,12 +1089,12 @@ namespace Crusaders30XX.ECS.Systems
             float diamondRotation = rotation + MathHelper.PiOver4;
             var drawScale = new Vector2(size / texSize, size / texSize);
 
-            color *= alpha;
+            color *= alpha * _drawAlpha;
 
             if (showOutline)
             {
                 // Draw outline at full size, then fill at reduced scale
-                var outlineColor = (isColorless
+                var outlineColor = Tint(isColorless
                     ? Color.Black
                     : GetPaletteColor(CostPipOutlineColors, cc, Color.Black)) * alpha;
                 _spriteBatch.Draw(tex, world, null, outlineColor, diamondRotation,
@@ -1011,7 +1286,7 @@ namespace Crusaders30XX.ECS.Systems
                     textColor = Color.White;
                     break;
             }
-            if (isColorless && variant != ChipVariant.ATK)
+            if (isColorless && variant is ChipVariant.AP or ChipVariant.FREE)
             {
                 bgColor = variant == ChipVariant.FREE
                     ? Color.Transparent
@@ -1051,12 +1326,8 @@ namespace Crusaders30XX.ECS.Systems
                 case ChipVariant.BLK:
                 {
                     // Solid fill — steel blue tint
-                    Color bgColor = isColorless
-                        ? Color.Lerp(ColorlessSurface, ColorlessMutedText, 0.18f)
-                        : GetPaletteColor(BlkChipBgColors, cc, new Color(42, 74, 94));
-                    Color valColor = isColorless
-                        ? ColorlessPrimaryText
-                        : GetPaletteColor(BlkChipTextColors, cc, new Color(176, 212, 232));
+                    Color bgColor = GetPaletteColor(BlkChipBgColors, cc, new Color(42, 74, 94));
+                    Color valColor = GetPaletteColor(BlkChipTextColors, cc, new Color(176, 212, 232));
 
                     var tex = GetPerCornerRoundedRectTexture((int)chipW, (int)chipH, rTL, rTR, rBR, rBL);
                     DrawTextureLocalScaled(cardCenter, rotation, new Vector2(x, y), tex, new Vector2(chipW, chipH), bgColor, vs);
@@ -1211,12 +1482,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             try
             {
-                int baseDamage = Math.Max(0, card.Damage);
-                try
-                {
-                    baseDamage = Math.Max(0, baseDamage + card.GetConditionalDamage(EntityManager, entity) + AttackDamageValueService.GetTotalDelta(entity));
-                }
-                catch { baseDamage = Math.Max(0, card.Damage); }
+                int baseDamage = CardStatModifierService.GetCardDamage(EntityManager, entity, CardStatQueryMode.Preview).TotalValue;
 
                 int finalDamage = baseDamage;
                 try

@@ -107,7 +107,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (top != null)
 			{
-				string text = TooltipTextService.BuildCardTooltip(top.E, top.UI.Tooltip);
+				string text = TooltipTextService.BuildCardTooltip(top.E, top.UI.Tooltip, EntityManager);
 				Rectangle anchorBounds = TransformResolverService.ResolveUIBounds(
 					EntityManager,
 					top.E,

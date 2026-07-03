@@ -29,6 +29,9 @@ public class BrittleDisplaySystem : Core.System
     private bool _failed;
     private bool _hasCapture;
     private Entity _capturedCard;
+    private Vector2 _capturedCardCenter;
+    private float _capturedCardScale = 1f;
+    private float _capturedCardRotation;
     private float _timeSeconds;
 
     [DebugEditable(DisplayName = "Chunk Size Px", Step = 1f, Min = 4f, Max = 80f)]
@@ -40,10 +43,10 @@ public class BrittleDisplaySystem : Core.System
     [DebugEditable(DisplayName = "Fall Fraction", Step = 0.01f, Min = 0f, Max = 1f)]
     public float FallFraction { get; set; } = 0.15f;
 
-    [DebugEditable(DisplayName = "Max Fall", Step = 0.5f, Min = 0f, Max = 40f)]
+    [DebugEditable(DisplayName = "Max Fall", Step = 0.5f, Min = 0f, Max = 12f)]
     public float MaxFall { get; set; } = 12f;
 
-    [DebugEditable(DisplayName = "Max Drift", Step = 0.1f, Min = 0f, Max = 8f)]
+    [DebugEditable(DisplayName = "Max Drift", Step = 0.1f, Min = 0f, Max = 2f)]
     public float MaxDrift { get; set; } = 1.2f;
 
     [DebugEditable(DisplayName = "Edge Glow Amount", Step = 0.05f, Min = 0f, Max = 2f)]
@@ -59,12 +62,8 @@ public class BrittleDisplaySystem : Core.System
         _spriteBatch = spriteBatch;
         _content = content;
 
-        EventManager.Subscribe<CardRenderEvent>(OnCardRenderPre, PreRenderPriority);
-        EventManager.Subscribe<CardRenderEvent>(OnCardRenderPost, PostRenderPriority);
-        EventManager.Subscribe<CardRenderScaledEvent>(OnCardRenderScaledPre, PreRenderPriority);
-        EventManager.Subscribe<CardRenderScaledEvent>(OnCardRenderScaledPost, PostRenderPriority);
-        EventManager.Subscribe<CardRenderScaledRotatedEvent>(OnCardRenderScaledRotatedPre, PreRenderPriority);
-        EventManager.Subscribe<CardRenderScaledRotatedEvent>(OnCardRenderScaledRotatedPost, PostRenderPriority);
+        EventManager.Subscribe<CardBaseRenderStartedEvent>(OnCardBaseRenderStarted, PreRenderPriority);
+        EventManager.Subscribe<CardBaseRenderCompletedEvent>(OnCardBaseRenderCompleted, PostRenderPriority);
         EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCachesEvent);
     }
 
@@ -94,37 +93,21 @@ public class BrittleDisplaySystem : Core.System
         _capturedCard = null;
     }
 
-    private void OnCardRenderPre(CardRenderEvent evt)
+    private void OnCardBaseRenderStarted(CardBaseRenderStartedEvent evt)
     {
-        BeginBrittleRender(evt.Card);
+        BeginBrittleRender(
+            evt.Card,
+            evt.Position,
+            evt.Scale,
+            evt.Rotation);
     }
 
-    private void OnCardRenderPost(CardRenderEvent evt)
-    {
-        EndBrittleRender(evt.Card);
-    }
-
-    private void OnCardRenderScaledPre(CardRenderScaledEvent evt)
-    {
-        BeginBrittleRender(evt.Card);
-    }
-
-    private void OnCardRenderScaledPost(CardRenderScaledEvent evt)
+    private void OnCardBaseRenderCompleted(CardBaseRenderCompletedEvent evt)
     {
         EndBrittleRender(evt.Card);
     }
 
-    private void OnCardRenderScaledRotatedPre(CardRenderScaledRotatedEvent evt)
-    {
-        BeginBrittleRender(evt.Card);
-    }
-
-    private void OnCardRenderScaledRotatedPost(CardRenderScaledRotatedEvent evt)
-    {
-        EndBrittleRender(evt.Card);
-    }
-
-    private void BeginBrittleRender(Entity card)
+    private void BeginBrittleRender(Entity card, Vector2 position, float scale, float rotation)
     {
         _hasCapture = false;
         _capturedCard = null;
@@ -133,18 +116,28 @@ public class BrittleDisplaySystem : Core.System
         if (!EnsureLoaded()) return;
         if (!EnsureTargets()) return;
 
-        var currentTargets = _graphicsDevice.GetRenderTargets();
-        if (!TryGetPrimaryRenderTarget(currentTargets, out var currentTarget)) return;
+        if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
+                _graphicsDevice,
+                out var currentTargets,
+                out var currentTarget)) return;
 
-        var state = CaptureSpriteBatchState();
+        var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
         _spriteBatch.End();
 
-        CopyRenderTarget(currentTarget, _beforeCardTarget);
-        RestoreRenderTargets(currentTargets);
-        RestoreSpriteBatchState(state);
+        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, _beforeCardTarget);
+        SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, currentTargets);
+        SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
 
         _hasCapture = true;
         _capturedCard = card;
+        _capturedCardScale = Math.Max(0.001f, scale);
+        _capturedCardRotation = rotation;
+        _capturedCardCenter = CardGeometryService.GetVisualGeometry(
+            EntityManager,
+            card,
+            position,
+            _capturedCardScale,
+            rotation).Center;
     }
 
     private void EndBrittleRender(Entity card)
@@ -162,16 +155,21 @@ public class BrittleDisplaySystem : Core.System
             return;
         }
 
-        var currentTargets = _graphicsDevice.GetRenderTargets();
-        if (!TryGetPrimaryRenderTarget(currentTargets, out var currentTarget)) return;
+        if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
+                _graphicsDevice,
+                out var currentTargets,
+                out var currentTarget)) return;
 
-        var state = CaptureSpriteBatchState();
+        var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
         _spriteBatch.End();
 
-        CopyRenderTarget(currentTarget, _afterCardTarget);
+        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, _afterCardTarget);
 
         _overlay.Time = _timeSeconds;
         _overlay.BackgroundTexture = _beforeCardTarget;
+        _overlay.CardCenter = _capturedCardCenter;
+        _overlay.CardScale = _capturedCardScale;
+        _overlay.CardRotation = _capturedCardRotation;
         _overlay.ChunkSizePx = ChunkSizePx;
         _overlay.MaskThreshold = MaskThreshold;
         _overlay.FallFraction = FallFraction;
@@ -180,14 +178,14 @@ public class BrittleDisplaySystem : Core.System
         _overlay.EdgeGlowAmount = EdgeGlowAmount;
         _overlay.HoleDarken = HoleDarken;
 
-        RestoreRenderTargets(currentTargets);
+        SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, currentTargets);
         _graphicsDevice.Clear(Color.Transparent);
 
         _overlay.Begin(_spriteBatch);
         _overlay.Draw(_spriteBatch, _afterCardTarget);
         _overlay.End(_spriteBatch);
 
-        RestoreSpriteBatchState(state);
+        SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
     }
 
     private bool ShouldRender(Entity card)
@@ -195,7 +193,8 @@ public class BrittleDisplaySystem : Core.System
         return ShaderRuntimeOptions.ShadersEnabled &&
             !_failed &&
             card != null &&
-            card.GetComponent<Brittle>() != null;
+            card.GetComponent<Brittle>() != null &&
+            card.GetComponent<SuppressCardVisualEffects>() == null;
     }
 
     private bool HasAnyBrittleCards()
@@ -256,76 +255,4 @@ public class BrittleDisplaySystem : Core.System
         return true;
     }
 
-    private static bool TryGetPrimaryRenderTarget(RenderTargetBinding[] targets, out RenderTarget2D renderTarget)
-    {
-        renderTarget = null;
-        if (targets == null || targets.Length == 0)
-        {
-            return false;
-        }
-
-        renderTarget = targets[0].RenderTarget as RenderTarget2D;
-        return renderTarget != null;
-    }
-
-    private void CopyRenderTarget(Texture2D source, RenderTarget2D destination)
-    {
-        _graphicsDevice.SetRenderTarget(destination);
-        _graphicsDevice.Clear(Color.Transparent);
-        _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
-        _spriteBatch.Draw(source, _graphicsDevice.Viewport.Bounds, Color.White);
-        _spriteBatch.End();
-    }
-
-    private SpriteBatchState CaptureSpriteBatchState()
-    {
-        return new SpriteBatchState(
-            _graphicsDevice.BlendState,
-            _graphicsDevice.SamplerStates[0],
-            _graphicsDevice.DepthStencilState,
-            _graphicsDevice.RasterizerState,
-            _graphicsDevice.ScissorRectangle);
-    }
-
-    private void RestoreSpriteBatchState(SpriteBatchState state)
-    {
-        _graphicsDevice.ScissorRectangle = state.ScissorRectangle;
-        _spriteBatch.Begin(
-            SpriteSortMode.Immediate,
-            state.BlendState,
-            state.SamplerState,
-            state.DepthStencilState,
-            state.RasterizerState
-        );
-    }
-
-    private void RestoreRenderTargets(RenderTargetBinding[] targets)
-    {
-        if (targets != null && targets.Length > 0)
-        {
-            _graphicsDevice.SetRenderTargets(targets);
-        }
-        else
-        {
-            _graphicsDevice.SetRenderTarget(null);
-        }
-    }
-
-    private readonly struct SpriteBatchState
-    {
-        public SpriteBatchState(BlendState blendState, SamplerState samplerState, DepthStencilState depthStencilState, RasterizerState rasterizerState, Rectangle scissorRectangle)
-        {
-            BlendState = blendState;
-            SamplerState = samplerState;
-            DepthStencilState = depthStencilState;
-            RasterizerState = rasterizerState;
-            ScissorRectangle = scissorRectangle;
-        }
-
-        public BlendState BlendState { get; }
-        public SamplerState SamplerState { get; }
-        public DepthStencilState DepthStencilState { get; }
-        public RasterizerState RasterizerState { get; }
-        public Rectangle ScissorRectangle { get; }
-    }
 }

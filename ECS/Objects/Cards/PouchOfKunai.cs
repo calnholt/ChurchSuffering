@@ -12,15 +12,15 @@ namespace Crusaders30XX.ECS.Objects.Cards
         private int MinKunai = 2;
         private int MaxKunai = 4;
 
-        private int MinKunaiUpgrade = 3;
+        private int MinKunaiUpgrade = 1;
         public PouchOfKunai()
         {
             CardId = "pouch_of_kunai";
             Name = "Pouch of Kunai";
             Target = "Player";
             Text = $"Put {GetMinKunai(IsUpgraded)} to {GetMaxKunai(IsUpgraded)} Kunai cards in your hand.";
-            Cost = ["White"];
-            Animation = "Buff";
+            Cost = ["Black"];
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
 

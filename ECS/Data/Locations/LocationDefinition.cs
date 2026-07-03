@@ -41,7 +41,6 @@ namespace Crusaders30XX.ECS.Data.Locations
 	{
 		public string id { get; set; }
 		public string type { get; set; }
-		public EnemyDifficulty difficulty { get; set; } = EnemyDifficulty.Easy;
 		public List<EnemyModification> modifications { get; set; } = new List<EnemyModification>();
 	}
 
@@ -59,5 +58,4 @@ namespace Crusaders30XX.ECS.Data.Locations
 		public bool isPurchased { get; set; }
 	}
 }
-
 

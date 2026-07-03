@@ -1,6 +1,7 @@
 using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Events;
 
 namespace Crusaders30XX.ECS.Objects.Equipment
@@ -19,6 +20,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
     public CardData.CardColor Color { get; set; }
     public EquipmentSlot Slot { get; set; }
     public Entity EquipmentEntity { get; set; }
+    public VisualEffectRecipe ActivationEffectRecipe { get; protected set; }
 
     public virtual void Initialize(EntityManager entityManager, Entity equipmentEntity) {
       EntityManager = entityManager;
@@ -53,6 +55,11 @@ namespace Crusaders30XX.ECS.Objects.Equipment
 
     public Action<EntityManager, Entity> OnActivate { get; protected set; } = (entityManager, entity) => { };
     public Func<bool> CanActivate { get; protected set; } = () => true;
+
+    protected static VisualEffectRecipe DefensiveGuardEffect()
+    {
+      return VisualEffectPresets.DefensiveGuard();
+    }
 
   }
 

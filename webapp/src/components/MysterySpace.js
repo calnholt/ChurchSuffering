@@ -60,15 +60,11 @@ export class MysterySpace extends HTMLElement {
     const unavailable = !expired && !active;
     const disabled = expired || !active;
     const leavesTiming = getLeavesTiming(slot, state);
-    const windowLabel = `T${slot.windowStart}-${slot.windowEnd}`;
 
     const compactHtml = `
       <span class="space-card-compact__glyph">?</span>
-      <span class="space-card-compact__title">Mystery</span>
+      <span class="space-card-compact__title">Event</span>
       <span class="space-card-compact__meta">
-        <span class="space-card-compact__meta-primary">
-          <span class="space-card-compact__window">${windowLabel}</span>
-        </span>
         ${spaceTimeBlockMarkup(slot.clickCost, leavesTiming)}
       </span>
     `;

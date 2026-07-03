@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Factories;
 
 namespace Crusaders30XX.ECS.Services
@@ -14,13 +15,13 @@ namespace Crusaders30XX.ECS.Services
 		{
 			"demon",
 			"mummy",
-			// "ninja",
+			"earth_demon",
 			"ogre",
 			"skeleton",
 			"skeletal_archer",
 			"spider",
 			"succubus",
-			"cactus",
+			"thornreaver",
 			"dust_wuurm",
 			"sorcerer",
 			"ice_demon",
@@ -29,13 +30,14 @@ namespace Crusaders30XX.ECS.Services
 			"fire_skeleton",
 			"berserker",
 			"shadow",
-			// "medusa",
 			"wyvern",
-			// "blood_martyr",
 			"sand_golem",
 			"fallen_shepherd",
+			// "medusa",
+			// "blood_martyr",
 			// "sniper", // marksman - disabled from run encounters
 			// "training_demon", // test-fight only
+			// "ninja",
 		};
 
 		public static string ToAssetName(string enemyId)
@@ -58,9 +60,9 @@ namespace Crusaders30XX.ECS.Services
 				.Where(entry => entry.Value != null
 					&& !entry.Value.IsBoss
 					&& !entry.Value.IsTutorialOnly
-					&& HasPortrait(entry.Key)
+					&& HasPortrait(entry.Key.ToKey())
 				)
-				.Select(entry => entry.Key)
+				.Select(entry => entry.Key.ToKey())
 				.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
 				.ToList();
 		}

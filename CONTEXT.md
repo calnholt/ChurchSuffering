@@ -4,15 +4,15 @@ Terms only. No implementation details.
 
 ## Run
 
-A single playthrough from WayStation Depart through the procedurally generated combat map until victory, failure, or abandon. A save may hold one active run or no active run.
+A single playthrough from WayStation Depart through the **Climb** until victory, failure, or abandon. A save may hold one active run or no active run.
 
 ## Fresh profile
 
-A save containing only **meta** progress. It has no active run, run map, deck, gold, loadout, inventory, or queued encounter. The **Guided Tutorial** may run from a fresh profile, but only WayStation Depart creates the first run.
+A save containing only **meta** progress. It has no active run, Climb, deck, gold, loadout, inventory, or queued encounter. The **Guided Tutorial** may run from a fresh profile, but only WayStation Depart creates the first run.
 
 ## Guided Tutorial
 
-A one-time, two-battle instructional sequence launched from the title screen before any run exists. It is meta progression and exists outside run, quest-node, and queued-encounter lifecycles. Interruption restarts the sequence from its opening dialogue and first battle. Completion transitions directly to WayStation.
+A one-time, two-battle instructional sequence launched from the title screen before any run exists. It is meta progression and exists outside run, Climb encounter, and queued-encounter lifecycles. Interruption restarts the sequence from its opening dialogue and first battle. Completion transitions directly to WayStation.
 
 ## Tutorial battle
 
@@ -28,7 +28,7 @@ An enemy classification reserved for the **Guided Tutorial**. Tutorial enemies c
 
 ## Active run
 
-A run whose map, deck, gold, inventory, and run-scoped state exist in the save. WayStation Depart creates and activates a run before applying the selected setup.
+A run whose Climb state, deck, gold, inventory, and run-scoped state exist in the save. WayStation Depart creates and activates a run before applying the selected setup.
 
 ## Inactive run
 
@@ -36,25 +36,25 @@ The persisted state after run victory, run failure, or run abandon. Meta remains
 
 ## Run-long applied passive
 
-A debuff or status on the player that lasts for the whole **run**: it survives leaving battle, visiting the location hub, shopping, and starting other **quest nodes**, until **run failure**, **quest abandon**, or **new run start**. Examples: Frostbite, Scar, Bleed, Shackled (see implementation list `GetRunLongPassives`). Scar stacks persist across quest nodes; when the player leaves battle after completing a quest node, one scar stack is removed and max HP is restored by that amount.
+A debuff or status on the player that lasts for the whole **run**: it survives leaving battle, visiting the Climb, shopping, and starting other **Climb encounters**, until **run failure**, **run abandon**, or **new run start**. Examples: Frostbite, Scar, Bleed, Shackled (see implementation list `GetRunLongPassives`). Gaining Scar immediately lowers max HP by that amount. At battle start, one Scar stack is removed, but max HP is not restored in that battle; the next battle recalculates max HP from the remaining Scar stacks.
 
 _Avoid_: Quest passive (when meaning run-long; use **run-long applied passive**)
 
-## Quest-scoped applied passive
+## Encounter-scoped applied passive
 
-A debuff or status on the player tied to the current **quest node** attempt: it persists across **queued encounters** within that node, but is removed when the player leaves the battle scene to the location hub, shop, or other non-battle scene. It is not written to the save file.
+A debuff or status on the player tied to the current **Climb encounter** attempt: it persists across **queued encounters** within that encounter, but is removed when the player leaves the battle scene to the Climb, shop, or other non-battle scene. It is not written to the save file.
 
-Examples: Penance, Webbing, Fear, Enflamed (see implementation list `GetQuestPassives`).
+Examples: Webbing, Fear, Enflamed (see implementation list `GetQuestPassives`).
 
 _Avoid_: Quest passive (when meaning run-long; use **run-long applied passive**)
 
 ## Queued encounter
 
-One enemy fight in the sequential battle queue for a **quest node** (`QueuedEvents` advances one step per **queued encounter**). A quest node may have several queued encounters before the player returns to the location hub.
+One enemy fight in the sequential battle queue for a **Climb encounter** (`QueuedEvents` advances one step per **queued encounter**). A Climb encounter may have several queued encounters before the player returns to the Climb.
 
-**Temperance** built during one queued encounter carries to the next encounter in the same quest node. **Temperance** resets to zero when the player leaves the battle scene (e.g. return to the location hub). Courage, HP, and action points reset at the start of each queued encounter.
+**Temperance** built during one queued encounter carries to the next encounter in the same Climb encounter. **Temperance** resets to zero when the player leaves the battle scene (e.g. return to the Climb). Courage, HP, and action points reset at the start of each queued encounter.
 
-When card or medal text says **win a battle**, that means winning a **queued encounter** (the enemy's **defeat presentation** has finished and the battle advances), not completing the whole **quest node**. Reaching 0 HP starts **defeat presentation**; the encounter is not won until that presentation ends.
+When card or medal text says **win a battle**, that means winning a **queued encounter** (the enemy's **defeat presentation** has finished and the battle advances), not completing the whole **Climb encounter**. Reaching 0 HP starts **defeat presentation**; the encounter is not won until that presentation ends.
 
 ## Action Point
 
@@ -66,7 +66,7 @@ A card play or equipment ability that can be activated during the **Action phase
 
 ## Equipment use
 
-A quest-node-scoped charge shared by an equipment item's block and activation behavior. Blocking with equipment or activating its ability consumes the listed uses. Uses do not reset between **queued encounters** in the same **quest node**. All equipped items replenish to their total uses when the **quest reward** overlay opens after node completion.
+An encounter-scoped charge shared by an equipment item's block and activation behavior. Blocking with equipment or activating its ability consumes the listed uses. Uses do not reset between **queued encounters** in the same **Climb encounter**. All equipped items replenish to their total uses when the **encounter reward** overlay opens after encounter completion.
 
 ## Pledge available
 
@@ -74,17 +74,17 @@ The player may pledge during the **Action phase** when pledging is enabled, they
 
 ## Defeat presentation
 
-The on-screen sequence when a combatant is reduced to 0 HP before the battle advances. For enemies in v1, this is the pixel-burst animation: the enemy **portrait** is hidden and replaced by the burst; other enemy UI (HP bar, intents, passives) may remain visible until the presentation ends. When it completes, the game runs the normal post-kill flow (achievements, next queued encounter, or quest completion). During defeat presentation the player cannot take battle actions (cards, end turn, equipment). Player defeat presentation is separate (game-over overlay).
+The on-screen sequence when a combatant is reduced to 0 HP before the battle advances. For enemies in v1, this is the pixel-burst animation: the enemy **portrait** is hidden and replaced by the burst; other enemy UI (HP bar, intents, passives) may remain visible until the presentation ends. When it completes, the game runs the normal post-kill flow (achievements, next queued encounter, or encounter completion). During defeat presentation the player cannot take battle actions (cards, end turn, equipment). Player defeat presentation is separate (game-over overlay).
 
 _Avoid_: Death animation (ambiguous with attack animations or game-over)
 
-_Avoid_: Battle node (ambiguous with **quest node** on the map)
+_Avoid_: Battle node (ambiguous with **Climb encounter**)
 
 ## Run failure
 
 Losing a battle. The current run ends after the game-over sequence finishes: run entities and run-scoped save data are cleared, an inactive run is persisted, and the player returns to WayStation. Meta earned during that fight is kept.
 
-## Quest abandon
+## Run abandon
 
 Voluntarily ending the current run from the in-battle quit overlay (prompt: "Abandon run?"). Uses the same game-over sequence as run failure, persists an inactive run, and returns to WayStation.
 
@@ -94,17 +94,21 @@ Progress that survives run failure and new-run creation: achievements, card mast
 
 ## Save
 
-Persistent file for run lifecycle state plus meta. A fresh profile and an inactive profile contain meta only. An active run includes map topology, node progress, gold, loadouts, inventory, **run-long applied passive** stacks on the player, and **run-long card restriction** markers per deck card entry. Starting a new run replaces run state only; meta is kept.
+Persistent record of run lifecycle state plus meta. A fresh profile and an inactive profile contain meta only. An active run includes current Climb progress and opportunities, gold, loadouts, inventory, **run-long applied passives**, and **run-long card restrictions**. Starting a new run replaces run state only; meta is kept.
 
-The save file has a `version` field. If it does not match the game's current save version, the entire file is replaced with a fresh meta-only profile. There is no migration between versions. Omitting `version` or using an old version number clears all prior progress.
+Saves do not migrate between incompatible versions; an incompatible save becomes a fresh meta-only profile.
 
 ## Loadout
 
-The player's configured battle kit for the run: deck card list, weapon, temperance ability, equipment slots, and medals. Shop card purchases append a card entry to the deck list immediately. Resolving a deck reward offer replaces the selected loadout entry in place. There is no separate owned-cards list. Equipment is one piece per slot (head, chest, arms, legs). Gaining new equipment in a slot replaces whatever was in that slot; the replaced piece cannot be re-equipped later in the run.
+The player's configured battle kit for the run: ordered deck card entries, weapon, Temperance ability, equipment, and medals. Shop card purchases append a deck card entry. Resolving a deck reward exchange replaces the selected entry at the same ordered position, ending the outgoing identity and creating a new identity for the incoming card. There is no separate owned-cards list.
 
 ## Deck
 
-The player's deck for the current run: the ordered set of card entries (card plus color) on the loadout, plus how those cards are distributed in battle (draw pile, hand, discard). A new run begins with a 20-card starting deck; the deck may grow beyond 20 during the run. There is no maximum deck size.
+The player's deck for the current run: the ordered set of **deck card entries** on the loadout, plus how those cards are distributed in battle. Duplicate card keys are valid because each entry has its own run identity.
+
+## Deck card entry
+
+One stable, run-scoped card instance in the ordered loadout. Its card key identifies its content; its entry identity distinguishes it from every other instance, including entries with the same card key. Upgrading a card preserves its entry identity. Replacing or exchanging it ends that identity and creates a new entry at the same ordered position.
 
 ## Printed color
 
@@ -124,15 +128,15 @@ At the start of each battle, all surviving cards (draw pile, hand, and discard) 
 
 ## Run-long card restriction
 
-A combat effect attached to a specific deck card entity (e.g. Frozen, Sealed, Brittle, or Colorless) that lasts for the whole **run** until **run failure**, **quest abandon**, or **new run start**. Restrictions survive leaving battle and hub visits; they are cleared when the run ends, not at each queued encounter.
+A combat effect owned by one **deck card entry** that lasts for the whole **run** until that entry ends, **run failure**, **run abandon**, or **new run start**. Restrictions survive leaving battle and Climb visits. Upgrading preserves them with the entry; replacement, exchange, or exhaustion removes them with the outgoing entry.
 
 The run-long **Shackled** player passive is not a card restriction. Battle-local **Shackle** markers link cards so they are assigned and unassigned as blockers together; those markers are not persisted.
 
-## Quest-scoped card modification
+## Encounter-scoped card modification
 
-A permanent change to a deck card's combat numbers (e.g. +1 damage from a card's quest-scoped effect) for the current **quest node** attempt. It persists across **queued encounters** in that node and is removed on **node completion** when the player earns **quest reward**. It does not carry to other quest nodes or the hub.
+A permanent change to a deck card's combat numbers (e.g. +1 damage from an encounter-scoped effect) for the current **Climb encounter** attempt. It persists across **queued encounters** in that encounter and is removed on **encounter completion** when the player earns **encounter reward**. It does not carry to other Climb encounters or the Climb.
 
-_Avoid_: Rest of the quest (ambiguous with whole **run**; prefer **quest node** or **quest-scoped card modification**)
+_Avoid_: Rest of the quest (ambiguous with whole **run**; prefer **Climb encounter** or **encounter-scoped card modification**)
 
 ## Starter pool
 
@@ -146,129 +150,99 @@ The 20-card deck assigned at new-run creation by random selection from the start
 
 A deck may include at most one copy of a given card identity and color pairing, and at most two copies of the same card identity across all colors. Starting deck construction follows this limit.
 
-Shop purchases and deck reward exchanges are exceptions: either may add a card entry even when it would exceed the normal copy limit. Each shop listing can still only be bought once per run (`isPurchased` on that slot).
+Shop purchases and deck reward exchanges are exceptions: either may add a card entry even when it would exceed the normal copy limit. Each shop listing can still be bought only once per run.
 
-## Location (desert)
+## Climb
 
-The desert is a presentation wrapper for the run map (background, title). It is not a separately authored level graph in v1. The world map scene is bypassed in v1. The location scene is the mid-run hub once at least one quest node is completed. A fresh profile completes or skips the Guided Tutorial, visits WayStation, and creates its first run only by selecting Depart.
+The capped time-and-slot progression layer for an active run between WayStation Depart and run victory, run failure, or run abandon. It presents generated Shop, Encounter, and Event columns.
+
+_Avoid_: Run map, world map, location hub (when meaning the active mid-run progression layer)
+
+## Climb time
+
+A capped progression meter advanced by Climb choices. It represents the run's approach to the Final encounter, not real elapsed time. Reaching maximum Climb time triggers the **Final encounter**.
+
+## Climb resource
+
+One of the Red, White, or Black spendable resources used by the Climb economy.
+
+## Climb resource pip
+
+One unit of one **Climb resource** color.
+
+## Climb encounter
+
+One fightable opportunity in the active Climb's Encounter column. Selecting it advances Climb time by its shown cost; completing its battle may grant an **encounter reward**.
 
 ## New run start
 
-WayStation Depart after first launch or after an inactive run. Depart creates and activates the run, applies the selected weapon and difficulty setup, then starts the root combat node.
+WayStation Depart after first launch or after an inactive run. Depart creates and activates the run, applies the selected setup, then routes the player to the Climb. Combat starts only after the player selects a Climb encounter.
 
 ## Combat node
 
-One battle location in the 20-node run map. A combat node is either a **quest node** or a **Hellrift**.
+A legacy implementation term from the dormant `RunMap` and `Location` model. It does not define the active Climb; use **Climb encounter** for canonical behavior.
 
-## Quest node
+## Ordinary Climb encounter
 
-An ordinary combat node on the run map. Each run has 19 quest nodes. Completing one marks it completed, grants a quest reward, and may reveal other combat nodes within map fog range.
+A Climb encounter that is not the **Final encounter**. Completing it can grant an **encounter reward**.
 
-## Hellrift
+## Final encounter
 
-The non-quest combat-node type. Each run has exactly one Hellrift, named **The Gate**, placed on a deepest leaf with at least six quest ancestors. It contains only the Fallen Shepherd encounter and grants no quest reward.
+The run-ending Climb encounter triggered when Climb time reaches its maximum. It grants no encounter reward.
 
-The Gate follows normal spatial node reveal. Before reveal it has no map icon, minimap marker, tooltip, or off-screen indicator. Once revealed it behaves like an ordinary fightable combat marker.
+## Encounter completion
 
-## Root quest node
-
-The first quest node in a run. It is the player's initial battle and the anchor for procedural placement. Its position is near the desert map center with random offset so it is not always at the exact geometric center.
-
-## Run map tree
-
-Internal parent/child links used only when generating the 20 combat-node positions. Not shown on the desert map and does not gate which combat nodes can be revealed or fought.
-
-## Run map coverage
-
-How widely combat nodes are distributed across the playable desert. Good coverage means the player must pan and zoom to see the whole run; nodes should not sit in one tight cluster. Uneven blobs are acceptable; symmetry across quadrants is not required. A new run is not created until the generator produces a layout that meets minimum spread standards and fog reveal can reach every combat node from the root.
-
-## Node completion
-
-Whether the player has won the battle at that quest node. Stored only on the run map in save v1; not a separate global quest-id list. Completed nodes remain visible on the map but cannot be started again in v1.
-
-## Node reveal
-
-A combat node becomes fightable when it is **revealed**. The root quest node is revealed at run start. When a quest is **completed**, up to three other combat nodes within **map fog range** of that completed node can become revealed as its fog circle expands (closest first; see **Reveal cutscene**). Revealed combat nodes are visible and can be started; they do **not** clear map fog. Only **completed** quest nodes clear fog. Merely revealing a node does not reveal further nodes until a quest node is completed. The player may tackle any revealed, incomplete combat node; branches are not mutually exclusive.
+Winning all queued encounters belonging to one Climb encounter.
 
 ## Boss phase
 
-One segment of a multi-phase enemy battle. `EnemyBase.Phases` is the total phase count and `CurrentPhase` is the active phase. Lethal damage before the final phase ends the current phase without publishing enemy-kill, battle-win, node-completion, or reward signals.
+One segment of a multi-phase enemy battle. `EnemyBase.Phases` is the total phase count and `CurrentPhase` is the active phase. Lethal damage before the final phase ends the current phase without publishing enemy-kill, battle-win, encounter-completion, or reward signals.
 
 ## Phase reset
 
 The transition between boss phases after checkpoint dialogue. It advances `CurrentPhase`, rebuilds the enemy arsenal, fully heals player and enemy, merges and shuffles hand/draw/discard while leaving exhausted cards removed, clears pledges and transient card/attack interaction state, and removes only turn-duration passives from player and enemy.
 
-Courage, Temperance, Guard, battle/quest/run passives, card restrictions, card modifications, and cumulative turn number persist. A phase reset does not publish StartBattle, rerun start-of-battle abilities, or show the Start of Battle banner. It enters the next EnemyStart flow directly.
+Courage, Temperance, Guard, battle/encounter/run passives, card restrictions, card modifications, and cumulative turn number persist. A phase reset does not publish StartBattle, rerun start-of-battle abilities, or show the Start of Battle banner. It enters the next EnemyStart flow directly.
 
-## Map fog range
+## Shop (Climb)
 
-The distance from a **completed** quest node's world position used for revealing other quests and for the maximum radius of fog that node clears. Measured center-to-center; icon size and fog feather are visual only. Uses `DefaultRevealRadius` (~1000 world units on the desert map). Shop enterability uses the same range but only from **completed** quests whose fog actually covers the shop.
+A generated opportunity in the active Climb's Shop column where Climb resources can be spent on its offered benefit.
 
-## Map fog
+## Climb event
 
-The desert overlay that hides unexplored areas. Only **completed** quest nodes clear map fog (a circular cleared area centered on the node). **Revealed** but incomplete quests do not clear fog; they only become visible and fightable when reached. `DefaultUnrevealedRadius` is icon-scale (~204px) and is the starting size for the expanding fog circle in the **Reveal cutscene** on the node just completed.
+A generated, time-scheduled, non-combat opportunity in the active Climb's Event column. It is either a **Hazard event** or a **Character event**.
 
-## Reveal cutscene
+## Hazard event
 
-After completing a quest, returning to the location hub focuses the completed marker, locks player controls, and animates **that completed node's** fog circle from icon size to full **map fog range**. Other hidden quest nodes become **revealed** when the expanding edge reaches them (visible and fightable, no fog clear at their position).
+A Climb event that shows a Climb resource reward while hiding a binding harmful effect until selection. Confirming applies the harm and reward together without advancing Climb time.
 
-Shop markers are an exception: their map icon and minimap dot are visible from the start of the run. Shops do not clear map fog. Unrevealed shops (not yet enterable) do not show a tooltip or enter prompt on hover.
+## Character event
 
-Treasure Chest markers are also visible from run start and do not clear map fog. A chest becomes enterable only after the player has won battles deeper into the desert (cleared fog from a completed battle far enough along the run). Until then, no tooltip or hold-to-open prompt. When enterable, the tooltip reads **Open Treasure**.
+A Climb event that shows a beneficial reward, presents a character exchange after binding selection, and then applies the reward while advancing Climb time by one.
 
-Map event markers are also visible from run start and do not clear map fog. A Map event becomes enterable when cleared map fog from a **completed** quest covers it (same rule as shops). Until then, no tooltip or hold prompt. When enterable, the tooltip reads **Event**.
+## Next-battle bonus
 
-## Shop (run map)
+Saved Courage, Temperance, or Vigor granted once when the next Climb encounter begins. Bonuses from multiple sources add together.
 
-A vendor on the desert run map. Three shops exist per run. Shops are **not** combat nodes: they are not part of the run map tree and do not replace any of the 20 combat nodes.
+## Next-battle penalty
 
-After the 20-node battle map is generated, each shop is placed at a world position within completed-quest fog range of at least one battle node (so completing that battle can unlock the shop). Each shop has three fixed listings generated at run creation and stored in save. Listings are usually cards; one shop per run also lists a medal and one non-medal shop lists equipment.
-
-## Shop reveal (enterable)
-
-A shop becomes enterable when its world position lies inside cleared map fog from at least one **completed** quest (same center and **map fog range** as that quest's fog circle). A nearby **revealed** quest does not unlock shops. The shop icon can be visible before enterable; until cleared fog reaches it, no tooltip or hold-to-enter.
-
-The same card identity may appear in more than one shop in a run; within one shop the three listings use distinct identities and distinct colors.
-
-_Avoid_: Shop node (when meaning the map marker; prefer **shop** vs **quest node**)
-
-## Treasure Chest (run map)
-
-A one-time loot marker on the desert run map. Three exist per run. Treasure Chests are **not** quest nodes or shops: they are not part of the run map tree.
-
-After the battle map and shops are generated, each chest is placed so that entering it requires having cleared fog from battles deeper into the desert. Opening a chest (hold-to-open on the hub) grants a random amount of gold (10-30 per chest, rolled at run creation). Two chests per run also grant one medal the player does not already own (excluding medals still for sale in run-map shops); the medal is added to the loadout and equipped immediately. One chest per run (chosen at random) grants equipment instead of a medal; that equipment is a different slot type than the equipment listed in run-map shops and is equipped immediately. A claimed chest stays on the map as a dimmed icon and cannot be opened again.
-
-_Avoid_: Treasure POI, treasure node (prefer **Treasure Chest** vs **quest node** or **shop**)
-
-## Map event (run map)
-
-A choice landmark on the desert run map. Two exist per run. Map events are **not** quest nodes, shops, or Treasure Chests: they are not part of the run map tree.
-
-After the battle map, shops, and chests are generated, each Map event is placed using the same scatter rules as shops. At run creation each marker rolls a distinct **narrative event** type (stored as `eventTypeId`) from the authored pool. The hold on the hub opens the **narrative event** choice UI. The Map event is marked completed only after the player selects an option and that choice is resolved.
-
-## Map event reveal (enterable)
-
-A Map event becomes enterable when its world position lies inside cleared map fog from at least one **completed** quest (same center and **map fog range** as that quest's fog circle). A nearby **revealed** quest does not unlock Map events. The red question-mark icon can be visible before enterable; until cleared fog reaches it, no tooltip or hold prompt.
-
-_Avoid_: Event node (when meaning the map marker; prefer **Map event** vs **quest node**)
+Saved Burn or Fear granted once when the next Climb encounter begins. Penalties from multiple sources add together.
 
 ## Narrative event
 
-Authored hub content with a title, body text, and one to three player choices (`EventBase`). Examples include Icebound Tithe and Pruned Vocation. A Map event's `eventTypeId` selects which narrative event runs when the player enters that marker on the hub.
+A legacy UI and implementation term used by dormant `RunMap` and `Location` event code. It is not a canonical Climb event subtype; use **Hazard event** or **Character event** for the active Climb.
 
-_Avoid_: Using "event" alone when you mean the map marker or the choice content; use **Map event** or **Narrative event**
+## Encounter reward
 
-## Quest reward
-
-On first completion of a quest node: quest gold and a deck reward offer. The Gate is not a quest node and grants no quest reward. No rewards on repeat attempts (replays disabled). The reward modal shows only this quest reward gold; other gold grants (e.g. from medals) may apply at the same moment without changing the modal amount.
+On first completion of an ordinary Climb encounter: reward gold and a deck reward offer. The Final encounter grants no encounter reward. No rewards on repeat attempts (replays disabled). The reward modal shows only this encounter reward gold; other gold grants (e.g. from medals) may apply at the same moment without changing the modal amount.
 
 ## Deck reward offer
 
-A persisted unresolved offer created by a quest reward. Resolving the offer chooses one exchange or upgrade lane and replaces that lane's targeted loadout entry in place. Deck reward exchanges ignore copy limits.
+A persisted unresolved offer created by an encounter reward. Resolving an exchange chooses one lane and replaces its targeted **deck card entry** at the same ordered position. The outgoing entry ends and the incoming card receives a new run identity. Deck reward exchanges ignore copy limits.
 
 ## Run victory
 
-Defeating the Fallen Shepherd's final phase. Victory dialogue finishes first, then the normal enemy defeat presentation and enemy-kill signal run. No node completion or reward is granted. The run is ended, an inactive run is persisted, and the game transitions to WayStation.
+Defeating the Fallen Shepherd's final phase. Victory dialogue finishes first, then the normal enemy defeat presentation and enemy-kill signal run. No encounter completion or reward is granted. The run is ended, an inactive run is persisted, and the game transitions to WayStation.
 
 ## Might (applied passive)
 
@@ -290,12 +264,12 @@ The end of the draw pile list (drawn last). The top of the draw pile is the card
 
 ## Medal bonus gold
 
-Gold granted by a medal on **node completion**, separate from **quest reward** gold shown in the completion modal. The player's total gold increases; the modal still displays the quest reward amount only.
+Gold granted by a medal on **encounter completion**, separate from **encounter reward** gold shown in the completion modal. The player's total gold increases; the modal still displays the encounter reward amount only.
 
 ## Diagnostics
 
-**Run map generator log**:
-An append-only text log written in debug builds when a new run map is created. Each line summarizes spread for one generation (seed, coverage stats). The log is cleared when the map generator version integer is bumped in code.
+**Climb generator log**:
+An append-only text log written in debug builds when a new Climb is created. Each line summarizes spread for one generation (seed, coverage stats). The log is cleared when the generator version integer is bumped in code.
 _Avoid_: Spread log, map debug file
 
 **Profiled game frame**:

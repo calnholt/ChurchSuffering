@@ -8,6 +8,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
     {
         private int MightAmount = 1;
 
+        private int CourageAmountUpgrade = 1;
         public RallyTheFaithful()
         {
             CardId = "rally_the_faithful";
@@ -16,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"Gain {MightAmount} might.";
             IsFreeAction = true;
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
 
@@ -29,6 +30,14 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     Type = AppliedPassiveType.Might,
                     Delta = MightAmount
                 });
+                if (IsUpgraded)
+                {
+                    EventManager.Publish(new ModifyCourageRequestEvent { Delta = CourageAmountUpgrade, Type = ModifyCourageType.Gain });
+                }
+            };
+            OnUpgrade = (entityManager, card) =>
+            {
+                Text = $"Gain {MightAmount} might and {CourageAmountUpgrade} courage.";
             };
         }
     }

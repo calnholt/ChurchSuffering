@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Exaltation";
             Target = "Enemy";
             Text = $"As an additional cost, lose {CourageCost} courage.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 7;
             Block = 3;
 

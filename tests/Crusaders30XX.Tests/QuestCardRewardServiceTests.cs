@@ -21,6 +21,7 @@ public class QuestCardRewardServiceTests
 		"shield_of_faith",
 		"increase_faith",
 		"renounce_and_hone",
+		"sacrifice",
 		"steel_the_spirit",
 		"iron_covenant",
 		"whirlwind",
@@ -36,7 +37,12 @@ public class QuestCardRewardServiceTests
 		"steadfast_resolve",
 		"exaltation",
 		"deus_vult",
-		"carpe_diem"
+		"carpe_diem",
+		"crimson_rite",
+		"consecrate",
+		"ark_of_the_covenant",
+		"dowse_with_holy_water",
+		"fury"
 	};
 
 	[Fact]
@@ -65,24 +71,32 @@ public class QuestCardRewardServiceTests
 	}
 
 	[Fact]
-	public void Incoming_exchange_pool_is_exact_shared_list_for_sword_and_dagger()
+	public void Incoming_exchange_pool_contains_shared_and_auto_upgrade_cards_for_sword_and_dagger()
 	{
-		Assert.Equal(
-			ExpectedSharedIncomingPool.Order(StringComparer.OrdinalIgnoreCase),
-			QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "sword")
-				.Order(StringComparer.OrdinalIgnoreCase));
+		var swordPool = QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "sword");
+		var swordAllowed = ExpectedSharedIncomingPool
+			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("sword"))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		Assert.All(swordPool, id => Assert.Contains(id, swordAllowed, StringComparer.OrdinalIgnoreCase));
+		Assert.All(swordAllowed, id => Assert.Contains(id, swordPool, StringComparer.OrdinalIgnoreCase));
 
-		Assert.Equal(
-			ExpectedSharedIncomingPool.Order(StringComparer.OrdinalIgnoreCase),
-			QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "dagger")
-				.Order(StringComparer.OrdinalIgnoreCase));
+		var daggerPool = QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "dagger");
+		var daggerAllowed = ExpectedSharedIncomingPool
+			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("dagger"))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		Assert.All(daggerPool, id => Assert.Contains(id, daggerAllowed, StringComparer.OrdinalIgnoreCase));
+		Assert.All(daggerAllowed, id => Assert.Contains(id, daggerPool, StringComparer.OrdinalIgnoreCase));
 	}
 
 	[Fact]
-	public void Incoming_exchange_pool_adds_only_hammer_specific_cards_for_hammer()
+	public void Incoming_exchange_pool_adds_hammer_bonus_and_auto_upgrade_cards_for_hammer()
 	{
 		var expected = ExpectedSharedIncomingPool
 			.Concat(new[] { "unburdened_strike", "battering_blow" })
+			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("hammer"))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.Order(StringComparer.OrdinalIgnoreCase);
 
 		Assert.Equal(
@@ -101,7 +115,7 @@ public class QuestCardRewardServiceTests
 	}
 
 	[Fact]
-	public void Generated_exchange_incoming_cards_are_only_from_shared_and_weapon_specific_pools()
+	public void Generated_exchange_incoming_cards_are_from_eligible_pools()
 	{
 		var deckKeys = new List<string>
 		{
@@ -109,15 +123,24 @@ public class QuestCardRewardServiceTests
 			"reckoning|Black",
 			"fervor|Red"
 		};
-		var swordAllowed = new HashSet<string>(ExpectedSharedIncomingPool, StringComparer.OrdinalIgnoreCase);
-		var hammerAllowed = new HashSet<string>(
-			ExpectedSharedIncomingPool.Concat(new[] { "unburdened_strike", "battering_blow" }),
-			StringComparer.OrdinalIgnoreCase);
+		var swordAllowed = ExpectedSharedIncomingPool
+			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("sword"))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		var daggerAllowed = ExpectedSharedIncomingPool
+			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("dagger"))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		var hammerAllowed = ExpectedSharedIncomingPool
+			.Concat(new[] { "unburdened_strike", "battering_blow" })
+			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("hammer"))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 		for (int i = 0; i < 100; i++)
 		{
 			AssertExchangeIncomingPool(deckKeys, "sword", swordAllowed);
-			AssertExchangeIncomingPool(deckKeys, "dagger", swordAllowed);
+			AssertExchangeIncomingPool(deckKeys, "dagger", daggerAllowed);
 			AssertExchangeIncomingPool(deckKeys, "hammer", hammerAllowed);
 		}
 	}
@@ -138,18 +161,18 @@ public class QuestCardRewardServiceTests
 	}
 
 	[Fact]
-	public void ApplyPendingOfferOption_replaces_card_at_same_loadout_position_and_allows_copy_limit_bypass()
+	public void ApplyPendingOfferOption_replaces_card_at_same_loadout_position_inherits_restrictions_and_allows_copy_limit_bypass()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.StartNewRun();
 		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
-		loadout.cardIds = new List<string>
-		{
+		loadout.cards = Entries(
 			"smite|White",
 			"fervor|Red",
-			"fervor|White"
-		};
+			"fervor|White");
+		loadout.cards[0].restrictions.Add(RunScopedStateService.RestrictionFrozen);
 		SaveCache.SaveLoadout(loadout);
+		var outgoingEntryId = loadout.cards[0].entryId;
 
 		SaveCache.SetPendingDeckRewardOffer(new DeckRewardOfferSave
 		{
@@ -160,6 +183,7 @@ public class QuestCardRewardServiceTests
 				{
 					kind = DeckRewardOfferKinds.Exchange,
 					loadoutIndex = 0,
+					outgoingEntryId = outgoingEntryId,
 					outgoingCardKey = "smite|White",
 					incomingCardKey = "fervor|Red"
 				}
@@ -168,9 +192,13 @@ public class QuestCardRewardServiceTests
 
 		Assert.True(QuestCardRewardService.ApplyPendingOfferOption(0));
 
-		var after = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cardIds;
-		Assert.Equal("fervor|Red", after[0]);
-		Assert.Equal(3, DeckRules.CountCardIdInDeck(after, "fervor"));
+		var after = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards;
+		Assert.Equal("fervor|Red", after[0].cardKey);
+		Assert.NotEqual(outgoingEntryId, after[0].entryId);
+		Assert.False(after[0].isStarter);
+		Assert.True(after[0].countsAsTraded);
+		Assert.Contains(RunScopedStateService.RestrictionFrozen, after[0].restrictions);
+		Assert.Equal(3, DeckRules.CountCardIdInDeck(after.Select(entry => entry.cardKey).ToList(), "fervor"));
 		Assert.Null(SaveCache.GetPendingDeckRewardOffer());
 	}
 
@@ -180,8 +208,11 @@ public class QuestCardRewardServiceTests
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.StartNewRun();
 		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
-		loadout.cardIds = new List<string> { "smite|White" };
+		loadout.cards = Entries("smite|White");
+		loadout.cards[0].countsAsTraded = true;
+		loadout.cards[0].restrictions.Add(RunScopedStateService.RestrictionFrozen);
 		SaveCache.SaveLoadout(loadout);
+		var original = loadout.cards[0];
 
 		SaveCache.SetPendingDeckRewardOffer(new DeckRewardOfferSave
 		{
@@ -191,6 +222,7 @@ public class QuestCardRewardServiceTests
 				{
 					kind = DeckRewardOfferKinds.Upgrade,
 					loadoutIndex = 0,
+					outgoingEntryId = original.entryId,
 					outgoingCardKey = "smite|White",
 					upgradedCardKey = "smite|White|Upgraded"
 				}
@@ -199,8 +231,12 @@ public class QuestCardRewardServiceTests
 
 		Assert.True(QuestCardRewardService.ApplyPendingOfferOption(0));
 
-		var key = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cardIds.Single();
-		Assert.Equal("smite|White|Upgraded", key);
+		var upgradedEntry = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards.Single();
+		Assert.Equal(original.entryId, upgradedEntry.entryId);
+		Assert.Equal("smite|White|Upgraded", upgradedEntry.cardKey);
+		Assert.True(upgradedEntry.isStarter);
+		Assert.True(upgradedEntry.countsAsTraded);
+		Assert.Contains(RunScopedStateService.RestrictionFrozen, upgradedEntry.restrictions);
 		var baseCard = Crusaders30XX.ECS.Factories.CardFactory.Create("smite");
 		var upgradedCard = Crusaders30XX.ECS.Factories.CardFactory.Create("smite");
 		upgradedCard.IsUpgraded = true;
@@ -213,7 +249,9 @@ public class QuestCardRewardServiceTests
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.StartNewRun();
-		var before = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cardIds.ToList();
+		var before = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards
+			.Select(entry => (entry.entryId, entry.cardKey))
+			.ToList();
 		SaveCache.SetPendingDeckRewardOffer(new DeckRewardOfferSave
 		{
 			options = new List<DeckRewardOfferOptionSave>
@@ -222,7 +260,8 @@ public class QuestCardRewardServiceTests
 				{
 					kind = DeckRewardOfferKinds.Exchange,
 					loadoutIndex = 0,
-					outgoingCardKey = before[0],
+					outgoingEntryId = before[0].entryId,
+					outgoingCardKey = before[0].cardKey,
 					incomingCardKey = "fervor|Red"
 				}
 			}
@@ -231,7 +270,11 @@ public class QuestCardRewardServiceTests
 		QuestCardRewardService.SkipPendingOffer();
 
 		Assert.Null(SaveCache.GetPendingDeckRewardOffer());
-		Assert.Equal(before, SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cardIds);
+		Assert.Equal(
+			before,
+			SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards
+				.Select(entry => (entry.entryId, entry.cardKey))
+				.ToList());
 	}
 
 	[Fact]
@@ -239,6 +282,7 @@ public class QuestCardRewardServiceTests
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.StartNewRun();
+		var outgoing = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards[0];
 		SaveCache.SetPendingDeckRewardOffer(new DeckRewardOfferSave
 		{
 			rewardGold = 20,
@@ -248,8 +292,9 @@ public class QuestCardRewardServiceTests
 				{
 					kind = DeckRewardOfferKinds.Upgrade,
 					loadoutIndex = 0,
-					outgoingCardKey = "smite|White",
-					upgradedCardKey = "smite|White|Upgraded"
+					outgoingEntryId = outgoing.entryId,
+					outgoingCardKey = outgoing.cardKey,
+					upgradedCardKey = RunDeckService.BuildUpgradedCardKey(outgoing.cardKey),
 				}
 			}
 		});
@@ -260,7 +305,8 @@ public class QuestCardRewardServiceTests
 		Assert.NotNull(pending);
 		Assert.Equal(20, pending.rewardGold);
 		Assert.Single(pending.options);
-		Assert.Equal("smite|White|Upgraded", pending.options[0].upgradedCardKey);
+		Assert.Equal(outgoing.entryId, pending.options[0].outgoingEntryId);
+		Assert.Equal(RunDeckService.BuildUpgradedCardKey(outgoing.cardKey), pending.options[0].upgradedCardKey);
 	}
 
 	[Fact]
@@ -307,8 +353,9 @@ public class QuestCardRewardServiceTests
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.StartNewRun();
 		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
-		loadout.cardIds = new List<string> { "smite|White" };
+		loadout.cards = Entries("smite|White");
 		SaveCache.SaveLoadout(loadout);
+		var outgoingEntryId = loadout.cards[0].entryId;
 
 		SaveCache.SetPendingDeckRewardOffer(new DeckRewardOfferSave
 		{
@@ -318,6 +365,7 @@ public class QuestCardRewardServiceTests
 				{
 					kind = DeckRewardOfferKinds.Upgrade,
 					loadoutIndex = 0,
+					outgoingEntryId = outgoingEntryId,
 					outgoingCardKey = "smite|White",
 					upgradedCardKey = "smite|White|Upgraded"
 				}
@@ -325,7 +373,9 @@ public class QuestCardRewardServiceTests
 		});
 
 		Assert.True(QuestCardRewardService.ApplyPendingOfferOption(0));
-		Assert.Equal("smite|White|Upgraded", SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cardIds.Single());
+		var upgraded = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards.Single();
+		Assert.Equal(outgoingEntryId, upgraded.entryId);
+		Assert.Equal("smite|White|Upgraded", upgraded.cardKey);
 		Assert.Equal(1, CardUpgradeService.UpgradeConfirmedInvokeCountForTests);
 	}
 
@@ -336,6 +386,171 @@ public class QuestCardRewardServiceTests
 		{
 			Assert.True(StartingDeckGeneratorService.IsInDefaultStarterPool(cardId));
 		}
+	}
+
+	[Fact]
+	public void GetAutoUpgradeCardIds_returns_correct_set_for_each_weapon()
+	{
+		var swordSet = StartingDeckGeneratorService.GetAutoUpgradeCardIds("sword");
+		Assert.Contains("mantlet", swordSet);
+		Assert.Contains("steadfast_resolve", swordSet);
+		Assert.Contains("increase_faith", swordSet);
+		Assert.Contains("seize", swordSet);
+		Assert.Contains("whirlwind", swordSet);
+		Assert.DoesNotContain("fervor", swordSet);
+		Assert.DoesNotContain("stab", swordSet);
+		Assert.DoesNotContain("smite", swordSet);
+		Assert.DoesNotContain("absolution", swordSet);
+
+		var hammerSet = StartingDeckGeneratorService.GetAutoUpgradeCardIds("hammer");
+		Assert.Contains("fervor", hammerSet);
+		Assert.Contains("stab", hammerSet);
+		Assert.Contains("exaltation", hammerSet);
+		Assert.Contains("increase_faith", hammerSet);
+		Assert.DoesNotContain("mantlet", hammerSet);
+		Assert.DoesNotContain("steadfast_resolve", hammerSet);
+		Assert.DoesNotContain("smite", hammerSet);
+
+		var daggerSet = StartingDeckGeneratorService.GetAutoUpgradeCardIds("dagger");
+		Assert.Contains("mantlet", daggerSet);
+		Assert.Contains("fervor", daggerSet);
+		Assert.Contains("increase_faith", daggerSet);
+		Assert.DoesNotContain("seize", daggerSet);
+		Assert.DoesNotContain("whirlwind", daggerSet);
+		Assert.DoesNotContain("smite", daggerSet);
+	}
+
+	[Fact]
+	public void Quest_exchange_auto_upgrades_off_weapon_cards_in_incoming_pool()
+	{
+		var autoUpgradeIds = StartingDeckGeneratorService.GetAutoUpgradeCardIds("sword");
+		var deckKeys = new List<string> { "smite|White", "reckoning|Black" };
+
+		bool foundUpgradedOffWeapon = false;
+		for (int i = 0; i < 100; i++)
+		{
+			var offer = QuestCardRewardService.GenerateDeckRewardOffer(deckKeys, "sword", 20);
+			foreach (var option in offer.options.Where(o => o.kind == DeckRewardOfferKinds.Exchange))
+			{
+				Assert.True(
+					RunDeckService.TryParseCardKey(option.incomingCardKey, out var incomingId, out _, out var isUpgraded));
+				if (autoUpgradeIds.Contains(incomingId))
+				{
+					Assert.True(isUpgraded,
+						$"Off-weapon card '{incomingId}' should be auto-upgraded but was not: {option.incomingCardKey}");
+					foundUpgradedOffWeapon = true;
+				}
+			}
+		}
+		Assert.True(foundUpgradedOffWeapon,
+			"Expected at least one off-weapon auto-upgraded card to appear in exchange options within 100 iterations");
+	}
+
+	[Fact]
+	public void Quest_exchange_does_not_auto_upgrade_equipped_weapon_cards()
+	{
+		var swordAutoUpgradeIds = StartingDeckGeneratorService.GetAutoUpgradeCardIds("sword");
+		var deckKeys = new List<string> { "smite|White", "reckoning|Black", "fervor|Red" };
+
+		for (int i = 0; i < 100; i++)
+		{
+			var offer = QuestCardRewardService.GenerateDeckRewardOffer(deckKeys, "sword", 20);
+			foreach (var option in offer.options.Where(o => o.kind == DeckRewardOfferKinds.Exchange))
+			{
+				Assert.True(
+					RunDeckService.TryParseCardKey(option.incomingCardKey, out var incomingId, out _, out var isUpgraded));
+				if (!swordAutoUpgradeIds.Contains(incomingId))
+				{
+					Assert.False(isUpgraded,
+						$"Equipped-weapon card '{incomingId}' should NOT be auto-upgraded but was: {option.incomingCardKey}");
+				}
+			}
+		}
+	}
+
+	[Fact]
+	public void Quest_exchange_does_not_auto_upgrade_starter_rarity_cards()
+	{
+		var deckKeys = new List<string> { "fervor|Red", "seize|Black" };
+
+		for (int i = 0; i < 100; i++)
+		{
+			var offer = QuestCardRewardService.GenerateDeckRewardOffer(deckKeys, "sword", 20);
+			foreach (var option in offer.options.Where(o => o.kind == DeckRewardOfferKinds.Exchange))
+			{
+				Assert.True(
+					RunDeckService.TryParseCardKey(option.incomingCardKey, out var incomingId, out _, out var isUpgraded));
+				if (incomingId == "smite" || incomingId == "absolution" || incomingId == "forge_strike"
+					|| incomingId == "reckoning" || incomingId == "litany_of_wrath" || incomingId == "courageous")
+				{
+					Assert.False(isUpgraded,
+						$"Starter rarity card '{incomingId}' should NOT be auto-upgraded but was: {option.incomingCardKey}");
+				}
+			}
+		}
+	}
+
+	[Fact]
+	public void Auto_upgraded_exchange_invokes_upgrade_confirmed()
+	{
+		CardUpgradeService.UpgradeConfirmedInvokeCountForTests = 0;
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+		loadout.cards = Entries("smite|White");
+		SaveCache.SaveLoadout(loadout);
+		var outgoingEntryId = loadout.cards[0].entryId;
+
+		SaveCache.SetPendingDeckRewardOffer(new DeckRewardOfferSave
+		{
+			options = new List<DeckRewardOfferOptionSave>
+			{
+				new()
+				{
+					kind = DeckRewardOfferKinds.Exchange,
+					loadoutIndex = 0,
+					outgoingEntryId = outgoingEntryId,
+					outgoingCardKey = "smite|White",
+					incomingCardKey = "mantlet|Red|Upgraded"
+				}
+			}
+		});
+
+		Assert.True(QuestCardRewardService.ApplyPendingOfferOption(0));
+		Assert.Equal(1, CardUpgradeService.UpgradeConfirmedInvokeCountForTests);
+
+		var after = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards.Single();
+		Assert.Equal("mantlet|Red|Upgraded", after.cardKey);
+	}
+
+	[Fact]
+	public void Auto_upgraded_exchange_does_not_invoke_upgrade_confirmed_for_non_upgraded_card()
+	{
+		CardUpgradeService.UpgradeConfirmedInvokeCountForTests = 0;
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+		loadout.cards = Entries("smite|White");
+		SaveCache.SaveLoadout(loadout);
+		var outgoingEntryId = loadout.cards[0].entryId;
+
+		SaveCache.SetPendingDeckRewardOffer(new DeckRewardOfferSave
+		{
+			options = new List<DeckRewardOfferOptionSave>
+			{
+				new()
+				{
+					kind = DeckRewardOfferKinds.Exchange,
+					loadoutIndex = 0,
+					outgoingEntryId = outgoingEntryId,
+					outgoingCardKey = "smite|White",
+					incomingCardKey = "fervor|Red"
+				}
+			}
+		});
+
+		Assert.True(QuestCardRewardService.ApplyPendingOfferOption(0));
+		Assert.Equal(0, CardUpgradeService.UpgradeConfirmedInvokeCountForTests);
 	}
 
 	private static void AssertExchangeIncomingPool(
@@ -351,6 +566,18 @@ public class QuestCardRewardServiceTests
 				$"Invalid incoming key {option.incomingCardKey}");
 			Assert.Contains(incomingId, allowed);
 		}
+	}
+
+	private static List<LoadoutCardEntry> Entries(params string[] cardKeys)
+	{
+		return cardKeys.Select((cardKey, index) => new LoadoutCardEntry
+		{
+			entryId = $"test_card_{index}",
+			cardKey = cardKey,
+			isStarter = true,
+			countsAsTraded = false,
+			restrictions = new List<string>(),
+		}).ToList();
 	}
 
 	private sealed class TestOnUpgradeCard : CardBase

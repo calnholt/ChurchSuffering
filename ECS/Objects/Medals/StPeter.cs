@@ -13,8 +13,8 @@ namespace Crusaders30XX.ECS.Objects.Medals
         {
             Id = "st_peter";
             Name = "St. Peter the Apostle";
-            MaxCount = 4;
-            Text = $"Each time you block with {MaxCount} black cards this quest, draw a card.";
+            MaxCount = 3;
+            Text = $"Each time you block with {MaxCount} black cards this quest, resurrect 1.";
         }
 
         public override void Initialize(EntityManager entityManager, Entity medalEntity)
@@ -40,7 +40,12 @@ namespace Crusaders30XX.ECS.Objects.Medals
         public override void Activate()
         {
             Console.WriteLine($"[StPeter] Activate: Drawing 1 card");
-            EventManager.Publish(new RequestDrawCardsEvent { Count = 1 });
+            EventManager.Publish(new DrawRandomCardFromDiscardEvent { Amount = 1 });
+        }
+
+        public override void Dispose()
+        {
+            EventManager.Unsubscribe<CardBlockedEvent>(OnCardBlockedEvent);
         }
     }
 }

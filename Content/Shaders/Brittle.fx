@@ -4,6 +4,9 @@
 float4x4 MatrixTransform;
 float2 iResolution; // viewport width/height in pixels
 float iTime;        // seconds
+float2 CARD_CENTER; // rendered card center, top-left screen coordinates
+float CARD_SCALE = 1.0;
+float CARD_ROTATION = 0.0;
 
 // Chunk shapes
 float GRID_MIN = 18.0;
@@ -35,8 +38,8 @@ float3 EDGE_GLOW = float3(1.0, 0.85, 0.45);
 float EDGE_GLOW_AMT = 0.6;
 float HOLE_DARKEN = 1.0;
 
-#define SEARCH_CELLS 9
-#define DRIFT_CELLS 2
+#define MAX_SEARCH_CELLS 12
+#define MAX_DRIFT_CELLS 2
 
 texture Texture : register(t0);
 sampler2D TextureSampler : register(s0) = sampler_state
@@ -138,25 +141,27 @@ float2 Voro(float2 q, out float d1, out float d2)
     return id;
 }
 
-float2 ToTextureUV(float2 shaderUV)
+float2 Rotate(float2 value, float angle)
 {
-    return float2(shaderUV.x, 1.0 - shaderUV.y);
+    float cs = cos(angle);
+    float sn = sin(angle);
+    return float2(cs * value.x - sn * value.y, sn * value.x + cs * value.y);
 }
 
-float3 SampleCurrent(float2 shaderUV)
+float3 SampleCurrent(float2 textureUV)
 {
-    return tex2D(TextureSampler, ToTextureUV(shaderUV)).rgb;
+    return tex2Dlod(TextureSampler, float4(textureUV, 0.0, 0.0)).rgb;
 }
 
-float3 SampleBackground(float2 shaderUV)
+float3 SampleBackground(float2 textureUV)
 {
-    return tex2D(BackgroundSampler, ToTextureUV(shaderUV)).rgb;
+    return tex2Dlod(BackgroundSampler, float4(textureUV, 0.0, 0.0)).rgb;
 }
 
-float ChangedMask(float2 shaderUV)
+float ChangedMask(float2 textureUV)
 {
-    float3 current = SampleCurrent(shaderUV);
-    float3 background = SampleBackground(shaderUV);
+    float3 current = SampleCurrent(textureUV);
+    float3 background = SampleBackground(textureUV);
     float delta = max(max(abs(current.r - background.r), abs(current.g - background.g)), abs(current.b - background.b));
     return smoothstep(MASK_THRESHOLD, MASK_THRESHOLD * 2.0, delta);
 }
@@ -166,9 +171,20 @@ float CellInterior(float distanceToEdge)
     return smoothstep(0.0, max(SEAM_WIDTH, 0.0001), distanceToEdge);
 }
 
-float3 SampleCard(float2 shaderUV)
+float3 SampleCard(float2 textureUV)
 {
-    return SampleCurrent(shaderUV);
+    return SampleCurrent(textureUV);
+}
+
+float2 ScreenToGrid(float2 screenPosition, float cellSize)
+{
+    float2 cardLocal = Rotate(screenPosition - CARD_CENTER, -CARD_ROTATION);
+    return cardLocal / max(cellSize, 0.001);
+}
+
+float2 GridToScreen(float2 gridPosition, float cellSize)
+{
+    return CARD_CENTER + Rotate(gridPosition * cellSize, CARD_ROTATION);
 }
 
 Chunk MakeChunk(float fall, float drift, float alpha, float home, float angle)
@@ -222,15 +238,15 @@ Chunk ChunkLife(float2 cell)
 float4 SpritePixelShader(VSOutput input) : COLOR0
 {
     float2 resolution = max(iResolution, float2(1.0, 1.0));
-    float2 uv = float2(input.TexCoord.x, 1.0 - input.TexCoord.y);
-    float chunkSize = max(CHUNK_SIZE_PX, 1.0);
-    float2 gridDim = max(resolution / chunkSize, float2(1.0, 1.0));
+    float2 uv = input.TexCoord;
+    float2 screenPosition = uv * resolution;
+    float chunkSize = max(CHUNK_SIZE_PX * max(CARD_SCALE, 0.001), 1.0);
     float3 col = SampleCurrent(uv);
 
     float gRand = frac(sin(GRID_SEED * 12.9898 + 78.233) * 43758.5453);
     float gridJitter = lerp(GRID_MIN, GRID_MAX, gRand) / max(GRID_MIN, 1.0);
-    gridDim *= max(gridJitter, 0.001);
-    float2 p = uv * gridDim;
+    float cellSize = chunkSize / max(gridJitter, 0.001);
+    float2 p = ScreenToGrid(screenPosition, cellSize);
     float localMask = ChangedMask(uv);
 
     if (localMask > 0.001)
@@ -246,11 +262,30 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
         col = lerp(background, card, show * localMask);
     }
 
-    for (int ky = 0; ky <= SEARCH_CELLS; ky++)
+    int fallSearchCells = min(MAX_SEARCH_CELLS, (int)ceil(max(MAX_FALL, 0.0)));
+    int driftSearchCells = min(MAX_DRIFT_CELLS, (int)ceil(max(MAX_DRIFT, 0.0)));
+
+    [loop]
+    for (int ky = 0; ky <= MAX_SEARCH_CELLS; ky++)
     {
-        for (int kx = -DRIFT_CELLS; kx <= DRIFT_CELLS; kx++)
+        if (ky > fallSearchCells)
         {
-            float2 c = floor(p) + float2((float)kx, (float)ky);
+            break;
+        }
+
+        [loop]
+        for (int kx = -MAX_DRIFT_CELLS; kx <= MAX_DRIFT_CELLS; kx++)
+        {
+            if (abs(kx) > driftSearchCells)
+            {
+                continue;
+            }
+
+            // Search for rest cells above this destination in screen space.
+            // The fracture grid remains card-local, but gravity and drift do not
+            // rotate with the card.
+            float2 candidateScreen = screenPosition - float2((float)kx, (float)ky) * cellSize;
+            float2 c = floor(ScreenToGrid(candidateScreen, cellSize));
             Chunk life = ChunkLife(c);
 
             if (life.alpha <= 0.001)
@@ -259,11 +294,10 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
             }
 
             float2 rest = FeatPt(c);
-            float2 centerNow = rest + float2(life.drift, -life.fall);
-            float cs = cos(-life.angle);
-            float sn = sin(-life.angle);
-            float2 rel = p - centerNow;
-            float2 q = float2(cs * rel.x - sn * rel.y, sn * rel.x + cs * rel.y) + rest;
+            float2 restScreen = GridToScreen(rest, cellSize);
+            float2 centerNowScreen = restScreen + float2(life.drift, life.fall) * cellSize;
+            float2 qScreen = Rotate(screenPosition - centerNowScreen, -life.angle) + restScreen;
+            float2 q = ScreenToGrid(qScreen, cellSize);
 
             float qd1;
             float qd2;
@@ -279,7 +313,7 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
                 continue;
             }
 
-            float2 srcUV = q / gridDim;
+            float2 srcUV = GridToScreen(q, cellSize) / resolution;
             if (srcUV.x < 0.0 || srcUV.x > 1.0 || srcUV.y < 0.0 || srcUV.y > 1.0)
             {
                 continue;

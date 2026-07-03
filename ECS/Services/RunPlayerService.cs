@@ -18,6 +18,7 @@ namespace Crusaders30XX.ECS.Services
 			}
 
 			var player = EntityFactory.CreatePlayer(world);
+			WayStationRunSetupService.ApplySelectedPlayerHp(player);
 			RunScopedStateService.HydrateRunLongPassivesOntoPlayer(player);
 			return player;
 		}

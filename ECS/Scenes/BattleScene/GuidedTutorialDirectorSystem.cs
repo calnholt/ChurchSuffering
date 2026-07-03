@@ -12,11 +12,13 @@ namespace Crusaders30XX.ECS.Systems
 {
 	public sealed class GuidedTutorialDirectorSystem : Core.System
 	{
+		private bool _restartRequested;
+
 		public GuidedTutorialDirectorSystem(EntityManager entityManager) : base(entityManager)
 		{
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged);
-			EventManager.Subscribe<CardPlayedEvent>(OnCardPlayed);
-			EventManager.Subscribe<PledgeAddedEvent>(OnPledged);
+			EventManager.Subscribe<GuidedTutorialRestartRequested>(OnRestartRequested);
+			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities() => Array.Empty<Entity>();
@@ -26,15 +28,17 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var state = GuidedTutorialService.GetState(EntityManager);
 			if (state == null) return;
-			state.RequiredPhase = evt.Current;
 
 			if (evt.Current == SubPhase.EnemyStart)
 			{
 				var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
-				int turn = phase?.TurnNumber ?? state.Turn;
+				int turn = phase?.TurnNumber ?? state.TurnWithinSection;
 				if (phase?.Sub is SubPhase.PlayerEnd or SubPhase.Action or SubPhase.PlayerStart)
 					turn++;
-				GuidedTutorialService.BeginNextTurn(EntityManager, turn);
+
+				int maxTurns = GuidedTutorialDefinitions.GetTurnCount(state.Section);
+				if (turn <= maxTurns)
+					GuidedTutorialService.BeginNextTurn(EntityManager, turn);
 			}
 			else if (evt.Current == SubPhase.EnemyAttack)
 			{
@@ -48,24 +52,54 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void OnCardPlayed(CardPlayedEvent evt)
+		private void OnRestartRequested(GuidedTutorialRestartRequested evt)
 		{
 			var state = GuidedTutorialService.GetState(EntityManager);
-			string id = evt?.Card?.GetComponent<CardData>()?.Card?.CardId;
-			if (state == null || string.IsNullOrEmpty(id)) return;
-			state.PlayedCardIds.Add(id);
-			state.ActionRequirementsComplete = GuidedTutorialDefinitions.AreActionRequirementsComplete(state);
-			GuidedTutorialService.RefreshValidPlays(state);
+			if (state == null || _restartRequested) return;
+
+			_restartRequested = true;
+			EventQueue.Clear();
+			TimerScheduler.Clear();
+			EventManager.Publish(new DeleteCachesEvent { Scene = SceneId.Battle });
+			ResetPhaseState();
+			ClearEnemyAttackState();
+			BattleTransientStateCleanupService.ClearInteractionState(EntityManager);
+			GuidedTutorialService.RestartSection(EntityManager);
 		}
 
-		private void OnPledged(PledgeAddedEvent evt)
+		private void OnLoadScene(LoadSceneEvent evt)
 		{
-			var state = GuidedTutorialService.GetState(EntityManager);
-			string id = evt?.Card?.GetComponent<CardData>()?.Card?.CardId;
-			if (state == null || string.IsNullOrEmpty(id)) return;
-			state.PledgedCardIds.Add(id);
-			state.ActionRequirementsComplete = GuidedTutorialDefinitions.AreActionRequirementsComplete(state);
-			GuidedTutorialService.RefreshValidPlays(state);
+			if (evt.Scene == SceneId.Battle)
+			{
+				_restartRequested = false;
+			}
+		}
+
+		private void ResetPhaseState()
+		{
+			var phase = EntityManager.GetEntitiesWithComponent<PhaseState>()
+				.FirstOrDefault()?.GetComponent<PhaseState>();
+			if (phase == null) return;
+
+			phase.Main = MainPhase.StartBattle;
+			phase.Sub = SubPhase.StartBattle;
+			phase.TurnNumber = 1;
+			phase.DefeatPresentationActive = false;
+			phase.PendingBlockConfirm = false;
+		}
+
+		private void ClearEnemyAttackState()
+		{
+			foreach (var progress in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>().ToList())
+			{
+				EntityManager.DestroyEntity(progress.Id);
+			}
+
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<AttackIntent>())
+			{
+				entity.GetComponent<AttackIntent>()?.Planned.Clear();
+				entity.GetComponent<NextTurnAttackIntent>()?.Planned.Clear();
+			}
 		}
 	}
 }

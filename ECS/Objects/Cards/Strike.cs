@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Strike";
             Target = "Enemy";
             Text = $"{Chance}% chance to gain {CourageGained} courage.";
-            Animation = "Attack";
+            VisualEffectRecipe = LightSlashEffect();
             Damage = 3;
             Block = 3;
 
@@ -37,6 +37,10 @@ namespace Crusaders30XX.ECS.Objects.Cards
                 {
                     EventManager.Publish(new ModifyCourageRequestEvent { Delta = CourageGained, Type = ModifyCourageType.Gain });
                 }
+            };
+            OnUpgrade = (entityManager, card) =>
+            {
+                IsFreeAction = true;
             };
         }
     }

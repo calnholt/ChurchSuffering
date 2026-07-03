@@ -39,7 +39,7 @@ public class PlayerHudLayoutSystemTests : IDisposable
 		Assert.Equal(system.ChipHeight * 2 - system.RowOverlap, anchor.Bounds.Height);
 		Assert.Equal(new Vector2(worldBounds.X, worldBounds.Y), rootEntity.GetComponent<Transform>().Position);
 
-		var animation = player.GetComponent<PlayerAnimationState>();
+		var animation = player.GetComponent<ActorPresentationState>();
 		animation.DrawOffset = new Vector2(700, -300);
 		animation.ScaleMultiplier = new Vector2(4f, 2f);
 		player.GetComponent<PortraitInfo>().CurrentScale = 5f;
@@ -300,7 +300,7 @@ public class PlayerHudLayoutSystemTests : IDisposable
 			BaseScale = 0.5f,
 			CurrentScale = 0.5f,
 		});
-		entityManager.AddComponent(player, new PlayerAnimationState());
+		entityManager.AddComponent(player, new ActorPresentationState());
 		return entityManager;
 	}
 

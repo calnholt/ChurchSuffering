@@ -12,13 +12,13 @@ namespace Crusaders30XX.ECS.Objects.Cards
         {
             CardId = "stalwart";
             Name = "Stalwart";
-            Text = $"As an additional cost, lose {CourageCost} courage.";
+            Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage.";
             Type = CardType.Block;
             Block = 7;
             
             OnBlock = (entityManager, card) =>
             {
-                EventManager.Publish(new ModifyCourageRequestEvent { Delta = -CourageCost, Type = ModifyCourageType.Spent });
+                EventManager.Publish(new ModifyCourageRequestEvent { Delta = -GetCourageCost(IsUpgraded), Type = ModifyCourageType.Spent });
             };
 
             CanPlay = (entityManager, card) =>
@@ -28,7 +28,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
                 {
                     var player = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
                     int courage = player?.GetComponent<Courage>()?.Amount ?? 0;
-                    if (courage < CourageCost) return false;
+                    if (courage < GetCourageCost(IsUpgraded)) return false;
                     return true;
                 }
                 return false;
@@ -40,14 +40,22 @@ namespace Crusaders30XX.ECS.Objects.Cards
                 {
                     var player = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
                     int courage = player?.GetComponent<Courage>()?.Amount ?? 0;
-                    if (courage < CourageCost)
-                        EventManager.Publish(new CantPlayCardMessage { Message = $"Requires {CourageCost} courage!" });
+                    if (courage < GetCourageCost(IsUpgraded))
+                        EventManager.Publish(new CantPlayCardMessage { Message = $"Requires {GetCourageCost(IsUpgraded)} courage!" });
                 }
                 else
                 {
                     EventManager.Publish(new CantPlayCardMessage { Message = $"Can only pay during block phase!" });
                 }
             };
+            OnUpgrade = (entityManager, card) =>
+            {
+                Text = string.Empty;
+            };
+        }
+        private int GetCourageCost(bool isUpgraded)
+        {
+            return isUpgraded ? 0 : CourageCost;
         }
     }
 }

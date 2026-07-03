@@ -24,13 +24,13 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteFont _font = FontSingleton.TitleFont;
 		private readonly Texture2D _pixel;
 
-	private string _lastContextId = null;
+	private int _lastAttackSequence = -1;
 	private float _introElapsed = 0f;
 	private readonly System.Random _rand = new System.Random();
 	private Entity _textAnchorEntity;
 	private Entity _timerAnchorEntity;
 	private bool _waitingForPhaseAnimation = false;
-	private string _pendingContextId = null;
+	private int _pendingAttackSequence = -1;
 
 		// Debug-editable tuning
 		[DebugEditable(DisplayName = "Intro Drop Duration (s)", Step = 0.05f, Min = 0.05f, Max = 3f)]
@@ -101,9 +101,9 @@ namespace Crusaders30XX.ECS.Systems
 				st.TimerRemainingSeconds = 0f;
 				st.FiredAutoConfirm = false;
 				_introElapsed = 0f;
-				_lastContextId = null;
+				_lastAttackSequence = -1;
 				_waitingForPhaseAnimation = false;
-				_pendingContextId = null;
+				_pendingAttackSequence = -1;
 			}
 		});
 
@@ -113,23 +113,23 @@ namespace Crusaders30XX.ECS.Systems
 				{ "SubPhase", evt.SubPhase.ToString() }
 			});
 			// When phase animation completes, activate the ambush intro if we were waiting
-			if (_waitingForPhaseAnimation && !string.IsNullOrEmpty(_pendingContextId))
+			if (_waitingForPhaseAnimation && _pendingAttackSequence >= 0)
 			{
 				var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>()?.Sub ?? SubPhase.Action;
 				if (phase == SubPhase.Block)
 				{
 					var st = GetOrCreateAmbushState();
-					_lastContextId = _pendingContextId;
+					_lastAttackSequence = _pendingAttackSequence;
 					st.IsActive = true;
 					st.IntroActive = true;
-					st.ContextId = _pendingContextId;
+					st.ActiveAttackSequence = _pendingAttackSequence;
 					st.TimerDurationSeconds = Math.Max(1f, DefaultTimerSeconds - GetSlowStacks());
 					st.TimerRemainingSeconds = st.TimerDurationSeconds;
 					_introElapsed = 0f;
 					UpdateAnchorTransforms();
 				}
 				_waitingForPhaseAnimation = false;
-				_pendingContextId = null;
+				_pendingAttackSequence = -1;
 			}
 		});
 
@@ -154,17 +154,15 @@ namespace Crusaders30XX.ECS.Systems
 			var st = GetOrCreateAmbushState();
 
 		// Detect context changes. Only commit activation during Block so ambush triggers at phase entry.
-		if (_lastContextId != pa.ContextId)
+		if (_lastAttackSequence != intent.ActiveAttackSequence)
 		{
 			_introElapsed = 0f;
 			st.FiredAutoConfirm = false;
 			if (pa.IsAmbush && phase == SubPhase.Block)
 			{
-				// Wait for phase animation to complete before showing ambush intro
 				_waitingForPhaseAnimation = true;
-				_pendingContextId = pa.ContextId;
-				// Prepare state but don't activate intro yet
-				st.ContextId = pa.ContextId;
+				_pendingAttackSequence = intent.ActiveAttackSequence;
+				st.ActiveAttackSequence = intent.ActiveAttackSequence;
 				st.TimerDurationSeconds = Math.Max(1f, DefaultTimerSeconds - GetSlowStacks());
 				st.TimerRemainingSeconds = st.TimerDurationSeconds;
 			}
@@ -175,16 +173,15 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 		// Fallback: if we are in Block and haven't activated for this context yet, wait for animation
-		else if (pa.IsAmbush && phase == SubPhase.Block && (!st.IsActive || st.ContextId != pa.ContextId))
+		else if (pa.IsAmbush && phase == SubPhase.Block && (!st.IsActive || st.ActiveAttackSequence != intent.ActiveAttackSequence))
 		{
 			if (!_waitingForPhaseAnimation)
 			{
-				// Set up waiting state if not already waiting
 				_waitingForPhaseAnimation = true;
-				_pendingContextId = pa.ContextId;
+				_pendingAttackSequence = intent.ActiveAttackSequence;
 				_introElapsed = 0f;
 				st.FiredAutoConfirm = false;
-				st.ContextId = pa.ContextId;
+				st.ActiveAttackSequence = intent.ActiveAttackSequence;
 				st.TimerDurationSeconds = Math.Max(1f, DefaultTimerSeconds - GetSlowStacks());
 				st.TimerRemainingSeconds = st.TimerDurationSeconds;
 			}
@@ -210,10 +207,7 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						st.FiredAutoConfirm = true;
 						// Notify listeners (e.g., MustBeBlockedSystem) that the ambush timer expired for this context
-						if (!string.IsNullOrEmpty(st.ContextId))
-						{
-							EventManager.Publish(new AmbushTimerExpired { ContextId = st.ContextId });
-						}
+						EventManager.Publish(new AmbushTimerExpired { AttackSequence = st.ActiveAttackSequence });
 						EventManager.Publish(new ConfirmBlocksRequested());
 					}
 				}
@@ -337,7 +331,7 @@ namespace Crusaders30XX.ECS.Systems
 		st.FiredAutoConfirm = false;
 		_introElapsed = 0f;
 		_waitingForPhaseAnimation = false;
-		_pendingContextId = null;
+		_pendingAttackSequence = -1;
 	}
 
 		private AmbushState GetOrCreateAmbushState()

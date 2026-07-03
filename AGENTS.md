@@ -114,6 +114,7 @@ The `ParallaxLayerSystem` is fully agnostic — external systems cooperate with 
 - When presented multiple different approaches, never take the easy way out - prefer the hard but comprehensive approach
   - NO SLOP; STAY DRY
 - Systems own their outputs exclusively — never duplicate another system's logic or neutralize it (e.g., overwriting its output each frame to suppress it). Fix ordering or initialization issues at the source instead
+- NEVER pass another `System` as a constructor parameter to a system. Systems must not hold direct references to other systems. Cross-system behavior goes through events (`EventManager`, `EventQueue`/`EventQueueBridge`) or shared component state the owning system writes
 - Keep systems self-contained: encode state on components (fields the owning system writes), not public static snapshots (`HashSet`, etc.) that other code must query
 - Services are read-only helpers/calculators. Do not mutate ECS components, publish/enqueue events, or change singleton state from services; route game-state writes through systems via events.
 
@@ -132,6 +133,7 @@ The `ParallaxLayerSystem` is fully agnostic — external systems cooperate with 
 ## Events
 
 - Create events to drive behavior across different systems
+- Prefer events over direct system-to-system calls. If one system needs another to act, define an event and let the target system subscribe or enqueue it — do not inject the target system via constructor
 - Prioritize leveraging `UIElementEventDelegateService` for simple events rather than `IsClicked`
 
 ### New System
@@ -140,6 +142,7 @@ The `ParallaxLayerSystem` is fully agnostic — external systems cooperate with 
 2. Override `GetRelevantEntities()` and `UpdateEntity()`
 3. Register with `world.AddSystem()` in `Game1.cs`
 4. Add `DebugEditable`/`DebugTab` attributes if it has a Draw function
+5. Constructor parameters may include scene resources (`GraphicsDevice`, `SpriteBatch`, `ContentManager`, etc.) but never other systems
 
 ### New Component
 

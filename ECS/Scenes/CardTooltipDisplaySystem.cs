@@ -17,6 +17,8 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteBatch _spriteBatch;
 		private CardGeometrySettings _settings;
 		private readonly Dictionary<string, Entity> _tooltipCardCache = new();
+		private float _pulsePhase;
+		private int? _lastPulseHoverId;
 
 		[DebugEditable(DisplayName = "Gap Override (px)", Step = 1, Min = 0, Max = 200)]
 		public int GapOverride { get; set; } = 0;
@@ -24,11 +26,21 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Screen Padding (px)", Step = 1, Min = 0, Max = 200)]
 		public int ScreenPadding { get; set; } = 8;
 
+		[DebugEditable(DisplayName = "Pulse Cycle (s)", Step = 0.1f, Min = 0.5f, Max = 10f)]
+		public float PulseCycleSeconds { get; set; } = 4f;
+
+		[DebugEditable(DisplayName = "Pulse Upgraded Hold Frac", Step = 0.01f, Min = 0f, Max = 0.45f)]
+		public float PulseUpgradedHoldFrac { get; set; } = 0.45f;
+
+		[DebugEditable(DisplayName = "Pulse Base Hold Frac", Step = 0.01f, Min = 0f, Max = 0.45f)]
+		public float PulseBaseHoldFrac { get; set; } = 0.45f;
+
 		public CardTooltipDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
+			EventManager.Subscribe<DeleteCachesEvent>(_ => _tooltipCardCache.Clear());
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -37,6 +49,14 @@ namespace Crusaders30XX.ECS.Systems
 		}
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
+
+		public override void Update(GameTime gameTime)
+		{
+			base.Update(gameTime);
+			float cycle = System.Math.Max(0.001f, PulseCycleSeconds);
+			_pulsePhase += (float)gameTime.ElapsedGameTime.TotalSeconds / cycle;
+			if (_pulsePhase >= 1f) _pulsePhase -= (float)System.Math.Floor(_pulsePhase);
+		}
 
 		public void Draw()
 		{
@@ -48,7 +68,21 @@ namespace Crusaders30XX.ECS.Systems
 				.OrderByDescending(x => x.T?.ZOrder ?? 0)
 				.ToList();
 			var top = hoverables.FirstOrDefault();
-			if (top == null) return;
+			if (top == null)
+			{
+				_lastPulseHoverId = null;
+				return;
+			}
+
+			if (top.CT.CrossfadeUpgradePreview && _lastPulseHoverId != top.E.Id)
+			{
+				_pulsePhase = 0f;
+				_lastPulseHoverId = top.E.Id;
+			}
+			else if (!top.CT.CrossfadeUpgradePreview)
+			{
+				_lastPulseHoverId = null;
+			}
 
 			// Ensure settings
 			if (_settings == null)
@@ -94,34 +128,158 @@ namespace Crusaders30XX.ECS.Systems
 			int offsetY = (int)System.Math.Round(_settings.CardOffsetYExtra * top.CT.TooltipScale);
 			var center = new Vector2(rx + w / 2f, ry + (h / 2f + offsetY));
 
-			// Get or create the visualization card entity for this tooltip
 			var color = top.CT.CardColor ?? top.CD?.Color ?? CardData.CardColor.White;
-			bool isColorless = top.E.HasComponent<Colorless>();
-			var key = top.CT.CardId + "|" + color + (isColorless ? "|colorless" : "");
+			var previewRestrictions = BuildPreviewRestrictions(top.CT, top.E);
+
+			if (top.CT.CrossfadeUpgradePreview)
+			{
+				var baseCard = GetOrCreateTooltipCard(top.CT.CardId, color, isUpgraded: false, previewRestrictions);
+				var upgradedCard = GetOrCreateTooltipCard(top.CT.CardId, color, isUpgraded: true, previewRestrictions);
+				if (baseCard == null || upgradedCard == null) return;
+
+				// Draw base card always at full opacity underneath
+				EventManager.Publish(new CardRenderScaledEvent
+				{
+					Card = baseCard,
+					Position = center,
+					Scale = top.CT.TooltipScale,
+					Alpha = 1f,
+				});
+
+				// Upgraded card pulses 1 -> 0 -> 1 over the cycle, revealing the base when faded out.
+				// Phase is split into four zones: upgraded hold | fade out | base hold | fade in
+				float upgradedAlpha = ComputePulseAlpha(_pulsePhase, PulseUpgradedHoldFrac, PulseBaseHoldFrac);
+
+				if (upgradedAlpha > 0.001f)
+				{
+					EventManager.Publish(new CardRenderScaledEvent
+					{
+						Card = upgradedCard,
+						Position = center,
+						Scale = top.CT.TooltipScale,
+						Alpha = upgradedAlpha,
+					});
+				}
+				return;
+			}
+
+			var cardEntity = GetOrCreateTooltipCard(top.CT.CardId, color, top.CT.IsUpgraded, previewRestrictions);
+			if (cardEntity == null) return;
+
+			EventManager.Publish(new CardRenderScaledEvent { Card = cardEntity, Position = center, Scale = top.CT.TooltipScale });
+		}
+
+		private Entity GetOrCreateTooltipCard(
+			string cardId,
+			CardData.CardColor color,
+			bool isUpgraded,
+			IReadOnlyList<string> previewRestrictions)
+		{
+			var restrictionKey = string.Join(",", NormalizeRestrictions(previewRestrictions));
+			var key = cardId + "|" + color + (isUpgraded ? "|upgraded" : "") + "|" + restrictionKey;
 			if (!_tooltipCardCache.TryGetValue(key, out var cardEntity) || cardEntity == null)
 			{
-				cardEntity = ECS.Factories.EntityFactory.CreateCardFromDefinition(EntityManager, top.CT.CardId, color, allowWeapons: true, index: 0);
+				cardEntity = ECS.Factories.EntityFactory.CreateCardFromDefinition(EntityManager, cardId, color, allowWeapons: true, index: 0, isUpgraded: isUpgraded);
 				if (cardEntity != null)
 				{
 					var ui = cardEntity.GetComponent<UIElement>();
 					if (ui != null)
 					{
-						ui.IsInteractable = false; // ensure the tooltip card never intercepts hover/clicks
-						ui.TooltipType = TooltipType.None; // prevent tooltip cards from generating their own tooltips
+						ui.IsInteractable = false;
+						ui.TooltipType = TooltipType.None;
 					}
-					if (isColorless)
-					{
-						EntityManager.AddComponent(cardEntity, new Colorless { Owner = cardEntity });
-					}
+					ApplyPreviewRestrictions(cardEntity, previewRestrictions);
 					_tooltipCardCache[key] = cardEntity;
 				}
 			}
-			if (cardEntity == null) return;
+			return cardEntity;
+		}
 
-			// Render via CardDisplaySystem using scaled event
-			EventManager.Publish(new CardRenderScaledEvent { Card = cardEntity, Position = center, Scale = top.CT.TooltipScale });
+		private static IReadOnlyList<string> BuildPreviewRestrictions(CardTooltip tooltip, Entity sourceEntity)
+		{
+			var restrictions = new List<string>();
+			foreach (var restriction in tooltip?.PreviewRestrictionNames ?? new List<string>())
+			{
+				AddRestriction(restrictions, restriction);
+			}
+
+			if (sourceEntity?.HasComponent<Colorless>() == true)
+			{
+				AddRestriction(restrictions, RunScopedStateService.RestrictionColorless);
+			}
+
+			return NormalizeRestrictions(restrictions);
+		}
+
+		private void ApplyPreviewRestrictions(Entity cardEntity, IReadOnlyList<string> restrictions)
+		{
+			foreach (var restriction in NormalizeRestrictions(restrictions))
+			{
+				switch (restriction)
+				{
+					case RunScopedStateService.RestrictionFrozen:
+						EntityManager.AddComponent(cardEntity, new Frozen { Owner = cardEntity });
+						break;
+					case RunScopedStateService.RestrictionBrittle:
+						EntityManager.AddComponent(cardEntity, new Brittle { Owner = cardEntity });
+						break;
+					case RunScopedStateService.RestrictionScorched:
+						EntityManager.AddComponent(cardEntity, new Scorched { Owner = cardEntity });
+						break;
+					case RunScopedStateService.RestrictionThorned:
+						EntityManager.AddComponent(cardEntity, new Thorned { Owner = cardEntity });
+						break;
+					case RunScopedStateService.RestrictionColorless:
+						EntityManager.AddComponent(cardEntity, new Colorless { Owner = cardEntity });
+						break;
+					case RunScopedStateService.RestrictionCursed:
+						CardApplicationManagementSystem.ApplyCursedRuntime(EntityManager, cardEntity);
+						break;
+				}
+			}
+		}
+
+		private static List<string> NormalizeRestrictions(IReadOnlyList<string> restrictions)
+		{
+			var normalized = new List<string>();
+			foreach (var restriction in restrictions ?? new List<string>())
+			{
+				AddRestriction(normalized, restriction);
+			}
+			return normalized
+				.OrderBy(restriction => restriction, System.StringComparer.OrdinalIgnoreCase)
+				.ToList();
+		}
+
+		private static void AddRestriction(List<string> restrictions, string restriction)
+		{
+			if (restrictions == null || string.IsNullOrWhiteSpace(restriction)) return;
+			if (!restrictions.Contains(restriction, System.StringComparer.OrdinalIgnoreCase))
+			{
+				restrictions.Add(restriction);
+			}
+		}
+
+		private static float ComputePulseAlpha(float phase, float upgradedHoldFrac, float baseHoldFrac)
+		{
+			float totalHold = System.Math.Clamp(upgradedHoldFrac, 0f, 0.45f) + System.Math.Clamp(baseHoldFrac, 0f, 0.45f);
+			float fadeFrac = (1f - totalHold) / 2f;
+			if (fadeFrac <= 0f) return 1f;
+
+			float uEnd = upgradedHoldFrac;
+			float f1End = uEnd + fadeFrac;
+			float bEnd = f1End + baseHoldFrac;
+			float f2End = bEnd + fadeFrac;
+
+			if (phase <= uEnd)
+				return 1f;
+			if (phase <= f1End)
+				return 1f - (phase - uEnd) / fadeFrac;
+			if (phase <= bEnd)
+				return 0f;
+			if (phase <= f2End)
+				return (phase - bEnd) / fadeFrac;
+			return 1f;
 		}
 	}
 }
-
-

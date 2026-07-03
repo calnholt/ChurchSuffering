@@ -17,8 +17,11 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private PlayerHudSnapshotVariant _variant;
 		private Texture2D _pixel;
 		private Texture2D _portrait;
+		private Texture2D _enemyPortrait;
 		private Entity _player;
+		private Entity _enemy;
 		private float _portraitScale;
+		private float _enemyPortraitScale;
 
 		private PlayerHudRootDisplaySystem _rootDisplay;
 		private PlayerHudHealthDisplaySystem _healthDisplay;
@@ -33,7 +36,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_variant = PlayerHudSnapshotVariant.Parse(args);
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
-			_portrait = ctx.Content.Load<Texture2D>("crusader_sword");
+			_portrait = ctx.ImageAssets.GetRequiredTexture("crusader_sword");
 			_portraitScale = 0.36f;
 
 			EntityFactory.CreateGameState(ctx.World);
@@ -52,9 +55,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			portraitInfo.TextureHeight = _portrait.Height;
 			portraitInfo.BaseScale = _portraitScale;
 			portraitInfo.CurrentScale = _portraitScale;
-			if (!_player.HasComponent<PlayerAnimationState>())
+			if (!_player.HasComponent<ActorPresentationState>())
 			{
-				ctx.World.AddComponent(_player, new PlayerAnimationState());
+				ctx.World.AddComponent(_player, new ActorPresentationState());
 			}
 
 			var deckEntity = ctx.World.CreateEntity("Deck");
@@ -92,6 +95,19 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				_portraitScale,
 				SpriteEffects.None,
 				0f);
+			if (_enemy != null && _enemyPortrait != null)
+			{
+				ctx.SpriteBatch.Draw(
+					_enemyPortrait,
+					_enemy.GetComponent<Transform>().Position,
+					null,
+					Color.White,
+					0f,
+					new Vector2(_enemyPortrait.Width / 2f, _enemyPortrait.Height / 2f),
+					_enemyPortraitScale,
+					SpriteEffects.None,
+					0f);
+			}
 
 			_rootDisplay.Draw();
 			_healthDisplay.Draw();
@@ -129,8 +145,8 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 						new PledgeAvailabilityState { PledgedThisActionPhase = true });
 					break;
 				case PlayerHudSnapshotVariantId.IncomingDamage:
-					CreateIncomingAttack(ctx, "snapshot-attack-1", 4);
-					CreateIncomingAttack(ctx, "snapshot-attack-2", 7);
+					CreateIncomingAttack(ctx, 1, 4);
+					CreateIncomingAttack(ctx, 2, 7);
 					break;
 				case PlayerHudSnapshotVariantId.LowHealth:
 					hp.Current = 3;
@@ -145,22 +161,44 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					passives.Passives[AppliedPassiveType.Power] = 10;
 					passives.Passives[AppliedPassiveType.Thorns] = 25;
 					break;
+				case PlayerHudSnapshotVariantId.EnemyHealth:
+					// Keep the cursor-parallax player HUD outside the capture so this enemy baseline is deterministic.
+					_player.GetComponent<Transform>().Position = new Vector2(-1000f, 260f);
+					CreateEnemyHealthSnapshot(ctx);
+					break;
 			}
+		}
+
+		private void CreateEnemyHealthSnapshot(DisplaySnapshotContext ctx)
+		{
+			_enemyPortrait = ctx.ImageAssets.GetRequiredTexture("Skeleton");
+			_enemyPortraitScale = Game1.VirtualHeight * 0.36f / _enemyPortrait.Height;
+			_enemy = ctx.World.CreateEntity("EnemyHealthSnapshot");
+			ctx.World.AddComponent(_enemy, new Enemy());
+			ctx.World.AddComponent(_enemy, new Transform { Position = new Vector2(960f, 260f) });
+			ctx.World.AddComponent(_enemy, new HP { Current = 32, Max = 50 });
+			ctx.World.AddComponent(_enemy, new PortraitInfo
+			{
+				TextureWidth = _enemyPortrait.Width,
+				TextureHeight = _enemyPortrait.Height,
+				BaseScale = _enemyPortraitScale,
+				CurrentScale = _enemyPortraitScale,
+			});
 		}
 
 		private static void CreateIncomingAttack(
 			DisplaySnapshotContext ctx,
-			string contextId,
+			int attackSequence,
 			int actualDamage)
 		{
-			var enemy = ctx.World.CreateEntity($"Enemy_{contextId}");
-			var intent = new AttackIntent();
-			intent.Planned.Add(new PlannedAttack { ContextId = contextId });
+			var enemy = ctx.World.CreateEntity($"Enemy_{attackSequence}");
+			var intent = new AttackIntent { ActiveAttackSequence = attackSequence };
+			intent.Planned.Add(new PlannedAttack());
 			ctx.World.AddComponent(enemy, intent);
-			var progressEntity = ctx.World.CreateEntity($"AttackProgress_{contextId}");
+			var progressEntity = ctx.World.CreateEntity($"AttackProgress_{attackSequence}");
 			ctx.World.AddComponent(progressEntity, new EnemyAttackProgress
 			{
-				ContextId = contextId,
+				AttackSequence = attackSequence,
 				Enemy = enemy,
 				ActualDamage = actualDamage,
 			});
@@ -200,7 +238,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ctx.World.EntityManager,
 				ctx.GraphicsDevice,
 				ctx.SpriteBatch,
-				ctx.Content);
+				ctx.ImageAssets);
 			_passivesDisplay = new AppliedPassivesDisplaySystem(
 				ctx.World.EntityManager,
 				ctx.GraphicsDevice,

@@ -28,6 +28,7 @@ namespace Crusaders30XX.ECS.Systems
         {
 			public int TargetEntityId;
 			public Entity Target;
+			public Guid PresentationId;
             public Vector2 StartWorldPos;
             public float AgeSeconds;
             public float LifetimeSeconds;
@@ -127,6 +128,7 @@ namespace Crusaders30XX.ECS.Systems
                 bool expired = f.AgeSeconds >= f.LifetimeSeconds;
                 if (expired)
                 {
+					PublishCompletion(f);
                     _floaters.RemoveAt(i);
                     continue;
                 }
@@ -149,6 +151,7 @@ namespace Crusaders30XX.ECS.Systems
             if (_floaters.Count >= MaxConcurrent)
             {
                 // Drop oldest
+				PublishCompletion(_floaters[0]);
                 _floaters.RemoveAt(0);
             }
 
@@ -165,10 +168,21 @@ namespace Crusaders30XX.ECS.Systems
             // Small random x jitter so multiple floaters are readable
             float jx = HorizontalJitter > 0 ? (Random.Shared.NextSingle() * 2f - 1f) * HorizontalJitter : 0f;
 
+			if (e.PresentationId != Guid.Empty)
+			{
+				EventManager.Publish(new BattlePresentationStarted
+				{
+					PresentationId = e.PresentationId,
+					Target = target,
+					Kind = BattlePresentationKind.DamageNumber
+				});
+			}
+
             _floaters.Add(new Floater
             {
                 TargetEntityId = target.Id,
                 Target = target,
+				PresentationId = e.PresentationId,
                 StartWorldPos = new Vector2(center.X + jx, center.Y),
                 Amount = Math.Abs(amt),
                 IsHeal = isHeal,
@@ -177,6 +191,17 @@ namespace Crusaders30XX.ECS.Systems
                 PopScale = 0f
             });
         }
+
+		private static void PublishCompletion(Floater floater)
+		{
+			if (floater == null || floater.PresentationId == Guid.Empty) return;
+			EventManager.Publish(new BattlePresentationCompleted
+			{
+				PresentationId = floater.PresentationId,
+				Target = floater.Target,
+				Kind = BattlePresentationKind.DamageNumber
+			});
+		}
 
         private Entity ResolveTarget(Entity explicitTarget)
         {
@@ -267,5 +292,3 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-
-

@@ -2,6 +2,7 @@ using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using System;
@@ -27,7 +28,8 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			base.Update(gameTime);
 			if (BattleInputGate.IsBattleInputFrozen(EntityManager)) return;
-			// Ensure all AssignedBlockCard entities have a UIElement so clicks can be detected elsewhere
+			// Ensure all AssignedBlockCard entities have a UIElement so clicks can be detected elsewhere.
+			// AssignedBlockCardsDisplaySystem owns assigned-block bounds and interactability.
 			var assigned = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>();
 			foreach (var e in assigned)
 			{
@@ -37,20 +39,7 @@ namespace Crusaders30XX.ECS.Systems
 					uiAbc = new UIElement { IsInteractable = true };
 					EntityManager.AddComponent(e, uiAbc);
 				}
-				// Best-effort bounds sync for assigned cards (precise sync happens in AssignedBlockCardsDisplaySystem)
-				var abc = e.GetComponent<AssignedBlockCard>();
-				if (abc != null)
-				{
-					const int defaultCardDrawWidth = 80;
-					const int defaultCardDrawHeight = 110;
-					int cw = (int)(defaultCardDrawWidth * abc.CurrentScale);
-					int ch = (int)(defaultCardDrawHeight * abc.CurrentScale);
-					var rectNow = new Microsoft.Xna.Framework.Rectangle((int)(abc.CurrentPos.X - cw / 2f), (int)(abc.CurrentPos.Y - ch / 2f), System.Math.Max(1, cw), System.Math.Max(1, ch));
-					uiAbc.Bounds = rectNow;
-					// Ensure clicks on assigned equipment route to unassign handler via delegate path
-					uiAbc.EventType = UIElementEventType.UnassignCardAsBlock;
-					uiAbc.IsInteractable = true;
-				}
+				uiAbc.EventType = UIElementEventType.UnassignCardAsBlock;
 			}
 			// Only in Block or Action phase
 			var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
@@ -60,7 +49,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (!isBlockPhase && !isActionPhase) return;
 			// Need current context during Block phase
 			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-			var ctx = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault()?.ContextId;
+			var plannedAttack = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
 			// Clicks now come from UIElement.IsClicked on equipment UI elements
 
 			// Iterate equipment visible in panel (Default zone), topmost first (Z desc just in case)
@@ -88,7 +77,7 @@ namespace Crusaders30XX.ECS.Systems
 						PublishInvalidClick("This equipment cannot block!");
 						break;
 					}
-					if (string.IsNullOrEmpty(ctx))
+					if (plannedAttack == null)
 					{
 						PublishInvalidClick("There is no attack to block!");
 						break;
@@ -109,6 +98,16 @@ namespace Crusaders30XX.ECS.Systems
 					if (blockVal <= 0)
 					{
 						PublishInvalidClick("This equipment cannot block!");
+						break;
+					}
+					if (!EnemyBlockerEligibilityService.IsEligibleEquipmentBlocker(EntityManager, eqEntity, plannedAttack))
+					{
+						var restriction = plannedAttack?.AttackDefinition?.BlockingRestrictionType ?? BlockingRestrictionType.None;
+						var message = restriction == BlockingRestrictionType.None
+							? "This equipment cannot block this attack!"
+							: EnemyAttackTextHelper.GetBlockingRestrictionText(restriction);
+						if (message.EndsWith(".")) message = message.Substring(0, message.Length - 1) + "!";
+						PublishInvalidClick(message);
 						break;
 					}
 
@@ -158,16 +157,16 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc = new AssignedBlockCard { ContextId = ctx, BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, StartPos = t?.Position ?? Vector2.Zero, CurrentPos = t?.Position ?? Vector2.Zero, TargetPos = t?.Position ?? Vector2.Zero, StartScale = t?.Scale.X ?? 1f, TargetScale = 0.35f, Phase = AssignedBlockCard.PhaseState.Pullback, Elapsed = 0f, IsEquipment = true, ColorKey = NormalizeColorKey(color), Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
+						abc = new AssignedBlockCard { BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, StartPos = t?.Position ?? Vector2.Zero, CurrentPos = t?.Position ?? Vector2.Zero, TargetPos = t?.Position ?? Vector2.Zero, StartScale = t?.Scale.X ?? 1f, TargetScale = 0.35f, Phase = AssignedBlockCard.PhaseState.Pullback, Elapsed = 0f, IsEquipment = true, ColorKey = NormalizeColorKey(color), Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
 						EntityManager.AddComponent(eqEntity, abc);
 					}
 					else
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc.ContextId = ctx; abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.Phase = AssignedBlockCard.PhaseState.Pullback; abc.Elapsed = 0f; abc.IsEquipment = true; abc.ColorKey = NormalizeColorKey(color); abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
+						abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.Phase = AssignedBlockCard.PhaseState.Pullback; abc.Elapsed = 0f; abc.IsEquipment = true; abc.ColorKey = NormalizeColorKey(color); abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
 					}
-					EventManager.Publish(new BlockAssignmentAdded { ContextId = ctx, Card = eqEntity, DeltaBlock = blockVal, Color = color });
+					EventManager.Publish(new BlockAssignmentAdded { Card = eqEntity, DeltaBlock = blockVal, Color = color });
 					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Equip, Volume = 0.5f });
 					// Mark the assigned equipment to unassign via delegate when clicked on its assigned tile
 					{

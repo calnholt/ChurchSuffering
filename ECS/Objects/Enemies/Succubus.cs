@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
@@ -14,11 +15,11 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
 public class Succubus : EnemyBase
 {
   public static readonly int SiphonMultiplier = 1;
-  public Succubus(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public Succubus()
   {
-    Id = "succubus";
+    Id = EnemyId.Succubus;
     Name = "Succubus";
-    HealthPerCard = 1.32f;
+    HP = 26;
     StartingHealthBelowMax = 3;
 
     OnStartOfBattle = (entityManager) =>
@@ -40,15 +41,15 @@ public class Succubus : EnemyBase
     }
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    var linkers = new List<string> { "enthralling_gaze", "teasing_nip", "crushing_adoration" };
+    var linkers = new List<EnemyAttackId> { EnemyAttackId.EnthrallingGaze, EnemyAttackId.TeasingNip, EnemyAttackId.CrushingAdoration };
     var battleStateInfo = GetComponentHelper.GetBattleStateInfo(entityManager);
     battleStateInfo.BattleTracking.TryGetValue("courage_lost", out int count);
-    var enders = new List<string> { "soul_siphon" };
+    var enders = new List<EnemyAttackId> { EnemyAttackId.SoulSiphon };
     if (count > 0)
     {
-      enders.Add("velvet_fangs");
+      enders.Add(EnemyAttackId.VelvetFangs);
     }
 
     // Select two random from linkers (with replacement)
@@ -56,16 +57,16 @@ public class Succubus : EnemyBase
     // Select one random from enders
     var pickedEnder = ArrayUtils.TakeRandomWithReplacement(enders, 1);
 
-    // Ensure "crushing_adoration" is not the last key
+    // Ensure EnemyAttackId.CrushingAdoration is not the last key
     // Prepare final list: pickedLinkers + pickedEnder
     var attacks = pickedLinkers.Concat(pickedEnder).ToList();
 
-    // Shuffle, but ensure "crushing_adoration" is never last
+    // Shuffle, but ensure EnemyAttackId.CrushingAdoration is never last
     var shuffled = ArrayUtils.Shuffled(attacks).ToList();
-    if (shuffled.Count > 1 && shuffled[^1] == "crushing_adoration")
+    if (shuffled.Count > 1 && shuffled[^1] == EnemyAttackId.CrushingAdoration)
     {
       // Try to swap with a previous entry
-      int swapIndex = shuffled.FindIndex(x => x != "crushing_adoration");
+      int swapIndex = shuffled.FindIndex(x => x != EnemyAttackId.CrushingAdoration);
       if (swapIndex != -1)
       {
         // Swap the last and swapIndex
@@ -99,9 +100,9 @@ public class SoulSiphon : EnemyAttackBase
   private int CourageLoss = 1;
   public SoulSiphon()
   {
-    Id = "soul_siphon";
+    Id = EnemyAttackId.SoulSiphon;
     Name = "Soul Siphon";
-    Damage = 4;
+    Damage = 3;
     ConditionType = ConditionType.OnHit;
     BlockingRestrictionType = BlockingRestrictionType.NotRed;
     Text = $"{EnemyAttackTextHelper.GetBlockingRestrictionText(BlockingRestrictionType)}\n\n{EnemyAttackTextHelper.GetText(EnemyAttackTextType.Custom, 0, ConditionType, 100, $"Lose {CourageLoss} courage.")}";
@@ -117,7 +118,7 @@ public class EnthrallingGaze : EnemyAttackBase
 {
   public EnthrallingGaze()
   {
-    Id = "enthralling_gaze";
+    Id = EnemyAttackId.EnthrallingGaze;
     Name = "Enthralling Gaze";
     Damage = 3;
     // ConditionType = ConditionType.MustBeBlockedByAtLeast1Card;
@@ -135,7 +136,7 @@ public class TeasingNip : EnemyAttackBase
   private int CourageLoss = 1;
   public TeasingNip()
   {
-    Id = "teasing_nip";
+    Id = EnemyAttackId.TeasingNip;
     Name = "Teasing Nip";
     Damage = 2;
     ConditionType = ConditionType.OnHit;
@@ -154,7 +155,7 @@ public class CrushingAdoration : EnemyAttackBase
   private int Aggression = 2;
   public CrushingAdoration()
   {
-    Id = "crushing_adoration";
+    Id = EnemyAttackId.CrushingAdoration;
     Name = "Crushing Adoration";
     Damage = 2;
     ConditionType = ConditionType.OnHit;
@@ -172,9 +173,10 @@ public class VelvetFangs : EnemyAttackBase
   public int Multiplier { get; set; } = 1;
   public VelvetFangs()
   {
-    Id = "velvet_fangs";
+    Id = EnemyAttackId.VelvetFangs;
     Name = "Velvet Fangs";
     Damage = 6;
+    AttackEffectRecipe = EnemyBiteEffect();
     ConditionType = ConditionType.OnHit;
 
     OnAttackReveal = (entityManager) =>

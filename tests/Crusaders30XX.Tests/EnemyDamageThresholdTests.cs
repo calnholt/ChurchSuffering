@@ -1,6 +1,7 @@
 using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -86,7 +87,7 @@ public class EnemyDamageThresholdTests : IDisposable
     public void Block_threshold_text_describes_required_block()
     {
         Assert.Equal(
-            "Unless at least 6 damage is blocked - Freeze the top card of your draw pile.",
+            "If this attack deals 7 or more damage - Freeze the top card of your draw pile.",
             EnemyAttackTextHelper.GetBlockThresholdText(6, "Freeze the top card of your draw pile."));
     }
 
@@ -96,6 +97,42 @@ public class EnemyDamageThresholdTests : IDisposable
         Assert.Equal(
             "If this attack deals 5 or more damage - Gain 2 burn.",
             EnemyAttackTextHelper.GetDamageThresholdText(5, "Gain 2 burn."));
+    }
+
+    [Theory]
+    [InlineData(10, 0, 0, 6, false)]
+    [InlineData(10, 6, 0, 6, true)]
+    [InlineData(10, 5, 5, 6, true)]
+    [InlineData(10, 3, 0, 6, false)]
+    public void Block_threshold_display_condition_reflects_assigned_block_and_final_damage(
+        int damage,
+        int assignedBlock,
+        int aegis,
+        int blockRequired,
+        bool expectedMet)
+    {
+        var progress = new EnemyAttackProgress
+        {
+            AssignedBlockTotal = assignedBlock,
+            AegisTotal = aegis,
+        };
+        int predictedFinalDamage = Math.Max(damage - assignedBlock - aegis, 0);
+
+        Assert.Equal(
+            expectedMet,
+            ConditionService.EvaluateBlockRequiredToPreventEffect(blockRequired, progress, predictedFinalDamage));
+    }
+
+    [Fact]
+    public void Block_threshold_display_condition_met_when_fully_prevented_by_special()
+    {
+        var progress = new EnemyAttackProgress
+        {
+            AssignedBlockTotal = 0,
+            FullyPreventedBySpecial = true,
+        };
+
+        Assert.True(ConditionService.EvaluateBlockRequiredToPreventEffect(6, progress, predictedFinalDamage: 10));
     }
 
     private static EntityManager CreateCombat(
@@ -112,21 +149,21 @@ public class EnemyDamageThresholdTests : IDisposable
         entityManager.AddComponent(player, new Player());
         entityManager.AddComponent(enemy, new AttackIntent
         {
+            ActiveAttackSequence = 1,
             Planned =
             [
                 new PlannedAttack
                 {
                     AttackId = attack.Id,
-                    ContextId = "test-context",
                     AttackDefinition = attack
                 }
             ]
         });
         entityManager.AddComponent(progressEntity, new EnemyAttackProgress
         {
-            ContextId = "test-context",
             Enemy = enemy,
             AttackId = attack.Id,
+            AttackSequence = 1,
             AssignedBlockTotal = assignedBlock,
             AegisTotal = aegis,
             BaseDamage = attack.Damage,
@@ -142,8 +179,8 @@ public class EnemyDamageThresholdTests : IDisposable
 
     private static void ResolveAttack(EntityManager entityManager)
     {
-        EventManager.Publish(new ResolveAttack { ContextId = "test-context" });
-        EventManager.Publish(new EnemyAttackImpactNow { ContextId = "test-context" });
+        EventManager.Publish(new ResolveAttack());
+        EventManager.Publish(new EnemyAttackImpactNow());
     }
 
     private sealed class ThresholdAttack : EnemyAttackBase
@@ -153,7 +190,7 @@ public class EnemyDamageThresholdTests : IDisposable
 
         public ThresholdAttack(int damage, int blockRequired, bool ignoresAegis, bool useOnHit = false)
         {
-            Id = "threshold_test";
+            Id = EnemyAttackId.Cinderbolt;
             Name = "Threshold Test";
             Damage = damage;
             BlockRequiredToPreventEffect = blockRequired;

@@ -8,7 +8,6 @@ using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Utils;
 using Crusaders30XX.ECS.Input;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.ECS.Singletons;
 
@@ -19,7 +18,6 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
         private readonly SpriteFont _font;
         private Texture2D _pixel;
         private Texture2D _rounded;
@@ -93,15 +91,13 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Angel Offset Y", Step = 1, Min = -1000, Max = 1000)]
         public int AngelOffsetY { get; set; } = -54;
 
-        public HintTooltipDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public HintTooltipDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
             _font = FontSingleton.ContentFont;
-            _pixel = new Texture2D(graphicsDevice, 1, 1);
-            _pixel.SetData(new[] { Color.White });
+            _pixel = imageAssets.GetPixel(Color.White);
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()

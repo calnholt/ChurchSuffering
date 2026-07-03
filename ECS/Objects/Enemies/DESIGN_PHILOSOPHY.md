@@ -147,7 +147,7 @@ The player has **20 HP**. All enemy stats should be understood relative to this.
 | Tough | 95-120 | Sorcerer (120), Glacial Guardian (110) | Extended battles, scaling threats |
 | Boss-tier | 120+ | Shadow (150) | Marathon fights, attrition-based |
 
-Enemy max HP scales with **deck size**, not difficulty: set `HealthPerCard` (legacy Easy HP / 30) on the enemy; at spawn, `MaxHealth = Round(HealthPerCard * Deck.Cards.Count)`. Difficulty affects attacks and passives where coded, not max HP.
+Enemy max HP scales with **deck size**, not difficulty: set `HP` (max HP at a 20-card reference deck) on the enemy; at spawn, `MaxHealth = Round(HP * deckWeight / 20)`. Difficulty affects spawn HP via `EnemyHealthModifier` and attacks/passives where coded.
 
 ### Attack Damage Ranges
 
@@ -288,7 +288,6 @@ Predictable rotation between attack types across turns.
 | Condition | Frequency | Design Role |
 |-----------|-----------|-------------|
 | Burn | Very common | Sustained damage pressure |
-| Penance | Common | Punishes specific behaviors |
 | Intimidate | Common | Restricts card plays |
 | Wounded | Moderate | Reduces card effectiveness |
 | Frozen | Moderate | Temporarily disables cards |

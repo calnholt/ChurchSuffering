@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Inventory Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Replaces CardListModalSystem modal panel with fullscreen dim only
+    - Layout: header row (title left, color ledger + Close right) + scrollable content
+    - Color ledger: number + swatch only (no color text labels)
+    - Climb scene: deck grid + build panel (HP, weapon, temperance, equipment, medals, passives all at once)
+    - Cards: CardRenderScaledEvent grid; 268x377 in-game (scaled down in mockup)
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #c41e3a;
+    --red-glow: rgba(196, 30, 58, 0.45);
+    --gold: #d4a84a;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --overlay-alpha: 0.78;
+    --grid-gap: 24px;
+    --card-w: 220px;
+    --card-h: 308px;
+    --close-size: 44px;
+    --card-white-bg: #dcd7ce;
+    --card-white-stripe: #999999;
+    --card-red-bg: #4e0c0c;
+    --card-red-stripe: #cc2222;
+    --card-black-bg: #131313;
+    --card-black-stripe: #333333;
+    --content-pad: 36px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 6px;
+  }
+
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    max-width: 960px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .control-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ctrl-btn {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border: 1px solid var(--black-4);
+    background: var(--black-2);
+    color: var(--white-3);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+
+  .ctrl-btn:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--white-1);
+  }
+
+  .ctrl-btn.is-active {
+    background: rgba(196, 30, 58, 0.22);
+    border-color: var(--red-3);
+    color: var(--white-1);
+    box-shadow: 0 0 12px var(--red-glow);
+  }
+
+  .page-main {
+    padding: 32px 40px 60px;
+  }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1200px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert-background-city.png') center / cover no-repeat;
+  }
+
+  .bg-scene.climb {
+    background:
+      linear-gradient(180deg, rgba(12, 8, 6, 0.3) 0%, rgba(0, 0, 0, 0.55) 100%),
+      url('../Content/desert-background-city.png') center / cover no-repeat;
+    filter: saturate(0.7) brightness(0.65);
+  }
+
+  .overlay-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, var(--overlay-alpha));
+    pointer-events: none;
+  }
+
+  /* --- Inventory shell --- */
+  .inv-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+  }
+
+  .main-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px var(--content-pad) 12px;
+    gap: 20px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .inv-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 38px;
+    letter-spacing: 3px;
+    color: var(--white-1);
+    line-height: 1;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
+    white-space: nowrap;
+  }
+
+  .color-ledger {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+  }
+
+  .color-pip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .swatch {
+    width: 16px;
+    height: 20px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .swatch-white {
+    background: var(--card-white-bg);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 0 2px var(--card-white-stripe);
+  }
+
+  .swatch-red {
+    background: var(--card-red-bg);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--card-red-stripe);
+  }
+
+  .swatch-black {
+    background: var(--card-black-bg);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 2px var(--card-black-stripe);
+  }
+
+  .pip-count {
+    font-family: 'New Rocker', cursive;
+    font-size: 24px;
+    color: var(--white-1);
+    letter-spacing: 1px;
+    line-height: 1;
+    min-width: 1ch;
+  }
+
+  .total-pip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 20px;
+    margin-right: 4px;
+    border-right: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .total-pip .pip-count { font-size: 28px; }
+
+  .btn-close {
+    height: var(--close-size);
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    color: var(--white-1);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .btn-close:hover {
+    background: #a00000;
+    border-color: var(--red-3);
+    box-shadow: 0 0 16px var(--red-glow);
+  }
+
+  .inv-scroll {
+    flex: 1;
+    min-height: 0;
+    padding: 0 var(--content-pad) var(--content-pad);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .inv-scroll.is-battle {
+    overflow-y: auto;
+    padding-top: 8px;
+  }
+
+  .climb-split {
+    display: flex;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .viewport.is-climb .climb-split {
+    flex-direction: row-reverse;
+  }
+
+  .deck-col {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--black-4) transparent;
+  }
+
+  .viewport.is-climb .deck-col {
+    padding-right: 0;
+    padding-left: 8px;
+  }
+
+  .build-col {
+    width: 380px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-left: 20px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    scrollbar-width: thin;
+    scrollbar-color: var(--black-4) transparent;
+  }
+
+  .viewport.is-climb .build-col {
+    border-left: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-left: 0;
+    padding-right: 20px;
+  }
+
+  .build-section { margin-bottom: 22px; }
+  .build-section:last-child { margin-bottom: 0; }
+
+  .section-head {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Card grid */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, var(--card-w));
+    gap: var(--grid-gap);
+    justify-content: start;
+  }
+
+  .card-ph {
+    width: var(--card-w);
+    height: var(--card-h);
+    position: relative;
+    border-radius: 7px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  }
+
+  .card-ph .stripe {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    z-index: 2;
+  }
+
+  .card-ph .ph-body {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px 16px 22px;
+    text-align: center;
+  }
+
+  .card-ph .ph-name {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    line-height: 1.15;
+  }
+
+  .card-ph.white { background: var(--card-white-bg); }
+  .card-ph.white .stripe { background: var(--card-white-stripe); }
+  .card-ph.white .ph-name { color: #1a1a1a; }
+
+  .card-ph.red { background: var(--card-red-bg); }
+  .card-ph.red .stripe { background: var(--card-red-stripe); }
+  .card-ph.red .ph-name { color: #f0e0d8; }
+
+  .card-ph.black { background: var(--card-black-bg); }
+  .card-ph.black .stripe { background: var(--card-black-stripe); }
+  .card-ph.black .ph-name { color: #e8e4e0; }
+
+  .card-ph.weapon {
+    background: #d7ba93;
+    border: 2px solid rgba(0, 0, 0, 0.25);
+  }
+
+  .card-ph.weapon .stripe { background: #8a6030; }
+  .card-ph.weapon .ph-name { color: #2a1a0a; }
+
+  /* Build panel widgets */
+  .medal-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .medal-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .medal-disc {
+    width: 56px;
+    height: 56px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .medal-disc img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  }
+
+  .medal-stack {
+    position: absolute;
+    bottom: -3px;
+    right: -6px;
+    min-width: 22px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: var(--red-3);
+    border: 1.5px solid var(--white-1);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--white-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0;
+  }
+
+  .equip-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 10px;
+  }
+
+  .equip-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .equip-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .equip-slot.is-empty .equip-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px dashed rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.35);
+  }
+
+  .equip-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .equip-slot-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .equip-slot.is-empty .equip-slot-label {
+    color: rgba(255, 255, 255, 0.22);
+  }
+
+  .temp-card {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+
+  .temp-stripe {
+    width: 5px;
+    flex-shrink: 0;
+    background: var(--white-1);
+  }
+
+  .temp-body {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px 12px 12px;
+  }
+
+  .temp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .temp-card h3 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.05rem;
+    color: var(--white-1);
+    line-height: 1.1;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .temp-chunks {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    height: 20px;
+  }
+
+  .temp-chunk {
+    width: 12px;
+    height: 16px;
+    flex-shrink: 0;
+    transform: skewX(-14deg);
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .temp-chunk.filled {
+    background: var(--white-1);
+  }
+
+  .temp-card p {
+    font-size: 0.68rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .hp-compact {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .hp-big {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .hp-big .val {
+    font-family: 'New Rocker', cursive;
+    font-size: 36px;
+    color: var(--white-1);
+    line-height: 1;
+  }
+
+  .hp-big .sep { font-size: 20px; color: rgba(255, 255, 255, 0.25); }
+
+  .hp-big .max {
+    font-family: 'New Rocker', cursive;
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .hp-track-wrap {
+    flex: 1;
+    height: 22px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid var(--red-3);
+    transform: skewX(-12deg);
+    overflow: hidden;
+  }
+
+  .hp-fill {
+    height: 100%;
+    background: var(--red-3);
+    width: 72%;
+  }
+
+  .weapon-card-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  .weapon-card-wrap .card-ph {
+    width: var(--card-w);
+    height: var(--card-h);
+  }
+
+  .passive-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .passive-chip {
+    padding: 5px 14px 5px 12px;
+    background: rgba(0, 0, 0, 0.85);
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .passive-chip .p-name {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--white-1);
+  }
+
+  .passive-chip .p-stacks {
+    font-family: 'New Rocker', cursive;
+    font-size: 15px;
+    color: var(--red-3);
+    line-height: 1;
+    min-width: 1ch;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Inventory Overlay</h1>
+  <p>
+    Replaces <strong>CardListModalSystem</strong> modal panel with a fullscreen dim overlay and scrollable content.
+    Color counts use <strong>number + swatch only</strong> (no text labels). Climb scene shows the
+    <strong>deck grid alongside a build panel</strong> with HP, weapon, temperance, equipment, medals,
+    and passives all visible at once.
+  </p>
+  <div class="controls">
+    <div class="control-group">
+      <span class="control-label">Scene</span>
+      <div class="btn-row" id="sceneBtns">
+        <button type="button" class="ctrl-btn is-active" data-scene="battle">Battle (Deck)</button>
+        <button type="button" class="ctrl-btn" data-scene="climb">Climb (Deck + Build)</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler">
+    <div class="viewport" id="viewport">
+      <div class="bg-scene" id="bgScene"></div>
+      <div class="overlay-dim"></div>
+
+      <div class="inv-root">
+        <div class="main-header">
+          <h2 class="inv-title" id="title">Draw Pile</h2>
+          <div class="header-actions">
+            <div class="color-ledger" id="ledger"></div>
+            <button type="button" class="btn-close" title="Close (B)">Close</button>
+          </div>
+        </div>
+        <div class="inv-scroll" id="scroll"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+
+  const CARDS = [
+    { name: 'Absolution', color: 'white' },
+    { name: 'Anoint the Sick', color: 'black' },
+    { name: 'Courageous', color: 'red' },
+    { name: 'Fervor', color: 'red' },
+    { name: 'Increase Faith', color: 'white' },
+    { name: 'Increase Faith', color: 'black' },
+    { name: 'Smite', color: 'red' },
+    { name: 'Absolution', color: 'white' },
+    { name: 'Fervor', color: 'red' },
+    { name: 'Anoint the Sick', color: 'black' },
+    { name: 'Courageous', color: 'red' },
+    { name: 'Increase Faith', color: 'white' },
+    { name: 'Smite', color: 'red' },
+    { name: 'Absolution', color: 'white' },
+    { name: 'Increase Faith', color: 'black' },
+    { name: 'Fervor', color: 'red' },
+    { name: 'Anoint the Sick', color: 'black' },
+    { name: 'Courageous', color: 'red' },
+    { name: 'Strike', color: 'white' },
+    { name: 'Strike', color: 'red' },
+    { name: 'Defend', color: 'white' },
+    { name: 'Defend', color: 'black' },
+    { name: 'Prayer', color: 'white' },
+    { name: 'Prayer', color: 'red' },
+  ];
+
+  const MEDALS = [
+    { id: 'st_luke', label: 'St. Luke' },
+    { id: 'st_michael', label: 'St. Michael' },
+    { id: 'st_nicholas', label: 'St. Nicholas' },
+    { id: 'st_peter', label: 'St. Peter', counter: '2/3' },
+    { id: 'st_louie_ix', label: 'St. Louie IX', counter: '3/3' },
+  ];
+
+  const EQUIPMENT = [
+    { slot: 'Head', icon: 'head.png', equipped: true },
+    { slot: 'Chest', icon: 'chest.png', equipped: true },
+    { slot: 'Arms', icon: 'arms.png', equipped: true },
+    { slot: 'Legs', icon: 'legs.png', equipped: false },
+  ];
+
+  const PASSIVES = [
+    { name: 'Might', stacks: 2, dur: 'battle' },
+    { name: 'Vigor', stacks: 1, dur: 'turn' },
+    { name: 'Aegis', stacks: 3, dur: 'battle' },
+    { name: 'Sharpen', stacks: 1, dur: 'quest' },
+    { name: 'Intellect', stacks: 1, dur: 'run' },
+    { name: 'Wounded', stacks: 1, dur: 'battle' },
+  ];
+
+  const state = { scene: 'battle' };
+
+  function countByColor() {
+    const counts = { white: 0, red: 0, black: 0 };
+    for (const c of CARDS) counts[c.color]++;
+    return counts;
+  }
+
+  function renderColorLedger() {
+    const counts = countByColor();
+    const pips = ['white', 'red', 'black'].map((key) => `
+      <div class="color-pip">
+        <span class="swatch swatch-${key}"></span>
+        <span class="pip-count">${counts[key]}</span>
+      </div>
+    `).join('');
+    document.getElementById('ledger').innerHTML = `
+      <div class="total-pip">
+        <span class="pip-count">${CARDS.length}</span>
+      </div>
+      ${pips}
+    `;
+  }
+
+  function cardHtml(card) {
+    return `
+      <article class="card-ph ${card.color}">
+        <div class="stripe"></div>
+        <div class="ph-body"><div class="ph-name">${card.name}</div></div>
+      </article>
+    `;
+  }
+
+  function sectionHead(label) {
+    return `<div class="section-head">${label}</div>`;
+  }
+
+  function buildPanelHtml() {
+    const medalSlots = MEDALS.map((m) => {
+      const badge = m.counter ? `<span class="medal-stack">${m.counter}</span>` : '';
+      return `
+        <div class="medal-slot">
+          <div class="medal-disc">
+            <img src="../Content/${m.id}.png" alt="${m.label}">
+            ${badge}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const equipPanels = EQUIPMENT.map((e) => {
+      const classes = ['equip-slot', e.equipped ? '' : 'is-empty'].filter(Boolean).join(' ');
+      const iconInner = e.equipped
+        ? `<img src="../Content/${e.icon}" alt="${e.slot}">`
+        : '';
+      return `
+      <div class="${classes}">
+        <div class="equip-icon">${iconInner}</div>
+        <span class="equip-slot-label">${e.slot}</span>
+      </div>
+    `;
+    }).join('');
+
+    const passiveChips = PASSIVES.map((p) => `
+      <div class="passive-chip">
+        <span class="p-stacks">${p.stacks}</span>
+        <span class="p-name">${p.name}</span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="build-section" data-region="hp">
+        ${sectionHead('Health')}
+        <div class="hp-compact">
+          <div class="hp-big">
+            <span class="val">36</span>
+            <span class="sep">/</span>
+            <span class="max">50</span>
+          </div>
+          <div class="hp-track-wrap"><div class="hp-fill"></div></div>
+        </div>
+      </div>
+      <div class="build-section" data-region="weapon">
+        ${sectionHead('Weapon')}
+        <div class="weapon-card-wrap">
+          <article class="card-ph weapon">
+            <div class="stripe"></div>
+            <div class="ph-body"><div class="ph-name">Sword</div></div>
+          </article>
+        </div>
+      </div>
+      <div class="build-section" data-region="temperance">
+        ${sectionHead('Temperance')}
+        <div class="temp-card">
+          <div class="temp-stripe" aria-hidden="true"></div>
+          <div class="temp-body">
+            <div class="temp-header">
+              <h3>Righteous Fury</h3>
+              <div class="temp-chunks" title="Temperance 2 / 3">
+                <div class="temp-chunk filled"></div>
+                <div class="temp-chunk filled"></div>
+                <div class="temp-chunk"></div>
+              </div>
+            </div>
+            <p>Spend all Courage. Deal 2 damage per Courage to all enemies.</p>
+          </div>
+        </div>
+      </div>
+      <div class="build-section" data-region="equipment">
+        ${sectionHead('Equipment')}
+        <div class="equip-grid">${equipPanels}</div>
+      </div>
+      <div class="build-section" data-region="medals">
+        ${sectionHead('Medals')}
+        <div class="medal-grid">${medalSlots}</div>
+      </div>
+      <div class="build-section" data-region="passives">
+        ${sectionHead('Passives')}
+        <div class="passive-list">${passiveChips}</div>
+      </div>
+    `;
+  }
+
+  function render() {
+    const isClimb = state.scene === 'climb';
+    const vp = document.getElementById('viewport');
+    vp.classList.toggle('is-climb', isClimb);
+    document.getElementById('bgScene').classList.toggle('climb', isClimb);
+    document.getElementById('title').textContent = isClimb ? 'Run Overview' : 'Draw Pile';
+
+    const scroll = document.getElementById('scroll');
+    scroll.classList.toggle('is-battle', !isClimb);
+    scroll.innerHTML = isClimb
+      ? `<div class="climb-split">
+           <div class="deck-col"><div class="card-grid">${CARDS.map(cardHtml).join('')}</div></div>
+           <div class="build-col">${buildPanelHtml()}</div>
+         </div>`
+      : `<div class="card-grid">${CARDS.map(cardHtml).join('')}</div>`;
+
+    renderColorLedger();
+  }
+
+  document.getElementById('sceneBtns').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-scene]');
+    if (!btn) return;
+    state.scene = btn.dataset.scene;
+    document.querySelectorAll('#sceneBtns .ctrl-btn').forEach((b) => {
+      b.classList.toggle('is-active', b.dataset.scene === state.scene);
+    });
+    render();
+  });
+
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const vp = document.querySelector('.viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / GAME_W;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  render();
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', fitViewport);
+  fitViewport();
+</script>
+</body>
+</html>

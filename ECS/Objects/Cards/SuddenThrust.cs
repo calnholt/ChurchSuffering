@@ -7,6 +7,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
     public class SuddenThrust : CardBase
     {
         private int CourageGain = 1;
+        private int DamageUpgrade = 1;
 
         public SuddenThrust()
         {
@@ -15,7 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"Gain {CourageGain} courage.";
             IsFreeAction = true;
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 2;
             Block = 3;
 
@@ -32,6 +33,10 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     DamageType = ModifyTypeEnum.Attack
                 });
                 EventManager.Publish(new ModifyCourageRequestEvent { Delta = CourageGain, Type = ModifyCourageType.Gain });
+            };
+            OnUpgrade = (entityManager, card) =>
+            {
+                Damage += DamageUpgrade;
             };
         }
     }

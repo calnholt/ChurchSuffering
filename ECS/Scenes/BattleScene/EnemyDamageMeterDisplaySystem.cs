@@ -189,21 +189,17 @@ namespace Crusaders30XX.ECS.Systems
 
 			_lastPhase = currentPhase;
 
+			if (BattleInputGate.ShouldSuppressEnemyAttackDisplay(EntityManager))
+			{
+				ResetAnimatedValues();
+				return;
+			}
+
 			// Get current progress and calculate target values
 			var progress = GetCurrentProgress();
 			if (progress == null)
 			{
-				// Reset animated values when no progress
-				_animatedDamage = 0f;
-				_animatedBlock = 0f;
-				_animatedAegis = 0f;
-				_animatedCondition = 0f;
-				_animatedOverflow = 0f;
-				_targetDamage = 0;
-				_targetBlock = 0;
-				_targetAegis = 0;
-				_targetCondition = 0;
-				_targetOverflow = 0;
+				ResetAnimatedValues();
 				return;
 			}
 
@@ -250,6 +246,12 @@ namespace Crusaders30XX.ECS.Systems
 			if (phaseEntity == null) return;
 			var phase = phaseEntity.GetComponent<PhaseState>();
 			if (phase == null || (phase.Sub != SubPhase.Block && phase.Sub != SubPhase.EnemyAttack)) return;
+
+			if (BattleInputGate.ShouldSuppressEnemyAttackDisplay(EntityManager))
+			{
+				CleanupTooltips(new HashSet<string>());
+				return;
+			}
 
 			// Get banner anchor bounds
 			var anchorEntity = EntityManager.GetEntitiesWithComponent<EnemyAttackBannerAnchor>().FirstOrDefault();
@@ -562,24 +564,25 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
+		private void ResetAnimatedValues()
+		{
+			_animatedDamage = 0f;
+			_animatedBlock = 0f;
+			_animatedAegis = 0f;
+			_animatedCondition = 0f;
+			_animatedOverflow = 0f;
+			_targetDamage = 0;
+			_targetBlock = 0;
+			_targetAegis = 0;
+			_targetCondition = 0;
+			_targetOverflow = 0;
+		}
+
 		private EnemyAttackProgress GetCurrentProgress()
 		{
-			// Get the first planned attack's context from the enemy
-			var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-			if (enemy == null) return null;
-			var intent = enemy.GetComponent<AttackIntent>();
-			if (intent == null || intent.Planned == null || intent.Planned.Count == 0) return null;
-
-			var contextId = intent.Planned[0].ContextId;
-			if (string.IsNullOrEmpty(contextId)) return null;
-
-			foreach (var e in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
-			{
-				var p = e.GetComponent<EnemyAttackProgress>();
-				if (p != null && p.ContextId == contextId)
-					return p;
-			}
-			return null;
+			return EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)
+				? progress
+				: null;
 		}
 
 		private void UpdateSegmentTooltipUi(string key, Rectangle rect, string tooltipText)

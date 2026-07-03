@@ -1,19 +1,38 @@
 UX
-- dialogue transitions, text, name section
+- improve applied passive animations
+- improve climb resources preview animation when hovering over buttons
+- enemy attack
+- improve remiel in battle text
+- make fixed buttons used throughout (just a fex styles used consistently)
+- tutorial section transitions a little rough -- take notes on what exactly needs to be fixed to clean up
+- make climb column buttons more thematic
+- recoil shader
+- intimidated shader (maybe change name)
+
+bugs
+- curse need to apply before brittle
+
+art
+- card art
+- 
 
 Gameplay
-- map needs to feel like worker placement -- think about HOW -- gain resources @ battles, use to buy, time costs to visit places, tableu building? conversions
 - maybe remove istoken/isweapon and make as components?
 - make hand display agnostic of carddata, probably involves refactoring some components and data objects
-- fix hand display card uielement bounds
-- make cardlistmodaldisplay not a modal, tinted overlay with floating UI
+- darkness X - for x turns, one card in hand becomes shrouded in darkess during the enemy turn, lifts during action phase, cards in darkness block for 3 and ignore color gains and play restrictions
+- reclaim - return X random cards from graveyard to deck, shuffle deck
 
 cards
 - if you have dealt 10 or more damage this turn...
+- gain galvanize
+- when this is in your hand, if you pledge a card, it loses all its mods
 
 medals
-- whenever you pledge 6 cards, gain 1 vigor
-- the start of the next x battles, the enemy gains 1 anathema
+- on acquire, X cards gain GOOD card modification
+- whenever you mill 2 cards, resurrect 1
+
+equipment
+- 
 
 weapons
 - rapier? - if fully block attack, gain riposte passive, cards trigger off riposte, temperance is aegis
@@ -21,22 +40,20 @@ weapons
 
 
 tech debt
-- 
+- researching removing isclicked and ishovered from UIElement, handle through PlayerInputEvent + enity ids
+- Fable - screen sizes
+- remove relic?
 
 
 persistent card states:
-- colorless
-- frozen
-- brittle
-- update sealed to reduce on block ONLY, can be pledged
-- cursed - becomes 3block 1AP prayer - Remove the curse from this card.
-
-
-
-cards to delete:
-- mace
-- shroud of turin
+- update sealed to reduce on block and other cards played, can be pledged
 
 keywords
 - indulgence for additional cost?
 - vigor reduction
+
+cards that need art:
+- steel the spirit
+
+bugs:
+- 

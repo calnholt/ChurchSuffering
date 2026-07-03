@@ -4,8 +4,8 @@ using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Rendering;
+using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -19,7 +19,6 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
 		private Texture2D _iconTexture;
 		private Texture2D _trapezoidTexture;
 
@@ -32,7 +31,7 @@ namespace Crusaders30XX.ECS.Systems
 		// --- Debug Editable Fields ---
 
 		[DebugEditable(DisplayName = "Vertical Offset from Head", Step = 1f, Min = -200f, Max = 200f)]
-		public float VerticalOffset { get; set; } = -80f;
+		public float VerticalOffset { get; set; } = -105f;
 
 		[DebugEditable(DisplayName = "Icon Scale", Step = 0.05f, Min = 0.1f, Max = 3f)]
 		public float IconScale { get; set; } = 0.1f;
@@ -88,13 +87,12 @@ namespace Crusaders30XX.ECS.Systems
 		private float _lastTrapWidth, _lastTrapHeight, _lastTrapLeftOffset;
 		private float _lastTrapTopAngle, _lastTrapRightAngle, _lastTrapBottomAngle, _lastTrapLeftAngle;
 
-		public ActiveCharacterIndicatorDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public ActiveCharacterIndicatorDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-      _iconTexture = _content.Load<Texture2D>("active_icon");
+      _iconTexture = imageAssets.GetRequiredTexture("active_icon");
 			RegenerateTrapezoid();
 		}
 
@@ -212,6 +210,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			else if (phaseState.Main == MainPhase.EnemyTurn)
 			{
+				if (BattleInputGate.ShouldSuppressEnemyAttackDisplay(EntityManager)) return;
 				targetEntity = EntityManager.GetEntitiesWithComponent<Enemy>().FirstOrDefault();
 			}
 
@@ -269,4 +268,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-

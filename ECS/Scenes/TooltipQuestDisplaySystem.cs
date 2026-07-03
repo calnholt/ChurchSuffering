@@ -8,7 +8,6 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Utils;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Objects.Enemies;
@@ -23,7 +22,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _contentFont = FontSingleton.ContentFont;
 		private readonly Dictionary<(int w, int h, int r), Texture2D> _roundedCache = new();
@@ -193,19 +192,18 @@ namespace Crusaders30XX.ECS.Systems
 
 		private const string TooltipEntityName = "UI_QuestTooltip";
 
-		public TooltipQuestDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public TooltipQuestDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-		_pixel = new Texture2D(graphicsDevice, 1, 1);
-		_pixel.SetData(new[] { Color.White });
-		try { _chaliceTexture = _content.Load<Texture2D>("chalice"); } catch { _chaliceTexture = null; }
-		try { _treasureChestTexture = _content.Load<Texture2D>("treasure_chest"); } catch { _treasureChestTexture = null; }
-		try { _goldTexture = _content.Load<Texture2D>("gold"); } catch { _goldTexture = null; }
-		try { _questIconTexture = _content.Load<Texture2D>("Quest_poi"); } catch { _questIconTexture = null; }
-		try { _hellriftIconTexture = _content.Load<Texture2D>("Hellrift_poi"); } catch { _hellriftIconTexture = null; }
+			_imageAssets = imageAssets;
+		_pixel = _imageAssets.GetPixel(Color.White);
+		_chaliceTexture = _imageAssets.TryGetTexture("chalice");
+		_treasureChestTexture = _imageAssets.TryGetTexture("treasure_chest");
+		_goldTexture = _imageAssets.TryGetTexture("gold");
+		_questIconTexture = _imageAssets.TryGetTexture("Quest_poi");
+		_hellriftIconTexture = _imageAssets.TryGetTexture("Hellrift_poi");
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -283,7 +281,6 @@ namespace Crusaders30XX.ECS.Systems
 						{
 							id = id,
 							type = "Enemy",
-							difficulty = EnemyDifficulty.Easy,
 						})
 						.ToList();
 					tribulations = new List<TribulationDefinition>();
@@ -468,27 +465,8 @@ namespace Crusaders30XX.ECS.Systems
 					int estimatedEnemyHeight = System.Math.Max(1, (int)System.Math.Round(80 * EnemyScale));
 					totalHeight += estimatedEnemyHeight;
 
-					// Add space for chevrons below enemies
-					int maxDiff = 0;
-					foreach (var ev in events)
-					{
-						int d = ev.difficulty switch
-						{
-							EnemyDifficulty.Easy => 1,
-							EnemyDifficulty.Medium => 2,
-							EnemyDifficulty.Hard => 3,
-							_ => 1
-						};
-						if (d > maxDiff) maxDiff = d;
-					}
-					if (maxDiff > 0)
-					{
-						float scaledHeight = ChevronHeight * ChevronScale;
-						int stackHeight = (int)System.Math.Ceiling((maxDiff * scaledHeight) + ((maxDiff - 1) * ChevronGap * ChevronScale));
-						totalHeight += ChevronTopMargin + stackHeight;
 					}
 				}
-			}
 			
 			// Tribulation section
 			if (tribulations != null && tribulations.Count > 0 && _chaliceTexture != null)
@@ -688,24 +666,7 @@ namespace Crusaders30XX.ECS.Systems
 				rewardsSpace = rewardsVert + rewardsLineHeight + System.Math.Max(0, RewardsVerticalSpacing / 2) + pad + rowHeightEst;
 			}
 			
-			// Calculate space for chevrons
-			int maxDiff = 0;
-			foreach (var q in questDefs)
-			{
-				int d = q.difficulty switch
-				{
-					EnemyDifficulty.Easy => 1,
-					EnemyDifficulty.Medium => 2,
-					EnemyDifficulty.Hard => 3,
-					_ => 1
-				};
-				if (d > maxDiff) maxDiff = d;
-			}
-			float scaledChevronHeight = ChevronHeight * ChevronScale;
-			int maxChevronStackHeight = (int)System.Math.Ceiling((maxDiff * scaledChevronHeight) + ((maxDiff - 1) * ChevronGap * ChevronScale));
-			int chevronTotalSpace = maxDiff > 0 ? (ChevronTopMargin + maxChevronStackHeight) : 0;
-
-			int enemiesHeight = System.Math.Max(1, inner.Bottom - enemiesTop - tribulationSpace - rewardsSpace - chevronTotalSpace);
+				int enemiesHeight = System.Math.Max(1, inner.Bottom - enemiesTop - tribulationSpace - rewardsSpace);
 			var enemiesRect = new Rectangle(inner.X, enemiesTop, inner.Width, enemiesHeight);
 
 			// load enemy textures and their definitions
@@ -732,32 +693,7 @@ namespace Crusaders30XX.ECS.Systems
 				int drawY = enemiesRect.Y + (enemiesRect.Height - sizes[i].Y) / 2;
 				_spriteBatch.Draw(entries[i].tex, new Rectangle(drawX, drawY, sizes[i].X, sizes[i].Y), Color.White * alpha01);
 
-				// Draw difficulty chevrons centered under this enemy
-				int diffCount = entries[i].def.difficulty switch
-				{
-					EnemyDifficulty.Easy => 1,
-					EnemyDifficulty.Medium => 2,
-					EnemyDifficulty.Hard => 3,
-					_ => 1
-				};
-
-				Texture2D chevronMask = PrimitiveTextureFactory.GetAntialiasedChevronMask(
-					_graphicsDevice,
-					ChevronWidth,
-					ChevronHeight,
-					ChevronThickness,
-					diffCount,
-					ChevronGap
-				);
-
-				if (chevronMask != null)
-				{
-					float totalStackWidth = ChevronWidth * ChevronScale;
-					float chevronX = drawX + (sizes[i].X - totalStackWidth) / 2f;
-					float chevronY = enemiesRect.Bottom + ChevronTopMargin;
-					_spriteBatch.Draw(chevronMask, new Vector2(chevronX, chevronY), null, Color.White * alpha01, 0f, Vector2.Zero, new Vector2(ChevronScale), SpriteEffects.None, 0f);
 				}
-			}
 
 			// Draw tribulations below enemies (within inner bounds)
 			if (tribulations != null && tribulations.Count > 0 && _chaliceTexture != null)
@@ -948,9 +884,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (string.IsNullOrEmpty(id)) return null;
 			string assetName = EnemyPortraitContent.ToAssetName(id);
-			try { return _content.Load<Texture2D>(assetName); } catch { }
-			try { return _content.Load<Texture2D>(id); } catch { }
-			return null;
+			return _imageAssets.GetTextureOrFallback(assetName, id);
 		}
 
 		private void DrawPill(Rectangle rect, Color color, int radius)

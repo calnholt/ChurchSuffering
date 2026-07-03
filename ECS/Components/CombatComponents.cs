@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Microsoft.Xna.Framework;
 
@@ -11,7 +12,7 @@ namespace Crusaders30XX.ECS.Components
 	public class EnemyArsenal : IComponent
 	{
 		public Entity Owner { get; set; }
-		public List<string> AttackIds { get; set; } = new();
+		public List<EnemyAttackId> AttackIds { get; set; } = new();
 	}
 
 	/// <summary>
@@ -21,6 +22,7 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 		public List<PlannedAttack> Planned { get; set; } = new();
+		public int ActiveAttackSequence { get; set; }
 	}
 
 	/// <summary>
@@ -34,9 +36,8 @@ namespace Crusaders30XX.ECS.Components
 
 	public class PlannedAttack
 	{
-		public string AttackId;
+		public EnemyAttackId AttackId;
 		public int ResolveStep;
-		public string ContextId;
 		public bool WasBlocked;
 		public bool IsAmbush;
 		public EnemyAttackBase AttackDefinition;
@@ -46,15 +47,15 @@ namespace Crusaders30XX.ECS.Components
 
 
 	/// <summary>
-	/// Per-attack, per-context progress data used by UI and logic. One entity per contextId.
+	/// Current active enemy attack progress snapshot used by UI and logic. One entity per enemy.
 	/// </summary>
 	public class EnemyAttackProgress : IComponent
 	{
 		public Entity Owner { get; set; }
 
-		public string ContextId { get; set; }
 		public Entity Enemy { get; set; }
-		public string AttackId { get; set; }
+		public EnemyAttackId AttackId { get; set; }
+		public int AttackSequence { get; set; }
 
 		// Typed counters replacing generic dictionary keys
 		public int AssignedBlockTotal { get; set; }
@@ -86,30 +87,11 @@ namespace Crusaders30XX.ECS.Components
 	}
 
 	/// <summary>
-	/// Holds transient animation state for the player portrait (offsets, timers).
-	/// Read by display; mutated by PlayerAnimationSystem.
-	/// </summary>
-	public class PlayerAnimationState : IComponent
-	{
-		public Entity Owner { get; set; }
-		public Vector2 DrawOffset { get; set; }
-		public Vector2 ScaleMultiplier { get; set; } = new Vector2(1f, 1f);
-		public float AttackAnimTimer { get; set; }
-		public float AttackAnimDuration { get; set; } = 0.2f;
-		public Vector2 AttackTargetPos { get; set; }
-		public Color TintColor { get; set; } = Color.White;
-		public float DamageFlashTimer { get; set; }
-	}
-
-
-
-	/// <summary>
 	/// Marks a card as currently assigned as block to a specific attack context and carries its animation state.
 	/// </summary>
 	public class AssignedBlockCard : IComponent
 	{
 		public Entity Owner { get; set; }
-		public string ContextId { get; set; }
 		public int BlockAmount { get; set; }
 		public long AssignedAtTicks { get; set; }
 		// Display data (self-contained; systems shouldn't need to inspect card/equipment):
@@ -128,6 +110,8 @@ namespace Crusaders30XX.ECS.Components
 		public float StartScale { get; set; } = 1f;
 		public float TargetScale { get; set; } = 0.4f;
 		public float CurrentScale { get; set; } = 1f;
+		public float StartRotation { get; set; } = 0f;
+		public float CurrentRotation { get; set; } = 0f;
 		public float Elapsed { get; set; } = 0f;
 		public bool ImpactPlayed { get; set; } = false;
 	}
@@ -138,7 +122,7 @@ namespace Crusaders30XX.ECS.Components
 	public class AmbushState : IComponent
 	{
 		public Entity Owner { get; set; }
-		public string ContextId { get; set; }
+		public int ActiveAttackSequence { get; set; }
 		public bool IsActive { get; set; }
 		public bool IntroActive { get; set; }
 		public float TimerDurationSeconds { get; set; } = 20f;
@@ -165,5 +149,3 @@ namespace Crusaders30XX.ECS.Components
 		public Entity Owner { get; set; }
 	}
 }
-
-

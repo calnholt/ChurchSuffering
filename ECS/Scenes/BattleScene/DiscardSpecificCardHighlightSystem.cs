@@ -88,20 +88,16 @@ namespace Crusaders30XX.ECS.Systems
 
             if (Enabled01 == 0) return;
 
-            // Current context
-            var intentEntity = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-            var ctx = intentEntity?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault()?.ContextId;
-            if (string.IsNullOrEmpty(ctx)) return;
+            if (!EnemyAttackFlowService.HasCurrentAttack(EntityManager)) return;
 
             foreach (var card in deck.Hand)
             {
                 var mark = card.GetComponent<MarkedForSpecificDiscard>();
                 if (mark == null) continue;
-                var t = card.GetComponent<Transform>();
                 var ui = card.GetComponent<UIElement>();
-                if (t == null || ui == null) continue;
-                var rect = CardGeometryService.GetVisualRect(EntityManager, t.Position);
-                DrawSparkles(rect, t.Rotation, t.Scale);
+                if (ui == null) continue;
+                var geometry = CardGeometryService.GetVisualGeometry(EntityManager, card);
+                DrawSparkles(geometry.Bounds, geometry.Rotation, new Vector2(geometry.Scale, geometry.Scale));
             }
         }
 
@@ -167,12 +163,13 @@ namespace Crusaders30XX.ECS.Systems
             int seed = rect.X ^ rect.Y ^ rect.Width ^ rect.Height;
             int flickerStep = System.Math.Max(0, FlickerSeedsPerSecond);
             var rand = new System.Random(seed + (int)System.Math.Floor(t * flickerStep));
+            float uniformScale = System.Math.Max(0.01f, scale.X);
             int count = System.Math.Max(0, SparkleCount);
-            int band = System.Math.Max(1, BandThicknessPx);
-            int inside = System.Math.Max(0, InsideOffsetPx);
-            int outside = System.Math.Max(0, OutsideOffsetPx);
-            int smin = System.Math.Max(1, System.Math.Min(SizeMinPx, SizeMaxPx));
-            int smax = System.Math.Max(smin, System.Math.Max(SizeMinPx, SizeMaxPx));
+            int band = System.Math.Max(1, (int)System.Math.Round(BandThicknessPx * uniformScale));
+            int inside = System.Math.Max(0, (int)System.Math.Round(InsideOffsetPx * uniformScale));
+            int outside = System.Math.Max(0, (int)System.Math.Round(OutsideOffsetPx * uniformScale));
+            int smin = System.Math.Max(1, (int)System.Math.Round(System.Math.Min(SizeMinPx, SizeMaxPx) * uniformScale));
+            int smax = System.Math.Max(smin, (int)System.Math.Round(System.Math.Max(SizeMinPx, SizeMaxPx) * uniformScale));
             float aMin = System.Math.Clamp(AlphaMin, 0f, 1f);
             float aMax = System.Math.Clamp(AlphaMax, 0f, 1f);
             if (aMax < aMin) { var tmp = aMax; aMax = aMin; aMin = tmp; }
@@ -181,7 +178,6 @@ namespace Crusaders30XX.ECS.Systems
             {
                 int side = rand.Next(0, 4);
                 float u = (float)rand.NextDouble();
-                // Offset across the normal direction: [-inside, +outside]
                 float nrm = (float)rand.NextDouble() * (inside + outside) - inside;
 
                 float halfW = rect.Width / 2f;
@@ -189,43 +185,35 @@ namespace Crusaders30XX.ECS.Systems
                 float lx = 0f, ly = 0f;
                 switch (side)
                 {
-                    case 0: // top edge, outward is -Y
+                    case 0:
                         lx = -halfW + u * rect.Width;
                         ly = -halfH - nrm;
                         break;
-                    case 1: // right edge, outward is +X
+                    case 1:
                         lx = halfW + nrm;
                         ly = -halfH + u * rect.Height;
                         break;
-                    case 2: // bottom edge, outward is +Y
+                    case 2:
                         lx = -halfW + u * rect.Width;
                         ly = halfH + nrm;
                         break;
-                    default: // left edge, outward is -X
+                    default:
                         lx = -halfW - nrm;
                         ly = -halfH + u * rect.Height;
                         break;
                 }
-                // Jitter along the tangent inside the band and clamp to card edge to avoid overshooting corners
                 float tangentJitter = ((float)rand.NextDouble() * 2f - 1f) * band;
                 if (side == 0 || side == 2) lx += tangentJitter; else ly += tangentJitter;
-                float eps = 1f; // keep a tiny margin inside the edge
+                float eps = 1f * uniformScale;
                 if (side == 0 || side == 2)
                 {
-                    // Clamp X to within card width
                     lx = MathHelper.Clamp(lx, -halfW + eps, halfW - eps);
                 }
                 else
                 {
-                    // Clamp Y to within card height
                     ly = MathHelper.Clamp(ly, -halfH + eps, halfH - eps);
                 }
 
-                // Apply scale
-                lx *= System.Math.Max(0.01f, scale.X);
-                ly *= System.Math.Max(0.01f, scale.Y);
-
-                // Rotate and translate to world
                 float rx = lx * cos - ly * sin;
                 float ry = lx * sin + ly * cos;
                 var pos = new Vector2(center.X + rx, center.Y + ry);

@@ -51,14 +51,13 @@ namespace Crusaders30XX.ECS.Systems
 
 		public static int CalculateTotalIncomingDamage(EntityManager entityManager, int currentHp)
 		{
-			var activeContextIds = entityManager.GetEntitiesWithComponent<AttackIntent>()
+			var activeSequences = entityManager.GetEntitiesWithComponent<AttackIntent>()
 				.Select(entity => entity.GetComponent<AttackIntent>())
 				.Where(intent => intent?.Planned != null && intent.Planned.Count > 0)
-				.Select(intent => intent.Planned[0]?.ContextId)
-				.Where(contextId => !string.IsNullOrEmpty(contextId))
-				.ToHashSet(StringComparer.Ordinal);
+				.Select(intent => intent.ActiveAttackSequence)
+				.ToHashSet();
 
-			if (activeContextIds.Count == 0 || currentHp <= 0) return 0;
+			if (activeSequences.Count == 0 || currentHp <= 0) return 0;
 
 			long total = 0;
 			foreach (var entity in entityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
@@ -66,7 +65,7 @@ namespace Crusaders30XX.ECS.Systems
 				var progress = entity.GetComponent<EnemyAttackProgress>();
 				if (progress == null
 					|| progress.ActualDamage <= 0
-					|| !activeContextIds.Contains(progress.ContextId))
+					|| !activeSequences.Contains(progress.AttackSequence))
 				{
 					continue;
 				}
@@ -100,6 +99,29 @@ namespace Crusaders30XX.ECS.Systems
 				Math.Max(0, trackHeight));
 		}
 
+		public static Rectangle CalculateEnemyRegionBounds(
+			Rectangle playerHealthBounds,
+			Vector2 portraitCenter,
+			int portraitTextureHeight,
+			float portraitBaseScale,
+			int offsetX,
+			int offsetY)
+		{
+			if (playerHealthBounds.Width <= 0
+				|| playerHealthBounds.Height <= 0
+				|| portraitTextureHeight <= 0)
+			{
+				return Rectangle.Empty;
+			}
+
+			float portraitHalfHeight = portraitTextureHeight * Math.Max(0f, portraitBaseScale) / 2f;
+			return new Rectangle(
+				(int)Math.Round(portraitCenter.X + offsetX - playerHealthBounds.Width / 2f),
+				(int)Math.Round(portraitCenter.Y + portraitHalfHeight + offsetY),
+				playerHealthBounds.Width,
+				playerHealthBounds.Height);
+		}
+
 		public static float CalculatePulseAlpha(
 			float elapsedSeconds,
 			float frequencyHz,
@@ -128,7 +150,7 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 
-	[DebugTab("Player HUD Health")]
+	[DebugTab("HUD Health")]
 	public class PlayerHudHealthDisplaySystem : Core.System
 	{
 		private sealed class FillAnimationState
@@ -178,6 +200,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Incoming Damage Alpha Max", Step = 0.05f, Min = 0f, Max = 1f)]
 		public float IncomingDamageAlphaMax { get; set; } = 0.45f;
 
+		[DebugEditable(DisplayName = "Enemy Region Offset X", Step = 1, Min = -1000, Max = 1000)]
+		public int EnemyRegionOffsetX { get; set; } = 0;
+
+		[DebugEditable(DisplayName = "Enemy Region Offset Y", Step = 1, Min = -1000, Max = 1000)]
+		public int EnemyRegionOffsetY { get; set; } = 4;
+
 		public PlayerHudHealthDisplaySystem(
 			EntityManager entityManager,
 			GraphicsDevice graphicsDevice,
@@ -189,18 +217,34 @@ namespace Crusaders30XX.ECS.Systems
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
 		{
-			return EntityManager.GetEntitiesWithComponent<Player>()
-				.Where(entity => entity.HasComponent<HP>());
+			return EntityManager.GetEntitiesWithComponent<HP>()
+				.Where(entity => entity.HasComponent<Player>() || entity.HasComponent<Enemy>());
 		}
 
 		public override void Update(GameTime gameTime)
 		{
 			_elapsedSeconds += Math.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
+			var relevantEntityIds = GetRelevantEntities()
+				.Select(entity => entity.Id)
+				.ToHashSet();
+			foreach (int staleEntityId in _fillAnimations.Keys
+				.Where(entityId => !relevantEntityIds.Contains(entityId))
+				.ToList())
+			{
+				_fillAnimations.Remove(staleEntityId);
+			}
 			base.Update(gameTime);
 		}
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
+			if (entity.HasComponent<SuppressPortraitRender>())
+			{
+				_fillAnimations.Remove(entity.Id);
+				PublishTrackAnchor(entity);
+				return;
+			}
+
 			var hp = entity.GetComponent<HP>();
 			if (hp == null) return;
 
@@ -230,8 +274,6 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void Draw()
 		{
-			var player = GetRelevantEntities().FirstOrDefault();
-			var hp = player?.GetComponent<HP>();
 			var root = EntityManager.GetEntitiesWithComponent<PlayerHudAnchor>().FirstOrDefault();
 			var anchor = root?.GetComponent<PlayerHudAnchor>();
 			var healthRegionEntity = GetHealthRegionEntity();
@@ -240,9 +282,7 @@ namespace Crusaders30XX.ECS.Systems
 				? Rectangle.Empty
 				: TransformResolverService.ResolveLocalBounds(EntityManager, healthRegionEntity, healthRegion.Bounds);
 			var font = FontSingleton.ChakraPetchFont;
-			if (player == null
-				|| hp == null
-				|| anchor == null
+			if (anchor == null
 				|| healthRegion == null
 				|| font == null
 				|| !healthRegion.IsVisible
@@ -252,14 +292,39 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
-			float displayedPercent = _fillAnimations.TryGetValue(player.Id, out var animation)
+			var player = EntityManager.GetEntitiesWithComponent<Player>()
+				.FirstOrDefault(entity => entity.HasComponent<HP>());
+			if (player != null && !player.HasComponent<SuppressPortraitRender>())
+			{
+				DrawHealthRegion(player, healthBounds, anchor, font, includeIncomingDamage: true);
+			}
+
+			foreach (var enemy in EntityManager.GetEntitiesWithComponent<Enemy>()
+				.Where(entity => entity.HasComponent<HP>() && !entity.HasComponent<SuppressPortraitRender>()))
+			{
+				Rectangle enemyBounds = CalculateHealthRegionBounds(enemy, healthBounds);
+				DrawHealthRegion(enemy, enemyBounds, anchor, font, includeIncomingDamage: false);
+			}
+		}
+
+		private void DrawHealthRegion(
+			Entity entity,
+			Rectangle regionBounds,
+			PlayerHudAnchor anchor,
+			SpriteFont font,
+			bool includeIncomingDamage)
+		{
+			var hp = entity.GetComponent<HP>();
+			if (hp == null || regionBounds.Width <= 0 || regionBounds.Height <= 0) return;
+
+			float displayedPercent = _fillAnimations.TryGetValue(entity.Id, out var animation)
 				? animation.Displayed
 				: hp.Max > 0
 					? MathHelper.Clamp(hp.Current / (float)hp.Max, 0f, 1f)
 					: 0f;
-			int incomingDamage = PlayerHudHealthRendering.CalculateTotalIncomingDamage(
-				EntityManager,
-				Math.Max(0, hp.Current));
+			int incomingDamage = includeIncomingDamage
+				? PlayerHudHealthRendering.CalculateTotalIncomingDamage(EntityManager, Math.Max(0, hp.Current))
+				: 0;
 			var renderState = PlayerHudHealthRendering.BuildRenderState(
 				hp.Current,
 				hp.Max,
@@ -267,16 +332,16 @@ namespace Crusaders30XX.ECS.Systems
 				incomingDamage,
 				LowHealthThresholdPercent);
 
-			DrawParallelogram(healthBounds, anchor.Slant, anchor.HudBlack);
+			DrawParallelogram(regionBounds, anchor.Slant, anchor.HudBlack);
 
 			float labelWidth = MeasureSpacedText(font, "HP", anchor.LabelFontScale, anchor.LabelLetterSpacing).X;
 			var trackBounds = PlayerHudHealthRendering.CalculateTrackBounds(
-				healthBounds,
+				regionBounds,
 				anchor,
 				labelWidth);
 			if (trackBounds.Width <= 0 || trackBounds.Height <= 0) return;
 
-			DrawHealthLabel(font, healthBounds, anchor);
+			DrawHealthLabel(font, regionBounds, anchor);
 			DrawTrack(trackBounds, anchor, renderState);
 			DrawFraction(font, trackBounds, anchor, renderState.FractionText);
 		}
@@ -296,7 +361,7 @@ namespace Crusaders30XX.ECS.Systems
 			return animation;
 		}
 
-		private void PublishTrackAnchor(Entity player)
+		private void PublishTrackAnchor(Entity healthEntity)
 		{
 			var anchor = EntityManager.GetEntitiesWithComponent<PlayerHudAnchor>()
 				.FirstOrDefault()
@@ -306,11 +371,11 @@ namespace Crusaders30XX.ECS.Systems
 			Rectangle healthBounds = healthRegionEntity == null || healthRegion == null
 				? Rectangle.Empty
 				: TransformResolverService.ResolveLocalBounds(EntityManager, healthRegionEntity, healthRegion.Bounds);
-			var hpBarAnchor = player.GetComponent<HPBarAnchor>();
+			var hpBarAnchor = healthEntity.GetComponent<HPBarAnchor>();
 			if (hpBarAnchor == null)
 			{
 				hpBarAnchor = new HPBarAnchor();
-				EntityManager.AddComponent(player, hpBarAnchor);
+				EntityManager.AddComponent(healthEntity, hpBarAnchor);
 			}
 
 			if (anchor == null
@@ -330,11 +395,36 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
+			healthBounds = CalculateHealthRegionBounds(healthEntity, healthBounds);
+			if (healthBounds.Width <= 0 || healthBounds.Height <= 0)
+			{
+				hpBarAnchor.Rect = Rectangle.Empty;
+				return;
+			}
+
 			float labelWidth = MeasureSpacedText(font, "HP", anchor.LabelFontScale, anchor.LabelLetterSpacing).X;
 			hpBarAnchor.Rect = PlayerHudHealthRendering.CalculateTrackBounds(
 				healthBounds,
 				anchor,
 				labelWidth);
+		}
+
+		private Rectangle CalculateHealthRegionBounds(Entity healthEntity, Rectangle playerHealthBounds)
+		{
+			if (healthEntity.HasComponent<SuppressPortraitRender>()) return Rectangle.Empty;
+			if (healthEntity.HasComponent<Player>()) return playerHealthBounds;
+
+			var transform = healthEntity.GetComponent<Transform>();
+			var portrait = healthEntity.GetComponent<PortraitInfo>();
+			if (transform == null || portrait == null) return Rectangle.Empty;
+
+			return PlayerHudHealthRendering.CalculateEnemyRegionBounds(
+				playerHealthBounds,
+				transform.Position,
+				portrait.TextureHeight,
+				portrait.BaseScale,
+				EnemyRegionOffsetX,
+				EnemyRegionOffsetY);
 		}
 
 		private Entity GetHealthRegionEntity()

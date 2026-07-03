@@ -179,7 +179,7 @@ public class PlayerHudResourceDisplaySystemTests : IDisposable
 			BaseScale = 0.5f,
 			CurrentScale = 0.5f,
 		});
-		entityManager.AddComponent(player, new PlayerAnimationState());
+		entityManager.AddComponent(player, new ActorPresentationState());
 
 		var layout = new PlayerHudLayoutSystem(entityManager);
 		layout.Update(new GameTime());

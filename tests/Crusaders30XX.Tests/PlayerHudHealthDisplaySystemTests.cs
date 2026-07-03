@@ -59,7 +59,7 @@ public class PlayerHudHealthDisplaySystemTests
 	public void Lethal_damage_preview_equals_current_health()
 	{
 		var entityManager = new EntityManager();
-		AddActiveAttack(entityManager, "lethal", 8);
+		AddActiveAttack(entityManager, attackSequence: 1, damage: 8);
 
 		Assert.Equal(8, PlayerHudHealthRendering.CalculateTotalIncomingDamage(entityManager, 8));
 	}
@@ -68,7 +68,7 @@ public class PlayerHudHealthDisplaySystemTests
 	public void Overkill_damage_preview_is_clamped_to_current_health()
 	{
 		var entityManager = new EntityManager();
-		AddActiveAttack(entityManager, "overkill", 50);
+		AddActiveAttack(entityManager, attackSequence: 1, damage: 50);
 
 		Assert.Equal(8, PlayerHudHealthRendering.CalculateTotalIncomingDamage(entityManager, 8));
 	}
@@ -77,12 +77,12 @@ public class PlayerHudHealthDisplaySystemTests
 	public void Multiple_enemies_sum_only_their_active_attacks()
 	{
 		var entityManager = new EntityManager();
-		AddAttackIntent(entityManager, "enemy-a", "active-a", "future-a");
-		AddAttackIntent(entityManager, "enemy-b", "active-b");
-		AddProgress(entityManager, "active-a", 3);
-		AddProgress(entityManager, "active-b", 5);
-		AddProgress(entityManager, "future-a", 20);
-		AddProgress(entityManager, "orphan", 20);
+		var enemyA = AddAttackIntent(entityManager, "enemy-a", activeAttackSequence: 1, plannedCount: 2);
+		var enemyB = AddAttackIntent(entityManager, "enemy-b", activeAttackSequence: 3, plannedCount: 1);
+		AddProgress(entityManager, enemyA, attackSequence: 1, damage: 3);
+		AddProgress(entityManager, enemyB, attackSequence: 3, damage: 5);
+		AddProgress(entityManager, enemyA, attackSequence: 2, damage: 20);
+		AddProgress(entityManager, enemyA, attackSequence: 99, damage: 20);
 
 		Assert.Equal(8, PlayerHudHealthRendering.CalculateTotalIncomingDamage(entityManager, 20));
 	}
@@ -108,7 +108,37 @@ public class PlayerHudHealthDisplaySystemTests
 	}
 
 	[Fact]
-	public void Legacy_hp_renderer_excludes_only_player_entities()
+	public void Enemy_region_matches_player_health_size_below_stable_portrait()
+	{
+		var playerHealthBounds = new Rectangle(100, 200, 559, 36);
+
+		Rectangle enemyBounds = PlayerHudHealthRendering.CalculateEnemyRegionBounds(
+			playerHealthBounds,
+			new Vector2(1400f, 300f),
+			400,
+			0.5f,
+			10,
+			4);
+
+		Assert.Equal(new Rectangle(1130, 404, 559, 36), enemyBounds);
+	}
+
+	[Fact]
+	public void Enemy_region_is_empty_without_resolved_portrait_geometry()
+	{
+		Rectangle enemyBounds = PlayerHudHealthRendering.CalculateEnemyRegionBounds(
+			new Rectangle(100, 200, 559, 36),
+			new Vector2(1400f, 300f),
+			0,
+			1f,
+			0,
+			4);
+
+		Assert.Equal(Rectangle.Empty, enemyBounds);
+	}
+
+	[Fact]
+	public void Legacy_hp_renderer_includes_only_plundered_entities()
 	{
 		var player = new Entity(1);
 		player.AddComponent(new Player());
@@ -118,38 +148,47 @@ public class PlayerHudHealthDisplaySystemTests
 		enemy.AddComponent(new HP());
 		var temporary = new Entity(3);
 		temporary.AddComponent(new HP());
+		var plundered = new Entity(4);
+		plundered.AddComponent(new Plundered());
+		plundered.AddComponent(new HP());
 
-		Assert.False(HPDisplaySystem.ShouldRenderLegacyHp(player));
-		Assert.True(HPDisplaySystem.ShouldRenderLegacyHp(enemy));
-		Assert.True(HPDisplaySystem.ShouldRenderLegacyHp(temporary));
+		#pragma warning disable CS0618 // The test locks down the deprecated renderer's remaining scope.
+		Assert.False(HPDisplaySystem.ShouldRenderLegacyPlunderHp(player));
+		Assert.False(HPDisplaySystem.ShouldRenderLegacyPlunderHp(enemy));
+		Assert.False(HPDisplaySystem.ShouldRenderLegacyPlunderHp(temporary));
+		Assert.True(HPDisplaySystem.ShouldRenderLegacyPlunderHp(plundered));
+		#pragma warning restore CS0618
 	}
 
-	private static void AddActiveAttack(EntityManager entityManager, string contextId, int damage)
+	private static void AddActiveAttack(EntityManager entityManager, int attackSequence, int damage)
 	{
-		AddAttackIntent(entityManager, $"enemy-{contextId}", contextId);
-		AddProgress(entityManager, contextId, damage);
+		var enemy = AddAttackIntent(entityManager, $"enemy-{attackSequence}", attackSequence);
+		AddProgress(entityManager, enemy, attackSequence, damage);
 	}
 
-	private static void AddAttackIntent(
+	private static Entity AddAttackIntent(
 		EntityManager entityManager,
 		string entityName,
-		params string[] contextIds)
+		int activeAttackSequence,
+		int plannedCount = 1)
 	{
 		var enemy = entityManager.CreateEntity(entityName);
-		var intent = new AttackIntent();
-		foreach (string contextId in contextIds)
+		var intent = new AttackIntent { ActiveAttackSequence = activeAttackSequence };
+		for (int i = 0; i < plannedCount; i++)
 		{
-			intent.Planned.Add(new PlannedAttack { ContextId = contextId });
+			intent.Planned.Add(new PlannedAttack());
 		}
 		entityManager.AddComponent(enemy, intent);
+		return enemy;
 	}
 
-	private static void AddProgress(EntityManager entityManager, string contextId, int damage)
+	private static void AddProgress(EntityManager entityManager, Entity enemy, int attackSequence, int damage)
 	{
-		var progressEntity = entityManager.CreateEntity($"progress-{contextId}");
+		var progressEntity = entityManager.CreateEntity($"progress-{attackSequence}");
 		entityManager.AddComponent(progressEntity, new EnemyAttackProgress
 		{
-			ContextId = contextId,
+			Enemy = enemy,
+			AttackSequence = attackSequence,
 			ActualDamage = damage,
 		});
 	}

@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Splash Effect Animation Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: ModifyHpEvent (damage) / ApplyPassiveEvent (status gain)
+    - System: SplashEffectAnimationDisplaySystem
+    - Assets: player-attack-splash.png, enemy-attack-splash.png, gain-*.png
+    - Portrait layout: player ~(461, 378), enemy ~(1536, 378), each ~389px tall
+    - Current animation: simple fade-in → hold → fade-out over ~550ms
+    - Target: replace the flat fade with one of three kinetic approaches
+  */
+  :root {
+    --bg: #0c0b0f;
+    --panel: #141318;
+    --muted: #666;
+    --text: #eee;
+    --text-dim: #888;
+    --red-3: #c41e3a;
+    --red-glow: rgba(196, 30, 58, 0.45);
+    --splash-color: #e84030;
+    --splash-glow: rgba(240, 60, 40, 0.7);
+    --game-w: 1920px;
+    --game-h: 1080px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    padding: 28px 24px 80px;
+  }
+
+  /* ── Header ── */
+  .page-header {
+    max-width: 900px;
+    margin: 0 auto 36px;
+    text-align: center;
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #e44, #f88, #e44);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+
+  .page-header p {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    line-height: 1.6;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .page-header code {
+    font-size: 0.72rem;
+    background: #1a1820;
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #c8a0a8;
+  }
+
+  /* ── Viewport Scaler ── */
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 48px), 1320px);
+    margin: 0 auto 40px;
+    position: relative;
+    overflow: hidden;
+    background: #0a090d;
+    border: 1px solid #2a2830;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 200px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert-background-city.png') center / cover no-repeat;
+  }
+
+  .bg-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.50);
+  }
+
+  /* ── Demo Column Layout ── */
+  .demos-row {
+    position: absolute;
+    inset: 40px 24px 24px;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 20px;
+    z-index: 2;
+  }
+
+  .demo-column {
+    flex: 1;
+    min-width: 0;
+    background: rgba(10, 9, 13, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 18px;
+    position: relative;
+  }
+
+  .demo-column.variant-1 { border-top: 3px solid #e44; }
+  .demo-column.variant-2 { border-top: 3px solid #4a8fe0; }
+  .demo-column.variant-3 { border-top: 3px solid #e8a020; }
+
+  .demo-label {
+    font-size: 0.56rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .variant-1 .demo-label { color: #e44; }
+  .variant-2 .demo-label { color: #4a8fe0; }
+  .variant-3 .demo-label { color: #e8a020; }
+
+  .demo-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .demo-desc {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+    text-align: center;
+    max-width: 260px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Stage (target area) ── */
+  .stage-wrap {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background:
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(200, 180, 150, 0.04), transparent),
+      #0c0b10;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .target-zone {
+    position: relative;
+    width: 200px;
+    height: 260px;
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  .target-label {
+    position: absolute;
+    bottom: 8px;
+    font-size: 0.52rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.18);
+  }
+
+  .target-figure {
+    width: 86px;
+    height: 112px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .target-figure::after {
+    content: '';
+    width: 28px;
+    height: 36px;
+    border-radius: 50% 50% 40% 40%;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  /* ── Splash Image Base ── */
+  .splash-group {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 30;
+    opacity: 0;
+  }
+
+  .splash-image {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    margin-left: -60px;
+    margin-top: -60px;
+  }
+
+  .splash-burst {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 40% 50% at 50% 50%, rgba(255,255,255,0.9) 0%, rgba(255,200,180,0.6) 20%, rgba(240,60,40,0.3) 45%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .splash-blade {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 80px;
+    margin: -40px 0 0 -8px;
+    background: linear-gradient(to top, transparent, rgba(255, 200, 160, 0.65), rgba(255, 255, 255, 0.8), transparent);
+    border-radius: 4px;
+    opacity: 0.7;
+  }
+  .splash-blade:nth-child(2) { transform: rotate(45deg); }
+  .splash-blade:nth-child(3) { transform: rotate(90deg); }
+  .splash-blade:nth-child(4) { transform: rotate(135deg); }
+
+  /* ── Replay Button ── */
+  .replay-btn {
+    width: 120px;
+    height: 36px;
+    padding: 0;
+    background: #1e1c24;
+    border: 1px solid #3a3644;
+    color: #f0ece6;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.66rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .replay-btn:hover {
+    background: #2a2830;
+    border-color: #aaa;
+  }
+
+  .timing-info {
+    margin-top: 6px;
+    font-size: 0.56rem;
+    color: #555;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  /* ═══════════════════════════════════════════
+      VARIANT 1: Impact Burst (Kinetic Bounce)
+     ═══════════════════════════════════════════ */
+  .v1-shockwave {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border: 3px solid rgba(255, 240, 220, 0.8);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 28;
+  }
+
+  .v1-flash {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100px;
+    height: 100px;
+    margin: -50px 0 0 -50px;
+    background: radial-gradient(ellipse, rgba(255, 255, 255, 0.85) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 29;
+  }
+
+  .v1-particle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    background: #ffe8c0;
+    border-radius: 1px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 31;
+  }
+
+  .v1-particle:nth-child(1) { margin: -3px 0 0 -3px; }
+  .v1-particle:nth-child(2) { margin: -3px 0 0 -3px; }
+  .v1-particle:nth-child(3) { margin: -3px 0 0 -3px; }
+  .v1-particle:nth-child(4) { margin: -3px 0 0 -3px; }
+  .v1-particle:nth-child(5) { margin: -3px 0 0 -3px; }
+  .v1-particle:nth-child(6) { margin: -3px 0 0 -3px; }
+
+  .playing.variant-1 .splash-group {
+    animation: v1-appear 0.05s ease-out forwards;
+  }
+
+  .playing.variant-1 .splash-image {
+    animation: v1-burst-scale 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .playing.variant-1 .v1-shockwave {
+    animation: v1-ring 0.35s ease-out 0.04s forwards;
+  }
+
+  .playing.variant-1 .v1-flash {
+    animation: v1-flash-fade 0.18s ease-out 0.02s forwards;
+  }
+
+  .playing.variant-1 .v1-particle:nth-child(1) { animation: v1-particle-out 0.36s ease-out 0.06s forwards; }
+  .playing.variant-1 .v1-particle:nth-child(2) { animation: v1-particle-out 0.36s ease-out 0.08s forwards; }
+  .playing.variant-1 .v1-particle:nth-child(3) { animation: v1-particle-out 0.36s ease-out 0.07s forwards; }
+  .playing.variant-1 .v1-particle:nth-child(4) { animation: v1-particle-out 0.36s ease-out 0.09s forwards; }
+  .playing.variant-1 .v1-particle:nth-child(5) { animation: v1-particle-out 0.36s ease-out 0.06s forwards; }
+  .playing.variant-1 .v1-particle:nth-child(6) { animation: v1-particle-out 0.36s ease-out 0.10s forwards; }
+
+  /* Phase 2: hold then fade */
+  .playing.variant-1 .splash-group {
+    animation: v1-appear 0.05s ease-out forwards, v1-hold-fade 0.28s ease-in 0.42s forwards;
+  }
+
+  @keyframes v1-appear {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes v1-burst-scale {
+    0%   { transform: scale(0.12); }
+    45%  { transform: scale(1.28); }
+    68%  { transform: scale(0.91); }
+    82%  { transform: scale(1.04); }
+    92%  { transform: scale(0.98); }
+    100% { transform: scale(1.00); }
+  }
+
+  @keyframes v1-ring {
+    0%   { opacity: 0.9; transform: scale(0.25); border-width: 4px; }
+    100% { opacity: 0;   transform: scale(3.2); border-width: 0.5px; }
+  }
+
+  @keyframes v1-flash-fade {
+    0%   { opacity: 0.8; transform: scale(0.4); }
+    100% { opacity: 0;   transform: scale(1.5); }
+  }
+
+  @keyframes v1-particle-out {
+    0%   { opacity: 0.85; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0;    transform: translate(var(--px, 40px), var(--py, -50px)) scale(0.15); }
+  }
+
+  @keyframes v1-hold-fade {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ═══════════════════════════════════════════
+      VARIANT 2: Slash Sweep (Directional)
+     ═══════════════════════════════════════════ */
+  .v2-trail {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 120px;
+    height: 120px;
+    margin: -60px 0 0 -60px;
+    pointer-events: none;
+    z-index: 27;
+  }
+
+  .v2-trail .trail-blade {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 80px;
+    margin: -40px 0 0 -8px;
+    background: linear-gradient(to top, transparent, rgba(255, 180, 140, 0.4), rgba(255, 255, 255, 0.5), transparent);
+    border-radius: 4px;
+    opacity: 0;
+  }
+  .v2-trail .trail-blade:nth-child(1) { transform: rotate(0deg); }
+  .v2-trail .trail-blade:nth-child(2) { transform: rotate(45deg); }
+  .v2-trail .trail-blade:nth-child(3) { transform: rotate(90deg); }
+  .v2-trail .trail-blade:nth-child(4) { transform: rotate(135deg); }
+
+  .v2-trail-ghost {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 120px;
+    height: 120px;
+    margin: -60px 0 0 -60px;
+    pointer-events: none;
+    z-index: 26;
+    opacity: 0;
+  }
+
+  .v2-trail-ghost .ghost-inner {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 40% 50% at 50% 50%, rgba(255,200,180,0.35) 0%, transparent 60%);
+    border-radius: 50%;
+  }
+
+  .v2-cut-line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4px;
+    height: 90px;
+    margin: -45px 0 0 -2px;
+    background: linear-gradient(to bottom, transparent, #fff, #ffe0d0, #ffb0a0, transparent);
+    border-radius: 2px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 32;
+  }
+
+  .playing.variant-2 .splash-group {
+    animation: v2-appear 0.05s ease-out forwards;
+  }
+
+  .playing.variant-2 .splash-image {
+    animation: v2-sweep 0.26s cubic-bezier(0.12, 0.8, 0.3, 1) forwards;
+  }
+
+  .playing.variant-2 .v2-trail-ghost {
+    animation: v2-ghost 0.22s ease-out 0.02s forwards;
+  }
+
+  .playing.variant-2 .v2-cut-line {
+    animation: v2-cut-flash 0.20s ease-out 0.18s forwards;
+  }
+
+  .playing.variant-2 .v2-trail .trail-blade {
+    animation: v2-trail-fade 0.24s ease-out 0.02s forwards;
+  }
+
+  .playing.variant-2 .splash-group {
+    animation: v2-appear 0.05s ease-out forwards, v2-hold-fade 0.26s ease-in 0.40s forwards;
+  }
+
+  @keyframes v2-appear {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes v2-sweep {
+    0%   { transform: translateX(-190px) rotate(-18deg) scale(0.55); opacity: 0.35; }
+    35%  { transform: translateX(-70px) rotate(-8deg)  scale(0.82); opacity: 0.75; }
+    70%  { transform: translateX(10px)  rotate(3deg)   scale(1.04); opacity: 1; }
+    85%  { transform: translateX(-6px)  rotate(-1deg)  scale(0.97); opacity: 1; }
+    100% { transform: translateX(0)     rotate(0deg)   scale(1);    opacity: 1; }
+  }
+
+  @keyframes v2-ghost {
+    0%   { opacity: 0.45; transform: translateX(-50px) scale(0.6); }
+    40%  { opacity: 0.25; transform: translateX(-80px) scale(0.45); }
+    100% { opacity: 0;    transform: translateX(-120px) scale(0.3); }
+  }
+
+  @keyframes v2-cut-flash {
+    0%   { opacity: 0.9; transform: scaleY(0.2) rotate(-25deg); }
+    40%  { opacity: 0.65; transform: scaleY(1.3) rotate(-25deg); }
+    100% { opacity: 0;    transform: scaleY(1) rotate(-25deg);   }
+  }
+
+  @keyframes v2-trail-fade {
+    0%   { opacity: 0.35; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes v2-hold-fade {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ═══════════════════════════════════════════
+      VARIANT 3: Fracture Impact (Shatter)
+     ═══════════════════════════════════════════ */
+  .v3-crack {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 2px;
+    height: 0;
+    background: rgba(255, 240, 200, 0.9);
+    border-radius: 1px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 32;
+    transform-origin: center top;
+  }
+
+  .v3-darken {
+    position: absolute;
+    inset: -20px;
+    border-radius: 6px;
+    background: radial-gradient(ellipse 60% 60% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 25;
+  }
+
+  .v3-target-shake {
+    /* applied to target-zone itself to add tremble */
+    animation: none;
+  }
+
+  .playing.variant-3 .splash-group {
+    animation: v3-snap 0.04s steps(1) forwards;
+  }
+
+  .playing.variant-3 .splash-image {
+    animation: v3-tremble 0.14s ease-out 0.02s forwards;
+  }
+
+  .playing.variant-3 .v3-darken {
+    animation: v3-darken-flash 0.22s ease-out 0.01s forwards;
+  }
+
+  .playing.variant-3 .v3-crack:nth-child(1) { animation: v3-crack-out-N 0.38s ease-out 0.04s forwards; }
+  .playing.variant-3 .v3-crack:nth-child(2) { animation: v3-crack-out-NE 0.38s ease-out 0.04s forwards; }
+  .playing.variant-3 .v3-crack:nth-child(3) { animation: v3-crack-out-E 0.38s ease-out 0.04s forwards; }
+  .playing.variant-3 .v3-crack:nth-child(4) { animation: v3-crack-out-SE 0.38s ease-out 0.04s forwards; }
+  .playing.variant-3 .v3-crack:nth-child(5) { animation: v3-crack-out-SW 0.38s ease-out 0.04s forwards; }
+  .playing.variant-3 .v3-crack:nth-child(6) { animation: v3-crack-out-W 0.38s ease-out 0.04s forwards; }
+
+  .playing.variant-3 .splash-group {
+    animation: v3-snap 0.04s steps(1) forwards, v3-hold-fade 0.26s ease-in 0.38s forwards;
+  }
+
+  @keyframes v3-snap {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes v3-tremble {
+    0%   { transform: translate(0, 0)    scale(1); }
+    20%  { transform: translate(5px, -3px) scale(1.04); }
+    40%  { transform: translate(-5px, 4px) scale(0.98); }
+    60%  { transform: translate(3px, 2px)  scale(1.02); }
+    80%  { transform: translate(-2px, -1px) scale(0.99); }
+    100% { transform: translate(0, 0)     scale(1); }
+  }
+
+  @keyframes v3-darken-flash {
+    0%   { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes v3-crack-out-N {
+    0%   { opacity: 0.9; height: 0;   transform: rotate(0deg) translateY(0); }
+    100% { opacity: 0;   height: 70px; transform: rotate(0deg) translateY(-35px); }
+  }
+  @keyframes v3-crack-out-NE {
+    0%   { opacity: 0.9; height: 0;   transform: rotate(45deg) translateY(0); }
+    100% { opacity: 0;   height: 70px; transform: rotate(45deg) translateY(-35px); }
+  }
+  @keyframes v3-crack-out-E {
+    0%   { opacity: 0.9; height: 0;   transform: rotate(90deg) translateY(0); }
+    100% { opacity: 0;   height: 70px; transform: rotate(90deg) translateY(-35px); }
+  }
+  @keyframes v3-crack-out-SE {
+    0%   { opacity: 0.9; height: 0;   transform: rotate(135deg) translateY(0); }
+    100% { opacity: 0;   height: 70px; transform: rotate(135deg) translateY(-35px); }
+  }
+  @keyframes v3-crack-out-SW {
+    0%   { opacity: 0.9; height: 0;   transform: rotate(225deg) translateY(0); }
+    100% { opacity: 0;   height: 70px; transform: rotate(225deg) translateY(-35px); }
+  }
+  @keyframes v3-crack-out-W {
+    0%   { opacity: 0.9; height: 0;   transform: rotate(270deg) translateY(0); }
+    100% { opacity: 0;   height: 70px; transform: rotate(270deg) translateY(-35px); }
+  }
+
+  @keyframes v3-hold-fade {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ── Notes Section ── */
+  .notes {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 28px 32px;
+    background: #121018;
+    border: 1px solid #2a2830;
+    border-radius: 10px;
+  }
+
+  .notes h2 {
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #c33;
+    margin-bottom: 16px;
+  }
+
+  .notes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 28px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    line-height: 1.55;
+  }
+
+  .notes-grid .section {
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 14px;
+    margin-top: 4px;
+  }
+
+  .notes-grid strong { color: #bbb; font-weight: 600; }
+  .notes-grid code {
+    font-size: 0.66rem;
+    background: #1a1820;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #c8a0a8;
+  }
+
+  .notes-grid .var-tag-v1 { color: #e44; font-weight: 600; }
+  .notes-grid .var-tag-v2 { color: #4a8fe0; font-weight: 600; }
+  .notes-grid .var-tag-v3 { color: #e8a020; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Splash Effect Animation — Three Variants</h1>
+  <p>
+    Current system shows a flat texture at <code>ImageScale * VirtualWidth</code> (default ~307px)
+    that fades in, holds, and fades out over ~550ms. These three variants explore how to add
+    impact, motion, and weight to the same action — one image, three different arrivals.
+  </p>
+</header>
+
+<main class="viewport-scaler">
+  <div class="viewport">
+    <div class="bg-scene"></div>
+    <div class="bg-dim"></div>
+
+    <div class="demos-row">
+
+      <!-- ═══ VARIANT 1: Impact Burst ═══ -->
+      <article class="demo-column variant-1" id="v1-demo">
+        <div class="demo-label">Variant 1</div>
+        <h2 class="demo-title">Impact Burst</h2>
+        <p class="demo-desc">
+          Image rockets from tiny to oversize, bounces back, then settles.
+          Shockwave ring + white flash + 6 particles sell the punch.
+        </p>
+
+        <div class="stage-wrap">
+          <div class="target-zone">
+            <div class="target-figure"></div>
+            <span class="target-label">Target</span>
+
+            <!-- Splash group -->
+            <div class="splash-group">
+              <div class="splash-image">
+                <div class="splash-burst"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+              </div>
+            </div>
+
+            <!-- Companion FX -->
+            <div class="v1-shockwave"></div>
+            <div class="v1-flash"></div>
+            <div class="v1-particle" style="--px: 45px;  --py: -55px;"></div>
+            <div class="v1-particle" style="--px: -38px; --py: -52px;"></div>
+            <div class="v1-particle" style="--px: 50px;  --py: 40px;"></div>
+            <div class="v1-particle" style="--px: -42px; --py: 38px;"></div>
+            <div class="v1-particle" style="--px: 10px;  --py: -62px;"></div>
+            <div class="v1-particle" style="--px: -15px; --py: 58px;"></div>
+          </div>
+        </div>
+
+        <button class="replay-btn" type="button" onclick="replay('v1-demo')">Replay</button>
+        <div class="timing-info">~700ms total | bounce ease-out</div>
+      </article>
+
+      <!-- ═══ VARIANT 2: Slash Sweep ═══ -->
+      <article class="demo-column variant-2" id="v2-demo">
+        <div class="demo-label">Variant 2</div>
+        <h2 class="demo-title">Slash Sweep</h2>
+        <p class="demo-desc">
+          Image enters from off-target with rotation, decelerating into center.
+          Ghost trail follows behind; a bright cut-line flashes on arrival.
+        </p>
+
+        <div class="stage-wrap">
+          <div class="target-zone">
+            <div class="target-figure"></div>
+            <span class="target-label">Target</span>
+
+            <!-- Splash group -->
+            <div class="splash-group">
+              <div class="splash-image">
+                <div class="splash-burst"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+              </div>
+            </div>
+
+            <!-- Companion FX -->
+            <div class="v2-trail-ghost">
+              <div class="ghost-inner"></div>
+            </div>
+            <div class="v2-trail">
+              <div class="trail-blade"></div>
+              <div class="trail-blade"></div>
+              <div class="trail-blade"></div>
+              <div class="trail-blade"></div>
+            </div>
+            <div class="v2-cut-line"></div>
+          </div>
+        </div>
+
+        <button class="replay-btn" type="button" onclick="replay('v2-demo')">Replay</button>
+        <div class="timing-info">~660ms total | cubic-bezier decel</div>
+      </article>
+
+      <!-- ═══ VARIANT 3: Fracture Impact ═══ -->
+      <article class="demo-column variant-3" id="v3-demo">
+        <div class="demo-label">Variant 3</div>
+        <h2 class="demo-title">Fracture Impact</h2>
+        <p class="demo-desc">
+          Image snaps in instantly. Six crack-lines radiate outward while
+          the image trembles. A brief dark vignette sells the weight.
+        </p>
+
+        <div class="stage-wrap">
+          <div class="target-zone">
+            <div class="target-figure"></div>
+            <span class="target-label">Target</span>
+
+            <!-- Splash group -->
+            <div class="splash-group">
+              <div class="splash-image">
+                <div class="splash-burst"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+                <div class="splash-blade"></div>
+              </div>
+            </div>
+
+            <!-- Companion FX -->
+            <div class="v3-darken"></div>
+            <div class="v3-crack"></div>
+            <div class="v3-crack"></div>
+            <div class="v3-crack"></div>
+            <div class="v3-crack"></div>
+            <div class="v3-crack"></div>
+            <div class="v3-crack"></div>
+          </div>
+        </div>
+
+        <button class="replay-btn" type="button" onclick="replay('v3-demo')">Replay</button>
+        <div class="timing-info">~640ms total | snap + tremble</div>
+      </article>
+
+    </div>
+  </div>
+</main>
+
+<footer class="notes">
+  <h2>MonoGame Implementation Notes</h2>
+  <div class="notes-grid">
+    <div>
+      <strong>Trigger</strong><br>
+      All three variants fire on the same <code>ModifyHpEvent</code> / <code>ApplyPassiveEvent</code>
+      as the current <code>SplashEffectAnimationDisplaySystem</code>.
+      Add an <code>enum SplashStyle { ImpactBurst, SlashSweep, FractureImpact }</code>
+      field to <code>AnimationInstance</code> or configure per-texture.
+    </div>
+    <div>
+      <strong>Texture</strong><br>
+      The existing splash textures (<code>player-attack-splash.png</code>, <code>enemy-attack-splash.png</code>,
+      <code>gain-aegis.png</code>, etc.) are used as-is. Companion FX (rings, particles, cracks)
+      use small primitives or dedicated 1x1 white pixel textures tinted in the shader.
+    </div>
+
+    <div class="section"><strong>Variant 1 — <span class="var-tag-v1">Impact Burst</span></strong></div>
+    <div>
+      <strong>Image animation</strong><br>
+      Eased scale keyframes: <code>0.12 → 1.28 → 0.91 → 1.04 → 0.98 → 1.0</code> over ~380ms.
+      Cubic-bezier(0.22, 1, 0.36, 1) for classic bounce feel.
+    </div>
+    <div>
+      <strong>Ring + Flash + Particles</strong><br>
+      Expanding ring: <code>scale 0.25→3.2</code>, <code>alpha 0.9→0</code>, ~350ms.<br>
+      Flash ellipse: <code>scale 0.4→1.5</code>, <code>alpha 0.8→0</code>, ~180ms.<br>
+      Six particles launched on staggered delays from center, each with a unique angle vector.
+      Ring/flash/particles all removed after expiry; no persistent state beyond the animation.
+    </div>
+
+    <div class="section"><strong>Variant 2 — <span class="var-tag-v2">Slash Sweep</span></strong></div>
+    <div>
+      <strong>Image animation</strong><br>
+      Keyframes: <code>translateX(-190) rotate(-18°) → translateX(0) rotate(0°)</code> over ~260ms.
+      Cubic-bezier(0.12, 0.8, 0.3, 1) — fast entry with sharp deceleration.
+      Scale also ramps <code>0.55 → 1.0</code> and alpha <code>0.35 → 1.0</code>.
+      Final frames include a settle bounce at ~85% keyframe.
+    </div>
+    <div>
+      <strong>Ghost trail + Cut line</strong><br>
+      One translucent copy trails behind at offset (~-50px), fading over ~220ms.<br>
+      Bright vertical cut-line flashes with scaleY keyframe: <code>0.2 → 1.3 → 1.0</code>, alpha <code>0.9→0</code>,
+      triggered at ~70% of sweep progress (~180ms). Rotated ~-25° to match slash gesture.
+    </div>
+
+    <div class="section"><strong>Variant 3 — <span class="var-tag-v3">Fracture Impact</span></strong></div>
+    <div>
+      <strong>Image animation</strong><br>
+      Instant appearance (<code>steps(1)</code> / snap to opacity=1).
+      Tremble: 5-frame position jitter over ~140ms: <code>(0,0)→(5,-3)→(-5,4)→(3,2)→(-2,-1)→(0,0)</code>
+      with a mild scale fluctuate <code>1.04 → 0.98 → 1.02 → 1.0</code>.
+    </div>
+    <div>
+      <strong>Crack lines + Darken vignette</strong><br>
+      Six crack lines at 60° intervals (N, NE, E, SE, SW, W) expand from center.<br>
+      Each: <code>height 0→70px</code>, <code>alpha 0.9→0</code>, with <code>translateY</code> for radial movement.<br>
+      Darken vignette: radial gradient <code>alpha 0.55→0</code> over ~220ms for impact emphasis.
+    </div>
+
+    <div class="section"><strong>Shared Implementation Guidance</strong></div>
+    <div>
+      <strong>Companion FX approach</strong><br>
+      Use a single <code>SpriteBatch</code> draw with a 1×1 white pixel <code>Texture2D</code>.
+      Rings: stretch the pixel into a thin rectangle, then draw <code>N</code> times at different
+      rotation angles (or use a circle primitive helper). Particles: small squares drawn at offset
+      positions from center computed via <code>angle + distance * progress</code>.
+    </div>
+    <div>
+      <strong>Scaling to viewport</strong><br>
+      Current splash uses <code>ImageScale * VirtualWidth / texture.Width</code>.
+      Companion FX should scale off the same base: ring max radius can be
+      <code>splashSize * 1.8</code>, crack length <code>splashSize * 0.6</code>, etc.
+      This keeps effects proportional across resolutions.
+    </div>
+  </div>
+</footer>
+
+<script>
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const vp = document.querySelector('.viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / 1920;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${1080 * scale}px`;
+  }
+
+  function replay(demoId) {
+    const el = document.getElementById(demoId);
+    if (!el) return;
+    el.classList.remove('playing');
+    void el.offsetWidth; // force reflow to restart animations
+    el.classList.add('playing');
+
+    // Clear after full animation cycle
+    clearTimeout(el._clearTimer);
+    el._clearTimer = setTimeout(() => {
+      el.classList.remove('playing');
+    }, 800);
+  }
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', () => {
+    fitViewport();
+    // Auto-play each variant on load with staggered delay
+    setTimeout(() => replay('v1-demo'), 400);
+    setTimeout(() => replay('v2-demo'), 700);
+    setTimeout(() => replay('v3-demo'), 1000);
+  });
+  fitViewport();
+</script>
+
+</body>
+</html>

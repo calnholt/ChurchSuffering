@@ -50,13 +50,7 @@ namespace Crusaders30XX.ECS.Systems
             if (ap?.Passives == null) return;
             if (!ap.Passives.TryGetValue(AppliedPassiveType.Bleed, out int bleedStacks) || bleedStacks <= 0) return;
 
-            var contextId = GetCurrentAttackContextId();
-            if (string.IsNullOrEmpty(contextId)) return;
-
-            var progress = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>()
-                .Select(e => e.GetComponent<EnemyAttackProgress>())
-                .FirstOrDefault(p => p != null && p.ContextId == contextId);
-            if (progress == null) return;
+            if (!EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)) return;
 
             int qualifyingColors = GetQualifyingSameColorCount(progress);
             if (qualifyingColors <= 0) return;
@@ -81,13 +75,6 @@ namespace Crusaders30XX.ECS.Systems
                 EventManager.Publish(new UpdatePassive { Owner = player, Type = AppliedPassiveType.Bleed, Delta = -1 });
                 bleedStacks--;
             }
-        }
-
-        private string GetCurrentAttackContextId()
-        {
-            var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-            var intent = enemy?.GetComponent<AttackIntent>();
-            return intent?.Planned?.FirstOrDefault()?.ContextId;
         }
     }
 }

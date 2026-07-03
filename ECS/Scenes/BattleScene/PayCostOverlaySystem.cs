@@ -47,13 +47,13 @@ namespace Crusaders30XX.ECS.Systems
         public float TextOffsetX { get; set; } = 0f;
 
         [DebugEditable(DisplayName = "Text Offset Y", Step = 1f, Min = -1000f, Max = 1000f)]
-        public float TextOffsetY { get; set; } = -375f;
+        public float TextOffsetY { get; set; } = -389f;
 
         [DebugEditable(DisplayName = "Card Offset X", Step = 1f, Min = -2000f, Max = 2000f)]
         public float CardOffsetX { get; set; } = 0f;
 
         [DebugEditable(DisplayName = "Card Offset Y", Step = 1f, Min = -2000f, Max = 2000f)]
-        public float CardOffsetY { get; set; } = 0f;
+        public float CardOffsetY { get; set; } = -160f;
 
         // Selected-cards row settings
         [DebugEditable(DisplayName = "Selected Scale", Step = 0.05f, Min = 0.3f, Max = 1.5f)]

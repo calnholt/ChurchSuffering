@@ -8,7 +8,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class SerpentCrush : CardBase
     {
-        private int CourageCost = 4;
+        private int CourageCost = 2;
         private int ActionPointAmount = 1;
         private int DrawAmount = 1;
 
@@ -18,9 +18,9 @@ namespace Crusaders30XX.ECS.Objects.Cards
             CardId = "serpent_crush";
             Name = "Serpent Crush";
             Target = "Enemy";
-            Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Gain {ActionPointAmount} action point and draw {DrawAmount} random card from your discard pile.";
+            Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Gain {ActionPointAmount} action point and resurrect {DrawAmount}.";
             IsFreeAction = true;
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 3;
             Type = CardType.Attack;
             Block = 3;
@@ -59,7 +59,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
             OnUpgrade = (entityManager, card) =>
             {
-                Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Gain {ActionPointAmount} action point and draw {DrawAmount} random card from your discard pile.";
+                Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Gain {ActionPointAmount} action point and resurrect {DrawAmount}.";
             };
         }
 

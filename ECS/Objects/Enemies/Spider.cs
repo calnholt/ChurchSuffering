@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
+using Crusaders30XX.ECS.Systems;
 using Crusaders30XX.ECS.Utils;
 using static Crusaders30XX.ECS.Systems.MustBeBlockedSystem;
 
@@ -11,118 +13,69 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
 
 public class Spider : EnemyBase
 {
-  public Spider(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  private int FearAmount = 2;
+  public Spider()
   {
-    Id = "spider";
+    Id = EnemyId.Spider;
     Name = "Spider";
-    HealthPerCard = 1.1f;
+    HP = 28;
+
+    OnStartOfBattle = (entityManager) =>
+    {
+      EventQueueBridge.EnqueueTriggerAction("Spider.OnStartOfBattle", () => {  
+        EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Fear, Delta = FearAmount });
+      }, AppliedPassivesManagementSystem.Duration);
+    };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    var enders = new List<string> { "mandible_breaker", "rafterfall_ambush", "eight_limbs_of_death" };
-    var linkers = new List<string> { "suffocating_silk", "fang_feint" };
-    var ender = enders[Random.Shared.Next(0, enders.Count)];
-    var linker = linkers[Random.Shared.Next(0, linkers.Count)];
-    if (linker == "fang_feint")
+    var random = Random.Shared.Next(0, 100);
+    if (random <= 65)
     {
-      return new List<string> { linker, ender };
+      return [EnemyAttackId.SuffocatingSilk];
     }
-    return new List<string> { ender, linker };
+    return [EnemyAttackId.MandibleBreaker];
   }
 }
 
 public class SuffocatingSilk : EnemyAttackBase
 {
-  private int Slow = 4;
+  private int SlowAmount = 4;
   public SuffocatingSilk()
   {
-    Id = "suffocating_silk";
+    Id = EnemyAttackId.SuffocatingSilk;
     Name = "Suffocating Silk";
-    Damage = 2;
-    ConditionType = ConditionType.OnHit;
-    Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Slow, 4, ConditionType);
-    AmbushPercentage = 75;
+    Damage = 10;
+    BlockRequiredToPreventEffect = Random.Shared.Next(0, 100) <= 50 ? 6 : 7;
+    Text = $"{EnemyAttackTextHelper.GetBlockThresholdText(Damage - BlockRequiredToPreventEffect.Value, EnemyAttackTextHelper.GetText(EnemyAttackTextType.Slow, SlowAmount, ConditionType))}";
 
-    OnAttackHit = (entityManager) =>
+    OnDamageThresholdMet = (entityManager) =>
     {
-      EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Slow, Delta = Slow });
+      EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Slow, Delta = SlowAmount });
     };
   }
 }
 
 public class MandibleBreaker : EnemyAttackBase
 {
-  private int Fear = 3;
+  private int FearAmount = 1;
   public MandibleBreaker()
   {
-    Id = "mandible_breaker";
+    Id = EnemyAttackId.MandibleBreaker;
     Name = "Mandible Breaker";
-    Damage = 6;
-    ConditionType = ConditionType.OnHit;
-    Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Fear, 3, ConditionType);
-    AmbushPercentage = 75;
-    OnAttackHit = (entityManager) =>
-    {
-      EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Fear, Delta = Fear });
-    };
-  }
-}
-
-public class RafterfallAmbush : EnemyAttackBase
-{
-  private int Threshold = 1;
-  public RafterfallAmbush()
-  {
-    Id = "rafterfall_ambush";
-    Name = "Rafterfall Ambush";
-    Damage = 8;
-    ConditionType = ConditionType.MustBeBlockedByAtLeast1Card;
-    Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.MustBeBlockedByAtLeast, 1);
-    AmbushPercentage = 75;
-    OnAttackReveal = (entityManager) =>
-    {
-      EventManager.Publish(new MustBeBlockedEvent { Threshold = Threshold, Type = MustBeBlockedByType.AtLeast });
-    };
-  }
-}
-
-public class EightLimbsOfDeath : EnemyAttackBase
-{
-  public int Fear = 1;
-  public EightLimbsOfDeath()
-  {
-    Id = "eight_limbs_of_death";
-    Name = "Eight Limbs of Death";
     Damage = 10;
-    Text = $"On attack - Gain {Fear} fear.";
-    AmbushPercentage = 75;
+    ConditionType = ConditionType.OnBlockedByAtLeast1Card;
+    Text = $"On attack - Intimidate 1 card.\n\n{EnemyAttackTextHelper.GetText(EnemyAttackTextType.Fear, FearAmount, ConditionType)}";
+
     OnAttackReveal = (entityManager) =>
     {
-      EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Fear, Delta = Fear });
+      EventManager.Publish(new IntimidateEvent { Amount = 1 });
     };
-  }
-}
 
-public class FangFeint : EnemyAttackBase
-{
-  private int Aggression = 4;
-  private int Chance = 50;
-  public FangFeint()
-  {
-    Id = "fang_feint";
-    Name = "Fang Feint";
-    Damage = 1;
-    ConditionType = ConditionType.OnHit;
-    Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Aggression, 4, ConditionType, 50);
-    AmbushPercentage = 75;
     OnAttackHit = (entityManager) =>
     {
-      if (Random.Shared.Next(0, 100) < Chance)
-      {
-        EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Enemy"), Type = AppliedPassiveType.Aggression, Delta = Aggression });
-      }
+      EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Fear, Delta = FearAmount });
     };
   }
-
 }

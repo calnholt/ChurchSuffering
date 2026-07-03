@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
@@ -16,11 +17,11 @@ public class SkeletalArcher : EnemyBase
   private int Armor = 1;
   private int SnipeCount = 0;
 
-  public SkeletalArcher(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public SkeletalArcher()
   {
-    Id = "skeletal_archer";
+    Id = EnemyId.SkeletalArcher;
     Name = "Skeletal Archer";
-    HealthPerCard = 1.15f;
+    HP = 23;
 
     OnStartOfBattle = (entityManager) =>
     {
@@ -31,7 +32,7 @@ public class SkeletalArcher : EnemyBase
     };
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
     int roll = Random.Shared.Next(0, 100);
 
@@ -39,14 +40,14 @@ public class SkeletalArcher : EnemyBase
     {
       SnipeCount = SnipeCount == 2 ? 0 : SnipeCount;
       // 70%: 3 attacks from pool
-      var pool = new List<string> { "piercing_shot", "weathering_shot", "quick_shot" };
+      var pool = new List<EnemyAttackId> { EnemyAttackId.PiercingShot, EnemyAttackId.WeatheringShot, EnemyAttackId.QuickShot };
       return ArrayUtils.TakeRandomWithoutReplacement(pool, 2);
     }
     else
     {
       // 30%: Single heavy attack
       SnipeCount++;
-      return ["snipe"];
+      return [EnemyAttackId.Snipe];
     }
   }
 }
@@ -56,7 +57,7 @@ public class PiercingShot : EnemyAttackBase
   private int PiercingDamage = 2;
   public PiercingShot()
   {
-    Id = "piercing_shot";
+    Id = EnemyAttackId.PiercingShot;
     Name = "Piercing Shot";
     Damage = 4;
     Text = "On Attack - Deal " + PiercingDamage + " damage.";
@@ -81,7 +82,7 @@ public class WeatheringShot : EnemyAttackBase
 {
   public WeatheringShot()
   {
-    Id = "weathering_shot";
+    Id = EnemyAttackId.WeatheringShot;
     Name = "Weathering Shot";
     Damage = 5;
     ConditionType = ConditionType.OnHit;
@@ -107,7 +108,7 @@ public class QuickShot : EnemyAttackBase
 {
   public QuickShot()
   {
-    Id = "quick_shot";
+    Id = EnemyAttackId.QuickShot;
     Name = "Quick Shot";
     Damage = 6;
   }
@@ -117,7 +118,7 @@ public class Snipe : EnemyAttackBase
 {
   public Snipe()
   {
-    Id = "snipe";
+    Id = EnemyAttackId.Snipe;
     Name = "Snipe";
     Damage = 10;
     IgnoresAegis = true;

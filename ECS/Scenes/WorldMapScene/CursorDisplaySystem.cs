@@ -6,8 +6,8 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Rendering;
+using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -40,12 +40,12 @@ namespace Crusaders30XX.ECS.Systems
             EntityManager entityManager,
             GraphicsDevice graphicsDevice,
             SpriteBatch spriteBatch,
-            ContentManager content)
+            ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _cursorCross = content.Load<Texture2D>("cursor_cross");
+            _cursorCross = imageAssets.GetRequiredTexture("cursor_cross");
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -61,14 +61,6 @@ namespace Crusaders30XX.ECS.Systems
             {
                 _pulseTimer = 0.06f;
                 _previousTarget = target;
-                if (target?.GetComponent<UIElement>()?.IsInteractable == true)
-                {
-                    EventManager.Publish(new Events.PlaySfxEvent
-                    {
-                        Track = Events.SfxTrack.Interface,
-                        Volume = 0.05f,
-                    });
-                }
             }
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;

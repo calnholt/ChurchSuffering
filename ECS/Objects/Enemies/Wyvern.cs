@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
@@ -9,11 +10,11 @@ namespace Crusaders30XX.ECS.Objects.Enemies
 {
     public class Wyvern : EnemyBase
     {
-        public Wyvern(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+        public Wyvern()
         {
-            Id = "wyvern";
+            Id = EnemyId.Wyvern;
             Name = "Wyvern";
-            HealthPerCard = 1.65f;
+            HP = 33;
 
             OnStartOfBattle = (entityManager) =>
             {
@@ -29,11 +30,11 @@ namespace Crusaders30XX.ECS.Objects.Enemies
             };
         }
 
-        public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+        public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
         {
             if (turnNumber % 2 == 0)
-                return ["wyvern_threat"];
-            return ["wyvern_strike"];
+                return [EnemyAttackId.WyvernThreat];
+            return [EnemyAttackId.WyvernStrike];
         }
     }
 }
@@ -42,7 +43,7 @@ public class WyvernStrike : EnemyAttackBase
 {
     public WyvernStrike()
     {
-        Id = "wyvern_strike";
+        Id = EnemyAttackId.WyvernStrike;
         Name = "Talon Swipe";
         Damage = 10;
     }
@@ -52,7 +53,7 @@ public class WyvernThreat : EnemyAttackBase
 {
     public WyvernThreat()
     {
-        Id = "wyvern_threat";
+        Id = EnemyAttackId.WyvernThreat;
         Name = "Rend & Ruin";
         Damage = 10;
         ConditionType = ConditionType.OnBlockedByAtLeast2Cards;

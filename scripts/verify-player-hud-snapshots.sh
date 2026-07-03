@@ -13,6 +13,7 @@ variants=(
   incoming-damage
   low-health
   expanded
+  enemy-health
 )
 
 for variant in "${variants[@]}"; do

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Corner Convergence Shuffle</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: ShuffleDrawPile in DeckManagementSystem (or new ShuffleAnimationEvent)
+    - Archetype: D — Scene HUD / battle overlay
+    - Draw pile anchor: bottom-right battle HUD (~draw pile icon)
+    - Card geometry: 268x377 default (CardVisualSettings); mockup uses scaled mini cards
+  */
+  :root {
+    --bg: #0c0b0f;
+    --panel: #141318;
+    --text: #eee;
+    --text-dim: #888;
+    --accent: #4a8fe0;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --card-w: 52px;
+    --card-h: 73px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    padding: 28px 24px 80px;
+  }
+
+  .page-header {
+    max-width: 640px;
+    margin: 0 auto 36px;
+    text-align: center;
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #e44, #f88, #e44);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+
+  .page-header p {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 48px), 900px);
+    margin: 0 auto 40px;
+    position: relative;
+    overflow: hidden;
+    background: #0a090d;
+    border: 1px solid #2a2830;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 200px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert-background-city.png') center / cover no-repeat;
+  }
+
+  .bg-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .demo-shell {
+    position: absolute;
+    inset: 48px 80px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+  }
+
+  .demo-header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .demo-label {
+    font-size: 0.58rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .demo-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .demo-desc {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-width: 420px;
+  }
+
+  .timeline {
+    width: 100%;
+    max-width: 480px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 2px;
+    margin: 16px 0 10px;
+    overflow: hidden;
+  }
+
+  .timeline-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #2868b0, #4a8fe0);
+    transition: width 0.05s linear;
+  }
+
+  .stage-wrap {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    max-width: 520px;
+    min-height: 360px;
+    border-radius: 8px;
+    background:
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(200, 180, 150, 0.04), transparent),
+      rgba(12, 11, 16, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    overflow: hidden;
+  }
+
+  .stage-canvas {
+    position: absolute;
+    inset: 0;
+  }
+
+  .phase-label {
+    position: absolute;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    font-size: 0.62rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+    z-index: 5;
+    white-space: nowrap;
+    transition: color 0.3s;
+  }
+
+  .phase-label.active {
+    color: rgba(255, 220, 200, 0.85);
+    text-shadow: 0 0 12px rgba(196, 30, 58, 0.5);
+  }
+
+  .deck-target {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    width: 64px;
+    height: 88px;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .deck-target::after {
+    content: 'DECK';
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.48rem;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.18);
+  }
+
+  .cross-guide {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 140px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .cross-guide.visible { opacity: 1; }
+
+  .cross-guide::before,
+  .cross-guide::after {
+    content: '';
+    position: absolute;
+    background: rgba(196, 30, 58, 0.12);
+    border-radius: 2px;
+  }
+
+  .cross-guide::before {
+    left: 50%;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    transform: translateX(-50%);
+  }
+
+  .cross-guide::after {
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    transform: translateY(-50%);
+  }
+
+  .replay-btn {
+    margin-top: 14px;
+    padding: 8px 22px;
+    background: #1e1c24;
+    border: 1px solid #3a3644;
+    color: #f0ece6;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .replay-btn:hover {
+    background: #2a2730;
+    border-color: #5a5564;
+  }
+
+  .shuffle-card {
+    position: absolute;
+    width: var(--card-w);
+    height: var(--card-h);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+    will-change: transform, opacity;
+    transform-origin: center center;
+  }
+
+  .shuffle-card .bg { position: absolute; inset: 0; border-radius: 4px; }
+  .shuffle-card .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; z-index: 2; }
+  .shuffle-card .name {
+    position: absolute;
+    left: 7px; right: 4px; top: 8px;
+    font-family: 'New Rocker', cursive;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    z-index: 3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .shuffle-card .chip {
+    position: absolute;
+    left: 6px; bottom: 6px;
+    width: 16px; height: 16px;
+    border-radius: 2px;
+    font-size: 7px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+
+  .shuffle-card.w .bg { background: #dcd7ce; }
+  .shuffle-card.w .stripe { background: #999; }
+  .shuffle-card.w .name { color: #1a1a1a; }
+  .shuffle-card.w .chip { background: #cc2222; color: #fff; }
+  .shuffle-card.r .bg { background: #1c0c0c; }
+  .shuffle-card.r .stripe { background: #cc2222; }
+  .shuffle-card.r .name { color: #f0e0d8; }
+  .shuffle-card.r .chip { background: #330e0e; color: #dd4433; }
+  .shuffle-card.k .bg { background: #131313; }
+  .shuffle-card.k .stripe { background: #cc2222; }
+  .shuffle-card.k .name { color: #e8e4e0; }
+  .shuffle-card.k .chip { background: #1e1e1e; color: #dd4433; }
+
+  .notes {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 24px;
+    background: var(--panel);
+    border: 1px solid #2a2830;
+    border-radius: 8px;
+  }
+
+  .notes h2 {
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 12px;
+  }
+
+  .notes ul {
+    list-style: none;
+    font-size: 0.74rem;
+    color: #aaa;
+    line-height: 1.65;
+  }
+
+  .notes li {
+    padding-left: 14px;
+    position: relative;
+    margin-bottom: 6px;
+  }
+
+  .notes li::before {
+    content: '-';
+    position: absolute;
+    left: 0;
+    color: #c33;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Corner Convergence Shuffle</h1>
+  <p>
+    Cards launch diagonally from all four screen corners, sweep inward along curved paths
+    to form a cross, then assemble into the draw pile. Click <strong>Replay</strong> to re-run.
+  </p>
+</header>
+
+<div class="viewport-scaler" id="scaler">
+  <div class="viewport" id="viewport">
+    <div class="bg-scene"></div>
+    <div class="bg-dim"></div>
+
+    <div class="demo-shell">
+      <div class="demo-header">
+        <div class="demo-label">Deck Shuffle</div>
+        <div class="demo-title">Corner Convergence</div>
+        <div class="demo-desc">
+          Each card originates from a screen corner and arcs inward to its cross-arm slot.
+          Top-arm cards alternate from TL/TR; bottom from BL/BR; left from TL/BL; right from TR/BR.
+        </div>
+      </div>
+
+      <div class="timeline"><div class="timeline-fill" id="timeline-corners"></div></div>
+
+      <div class="stage-wrap">
+        <div class="cross-guide" id="cross-guide"></div>
+        <div class="phase-label" id="phase">Ready</div>
+        <div class="deck-target"></div>
+        <div class="stage-canvas" id="stage"></div>
+      </div>
+
+      <button class="replay-btn" id="replay-btn">Replay</button>
+    </div>
+  </div>
+</div>
+
+<section class="notes">
+  <h2>Implementation Notes</h2>
+  <ul>
+    <li><strong>Phase 1 (~1.2s)</strong> — 20 cards in 4 corner groups; quadratic bezier from corner to cross-arm slot with outward-bowed control point.</li>
+    <li><strong>Phase 2 (~0.3s)</strong> — Hold on completed cross with guide overlay visible.</li>
+    <li><strong>Phase 3 (~0.9s)</strong> — Staggered converge to draw-pile anchor with scale-down to 0.72.</li>
+    <li>Block input briefly during animation; publish completion before draw animations begin.</li>
+  </ul>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  const CARD_NAMES = ['Strike', 'Smite', 'Block', 'Pray', 'Cleave', 'Guard', 'Wrath', 'Heal', 'Slash', 'Shield'];
+  const VARIANTS = ['w', 'r', 'k'];
+  const CARD_W = 52;
+  const CARD_H = 73;
+  const PER_ARM = 5;
+  const CROSS_ARM = 55;
+  const SLOT_GAP = 14;
+
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  let runner = null;
+
+  function scaleViewport() {
+    const scaler = document.getElementById('scaler');
+    const viewport = document.getElementById('viewport');
+    const w = scaler.clientWidth;
+    const scale = w / 1920;
+    viewport.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${1080 * scale}px`;
+  }
+
+  window.addEventListener('resize', scaleViewport);
+  scaleViewport();
+
+  function createCardEl(index) {
+    const el = document.createElement('div');
+    el.className = `shuffle-card ${VARIANTS[index % 3]}`;
+    el.innerHTML = `
+      <div class="bg"></div>
+      <div class="stripe"></div>
+      <div class="name">${CARD_NAMES[index % CARD_NAMES.length]}</div>
+      <div class="chip">${(index % 5) + 1}</div>
+    `;
+    return el;
+  }
+
+  function getStageMetrics(stageEl) {
+    const parent = stageEl.parentElement.getBoundingClientRect();
+    return {
+      w: parent.width,
+      h: parent.height,
+      deckX: parent.width - 24 - 32 - CARD_W / 2,
+      deckY: parent.height - 24 - 44 - CARD_H / 2,
+      cx: parent.width / 2,
+      cy: parent.height / 2
+    };
+  }
+
+  function setCardTransform(el, x, y, rot, scale, opacity) {
+    el.style.transform = `translate(${x - CARD_W / 2}px, ${y - CARD_H / 2}px) rotate(${rot}deg) scale(${scale})`;
+    el.style.opacity = opacity;
+    el.style.zIndex = Math.round(y + rot * 0.1);
+  }
+
+  function buildCrossAssignments() {
+    const assignments = [];
+    for (let i = 0; i < PER_ARM; i++) {
+      assignments.push({ arm: 'top', slot: i });
+      assignments.push({ arm: 'bottom', slot: i });
+      assignments.push({ arm: 'left', slot: i });
+      assignments.push({ arm: 'right', slot: i });
+    }
+    return assignments;
+  }
+
+  function crossTarget(m, arm, slot) {
+    const offset = (slot - (PER_ARM - 1) / 2) * SLOT_GAP;
+    switch (arm) {
+      case 'top': return { x: m.cx + offset * 0.3, y: m.cy - CROSS_ARM + slot * SLOT_GAP * 0.55, rot: 0 };
+      case 'bottom': return { x: m.cx + offset * 0.3, y: m.cy + CROSS_ARM - slot * SLOT_GAP * 0.55, rot: 180 };
+      case 'left': return { x: m.cx - CROSS_ARM + slot * SLOT_GAP * 0.55, y: m.cy + offset * 0.3, rot: -90 };
+      case 'right': return { x: m.cx + CROSS_ARM - slot * SLOT_GAP * 0.55, y: m.cy + offset * 0.3, rot: 90 };
+    }
+  }
+
+  function cornerStart(m, corner) {
+    const margin = 60;
+    switch (corner) {
+      case 'tl': return { x: -margin, y: -margin, rot: 45 };
+      case 'tr': return { x: m.w + margin, y: -margin, rot: -45 };
+      case 'bl': return { x: -margin, y: m.h + margin, rot: -45 };
+      case 'br': return { x: m.w + margin, y: m.h + margin, rot: 45 };
+    }
+  }
+
+  function bezier2(p0x, p0y, p1x, p1y, p2x, p2y, t) {
+    const u = 1 - t;
+    return {
+      x: u * u * p0x + 2 * u * t * p1x + t * t * p2x,
+      y: u * u * p0y + 2 * u * t * p1y + t * t * p2y
+    };
+  }
+
+  class AnimRunner {
+    constructor(duration, onFrame, onComplete) {
+      this.duration = duration;
+      this.onFrame = onFrame;
+      this.onComplete = onComplete;
+      this.startTime = null;
+      this.raf = null;
+      this.running = false;
+    }
+
+    start() {
+      this.stop();
+      this.running = true;
+      this.startTime = null;
+      const tick = (ts) => {
+        if (!this.running) return;
+        if (this.startTime === null) this.startTime = ts;
+        const elapsed = ts - this.startTime;
+        const t = Math.min(1, elapsed / this.duration);
+        this.onFrame(t, elapsed);
+        const timeline = document.getElementById('timeline-corners');
+        if (timeline) timeline.style.width = `${t * 100}%`;
+        if (t >= 1) {
+          this.running = false;
+          if (this.onComplete) this.onComplete();
+          return;
+        }
+        this.raf = requestAnimationFrame(tick);
+      };
+      this.raf = requestAnimationFrame(tick);
+    }
+
+    stop() {
+      this.running = false;
+      if (this.raf) cancelAnimationFrame(this.raf);
+    }
+  }
+
+  function play() {
+    const stage = document.getElementById('stage');
+    const phase = document.getElementById('phase');
+    const guide = document.getElementById('cross-guide');
+    stage.innerHTML = '';
+    guide.classList.remove('visible');
+    phase.textContent = 'Ready';
+    phase.classList.remove('active');
+
+    const m = getStageMetrics(stage);
+    const cards = [];
+    const cornerMap = {
+      top: (slot) => slot % 2 === 0 ? 'tl' : 'tr',
+      bottom: (slot) => slot % 2 === 0 ? 'bl' : 'br',
+      left: (slot) => slot % 2 === 0 ? 'tl' : 'bl',
+      right: (slot) => slot % 2 === 0 ? 'tr' : 'br',
+    };
+
+    buildCrossAssignments().forEach((a, i) => {
+      const el = createCardEl(i);
+      stage.appendChild(el);
+      const corner = cornerMap[a.arm](a.slot);
+      const start = cornerStart(m, corner);
+      const target = crossTarget(m, a.arm, a.slot);
+      const midX = (start.x + target.x) / 2 + (target.x - m.cx) * 0.4;
+      const midY = (start.y + target.y) / 2 + (target.y - m.cy) * 0.4;
+      cards.push({
+        el, start, target,
+        cp: { x: midX, y: midY },
+        stagger: a.slot * 0.08 + (corner === 'tl' || corner === 'br' ? 0 : 0.04),
+      });
+    });
+
+    const phase1Dur = 1200;
+    const holdDur = 300;
+    const phase2Dur = 900;
+    const totalDur = phase1Dur + holdDur + phase2Dur;
+
+    if (runner) runner.stop();
+    runner = new AnimRunner(totalDur, (t, elapsed) => {
+      if (elapsed < phase1Dur) {
+        phase.textContent = 'Corners converging';
+        phase.classList.add('active');
+        guide.classList.add('visible');
+        const pt = elapsed / phase1Dur;
+        cards.forEach(c => {
+          const localT = Math.max(0, Math.min(1, (pt - c.stagger) / (1 - c.stagger)));
+          const e = easeOutCubic(localT);
+          const pos = bezier2(c.start.x, c.start.y, c.cp.x, c.cp.y, c.target.x, c.target.y, e);
+          const rot = lerp(c.start.rot, c.target.rot, e);
+          setCardTransform(c.el, pos.x, pos.y, rot, 1, localT > 0 ? 1 : 0);
+        });
+      } else if (elapsed < phase1Dur + holdDur) {
+        phase.textContent = 'Cross locked';
+        cards.forEach(c => setCardTransform(c.el, c.target.x, c.target.y, c.target.rot, 1, 1));
+      } else {
+        phase.textContent = 'Assembling the deck';
+        guide.classList.remove('visible');
+        const pt = (elapsed - phase1Dur - holdDur) / phase2Dur;
+        cards.forEach((c, i) => {
+          const stagger = i * 0.025;
+          const localT = Math.max(0, Math.min(1, (pt - stagger) / (1 - stagger)));
+          const e = easeInOutCubic(localT);
+          const x = lerp(c.target.x, m.deckX, e);
+          const y = lerp(c.target.y, m.deckY - i * 1.2, e);
+          const rot = lerp(c.target.rot, 0, e);
+          const scale = lerp(1, 0.72, e);
+          setCardTransform(c.el, x, y, rot, scale, 1);
+        });
+      }
+    }, () => {
+      phase.textContent = 'Deck ready';
+      phase.classList.remove('active');
+    });
+    runner.start();
+  }
+
+  document.getElementById('replay-btn').addEventListener('click', play);
+  setTimeout(play, 400);
+})();
+</script>
+</body>
+</html>

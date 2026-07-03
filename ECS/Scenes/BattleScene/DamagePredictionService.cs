@@ -1,9 +1,9 @@
 using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
-using System.Runtime.CompilerServices;
 using System;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
+using Crusaders30XX.ECS.Services;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -25,38 +25,28 @@ namespace Crusaders30XX.ECS.Systems
 			return Math.Max(value, 0);
 		}
 
-		public static int GetAssignedBlockForContext(EntityManager entityManager, string contextId)
+		public static int GetAssignedBlockForCurrentAttack(EntityManager entityManager)
 		{
-			if (string.IsNullOrEmpty(contextId)) return 0;
-			// Use EnemyAttackProgress exclusively
-			foreach (var e in entityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
-			{
-				var p = e.GetComponent<EnemyAttackProgress>();
-				if (p != null && p.ContextId == contextId)
-				{
-					return p.AssignedBlockTotal;
-				}
-			}
-			return 0;
+			if (!EnemyAttackFlowService.TryGetCurrentProgress(entityManager, out var progress))
+				return 0;
+			return progress.AssignedBlockTotal;
 		}
-		public static int ComputeActualDamage(EnemyAttackBase definition, EntityManager entityManager, string contextId, bool isBlocked)
+
+		public static int ComputeActualDamage(EnemyAttackBase definition, EntityManager entityManager, bool isBlocked)
 		{
 			int full = ComputeFullDamage(definition);
 			int aegis = GetAegisAmount(entityManager);
-			int assigned = GetAssignedBlockForContext(entityManager, contextId);
+			int assigned = GetAssignedBlockForCurrentAttack(entityManager);
 			int reduced = aegis + assigned;
 			int actual = full - reduced;
 			return actual < 0 ? 0 : actual;
 		}
 
-    public static int ComputePreventedDamage(EnemyAttackBase definition, EntityManager entityManager, string contextId, bool isBlocked)
-    {
-      int aegis = GetAegisAmount(entityManager);
-      int assigned = GetAssignedBlockForContext(entityManager, contextId);
-      return aegis + assigned;
-    }
-
+		public static int ComputePreventedDamage(EnemyAttackBase definition, EntityManager entityManager, bool isBlocked)
+		{
+			int aegis = GetAegisAmount(entityManager);
+			int assigned = GetAssignedBlockForCurrentAttack(entityManager);
+			return aegis + assigned;
+		}
 	}
 }
-
-

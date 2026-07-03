@@ -62,6 +62,9 @@ namespace Crusaders30XX.ECS.Events
     public class FrostbiteTriggered
     {
         public Entity Target { get; set; }
+        public int DamageAmount { get; set; }
+        public int TriggerIndex { get; set; }
+        public int TriggerCount { get; set; }
     }
 
     /// <summary>
@@ -73,5 +76,4 @@ namespace Crusaders30XX.ECS.Events
         public string QuestId { get; set; }
     }
 }
-
 

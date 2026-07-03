@@ -49,6 +49,26 @@ public class HandStateLoggingServiceTests
         Assert.True(snapshot["mismatch"]!.GetValue<bool>());
     }
 
+    [Fact]
+    public void BuildHandSnapshot_marks_token_cards_visible_but_not_counted_for_draw()
+    {
+        var entityManager = new EntityManager();
+        var deck = new Deck();
+        var tokenCard = CreateCard(entityManager, new CardBase { CardId = "token", IsToken = true });
+        deck.Hand.Add(tokenCard);
+
+        var snapshot = HandStateLoggingService.BuildHandSnapshot(deck, "test", SubPhase.EnemyStart);
+
+        Assert.True(HandStateLoggingService.CountsForHandLayout(tokenCard));
+        Assert.False(HandStateLoggingService.CountsForDraw(tokenCard));
+        Assert.Equal("Visible", HandStateLoggingService.GetLayoutExclusionReason(tokenCard));
+        Assert.Equal("token", HandStateLoggingService.GetDrawCountReason(tokenCard));
+        Assert.Equal(1, snapshot["deckHandCount"]!.GetValue<int>());
+        Assert.Equal(1, snapshot["visibleHandCount"]!.GetValue<int>());
+        Assert.Equal(0, snapshot["effectiveDrawHandCount"]!.GetValue<int>());
+        Assert.True(snapshot["mismatch"]!.GetValue<bool>());
+    }
+
     private static Entity CreateCard(EntityManager entityManager, CardBase card)
     {
         var entity = entityManager.CreateEntity(card.CardId);

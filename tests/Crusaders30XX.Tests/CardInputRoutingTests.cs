@@ -109,6 +109,30 @@ public class CardInputRoutingTests : IDisposable
         Assert.Equal(0, pledges);
     }
 
+    [Fact]
+    public void Display_only_card_list_modal_click_does_not_publish_card_selection()
+    {
+        var entityManager = new EntityManager();
+        var card = entityManager.CreateEntity("DisplayOnlyCard");
+        entityManager.AddComponent(card, new CardData { Card = new CardBase { CardId = "smite" } });
+        var modalEntity = entityManager.CreateEntity("CardListModal");
+        entityManager.AddComponent(modalEntity, new CardListModal
+        {
+            IsOpen = true,
+            IsSelectable = false,
+            Cards = new System.Collections.Generic.List<Entity> { card },
+        });
+        int selections = 0;
+        EventManager.Subscribe<CardListModalCardSelectedEvent>(_ => selections++);
+
+        UIElementEventDelegateService.HandleEvent(
+            UIElementEventType.CardClicked,
+            card,
+            entityManager);
+
+        Assert.Equal(0, selections);
+    }
+
     private static EntityManager BuildHand(SubPhase subPhase, out Entity card)
     {
         var entityManager = new EntityManager();

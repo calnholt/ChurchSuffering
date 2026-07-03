@@ -51,6 +51,34 @@ public class ShackleManagementSystemTests : System.IDisposable
 		Assert.Equal(2, CountShackled(entityManager));
 	}
 
+	[Fact]
+	public void BeginDefeatPresentation_clears_shackles_without_enemy_end()
+	{
+		var entityManager = BuildWorld(out _);
+		var enemy = entityManager.CreateEntity("Enemy");
+		entityManager.AddComponent(enemy, new Enemy());
+		_ = new ShackleManagementSystem(entityManager);
+
+		EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.PreBlock });
+		Assert.Equal(2, CountShackled(entityManager));
+
+		EventManager.Publish(new BeginDefeatPresentationEvent { Enemy = enemy, IsPreview = false });
+		Assert.Equal(0, CountShackled(entityManager));
+	}
+
+	[Fact]
+	public void EnemyPhaseReset_clears_shackles_without_enemy_end()
+	{
+		var entityManager = BuildWorld(out _);
+		_ = new ShackleManagementSystem(entityManager);
+
+		EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.PreBlock });
+		Assert.Equal(2, CountShackled(entityManager));
+
+		EventManager.Publish(new EnemyPhaseResetEvent());
+		Assert.Equal(0, CountShackled(entityManager));
+	}
+
 	private static EntityManager BuildWorld(out Entity player)
 	{
 		var entityManager = new EntityManager();

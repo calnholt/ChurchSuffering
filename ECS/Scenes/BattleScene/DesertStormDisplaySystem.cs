@@ -31,10 +31,10 @@ public class DesertStormDisplaySystem : Core.System
         _overlay?.IsAvailable == true;
 
     [DebugEditable(DisplayName = "Time Scale", Step = 0.01f, Min = 0f, Max = 5f)]
-    public float TimeScale { get; set; } = 3.27f;
+    public float TimeScale { get; set; } = 5f;
 
     [DebugEditable(DisplayName = "Base Scale", Step = 0.01f, Min = 0.01f, Max = 10f)]
-    public float BaseScale { get; set; } = 2.89f;
+    public float BaseScale { get; set; } = 3.17f;
 
     [DebugEditable(DisplayName = "Lacunarity", Step = 0.01f, Min = 0.01f, Max = 5f)]
     public float Lacunarity { get; set; } = 2f;
@@ -64,7 +64,7 @@ public class DesertStormDisplaySystem : Core.System
     public float WarpDriftB { get; set; } = 0.012f;
 
     [DebugEditable(DisplayName = "Morph Speed", Step = 0.001f, Min = -0.5f, Max = 0.5f)]
-    public float MorphSpeed { get; set; } = 0.008f;
+    public float MorphSpeed { get; set; } = 0.016f;
 
     [DebugEditable(DisplayName = "Shadow R", Step = 0.01f, Min = 0f, Max = 1f)]
     public float ShadowR { get; set; } = 0.55f;
@@ -106,10 +106,10 @@ public class DesertStormDisplaySystem : Core.System
     public float VerticalGradient { get; set; } = 0.08f;
 
     [DebugEditable(DisplayName = "Dust Base", Step = 0.01f, Min = 0f, Max = 1f)]
-    public float DustBase { get; set; } = 0.55f;
+    public float DustBase { get; set; } = 0f;
 
     [DebugEditable(DisplayName = "Dust Density", Step = 0.01f, Min = 0f, Max = 1f)]
-    public float DustDensity { get; set; } = 0.45f;
+    public float DustDensity { get; set; } = 1f;
 
     [DebugEditable(DisplayName = "Scene Tint R", Step = 0.01f, Min = 0f, Max = 1f)]
     public float SceneTintR { get; set; } = 0.90f;

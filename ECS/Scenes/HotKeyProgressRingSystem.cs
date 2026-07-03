@@ -5,6 +5,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Rendering;
+using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -61,18 +62,19 @@ namespace Crusaders30XX.ECS.Systems
 
         public void Draw()
         {
+            if (GameOverOverlayDisplaySystem.IsOverlayActive(EntityManager)) return;
+
             HotKeySystem hotKeySystem = _systemManager.GetSystem<HotKeySystem>();
             if (hotKeySystem == null) return;
             string contextId = InputContextResolver.ResolveCommandContext(EntityManager);
+            bool gameplayBlocked = StateSingleton.PreventClicking
+                && contextId == InputContextIds.Gameplay;
 
             foreach ((Entity entity, float elapsed) in hotKeySystem.HoldProgress.ToList())
             {
                 HotKey hotKey = entity.GetComponent<HotKey>();
                 UIElement ui = entity.GetComponent<UIElement>();
-                if (hotKey == null
-                    || ui == null
-                    || !ui.IsInteractable
-                    || !InputContextResolver.IsMember(entity, contextId))
+                if (!HotKeySystem.IsHotKeyEligible(entity, hotKey, ui, contextId, gameplayBlocked))
                 {
                     continue;
                 }

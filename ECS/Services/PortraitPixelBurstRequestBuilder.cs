@@ -3,7 +3,6 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Services
@@ -12,18 +11,18 @@ namespace Crusaders30XX.ECS.Services
 	{
 		public static bool TryBuild(
 			EntityManager entityManager,
-			ContentManager content,
+			ImageAssetService imageAssets,
 			Entity enemy,
 			bool isPreview,
 			out PixelBurstAnimationRequested request)
 		{
 			request = null;
-			if (enemy == null || content == null) return false;
+			if (enemy == null || imageAssets == null) return false;
 
 			var transform = enemy.GetComponent<Transform>();
 			if (transform == null) return false;
 
-			var texture = ResolveEnemyTexture(entityManager, content);
+			var texture = ResolveEnemyTexture(entityManager, imageAssets);
 			if (texture == null) return false;
 
 			var portraitInfo = enemy.GetComponent<PortraitInfo>();
@@ -47,32 +46,18 @@ namespace Crusaders30XX.ECS.Services
 			return true;
 		}
 
-		private static Texture2D ResolveEnemyTexture(EntityManager entityManager, ContentManager content)
+		private static Texture2D ResolveEnemyTexture(EntityManager entityManager, ImageAssetService imageAssets)
 		{
 			var queuedEntity = entityManager.GetEntity("QueuedEvents");
 			var queued = queuedEntity?.GetComponent<QueuedEvents>();
 			if (queued?.Events == null || queued.Events.Count == 0 || queued.CurrentIndex < 0 || queued.CurrentIndex >= queued.Events.Count)
 			{
-				return TryLoad(content, "Skeleton");
+				return imageAssets.TryGetTexture("Skeleton");
 			}
 
 			string enemyId = queued.Events[queued.CurrentIndex].EventId;
 			string assetName = EnemyPortraitContent.ToAssetName(enemyId);
-			var tex = TryLoad(content, assetName);
-			return tex ?? TryLoad(content, "Skeleton");
-		}
-
-		private static Texture2D TryLoad(ContentManager content, string assetName)
-		{
-			if (string.IsNullOrEmpty(assetName)) return null;
-			try
-			{
-				return content.Load<Texture2D>(assetName);
-			}
-			catch
-			{
-				return null;
-			}
+			return imageAssets.GetTextureOrFallback(assetName, "Skeleton");
 		}
 	}
 }

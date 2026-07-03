@@ -13,6 +13,7 @@ namespace Crusaders30XX.ECS.Services
 	public static class RunDeckService
 	{
 		public const string PrimaryLoadoutId = "loadout_1";
+		public const int EnemyHealthClimbTimeBonusMultiplier = 2;
 		private const string DeckEntityName = "Deck";
 
 		public static LoadoutDefinition GetLoadoutForRun()
@@ -27,47 +28,45 @@ namespace Crusaders30XX.ECS.Services
 			if (deck == null) return deckEntity;
 
 			var loadout = GetLoadoutForRun();
-			var desiredKeys = BuildDesiredKeys(loadout);
-			var starterCardKeys = BuildStarterCardKeySet();
-			var existingByKey = entityManager
+			var desiredEntries = BuildDesiredEntries(loadout);
+			var existingByEntryId = entityManager
 				.GetEntitiesWithComponent<RunDeckCard>()
-				.Where(e => e.IsActive)
-				.ToDictionary(e => e.GetComponent<RunDeckCard>().CardKey, e => e, StringComparer.OrdinalIgnoreCase);
+				.Where(e => e.IsActive && !string.IsNullOrWhiteSpace(e.GetComponent<RunDeckCard>()?.EntryId))
+				.GroupBy(e => e.GetComponent<RunDeckCard>().EntryId, StringComparer.Ordinal)
+				.ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 
-			// Legacy loadouts may still list weapon keys; purge stale weapon entities so they never enter the draw pile.
-			foreach (var kv in existingByKey.ToList())
+			foreach (var entry in desiredEntries)
 			{
-				if (!IsWeaponCardKey(kv.Key)) continue;
-				RemoveCardFromDeckLists(deck, kv.Value);
-				deck.Cards.Remove(kv.Value);
-				entityManager.DestroyEntity(kv.Value.Id);
-				existingByKey.Remove(kv.Key);
-			}
-
-			foreach (var key in desiredKeys)
-			{
-				if (existingByKey.ContainsKey(key)) continue;
-				var created = CreateRunDeckCard(entityManager, key, starterCardKeys);
-				if (created != null)
+				if (existingByEntryId.TryGetValue(entry.entryId, out var existing)
+					&& string.Equals(existing.GetComponent<RunDeckCard>()?.CardKey, entry.cardKey, StringComparison.OrdinalIgnoreCase))
 				{
-					existingByKey[key] = created;
+					continue;
 				}
+
+				if (existing != null)
+				{
+					RemoveCardFromDeckLists(deck, existing);
+					deck.Cards.Remove(existing);
+					entityManager.DestroyEntity(existing.Id);
+				}
+
+				var created = CreateRunDeckCard(entityManager, entry);
+				if (created != null) existingByEntryId[entry.entryId] = created;
 			}
 
-			var desiredSet = new HashSet<string>(desiredKeys, StringComparer.OrdinalIgnoreCase);
-			foreach (var kv in existingByKey.ToList())
+			var desiredIds = new HashSet<string>(desiredEntries.Select(entry => entry.entryId), StringComparer.Ordinal);
+			foreach (var kv in existingByEntryId.ToList())
 			{
-				if (desiredSet.Contains(kv.Key)) continue;
-				SaveCache.SetRunCardRestrictionsForCard(kv.Key, new List<string>());
+				if (desiredIds.Contains(kv.Key)) continue;
 				RemoveCardFromDeckLists(deck, kv.Value);
 				deck.Cards.Remove(kv.Value);
 				entityManager.DestroyEntity(kv.Value.Id);
 			}
 
 			deck.Cards.Clear();
-			foreach (var key in desiredKeys)
+			foreach (var entry in desiredEntries)
 			{
-				if (existingByKey.TryGetValue(key, out var card) && card != null && card.IsActive)
+				if (existingByEntryId.TryGetValue(entry.entryId, out var card) && card != null && card.IsActive)
 				{
 					deck.Cards.Add(card);
 				}
@@ -80,8 +79,7 @@ namespace Crusaders30XX.ECS.Services
 
 		public static void ReplaceDeckFromLoadout(
 			EntityManager entityManager,
-			LoadoutDefinition loadout,
-			IReadOnlyCollection<string> starterCardKeys)
+			LoadoutDefinition loadout)
 		{
 			if (entityManager == null) return;
 
@@ -96,12 +94,11 @@ namespace Crusaders30XX.ECS.Services
 			ClearEquippedWeapon(entityManager);
 			DestroyAllDeckCards(entityManager, deck);
 
-			var starterKeySet = BuildStarterCardKeySet(starterCardKeys);
-			var desiredKeys = BuildDesiredKeys(loadout);
+			var desiredEntries = BuildDesiredEntries(loadout);
 			deck.Cards.Clear();
-			foreach (var key in desiredKeys)
+			foreach (var entry in desiredEntries)
 			{
-				var created = CreateRunDeckCard(entityManager, key, starterKeySet);
+				var created = CreateRunDeckCard(entityManager, entry);
 				if (created != null)
 				{
 					deck.Cards.Add(created);
@@ -114,19 +111,16 @@ namespace Crusaders30XX.ECS.Services
 			}
 		}
 
-		public static void AddCardFromKey(EntityManager entityManager, string cardKey)
+		public static void AddCardFromEntry(EntityManager entityManager, string entryId)
 		{
-			if (string.IsNullOrWhiteSpace(cardKey)) return;
-			if (IsWeaponCardKey(cardKey)) return;
+			if (string.IsNullOrWhiteSpace(entryId)) return;
+			var entry = SaveCache.GetRunDeckEntry(PrimaryLoadoutId, entryId);
+			if (entry == null || IsWeaponCardKey(entry.cardKey)) return;
 			var deckEntity = EnsureRunDeck(entityManager);
 			var deck = deckEntity.GetComponent<Deck>();
 			if (deck == null) return;
 
-			var existing = entityManager
-				.GetEntitiesWithComponent<RunDeckCard>()
-				.FirstOrDefault(e => e.IsActive &&
-					string.Equals(e.GetComponent<RunDeckCard>()?.CardKey, cardKey, StringComparison.OrdinalIgnoreCase));
-			if (existing != null)
+			if (TryGetCardEntityByEntryId(entityManager, entryId, out var existing))
 			{
 				if (!deck.Cards.Contains(existing))
 				{
@@ -135,25 +129,16 @@ namespace Crusaders30XX.ECS.Services
 				return;
 			}
 
-			var created = CreateRunDeckCard(entityManager, cardKey, BuildStarterCardKeySet());
+			var created = CreateRunDeckCard(entityManager, entry);
 			if (created != null && !deck.Cards.Contains(created))
 			{
 				deck.Cards.Add(created);
 			}
 		}
 
-		public static void RemoveCardByKey(EntityManager entityManager, string cardKey)
+		public static void RemoveCardByEntryId(EntityManager entityManager, string entryId)
 		{
-			if (string.IsNullOrWhiteSpace(cardKey)) return;
-			var card = entityManager
-				.GetEntitiesWithComponent<RunDeckCard>()
-				.FirstOrDefault(e => e.IsActive &&
-					string.Equals(e.GetComponent<RunDeckCard>()?.CardKey, cardKey, StringComparison.OrdinalIgnoreCase));
-			if (card == null)
-			{
-				ClearRestrictionsIfCardKeyIsAbsentFromLoadout(cardKey);
-				return;
-			}
+			if (!TryGetCardEntityByEntryId(entityManager, entryId, out var card)) return;
 
 			var deckEntity = GetRunDeckEntity(entityManager);
 			var deck = deckEntity?.GetComponent<Deck>();
@@ -164,20 +149,18 @@ namespace Crusaders30XX.ECS.Services
 			}
 
 			entityManager.DestroyEntity(card.Id);
-			ClearRestrictionsIfCardKeyIsAbsentFromLoadout(cardKey);
 		}
 
 		public static void ExhaustRunCard(EntityManager entityManager, Entity card)
 		{
 			if (card == null) return;
 			var runDeck = card.GetComponent<RunDeckCard>();
-			if (runDeck == null || string.IsNullOrWhiteSpace(runDeck.CardKey))
+			if (runDeck == null || string.IsNullOrWhiteSpace(runDeck.EntryId))
 			{
 				DestroyNonRunCard(entityManager, card);
 				return;
 			}
 
-			var cardKey = runDeck.CardKey;
 			var deckEntity = GetRunDeckEntity(entityManager);
 			var deck = deckEntity?.GetComponent<Deck>();
 			if (deck != null)
@@ -186,9 +169,18 @@ namespace Crusaders30XX.ECS.Services
 				deck.Cards.Remove(card);
 			}
 
-			SaveCache.RemoveCardFromLoadout(PrimaryLoadoutId, cardKey, publishChange: false);
-			ClearRestrictionsIfCardKeyIsAbsentFromLoadout(cardKey);
+			SaveCache.TryRemoveRunDeckEntry(PrimaryLoadoutId, runDeck.EntryId, out _, publishChange: false);
 			entityManager.DestroyEntity(card.Id);
+		}
+
+		public static bool TryGetCardEntityByEntryId(EntityManager entityManager, string entryId, out Entity card)
+		{
+			card = null;
+			if (entityManager == null || string.IsNullOrWhiteSpace(entryId)) return false;
+			card = entityManager.GetEntitiesWithComponent<RunDeckCard>()
+				.FirstOrDefault(entity => entity.IsActive
+					&& string.Equals(entity.GetComponent<RunDeckCard>()?.EntryId, entryId, StringComparison.Ordinal));
+			return card != null;
 		}
 
 		public static void DestroyRunDeck(EntityManager entityManager)
@@ -207,6 +199,32 @@ namespace Crusaders30XX.ECS.Services
 			{
 				entityManager.DestroyEntity(deckEntity.Id);
 			}
+		}
+
+		public static float CalculateEnemyHealthDeckWeight(
+			EntityManager entityManager,
+			int fallbackDeckCardCount,
+			int baseCardCountReduction = 0,
+			int climbTimeOverride = -1)
+		{
+			var entries = BuildDesiredEntries(GetLoadoutForRun());
+			if (entries.Count == 0 && entityManager != null)
+			{
+				entries = entityManager.GetEntitiesWithComponent<RunDeckCard>()
+					.Where(entity => entity != null && entity.IsActive)
+					.Select(entity => entity.GetComponent<RunDeckCard>())
+					.Where(runCard => runCard != null && !string.IsNullOrWhiteSpace(runCard.CardKey) && !IsWeaponCardKey(runCard.CardKey))
+					.Select(runCard => new LoadoutCardEntry { entryId = runCard.EntryId, cardKey = runCard.CardKey })
+					.ToList();
+			}
+
+			int cardCount = entries.Count > 0 ? entries.Count : Math.Max(0, fallbackDeckCardCount);
+			int reducedCardCount = Math.Max(0, cardCount - Math.Max(0, baseCardCountReduction));
+			int climbTime = climbTimeOverride >= 0
+				? ClimbRuleService.ClampTime(climbTimeOverride)
+				: ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0);
+			int timeBonus = (climbTime / ClimbRuleService.ShopRefreshInterval) * EnemyHealthClimbTimeBonusMultiplier;
+			return reducedCardCount + timeBonus;
 		}
 
 		public static Entity GetRunDeckEntity(EntityManager entityManager)
@@ -235,14 +253,15 @@ namespace Crusaders30XX.ECS.Services
 
 		private static Entity CreateRunDeckCard(
 			EntityManager entityManager,
-			string cardKey,
-			IReadOnlySet<string> starterCardKeys = null)
+			LoadoutCardEntry entry)
 		{
+			if (entry == null || string.IsNullOrWhiteSpace(entry.entryId)) return null;
+			string cardKey = entry.cardKey;
 			if (!TryParseCardKey(cardKey, out var cardId, out var color, out var isUpgraded)) return null;
 			var card = CardFactory.Create(cardId);
 			if (card == null || card.IsWeapon) return null;
 
-			int index = StableIndexForKey(cardKey);
+			int index = StableIndexForKey(entry.entryId);
 			var entity = EntityFactory.CreateCardFromDefinition(
 				entityManager,
 				cardId,
@@ -250,9 +269,10 @@ namespace Crusaders30XX.ECS.Services
 				allowWeapons: false,
 				index: index,
 				cardKey: cardKey,
+				runDeckEntryId: entry.entryId,
 				persistForRun: true,
 				isUpgraded: isUpgraded);
-			if (entity != null && IsStarterCardKey(cardKey, starterCardKeys))
+			if (entity != null && entry.isStarter)
 			{
 				var cardData = entity.GetComponent<CardData>();
 				if (cardData?.Card != null)
@@ -263,46 +283,18 @@ namespace Crusaders30XX.ECS.Services
 			return entity;
 		}
 
-		private static bool IsStarterCardKey(string cardKey, IReadOnlySet<string> starterCardKeys)
+		private static List<LoadoutCardEntry> BuildDesiredEntries(LoadoutDefinition loadout)
 		{
-			if (starterCardKeys != null)
+			var entries = new List<LoadoutCardEntry>();
+			if (loadout?.cards == null) return entries;
+			foreach (var entry in loadout.cards)
 			{
-				return starterCardKeys.Contains(cardKey);
-			}
-
-			return SaveCache.IsStarterCardKey(cardKey);
-		}
-
-		private static HashSet<string> BuildStarterCardKeySet(IReadOnlyCollection<string> starterCardKeys = null)
-		{
-			if (starterCardKeys != null)
-			{
-				return new HashSet<string>(
-					starterCardKeys.Where(key => !string.IsNullOrWhiteSpace(key)),
-					StringComparer.OrdinalIgnoreCase);
-			}
-
-			var keys = SaveCache.GetAll()?.starterCardKeys;
-			if (keys == null || keys.Count == 0)
-			{
-				return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			}
-
-			return new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
-		}
-
-		private static List<string> BuildDesiredKeys(LoadoutDefinition loadout)
-		{
-			var keys = new List<string>();
-			if (loadout?.cardIds == null) return keys;
-			foreach (var entry in loadout.cardIds)
-			{
-				if (string.IsNullOrWhiteSpace(entry)) continue;
-				var key = entry.Trim();
+				if (entry == null || string.IsNullOrWhiteSpace(entry.entryId) || string.IsNullOrWhiteSpace(entry.cardKey)) continue;
+				var key = entry.cardKey.Trim();
 				if (IsWeaponCardKey(key)) continue;
-				keys.Add(key);
+				entries.Add(entry);
 			}
-			return keys;
+			return entries;
 		}
 
 		private static bool IsWeaponCardKey(string cardKey)
@@ -310,18 +302,6 @@ namespace Crusaders30XX.ECS.Services
 			if (!TryParseCardKey(cardKey, out var cardId, out _, out _)) return false;
 			var card = CardFactory.Create(cardId);
 			return card?.IsWeapon == true;
-		}
-
-		private static void ClearRestrictionsIfCardKeyIsAbsentFromLoadout(string cardKey)
-		{
-			var loadout = GetLoadoutForRun();
-			if (loadout?.cardIds?.Any(key =>
-				string.Equals(key, cardKey, StringComparison.OrdinalIgnoreCase)) == true)
-			{
-				return;
-			}
-
-			SaveCache.SetRunCardRestrictionsForCard(cardKey, new List<string>());
 		}
 
 		public static bool TryParseCardKey(string cardKey, out string cardId, out CardData.CardColor color)

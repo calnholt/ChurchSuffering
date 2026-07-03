@@ -8,10 +8,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Singletons;
  
 using System;
 using Crusaders30XX.ECS.Scenes.BattleScene;
 using Crusaders30XX.ECS.Data.Locations;
+using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Data.Tutorials;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -23,6 +26,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private bool _loadedSystems = false;
 		private bool _loadedEntities = false;
 
@@ -31,17 +35,32 @@ namespace Crusaders30XX.ECS.Systems
 
 	private HandDisplaySystem _handDisplaySystem;
 	private CardHoverDetectionSystem _cardHoverDetectionSystem;
+	private CardVisualEffectsSuppressionSystem _cardVisualEffectsSuppressionSystem;
 		private BattleBackgroundSystem _battleBackgroundSystem;
 		private DrawPileDisplaySystem _drawPileDisplaySystem;
+		private ShuffleDeckDisplaySystem _shuffleDeckDisplaySystem;
 		private DiscardPileDisplaySystem _discardPileDisplaySystem;
-		private DrawPileColorCountDisplaySystem _drawPileColorCountDisplaySystem;
+		private PileColorCountDisplaySystem _pileColorCountDisplaySystem;
 		private PlayerDisplaySystem _playerDisplaySystem;
 		private PlayerWispParticleSystem _playerWispParticleSystem;
 		private PlayerTemperanceActivationDisplaySystem _playerTemperanceActivationDisplaySystem;
-		private PlayerAnimationSystem _playerAnimationSystem;
+		private ModularEffectCoordinatorSystem _modularEffectCoordinatorSystem;
+		private ModularEffectActorPresentationSystem _modularEffectActorPresentationSystem;
+		private ModularEffectScreenDisplaySystem _modularEffectScreenDisplaySystem;
+		private ModularEffectPrimitiveDisplaySystem _modularEffectPrimitiveDisplaySystem;
+		private ModularEffectParticleDisplaySystem _modularEffectParticleDisplaySystem;
+		private CardModularEffectsDebugSystem _cardModularEffectsDebugSystem;
+		private EquipmentModularEffectsDebugSystem _equipmentModularEffectsDebugSystem;
+		private MedalModularEffectsDebugSystem _medalModularEffectsDebugSystem;
+		private EnemyAttackModularEffectsDebugSystem _enemyAttackModularEffectsDebugSystem;
+		private ModularEffectModuleDebugSystem _modularEffectModuleDebugSystem;
 		private CathedralLightingSystem _cathedralLightingSystem;
 		private DesertBackgroundEffectSystem _desertBackgroundEffectSystem;
 		private DesertStormDisplaySystem _desertStormDisplaySystem;
+		private VolcanoEmbersDisplaySystem _volcanoEmbersDisplaySystem;
+		private SnowstormDisplaySystem _snowstormDisplaySystem;
+		private PurpleZapsDisplaySystem _purpleZapsDisplaySystem;
+		private JungleBackgroundDisplaySystem _jungleBackgroundDisplaySystem;
 		private PlayerHudLayoutSystem _playerHudLayoutSystem;
 		private PlayerHudFeedbackSystem _playerHudFeedbackSystem;
 		private PlayerHudRootDisplaySystem _playerHudRootDisplaySystem;
@@ -53,12 +72,12 @@ namespace Crusaders30XX.ECS.Systems
 		private CourageManagerSystem _courageManagerSystem;
 		private ActionPointManagementSystem _actionPointManagementSystem;
 		private TemperanceManagerSystem _temperanceManagerSystem;
+		#pragma warning disable CS0618 // Intentional until the plunder gauge owns its rendering.
 		private HPDisplaySystem _hpDisplaySystem;
-		private EnemyDifficultyDisplaySystem _enemyDifficultyDisplaySystem;
+		#pragma warning restore CS0618
 		private AppliedPassivesDisplaySystem _appliedPassivesDisplaySystem;
 		private PoisonSystem _poisonSystem;
 		private PassiveMeterRenderSystem _passiveMeterRenderSystem;
-		private SanguineCurseSystem _sanguineCurseSystem;
 		private CardGeometrySettingsDebugSystem _cardGeometrySettingsDebugSystem;
 		private HpManagementSystem _hpManagementSystem;
 		private BattlePhaseDisplaySystem _battlePhaseDisplaySystem;
@@ -69,7 +88,7 @@ namespace Crusaders30XX.ECS.Systems
 		private EnemyAttackDisplaySystem _enemyAttackDisplaySystem;
 		private EnemyDamageMeterDisplaySystem _enemyDamageMeterDisplaySystem;
 		private AmbushDisplaySystem _ambushDisplaySystem;
-		private QueuedEventsDisplaySystem _queuedEventsDisplaySystem;
+		// private QueuedEventsDisplaySystem _queuedEventsDisplaySystem;
 		private DamageModificationDisplaySystem _damageModificationDisplaySystem;
 		private SplashEffectAnimationDisplaySystem _attackAnimationDisplaySystem;
 		private CardPlayedAnimationSystem _cardPlayedAnimationSystem;
@@ -83,6 +102,7 @@ namespace Crusaders30XX.ECS.Systems
 		private EnemyAttackProgressManagementSystem _enemyAttackProgressManagementSystem;
 		private MarkedForSpecificDiscardSystem _markedForSpecificDiscardSystem;
 		private MarkedForEndOfTurnSystem _markedForEndOfTurnSystem;
+		private MarkedForExhaustSystem _markedForExhaustSystem;
 		private StunnedOverlaySystem _stunnedOverlaySystem;
 		private AttackResolutionSystem _attackResolutionSystem;
 		private HandBlockInteractionSystem _handBlockInteractionSystem;
@@ -93,11 +113,12 @@ namespace Crusaders30XX.ECS.Systems
 		private CardPlaySystem _cardPlaySystem;
 		private EndTurnDisplaySystem _endTurnDisplaySystem;
 		private DrawHandSystem _battlePhaseDrawSystem;
+		private DeckEmptyDeathCheckSystem _deckEmptyDeathCheckSystem;
 		private PhaseCoordinatorSystem _phaseCoordinatorSystem;
 		private PhaseChangeEventSystem _phaseChangeEventSystem;
 		private PayCostOverlaySystem _payCostOverlaySystem;
 		private CantPlayCardMessageSystem _cantPlayCardMessageSystem;
-		private GameOverOverlayDisplaySystem _gameOverOverlayDisplaySystem;
+		private TutorialRetryDisplaySystem _tutorialRetryDisplaySystem;
 		private TestFightFlowSystem _testFightFlowSystem;
 		private WeaponManagementSystem _weaponManagementSystem;
 		private EquipmentManagerSystem _equipmentManagerSystem;
@@ -108,7 +129,12 @@ namespace Crusaders30XX.ECS.Systems
 		private EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
 		private HighlightSettingsSystem _equipmentHighlightSettingsDebugSystem;
 		private EquipmentBlockInteractionSystem _equipmentBlockInteractionSystem;
+		private ReplacementEffectSystem _replacementEffectSystem;
 		private AppliedPassivesManagementSystem _appliedPassivesManagementSystem;
+		private AnathemaManagementSystem _anathemaManagementSystem;
+		private BrittleManagementSystem _brittleManagementSystem;
+		private ScorchedManagementSystem _scorchedManagementSystem;
+		private ThornedManagementSystem _thornedManagementSystem;
 		private BleedManagementSystem _bleedManagementSystem;
 		private BattleStateInfoManagementSystem _battleStateInfoManagementSystem;
 		private DiscardSpecificCardHighlightSystem _discardSpecificCardHighlightSystem;
@@ -121,12 +147,10 @@ namespace Crusaders30XX.ECS.Systems
 		private RecoilDisplaySystem _recoilDisplaySystem;
 		private SealManagementSystem _sealManagementSystem;
 		private VigorManagementSystem _vigorManagementSystem;
-		private SealDisplaySystem _sealDisplaySystem;
 		private ShackleDisplaySystem _shackleDisplaySystem;
 		private UIElementHighlightSystem _uiElementHighlightSystem;
 		private TribulationManagerSystem _tribulationManagerSystem;
 		private QuestTribulationDisplaySystem _questTribulationDisplaySystem;
-		private QuitCurrentQuestDisplaySystem _quitCurrentQuestDisplaySystem;
 		private MustBeBlockedSystem _mustBeBlockedSystem;
 		private ActiveCharacterIndicatorDisplaySystem _activeCharacterIndicatorDisplaySystem;
 		private TutorialManager _tutorialManager;
@@ -157,13 +181,14 @@ namespace Crusaders30XX.ECS.Systems
 		private RasterizerState _rasterizerState;
 
 
-		public BattleSceneSystem(EntityManager em, SystemManager sm, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content) : base(em)
+		public BattleSceneSystem(EntityManager em, SystemManager sm, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content, ImageAssetService imageAssets) : base(em)
 		{
 			_systemManager = sm;
 			_world = world;
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_content = content;
+			_imageAssets = imageAssets;
 			EventManager.Subscribe<StartBattleRequested>(_ =>
 			{
 				LoggingService.Append("BattleSceneSystem.OnStartBattleRequested", new System.Text.Json.Nodes.JsonObject { ["event"] = "StartBattleRequested" });
@@ -176,26 +201,34 @@ namespace Crusaders30XX.ECS.Systems
 					return;
 				}
 				var queued = EntityManager.GetEntity("QueuedEvents").GetComponent<QueuedEvents>();
-				LocationDefinitionCache.TryGet(queued.LocationId, out var def);
-				var musicTrack = GuidedTutorialService.IsActive(EntityManager)
-					? MusicTrack.DesertBattle
-					: def?.pointsOfInterest[queued.QuestIndex].musicTrack ?? MusicTrack.DesertBattle;
+				bool guidedTutorial = GuidedTutorialService.IsActive(EntityManager);
+				var musicTrack = MusicTrack.DesertBattle;
+				if (!guidedTutorial && queued?.IsClimbEncounter == true)
+				{
+					musicTrack = BattleLocationAssetService.GetMusicTrack(queued.BattleLocation ?? BattleLocation.Desert);
+				}
+				else if (!guidedTutorial)
+				{
+					LocationDefinitionCache.TryGet(queued.LocationId, out var def);
+					musicTrack = def?.pointsOfInterest[queued.QuestIndex].musicTrack ?? MusicTrack.DesertBattle;
+				}
 				EventManager.Publish(new ChangeMusicTrack { Track = musicTrack });
 				if (!_loadedSystems)
 				{
 					AddBattleSystems();
 				}
+				EventManager.Publish(new ChangeBattleLocationEvent
+				{
+					Location = ResolveBattleLocationForLoad(queued, guidedTutorial),
+				});
 				if (!_loadedEntities)
 				{
 					CreateBattleSceneEntities();
 				}
-				// If a dialog is pending for this quest, wait for DialogEnded before starting battle
+				// Initialize the battle scene before pending dialog, but wait for dialog completion before starting battle rules.
 				bool willShowDialog = EntityManager.GetEntitiesWithComponent<QueuedEvents>().FirstOrDefault()?.GetComponent<PendingQuestDialog>()?.WillShowDialog ?? false;
-				if (!willShowDialog)
-				{
-					InitBattle();
-					// EnqueueBattleRules(false);
-				}
+				InitBattle();
+				// EnqueueBattleRules(false);
 			});
 			EventManager.Subscribe<DialogEnded>(_ =>
 			{
@@ -207,13 +240,13 @@ namespace Crusaders30XX.ECS.Systems
 				{
 					CreateBattleSceneEntities();
 				}
-				InitBattle();
+				EnsureBattleInitialized();
 				TimerScheduler.Schedule(0.3f, () => {
 					EventManager.Publish(new ShowStartOfBattleAnimationEvent());
 				});
 				// EnqueueBattleRules(true);
 			});
-			EventManager.Subscribe<EncounterDialogueCompleted>(completed =>
+			EventManager.Subscribe<DialogueSequenceCompleted>(completed =>
 			{
 				var pending = EntityManager.GetEntitiesWithComponent<QueuedEvents>().FirstOrDefault()
 					?.GetComponent<PendingQuestDialog>();
@@ -230,7 +263,7 @@ namespace Crusaders30XX.ECS.Systems
 				{
 					CreateBattleSceneEntities();
 				}
-				InitBattle();
+				EnsureBattleInitialized();
 				TimerScheduler.Schedule(0.3f, () =>
 				{
 					EventManager.Publish(new ShowStartOfBattleAnimationEvent());
@@ -287,6 +320,10 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("BattleBackgroundSystem.Draw", _battleBackgroundSystem.Draw);
 			FrameProfiler.Measure("CathedralLightingSystem.Draw", _cathedralLightingSystem.Draw);
 			bool hasDesertStorm = _desertStormDisplaySystem?.CanComposite == true;
+			bool hasVolcanoEmbers = _volcanoEmbersDisplaySystem?.CanComposite == true;
+			bool hasSnowstorm = _snowstormDisplaySystem?.CanComposite == true;
+			bool hasPurpleZaps = _purpleZapsDisplaySystem?.CanComposite == true;
+			bool hasJungleBackground = _jungleBackgroundDisplaySystem?.CanComposite == true;
 			if (!hasDesertStorm)
 			{
 				FrameProfiler.Measure("DesertBackgroundEffectSystem.Draw", _desertBackgroundEffectSystem.Draw);
@@ -299,6 +336,38 @@ namespace Crusaders30XX.ECS.Systems
 				FrameProfiler.Measure(
 					"DesertStormDisplaySystem.Composite",
 					() => _desertStormDisplaySystem.Composite(_bgRt, _bgTemp)
+				);
+				backgroundSource = _bgTemp;
+			}
+			else if (hasVolcanoEmbers)
+			{
+				FrameProfiler.Measure(
+					"VolcanoEmbersDisplaySystem.Composite",
+					() => _volcanoEmbersDisplaySystem.Composite(_bgRt, _bgTemp)
+				);
+				backgroundSource = _bgTemp;
+			}
+			else if (hasSnowstorm)
+			{
+				FrameProfiler.Measure(
+					"SnowstormDisplaySystem.Composite",
+					() => _snowstormDisplaySystem.Composite(_bgRt, _bgTemp)
+				);
+				backgroundSource = _bgTemp;
+			}
+			else if (hasPurpleZaps)
+			{
+				FrameProfiler.Measure(
+					"PurpleZapsDisplaySystem.Composite",
+					() => _purpleZapsDisplaySystem.Composite(_bgRt, _bgTemp)
+				);
+				backgroundSource = _bgTemp;
+			}
+			else if (hasJungleBackground)
+			{
+				FrameProfiler.Measure(
+					"JungleBackgroundDisplaySystem.Composite",
+					() => _jungleBackgroundDisplaySystem.Composite(_bgRt, _bgTemp)
 				);
 				backgroundSource = _bgTemp;
 			}
@@ -330,20 +399,24 @@ namespace Crusaders30XX.ECS.Systems
 			bool encounterDialogueActive = EntityManager.GetEntitiesWithComponent<DialogOverlayState>()
 				.FirstOrDefault()?.GetComponent<DialogOverlayState>()?.IsActive ?? false;
 			if (willShowDialog || encounterDialogueActive) return;
-			if (RewardModalDisplaySystem.IsOverlayOpen(EntityManager)) return;
+			if (RewardModalDisplaySystem.ShouldSuppressBattleSceneDisplay(EntityManager)) return;
 			FrameProfiler.Measure("PlayerDisplaySystem.Draw", _playerDisplaySystem.Draw);
 			FrameProfiler.Measure("GuardianAngelDisplaySystem.Draw", _guardianAngelDisplaySystem.Draw);
 			FrameProfiler.Measure("EnemyDisplaySystem.Draw", _enemyDisplaySystem.Draw);
 			FrameProfiler.Measure("PixelBurstDisplaySystem.Draw", _pixelBurstDisplaySystem.Draw);
+			FrameProfiler.Measure("ModularEffectScreenDisplaySystem.Draw", _modularEffectScreenDisplaySystem.Draw);
+			FrameProfiler.Measure("ModularEffectPrimitiveDisplaySystem.Draw", _modularEffectPrimitiveDisplaySystem.Draw);
+			FrameProfiler.Measure("ModularEffectParticleDisplaySystem.Draw", _modularEffectParticleDisplaySystem.Draw);
 			FrameProfiler.Measure("PlunderDisplaySystem.Draw", _plunderDisplaySystem.Draw);
 			FrameProfiler.Measure("PlunderSnatchDisplaySystem.Draw", _plunderSnatchDisplaySystem.Draw);
 			FrameProfiler.Measure("ActiveCharacterIndicatorDisplaySystem.Draw", _activeCharacterIndicatorDisplaySystem.Draw);
 			FrameProfiler.Measure("EnemyIntentPipsSystem.Draw", _enemyIntentPipsSystem.Draw);
 			FrameProfiler.Measure("AmbushDisplaySystem.Draw", _ambushDisplaySystem.Draw);
 			bool guidedTutorial = GuidedTutorialService.IsActive(EntityManager);
-			if (!guidedTutorial) FrameProfiler.Measure("QueuedEventsDisplaySystem.Draw", _queuedEventsDisplaySystem.Draw);
+			// if (!guidedTutorial) FrameProfiler.Measure("QueuedEventsDisplaySystem.Draw", _queuedEventsDisplaySystem.Draw);
 			FrameProfiler.Measure("AttackAnimationDisplaySystem.Draw", _attackAnimationDisplaySystem.Draw);
 			FrameProfiler.Measure("StunnedOverlaySystem.Draw", _stunnedOverlaySystem.Draw);
+			FrameProfiler.Measure("UIElementHighlightSystem.Draw", _uiElementHighlightSystem.Draw);
 			FrameProfiler.Measure("AssignedBlockCardsDisplaySystem.Draw", _assignedBlockCardsDisplaySystem.Draw);
 			FrameProfiler.Measure("ExhaustOnBlockDisplaySystem.Draw", _exhaustOnBlockDisplaySystem.Draw);
 			FrameProfiler.Measure("PlayerWispParticleSystem.Draw", _playerWispParticleSystem.Draw);
@@ -355,12 +428,10 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("PlayerHudActionPointDisplaySystem.Draw", _playerHudActionPointDisplaySystem.Draw);
 			FrameProfiler.Measure("PlayerHudPledgeDisplaySystem.Draw", _playerHudPledgeDisplaySystem.Draw);
 			FrameProfiler.Measure("QuestTribulationDisplaySystem.Draw", _questTribulationDisplaySystem.Draw);
-			FrameProfiler.Measure("HPDisplaySystem.Draw", _hpDisplaySystem.Draw);
-			if (!guidedTutorial) FrameProfiler.Measure("EnemyDifficultyDisplaySystem.Draw", _enemyDifficultyDisplaySystem.Draw);
+			FrameProfiler.Measure("LegacyPlunderHpDisplaySystem.Draw", _hpDisplaySystem.Draw);
 			FrameProfiler.Measure("AppliedPassivesDisplaySystem.Draw", _appliedPassivesDisplaySystem.Draw);
 			FrameProfiler.Measure("PassiveMeterRenderSystem.Draw", _passiveMeterRenderSystem.Draw);
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawBackdrop", _payCostOverlaySystem.DrawBackdrop);
-			FrameProfiler.Measure("UIElementHighlightSystem.Draw", _uiElementHighlightSystem.Draw);
 			FrameProfiler.Measure("EnemyAttackDisplaySystem.Draw", _enemyAttackDisplaySystem.Draw);
 			FrameProfiler.Measure("EnemyDamageMeterDisplaySystem.Draw", _enemyDamageMeterDisplaySystem.Draw);
 			FrameProfiler.Measure("EndTurnDisplaySystem.Draw", _endTurnDisplaySystem.Draw);
@@ -370,11 +441,15 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("EquipmentDisplaySystem.Draw", _equipmentDisplaySystem.Draw);
 			FrameProfiler.Measure("EquipmentTooltipDisplaySystem.Draw", _equipmentTooltipDisplaySystem.Draw);
 			var guidedState = GuidedTutorialService.GetState(EntityManager);
-			if (guidedState == null || guidedState.Battle == TutorialBattle.SandCorpse)
+			bool showDrawPile = !guidedTutorial || (guidedState?.Section == 8);
+			if (guidedState == null || guidedState.Section >= 5)
 				FrameProfiler.Measure("EquippedWeaponDisplaySystem.Draw", _equippedWeaponDisplaySystem.Draw);
 			FrameProfiler.Measure("MedalDisplaySystem.Draw", _medalDisplaySystem.Draw);
-			if (!guidedTutorial) FrameProfiler.Measure("DrawPileDisplaySystem.Draw", _drawPileDisplaySystem.Draw);
-			if (!guidedTutorial) FrameProfiler.Measure("DrawPileColorCountDisplaySystem.Draw", _drawPileColorCountDisplaySystem.Draw);
+			if (showDrawPile) FrameProfiler.Measure("DrawPileDisplaySystem.Draw", _drawPileDisplaySystem.Draw);
+			if (showDrawPile || !guidedTutorial)
+				FrameProfiler.Measure("PileColorCountDisplaySystem.Draw",
+					() => _pileColorCountDisplaySystem.Draw(showDrawPile, !guidedTutorial));
+			FrameProfiler.Measure("ShuffleDeckDisplaySystem.Draw", _shuffleDeckDisplaySystem.Draw);
 			if (!guidedTutorial) FrameProfiler.Measure("DiscardPileDisplaySystem.Draw", _discardPileDisplaySystem.Draw);
 			FrameProfiler.Measure("MillCardSystem.Draw", _millCardSystem.Draw);
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawForeground", _payCostOverlaySystem.DrawForeground);
@@ -384,8 +459,7 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("BattlePhaseDisplaySystem.Draw", _battlePhaseDisplaySystem.Draw);
 			FrameProfiler.Measure("TestFightHpDisplaySystem.Draw", _testFightHpDisplaySystem.Draw);
 			FrameProfiler.Measure("DamageModificationDisplaySystem.Draw", _damageModificationDisplaySystem.Draw);
-			if (!guidedTutorial && !TestFightRuntime.IsActive) FrameProfiler.Measure("QuitCurrentQuestDisplaySystem.Draw", _quitCurrentQuestDisplaySystem.Draw);
-		if (!guidedTutorial && !TestFightRuntime.IsActive && _gameOverOverlayDisplaySystem != null) FrameProfiler.Measure("GameOverOverlayDisplaySystem.Draw", _gameOverOverlayDisplaySystem.Draw);
+		if (_tutorialRetryDisplaySystem != null) FrameProfiler.Measure("TutorialRetryDisplaySystem.Draw", _tutorialRetryDisplaySystem.Draw);
 		if (_tutorialDisplaySystem != null) FrameProfiler.Measure("TutorialDisplaySystem.Draw", _tutorialDisplaySystem.Draw);
 		}
 
@@ -420,7 +494,6 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				TribulationQuestService.CreateTribulationsForQuest(EntityManager, queued.LocationId, queued.QuestIndex);
 			}
-			EventManager.Publish(new ChangeBattleLocationEvent { Location = BattleLocation.Desert });
 			_loadedEntities = true;
 		}
 
@@ -442,10 +515,8 @@ namespace Crusaders30XX.ECS.Systems
 			var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
 			var queuedEntity = EntityManager.GetEntity("QueuedEvents");
 			var queued = queuedEntity.GetComponent<QueuedEvents>();
-			EventManager.Publish(new SetCourageEvent{ Amount = 0 });
+			bool shouldApplyClimbBattlePackage = IsFirstQueuedClimbEncounter(queued);
 			EventManager.Publish(new SetActionPointsEvent { Amount = 0 });
-			// Dialog is now handled globally; do not open here
-			// TODO: should handle through events rather than directly but im lazy right now
 			var player = EntityManager.GetEntity("Player");
 			if (player == null)
 			{
@@ -454,10 +525,8 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			var battleStateInfo = player.GetComponent<BattleStateInfo>();
 			battleStateInfo.EquipmentTriggeredThisBattle.Clear();
-			// Initialize/Reset per-battle applied passives on player
 			var playerPassives = player.GetComponent<AppliedPassives>();
 
-			// Clear all pledges at start of battle
 			var allCards = EntityManager.GetEntitiesWithComponent<CardData>();
 			foreach (var c in allCards)
 			{
@@ -473,13 +542,31 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			EntityManager.DestroyEntity("Enemy");
 			LoggingService.Append("BattleSceneSystem.InitBattle", new System.Text.Json.Nodes.JsonObject { ["eventsCount"] = queued.Events.Count, ["currentIndex"] = queued.CurrentIndex });
-			var nextEvent = queued.Events[++queued.CurrentIndex];
-			var nextEnemy = EntityFactory.CreateEnemyFromId(_world, nextEvent.EventId, EntityManager, nextEvent.Difficulty);
+			Entity nextEnemy;
+			if (guidedTutorial)
+			{
+				var tutorial = GuidedTutorialService.GetState(EntityManager);
+				var sectionDef = GuidedTutorialDefinitions.GetSection(tutorial.Section);
+				EventManager.Publish(new SetCourageEvent { Amount = tutorial.BaselineCourage });
+				EventManager.Publish(new SetTemperanceEvent { Amount = tutorial.BaselineTemperance });
+				player.GetComponent<Intellect>().Value = sectionDef.Turns[0].StockHand.Count;
+				player.GetComponent<MaxHandSize>().Value = sectionDef.Turns[0].StockHand.Count;
+				StateSingleton.IsPledgeEnabled = tutorial.Section >= 8;
+				tutorial.IsRestart = false;
+				queued.CurrentIndex = 0;
+				nextEnemy = EntityFactory.CreateEnemyFromId(_world, "gleeber", EntityManager);
+			}
+			else
+			{
+				EventManager.Publish(new SetCourageEvent { Amount = 0 });
+				StateSingleton.IsPledgeEnabled = true;
+				var nextEvent = queued.Events[++queued.CurrentIndex];
+				nextEnemy = EntityFactory.CreateEnemyFromId(_world, nextEvent.EventId, EntityManager);
+			}
 			TestFightSetupService.ApplyEnemyHpDelta(nextEnemy);
 			if (!guidedTutorial)
 				EventManager.Publish(new ResetDeckEvent { });
 			var phaseState = EntityManager.GetEntity("PhaseState").GetComponent<PhaseState>();
-			// Reset phase state at the start of every battle so we don't inherit the previous battle's sub-phase.
 			phaseState.Main = MainPhase.StartBattle;
 			phaseState.Sub = SubPhase.StartBattle;
 			phaseState.TurnNumber = 1;
@@ -491,13 +578,20 @@ namespace Crusaders30XX.ECS.Systems
 				if (hp != null)
 				{
 					hp.Max = 25;
+					hp.UnscarredMax = 25;
 					hp.Current = tutorial.PlayerHp;
 				}
 			}
 			else
 			{
+				EventManager.Publish(new ApplyBattleMaxHpEvent
+				{
+					Target = player,
+					ScarPenalty = GetScarStacks(player)
+				});
 				EventManager.Publish(new FullyHealEvent { Target = player });
 			}
+			ApplyPendingClimbBattlePackage(shouldApplyClimbBattlePackage, player);
 			foreach (var e in EntityManager.GetEntitiesWithComponent<CardTooltip>()) {
 				var cardData = e.GetComponent<CardData>();
 				var card = CardFactory.Create(cardData.Card.CardId);
@@ -508,8 +602,90 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
+		internal static bool IsFirstQueuedClimbEncounter(QueuedEvents queued)
+		{
+			return queued?.IsClimbEncounter == true && queued.CurrentIndex == -1;
+		}
+
+		internal static BattleLocation ResolveBattleLocationForLoad(QueuedEvents queued, bool guidedTutorial)
+		{
+			if (guidedTutorial) return BattleLocation.Desert;
+			return queued?.BattleLocation ?? BattleLocation.Desert;
+		}
+
+		internal static bool ApplyPendingClimbBattlePackage(bool shouldApply, Entity player)
+		{
+			if (!shouldApply || player == null) return false;
+
+			var climb = SaveCache.GetClimbState();
+			var bonus = climb?.nextBattleBonus;
+			var penalty = climb?.nextBattlePenalty;
+			int courage = Math.Max(0, bonus?.courage ?? 0);
+			int temperance = Math.Max(0, bonus?.temperance ?? 0);
+			int vigor = Math.Max(0, bonus?.vigor ?? 0);
+			int burn = Math.Max(0, penalty?.burn ?? 0);
+			int fear = Math.Max(0, penalty?.fear ?? 0);
+			if (courage == 0 && temperance == 0 && vigor == 0 && burn == 0 && fear == 0)
+			{
+				return false;
+			}
+
+			if (courage > 0)
+			{
+				EventManager.Publish(new ModifyCourageRequestEvent
+				{
+					Delta = courage,
+					Reason = "Climb next-battle bonus",
+					Type = ModifyCourageType.Gain,
+				});
+			}
+			if (temperance > 0)
+			{
+				EventManager.Publish(new ModifyTemperanceEvent { Delta = temperance });
+			}
+			PublishPassiveGrant(player, AppliedPassiveType.Vigor, vigor);
+			PublishPassiveGrant(player, AppliedPassiveType.Burn, burn);
+			PublishPassiveGrant(player, AppliedPassiveType.Fear, fear);
+
+			climb.nextBattleBonus = new ClimbNextBattleBonusSave();
+			climb.nextBattlePenalty = new ClimbNextBattlePenaltySave();
+			SaveCache.SaveClimbState(climb);
+			return true;
+		}
+
+		private static void PublishPassiveGrant(Entity player, AppliedPassiveType type, int amount)
+		{
+			if (amount <= 0) return;
+			EventManager.Publish(new ApplyPassiveEvent
+			{
+				Target = player,
+				Type = type,
+				Delta = amount,
+			});
+		}
+
+		private static int GetScarStacks(Entity player)
+		{
+			var passives = player?.GetComponent<AppliedPassives>()?.Passives;
+			if (passives == null) return 0;
+			return passives.TryGetValue(AppliedPassiveType.Scar, out var stacks)
+				? Math.Max(0, stacks)
+				: 0;
+		}
+
+		private void EnsureBattleInitialized()
+		{
+			var queued = EntityManager.GetEntity("QueuedEvents")?.GetComponent<QueuedEvents>();
+			if (queued != null && queued.CurrentIndex >= 0) return;
+			InitBattle();
+		}
+
 		public void EnqueueBattleRules(bool isFollowingDialog) 
 		{
+			if (!GuidedTutorialService.IsActive(EntityManager))
+			{
+				EventQueue.EnqueueRule(new QueuedShuffleDeckAnimationEvent("StartBattle"));
+			}
 			EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<ChangeBattlePhaseEvent>(
 				"Rule.ChangePhase.EnemyStart",
 				new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle, Previous = SubPhase.StartBattle }
@@ -540,21 +716,36 @@ namespace Crusaders30XX.ECS.Systems
 			if (_loadedSystems) return;
 			_loadedSystems = true;
 			LoggingService.Append("BattleSceneSystem.AddBattleSystems", new System.Text.Json.Nodes.JsonObject { ["action"] = "Adding battle systems" });
-		_battleBackgroundSystem = new BattleBackgroundSystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+		_battleBackgroundSystem = new BattleBackgroundSystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 		_handDisplaySystem = new HandDisplaySystem(_world.EntityManager, _graphicsDevice);
 		_cardHoverDetectionSystem = new CardHoverDetectionSystem(_world.EntityManager);
+		_cardVisualEffectsSuppressionSystem = new CardVisualEffectsSuppressionSystem(_world.EntityManager);
 			_cardZoneSystem = new CardZoneSystem(_world.EntityManager);
-			_drawPileDisplaySystem = new DrawPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_discardPileDisplaySystem = new DiscardPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_drawPileColorCountDisplaySystem = new DrawPileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_drawPileDisplaySystem = new DrawPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_shuffleDeckDisplaySystem = new ShuffleDeckDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_discardPileDisplaySystem = new DiscardPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_pileColorCountDisplaySystem = new PileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_millCardSystem = new MillCardSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_playerDisplaySystem = new PlayerDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_playerDisplaySystem = new PlayerDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_cathedralLightingSystem = new CathedralLightingSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_desertBackgroundEffectSystem = new DesertBackgroundEffectSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_desertStormDisplaySystem = new DesertStormDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_volcanoEmbersDisplaySystem = new VolcanoEmbersDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_snowstormDisplaySystem = new SnowstormDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_purpleZapsDisplaySystem = new PurpleZapsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_jungleBackgroundDisplaySystem = new JungleBackgroundDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
 			_playerWispParticleSystem = new PlayerWispParticleSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_playerTemperanceActivationDisplaySystem = new PlayerTemperanceActivationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_playerAnimationSystem = new PlayerAnimationSystem(_world.EntityManager);
+			_playerTemperanceActivationDisplaySystem = new PlayerTemperanceActivationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_modularEffectCoordinatorSystem = new ModularEffectCoordinatorSystem(_world.EntityManager);
+			_modularEffectActorPresentationSystem = new ModularEffectActorPresentationSystem(_world.EntityManager);
+			_modularEffectScreenDisplaySystem = new ModularEffectScreenDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_modularEffectPrimitiveDisplaySystem = new ModularEffectPrimitiveDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_modularEffectParticleDisplaySystem = new ModularEffectParticleDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_cardModularEffectsDebugSystem = new CardModularEffectsDebugSystem(_world.EntityManager);
+			_equipmentModularEffectsDebugSystem = new EquipmentModularEffectsDebugSystem(_world.EntityManager);
+			_medalModularEffectsDebugSystem = new MedalModularEffectsDebugSystem(_world.EntityManager);
+			_enemyAttackModularEffectsDebugSystem = new EnemyAttackModularEffectsDebugSystem(_world.EntityManager);
+			_modularEffectModuleDebugSystem = new ModularEffectModuleDebugSystem(_world.EntityManager);
 			_playerHudLayoutSystem = new PlayerHudLayoutSystem(_world.EntityManager);
 			_playerHudFeedbackSystem = new PlayerHudFeedbackSystem(_world.EntityManager);
 			_playerHudRootDisplaySystem = new PlayerHudRootDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -562,49 +753,50 @@ namespace Crusaders30XX.ECS.Systems
 			_playerHudCourageDisplaySystem = new PlayerHudCourageDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_playerHudTemperanceDisplaySystem = new PlayerHudTemperanceDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_playerHudActionPointDisplaySystem = new PlayerHudActionPointDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_playerHudPledgeDisplaySystem = new PlayerHudPledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_playerHudPledgeDisplaySystem = new PlayerHudPledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			// _threatDisplaySystem = new ThreatDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_cardMoveDisplaySystem = new CardMoveDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_courageManagerSystem = new CourageManagerSystem(_world.EntityManager);
 			_actionPointManagementSystem = new ActionPointManagementSystem(_world.EntityManager);
 			_temperanceManagerSystem = new TemperanceManagerSystem(_world.EntityManager);
 			// _threatManagementSystem = new ThreatManagementSystem(_world.EntityManager);
+			#pragma warning disable CS0618 // Intentional until the plunder gauge owns its rendering.
 			_hpDisplaySystem = new HPDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyDifficultyDisplaySystem = new EnemyDifficultyDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			#pragma warning restore CS0618
 			_appliedPassivesDisplaySystem = new AppliedPassivesDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_poisonSystem = new PoisonSystem(_world.EntityManager);
 			_passiveMeterRenderSystem = new PassiveMeterRenderSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_sanguineCurseSystem = new SanguineCurseSystem(_world.EntityManager);
 			_cardGeometrySettingsDebugSystem = new CardGeometrySettingsDebugSystem(_world.EntityManager);
 			_hpManagementSystem = new HpManagementSystem(_world.EntityManager);
 			_pledgeManagementSystem = new PledgeManagementSystem(_world.EntityManager);
 			_eventQueueSystem = new EventQueueSystem(_world.EntityManager);
 			_battlePhaseDisplaySystem = new BattlePhaseDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_testFightHpDisplaySystem = new TestFightHpDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyDisplaySystem = new EnemyDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_guardianAngelDisplaySystem = new GuardianAngelDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_enemyDisplaySystem = new EnemyDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_guardianAngelDisplaySystem = new GuardianAngelDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_enemyIntentPipsSystem = new EnemyIntentPipsSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyAttackDisplaySystem = new EnemyAttackDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_enemyAttackDisplaySystem = new EnemyAttackDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_enemyDamageMeterDisplaySystem = new EnemyDamageMeterDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_ambushDisplaySystem = new AmbushDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_queuedEventsDisplaySystem = new QueuedEventsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			// _queuedEventsDisplaySystem = new QueuedEventsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
 			_damageModificationDisplaySystem = new DamageModificationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_attackAnimationDisplaySystem = new SplashEffectAnimationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_attackAnimationDisplaySystem = new SplashEffectAnimationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_cardPlayedAnimationSystem = new CardPlayedAnimationSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_pixelBurstDisplaySystem = new PixelBurstDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyDefeatFlowSystem = new EnemyDefeatFlowSystem(_world.EntityManager, _content);
+			_enemyDefeatFlowSystem = new EnemyDefeatFlowSystem(_world.EntityManager, _imageAssets);
 			_enemyPhaseFlowSystem = new EnemyPhaseFlowSystem(_world.EntityManager);
 			_endTurnDisplaySystem = new EndTurnDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_assignedBlockCardsDisplaySystem = new AssignedBlockCardsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_assignedBlockCardsDisplaySystem = new AssignedBlockCardsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_exhaustOnBlockDisplaySystem = new ExhaustOnBlockDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_payCostOverlaySystem = new PayCostOverlaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_cantPlayCardMessageSystem = new CantPlayCardMessageSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_gameOverOverlayDisplaySystem = new GameOverOverlayDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_tutorialRetryDisplaySystem = new TutorialRetryDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_testFightFlowSystem = new TestFightFlowSystem(_world.EntityManager);
 			_enemyIntentPlanningSystem = new EnemyIntentPlanningSystem(_world.EntityManager);
 			_enemyAttackProgressManagementSystem = new EnemyAttackProgressManagementSystem(_world.EntityManager);
 			_markedForSpecificDiscardSystem = new MarkedForSpecificDiscardSystem(_world.EntityManager);
 			_markedForEndOfTurnSystem = new MarkedForEndOfTurnSystem(_world.EntityManager);
+			_markedForExhaustSystem = new MarkedForExhaustSystem(_world.EntityManager);
 			_stunnedOverlaySystem = new StunnedOverlaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_attackResolutionSystem = new AttackResolutionSystem(_world.EntityManager);
 			_handBlockInteractionSystem = new HandBlockInteractionSystem(_world.EntityManager);
@@ -613,40 +805,46 @@ namespace Crusaders30XX.ECS.Systems
 			_cardPlaySystem = new CardPlaySystem(_world.EntityManager);
 			_guidedTutorialDirectorSystem = new GuidedTutorialDirectorSystem(_world.EntityManager);
 			_battlePhaseDrawSystem = new DrawHandSystem(_world.EntityManager);
+			_deckEmptyDeathCheckSystem = new DeckEmptyDeathCheckSystem(_world.EntityManager);
 			_phaseCoordinatorSystem = new PhaseCoordinatorSystem(_world.EntityManager);
 			_phaseChangeEventSystem = new PhaseChangeEventSystem(_world.EntityManager);
 			_weaponManagementSystem = new WeaponManagementSystem(_world.EntityManager);
 			_equipmentManagerSystem = new EquipmentManagerSystem(_world.EntityManager);
 			_medalManagerSystem = new MedalManagerSystem(_world.EntityManager);
 			_tribulationManagerSystem = new TribulationManagerSystem(_world.EntityManager);
-			_equipmentDisplaySystem = new EquipmentDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_equippedWeaponDisplaySystem = new EquippedWeaponDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_medalDisplaySystem = new MedalDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_questTribulationDisplaySystem = new QuestTribulationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_equipmentDisplaySystem = new EquipmentDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_equippedWeaponDisplaySystem = new EquippedWeaponDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_medalDisplaySystem = new MedalDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_questTribulationDisplaySystem = new QuestTribulationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_equipmentHighlightSettingsDebugSystem = new HighlightSettingsSystem(_world.EntityManager);
 			_equipmentBlockInteractionSystem = new EquipmentBlockInteractionSystem(_world.EntityManager);
+			_replacementEffectSystem = new ReplacementEffectSystem(_world.EntityManager);
 			_appliedPassivesManagementSystem = new AppliedPassivesManagementSystem(_world.EntityManager);
+			_anathemaManagementSystem = new AnathemaManagementSystem(_world.EntityManager);
+			_brittleManagementSystem = new BrittleManagementSystem(_world.EntityManager);
+			_scorchedManagementSystem = new ScorchedManagementSystem(_world.EntityManager);
+			_thornedManagementSystem = new ThornedManagementSystem(_world.EntityManager);
 			_bleedManagementSystem = new BleedManagementSystem(_world.EntityManager);
 			_battleStateInfoManagementSystem = new BattleStateInfoManagementSystem(_world.EntityManager);
 			_discardSpecificCardHighlightSystem = new DiscardSpecificCardHighlightSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_intimidateManagementSystem = new IntimidateManagementSystem(_world.EntityManager);
 			_shackleManagementSystem = new ShackleManagementSystem(_world.EntityManager);
-			var frostTexture = _content.Load<Texture2D>("frost");
-			_frozenCardDisplaySystem = new FrozenCardDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, frostTexture);
+			if (!ShaderRuntimeOptions.ShadersEnabled)
+			{
+				var frostTexture = _imageAssets.GetRequiredTexture("frost");
+				_frozenCardDisplaySystem = new FrozenCardDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, frostTexture);
+			}
 			_recoilManagementSystem = new RecoilManagementSystem(_world.EntityManager);
 			_recoilDisplaySystem = new RecoilDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_sealManagementSystem = new SealManagementSystem(_world.EntityManager);
 			_vigorManagementSystem = new VigorManagementSystem(_world.EntityManager);
-			var sealTexture = _content.Load<Texture2D>("seal");
-			_sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, sealTexture);
-			var shackleTexture = _content.Load<Texture2D>("shackles");
+			var shackleTexture = _imageAssets.GetRequiredTexture("shackles");
 			_shackleDisplaySystem = new ShackleDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, shackleTexture);
 			_intimidateDisplaySystem = new IntimidateDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_uiElementHighlightSystem = new UIElementHighlightSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_quitCurrentQuestDisplaySystem = new QuitCurrentQuestDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_mustBeBlockedSystem = new MustBeBlockedSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_activeCharacterIndicatorDisplaySystem = new ActiveCharacterIndicatorDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_activeCharacterIndicatorDisplaySystem = new ActiveCharacterIndicatorDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 
 			// Plunder system (Wyvern)
 			_plunderManagementSystem = new PlunderManagementSystem(_world.EntityManager, _graphicsDevice);
@@ -655,7 +853,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			// Marksman system (Sniper)
 			_markManagementSystem = new MarkManagementSystem(_world.EntityManager);
-			var markTexture = _content.Load<Texture2D>("mark");
+			var markTexture = _imageAssets.GetRequiredTexture("mark");
 			_markDisplaySystem = new MarkDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, markTexture);
 
 			// Can-play card highlight
@@ -671,21 +869,36 @@ namespace Crusaders30XX.ECS.Systems
 		// Register
 		_world.AddSystem(_handDisplaySystem);
 		_world.AddSystem(_cardHoverDetectionSystem);
+		_world.AddSystem(_cardVisualEffectsSuppressionSystem);
 		_world.AddSystem(_cardZoneSystem);
 			_world.AddSystem(_handBlockInteractionSystem);
 			_world.AddSystem(_pledgeManagementSystem);
 			_world.AddSystem(_eventQueueSystem);
 			_world.AddSystem(_drawPileDisplaySystem);
+			_world.AddSystem(_shuffleDeckDisplaySystem);
 			_world.AddSystem(_discardPileDisplaySystem);
-			_world.AddSystem(_drawPileColorCountDisplaySystem);
+			_world.AddSystem(_pileColorCountDisplaySystem);
 			_world.AddSystem(_millCardSystem);
 			_world.AddSystem(_playerDisplaySystem);
 			_world.AddSystem(_guardianAngelDisplaySystem);
 			_world.AddSystem(_cathedralLightingSystem);
 			_world.AddSystem(_desertBackgroundEffectSystem);
 			_world.AddSystem(_desertStormDisplaySystem);
+			_world.AddSystem(_volcanoEmbersDisplaySystem);
+			_world.AddSystem(_snowstormDisplaySystem);
+			_world.AddSystem(_purpleZapsDisplaySystem);
+			_world.AddSystem(_jungleBackgroundDisplaySystem);
 			_world.AddSystem(_playerWispParticleSystem);
-			_world.AddSystem(_playerAnimationSystem);
+			_world.AddSystem(_modularEffectCoordinatorSystem, SystemUpdatePhase.Presentation);
+			_world.AddSystem(_modularEffectActorPresentationSystem, SystemUpdatePhase.Presentation);
+			_world.AddSystem(_modularEffectScreenDisplaySystem, SystemUpdatePhase.Presentation);
+			_world.AddSystem(_modularEffectPrimitiveDisplaySystem, SystemUpdatePhase.Presentation);
+			_world.AddSystem(_modularEffectParticleDisplaySystem, SystemUpdatePhase.Presentation);
+			_world.AddSystem(_cardModularEffectsDebugSystem);
+			_world.AddSystem(_equipmentModularEffectsDebugSystem);
+			_world.AddSystem(_medalModularEffectsDebugSystem);
+			_world.AddSystem(_enemyAttackModularEffectsDebugSystem);
+			_world.AddSystem(_modularEffectModuleDebugSystem);
 			_world.AddSystem(_playerTemperanceActivationDisplaySystem);
 			_world.AddSystem(_playerHudLayoutSystem);
 			_world.AddSystem(_playerHudFeedbackSystem);
@@ -700,7 +913,6 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_actionPointManagementSystem);
 			_world.AddSystem(_battleBackgroundSystem);
 			_world.AddSystem(_hpDisplaySystem);
-			_world.AddSystem(_enemyDifficultyDisplaySystem);
 			_world.AddSystem(_appliedPassivesDisplaySystem);
 			_world.AddSystem(_cardGeometrySettingsDebugSystem);
 			_world.AddSystem(_hpManagementSystem);
@@ -713,17 +925,17 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_enemyIntentPipsSystem);
 			_world.AddSystem(_poisonSystem);
 			_world.AddSystem(_passiveMeterRenderSystem);
-			_world.AddSystem(_sanguineCurseSystem);
 			_world.AddSystem(_enemyIntentPlanningSystem);
 			_world.AddSystem(_enemyAttackProgressManagementSystem);
 			_world.AddSystem(_markedForSpecificDiscardSystem);
 			_world.AddSystem(_markedForEndOfTurnSystem);
+			_world.AddSystem(_markedForExhaustSystem);
 			_world.AddSystem(_stunnedOverlaySystem);
 			_world.AddSystem(_attackResolutionSystem);
 			_world.AddSystem(_enemyAttackDisplaySystem);
 			_world.AddSystem(_enemyDamageMeterDisplaySystem);
 			_world.AddSystem(_ambushDisplaySystem);
-			_world.AddSystem(_queuedEventsDisplaySystem);
+			// _world.AddSystem(_queuedEventsDisplaySystem);
 			_world.AddSystem(_damageModificationDisplaySystem);
 			_world.AddSystem(_attackAnimationDisplaySystem);
 			_world.AddSystem(_cardPlayedAnimationSystem);
@@ -736,6 +948,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_cardPlaySystem);
 			_world.AddSystem(_guidedTutorialDirectorSystem);
 			_world.AddSystem(_battlePhaseDrawSystem);
+			_world.AddSystem(_deckEmptyDeathCheckSystem);
 			_world.AddSystem(_phaseCoordinatorSystem);
 			_world.AddSystem(_phaseChangeEventSystem);
 			_world.AddSystem(_weaponManagementSystem);
@@ -749,30 +962,35 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_questTribulationDisplaySystem);
 			_world.AddSystem(_equipmentHighlightSettingsDebugSystem);
 			_world.AddSystem(_equipmentBlockInteractionSystem);
+			_world.AddSystem(_replacementEffectSystem);
 			_world.AddSystem(_appliedPassivesManagementSystem);
+			_world.AddSystem(_anathemaManagementSystem);
+			_world.AddSystem(_brittleManagementSystem);
+			_world.AddSystem(_scorchedManagementSystem);
+			_world.AddSystem(_thornedManagementSystem);
 			_world.AddSystem(_vigorManagementSystem);
 			_world.AddSystem(_bleedManagementSystem);
 			_world.AddSystem(_battleStateInfoManagementSystem);
 			_world.AddSystem(_payCostOverlaySystem);
 			_world.AddSystem(_cantPlayCardMessageSystem);
-			_world.AddSystem(_gameOverOverlayDisplaySystem);
 			_world.AddSystem(_testFightFlowSystem);
 			_world.AddSystem(_discardSpecificCardHighlightSystem);
 			_world.AddSystem(_intimidateManagementSystem);
 			_world.AddSystem(_shackleManagementSystem);
 			_world.AddSystem(_intimidateDisplaySystem);
-			_world.AddSystem(_frozenCardDisplaySystem);
+			if (_frozenCardDisplaySystem != null)
+			{
+				_world.AddSystem(_frozenCardDisplaySystem);
+			}
 			_world.AddSystem(_recoilManagementSystem);
 			_world.AddSystem(_recoilDisplaySystem);
 			_world.AddSystem(_sealManagementSystem);
-			_world.AddSystem(_sealDisplaySystem);
 			_world.AddSystem(_shackleDisplaySystem);
 			_world.AddSystem(_plunderManagementSystem);
 			_world.AddSystem(_plunderDisplaySystem);
 			_world.AddSystem(_plunderSnatchDisplaySystem);
 			_world.AddSystem(_markManagementSystem);
 			_world.AddSystem(_markDisplaySystem);
-			_world.AddSystem(_quitCurrentQuestDisplaySystem);
 			_world.AddSystem(_mustBeBlockedSystem);
 			_world.AddSystem(_activeCharacterIndicatorDisplaySystem);
 			_world.AddSystem(_bloodshotDisplaySystem);
@@ -783,18 +1001,20 @@ namespace Crusaders30XX.ECS.Systems
 			if (!TutorialLaunchOptions.SkipTutorials)
 			{
 				_tutorialManager = new TutorialManager(_world.EntityManager);
-				_tutorialDisplaySystem = new TutorialDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content, _tutorialManager);
+				_tutorialDisplaySystem = new TutorialDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets, _tutorialManager);
 				_world.AddSystem(_tutorialManager);
 				_world.AddSystem(_tutorialDisplaySystem);
+				_world.AddSystem(_tutorialRetryDisplaySystem);
 			}
 
 			// Pledge system
-			_pledgeDisplaySystem = new PledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_pledgeDisplaySystem = new PledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_pledgeDisplaySystem);
 		}
 
 		public void DrawAdditive()
 		{
+			if (RewardModalDisplaySystem.ShouldSuppressBattleSceneDisplay(EntityManager)) return;
 			_cardMoveDisplaySystem?.DrawAdditive();
 		}
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (2026-05-30)
+Superseded by [ADR 0009](0009-time-based-climb.md) (2026-06-20); originally accepted (2026-05-30)
 
 ## Context
 

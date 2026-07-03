@@ -24,14 +24,13 @@ namespace Crusaders30XX.ECS.Systems
         public static int GetTotalDelta(Entity card)
         {
           var modifiedDamage = card.GetComponent<ModifiedDamage>();
-          return modifiedDamage.Modifications.Sum(m => m.Delta);
+          return modifiedDamage?.Modifications?.Sum(m => m.Delta) ?? 0;
         }
 
         public static int GetTotalDamageValue(Entity card)
         {
-          var modifiedDamage = card.GetComponent<ModifiedDamage>();
-          var baseDamage = GetBaseDamageValue(card);
-          return modifiedDamage.Modifications.Sum(m => m.Delta) + baseDamage;
+          var entityManager = card?.GetComponent<CardData>()?.Card?.EntityManager;
+          return CardStatModifierService.GetCardDamage(entityManager, card).TotalValue;
         }
 
         public static int GetBaseDamageValue(Entity card)

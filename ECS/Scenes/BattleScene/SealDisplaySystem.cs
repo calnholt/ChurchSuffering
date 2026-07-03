@@ -4,6 +4,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
@@ -62,6 +63,7 @@ namespace Crusaders30XX.ECS.Systems
 			_sealTexture = sealTexture;
 			EventManager.Subscribe<CardRenderEvent>(evt => FrameProfiler.Measure("SealDisplaySystem.OnCardRenderEvent", () => OnCardRenderEvent(evt)));
 			EventManager.Subscribe<CardRenderScaledEvent>(evt => FrameProfiler.Measure("SealDisplaySystem.OnCardRenderScaledEvent", () => OnCardRenderScaledEvent(evt)));
+			EventManager.Subscribe<CardRenderScaledRotatedEvent>(evt => FrameProfiler.Measure("SealDisplaySystem.OnCardRenderScaledRotatedEvent", () => OnCardRenderScaledRotatedEvent(evt)));
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -79,28 +81,20 @@ namespace Crusaders30XX.ECS.Systems
 			// Drawing is handled via event subscriptions
 		}
 
-		private Rectangle ComputeCardBounds(Vector2 position)
-		{
-			_settings ??= CardGeometryService.GetSettings(EntityManager);
-			return CardGeometryService.GetVisualRect(_settings, position);
-		}
-
 		private void OnCardRenderEvent(CardRenderEvent evt)
 		{
 			if (!ShouldRenderSeal(evt.Card)) return;
 
-			var transform = evt.Card.GetComponent<Transform>();
 			var ui = evt.Card.GetComponent<UIElement>();
-			if (transform == null || ui == null) return;
+			if (ui == null) return;
 
-			var bounds = ComputeCardBounds(transform.Position);
-			var center = new Vector2(bounds.X + bounds.Width / 2f, bounds.Y + bounds.Height / 2f);
-
-			center.X += SealOffsetX;
-			center.Y += SealOffsetY;
+			var geometry = CardGeometryService.GetVisualGeometry(EntityManager, evt.Card, evt.Position);
+			var center = geometry.Center;
+			center.X += SealOffsetX * geometry.Scale;
+			center.Y += SealOffsetY * geometry.Scale;
 
 			var sealedComp = evt.Card.GetComponent<Sealed>();
-			DrawSealOverlay(center, bounds.Width, bounds.Height, 1f, transform.Rotation, sealedComp?.Seals ?? 0);
+			DrawSealOverlay(center, geometry.Bounds.Width, geometry.Bounds.Height, geometry.Scale, geometry.Rotation, sealedComp?.Seals ?? 0);
 		}
 
 		private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
@@ -112,26 +106,49 @@ namespace Crusaders30XX.ECS.Systems
 				["seals"] = evt.Card?.GetComponent<Sealed>()?.Seals ?? 0
 			});
 			if (!ShouldRenderSeal(evt.Card)) return;
+			using var clip = CardRenderClipScope.Apply(_graphicsDevice, evt.ClipRect);
 
-			var transform = evt.Card.GetComponent<Transform>();
-			if (transform == null) return;
+			var geometry = CardGeometryService.GetVisualGeometry(
+				EntityManager,
+				evt.Card,
+				evt.Position,
+				evt.Scale);
+			var center = geometry.Center;
+			center.X += SealOffsetX * geometry.Scale;
+			center.Y += SealOffsetY * geometry.Scale;
 
 			_settings ??= CardGeometryService.GetSettings(EntityManager);
 			int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
 			int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
-			var center = CardGeometryService.GetVisualCenter(_settings, evt.Position, evt.Scale);
-
-			center.X += SealOffsetX * evt.Scale;
-			center.Y += SealOffsetY * evt.Scale;
-
 			var sealedComp = evt.Card.GetComponent<Sealed>();
-			DrawSealOverlay(center, cardWidth, cardHeight, evt.Scale, transform.Rotation, sealedComp?.Seals ?? 0);
+			DrawSealOverlay(center, cardWidth, cardHeight, geometry.Scale, geometry.Rotation, sealedComp?.Seals ?? 0);
+		}
+
+		private void OnCardRenderScaledRotatedEvent(CardRenderScaledRotatedEvent evt)
+		{
+			if (!ShouldRenderSeal(evt.Card)) return;
+
+			var geometry = CardGeometryService.GetVisualGeometry(
+				EntityManager,
+				evt.Card,
+				evt.Position,
+				evt.Scale);
+			var center = geometry.Center;
+			center.X += SealOffsetX * geometry.Scale;
+			center.Y += SealOffsetY * geometry.Scale;
+
+			_settings ??= CardGeometryService.GetSettings(EntityManager);
+			int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
+			int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
+			var sealedComp = evt.Card.GetComponent<Sealed>();
+			DrawSealOverlay(center, cardWidth, cardHeight, geometry.Scale, geometry.Rotation, sealedComp?.Seals ?? 0);
 		}
 
 		private bool ShouldRenderSeal(Entity card)
 		{
 			return card != null
 				&& card.GetComponent<Sealed>() != null
+				&& card.GetComponent<SuppressCardVisualEffects>() == null
 				&& _sealTexture != null;
 		}
 

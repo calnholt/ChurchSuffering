@@ -12,36 +12,41 @@ using Crusaders30XX.ECS.Services;
 namespace Crusaders30XX.ECS.Systems
 {
     /// <summary>
-    /// Renders a draw pile rectangle at bottom-right with the current draw pile count
+    /// Renders the draw pile asset at bottom-right with the current draw pile count.
     /// </summary>
     [DebugTab("Draw Pile Display")]
     public class DrawPileDisplaySystem : Core.System
     {
-        private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
+        private readonly ImageAssetService _imageAssets;
         private readonly SpriteFont _font = FontSingleton.ContentFont;
-        private readonly Texture2D _pixel;
-		private const string RootEntityName = "UI_DrawPileRoot";
+        private Texture2D _pileTexture;
+        private const string RootEntityName = "UI_DrawPileRoot";
+        private const string PileAsset = "Battle_UI/draw_pile";
         private double _pulseTimeRemaining = 0.0;
         private const double PulseDuration = 0.15; // seconds
         private const float PulseAmplitude = 0.12f; // 12% size bump at peak
 
-        [DebugEditable(DisplayName = "Panel Width", Step = 1, Min = 10, Max = 2000)]
-        public int PanelWidth { get; set; } = 60;
-        [DebugEditable(DisplayName = "Panel Height", Step = 1, Min = 10, Max = 2000)]
-        public int PanelHeight { get; set; } = 80;
+        [DebugEditable(DisplayName = "Asset Scale", Step = 0.01f, Min = 0.01f, Max = 5f)]
+        public float AssetScale { get; set; } = 0.25f;
         [DebugEditable(DisplayName = "Panel Margin", Step = 1, Min = 0, Max = 500)]
         public int PanelMargin { get; set; } = 30;
-        [DebugEditable(DisplayName = "Text Scale", Step = 0.05f, Min = 0.1f, Max = 10f)]
-        public float TextScale { get; set; } = 0.2f;
+        [DebugEditable(DisplayName = "Text Scale", Step = 0.01f, Min = 0.01f, Max = 10f)]
+        public float TextScale { get; set; } = 0.23f;
+        [DebugEditable(DisplayName = "Count Text Offset Y", Step = 1, Min = 0, Max = 500)]
+        public int CountTextOffsetY { get; set; } = 2;
+        [DebugEditable(DisplayName = "Count Text Color R", Step = 1, Min = 0, Max = 255)]
+        public int CountTextColorR { get; set; } = 150;
+        [DebugEditable(DisplayName = "Count Text Color G", Step = 1, Min = 0, Max = 255)]
+        public int CountTextColorG { get; set; } = 0;
+        [DebugEditable(DisplayName = "Count Text Color B", Step = 1, Min = 0, Max = 255)]
+        public int CountTextColorB { get; set; } = 0;
 
-        public DrawPileDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+        public DrawPileDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
-            _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _pixel = new Texture2D(graphicsDevice, 1, 1);
-            _pixel.SetData(new[] { Color.White });
+            _imageAssets = imageAssets;
 
             EventManager.Subscribe<CardsDrawnEvent>(OnCardsDrawn);
             LoggingService.Append("DrawPileDisplaySystem.constructor", new System.Text.Json.Nodes.JsonObject { ["action"] = "Subscribed to CardsDrawnEvent" });
@@ -61,98 +66,108 @@ namespace Crusaders30XX.ECS.Systems
             base.Update(gameTime);
         }
 
-		protected override void UpdateEntity(Entity entity, GameTime gameTime)
-		{
-			EnsureRootEntity();
-			int w = Game1.VirtualWidth;
-			int h = Game1.VirtualHeight;
+        protected override void UpdateEntity(Entity entity, GameTime gameTime)
+        {
+            EnsurePileTexture();
+            EnsureRootEntity();
+            int vw = Game1.VirtualWidth;
+            int vh = Game1.VirtualHeight;
             var root = EntityManager.GetEntity(RootEntityName);
             var t = root?.GetComponent<Transform>();
-            if (t != null)
+            if (t != null && _pileTexture != null)
             {
-                int rectW = PanelWidth;
-                int rectH = PanelHeight;
+                int displayW = GetDisplayWidth(1f);
+                int displayH = GetDisplayHeight(1f);
                 int m = PanelMargin;
-                var center = new Vector2(w - rectW / 2f - m, h - rectH / 2f - m);
+                var center = new Vector2(vw - displayW / 2f - m, vh - displayH / 2f - m);
                 t.Position = center;
             }
-		}
+        }
 
         public void Draw()
         {
+            EnsurePileTexture();
+            if (_pileTexture == null) return;
+
             var deckEntity = GetRelevantEntities().FirstOrDefault();
             if (deckEntity == null) return;
             var deck = deckEntity.GetComponent<Deck>();
             if (deck == null) return;
 
-			var root = EntityManager.GetEntity(RootEntityName);
-			var tRoot = root?.GetComponent<Transform>();
-			if (tRoot == null) return;
+            var root = EntityManager.GetEntity(RootEntityName);
+            var tRoot = root?.GetComponent<Transform>();
+            if (tRoot == null) return;
 
-			int rectW = PanelWidth;
-            int rectH = PanelHeight;
-			var center = new Vector2(tRoot.Position.X, tRoot.Position.Y);
-			var rect = new Rectangle(
-				(int)Math.Round(center.X - rectW / 2f),
-				(int)Math.Round(center.Y - rectH / 2f),
-				rectW,
-				rectH);
+            float pulseScale = GetPulseScale();
+            var center = new Vector2(tRoot.Position.X, tRoot.Position.Y);
+            var bounds = GetBounds(center, pulseScale);
 
-            // Pulse scale factor
-            float scale = 1f;
-            if (_pulseTimeRemaining > 0.0)
-            {
-                float t = (float)(1.0 - (_pulseTimeRemaining / PulseDuration)); // 0->1
-                float wave = (float)Math.Sin(t * Math.PI); // 0..1..0
-                scale = 1f + PulseAmplitude * wave;
-            }
+            _spriteBatch.Draw(_pileTexture, bounds, Color.White);
 
-            // Scale about the rect center
-            var center2 = new Vector2(rect.Center.X, rect.Center.Y);
-            int scaledW = (int)Math.Round(rectW * scale);
-            int scaledH = (int)Math.Round(rectH * scale);
-            var scaledRect = new Rectangle((int)(center2.X - scaledW / 2f), (int)(center2.Y - scaledH / 2f), scaledW, scaledH);
-
-            // Panel
-            _spriteBatch.Draw(_pixel, scaledRect, new Color(20, 20, 20) * 0.75f);
-            // Border
-            DrawBorder(scaledRect, Color.White, 2);
-
-            // Count text centered (scale pulses with panel)
             if (_font != null)
             {
                 string text = deck.DrawPile.Count.ToString();
-                float textScale = TextScale * scale;
+                float textScale = TextScale * pulseScale;
+                var countColor = new Color(
+                    Math.Clamp(CountTextColorR, 0, 255),
+                    Math.Clamp(CountTextColorG, 0, 255),
+                    Math.Clamp(CountTextColorB, 0, 255));
                 var size = _font.MeasureString(text) * textScale;
-                var pos = new Vector2(scaledRect.Center.X - size.X / 2f, scaledRect.Center.Y - size.Y / 2f);
-                _spriteBatch.DrawString(_font, text, pos, Color.White, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                var pos = new Vector2(
+                    bounds.Center.X - size.X / 2f,
+                    bounds.Bottom - size.Y - CountTextOffsetY * pulseScale);
+                _spriteBatch.DrawString(_font, text, pos, countColor, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
             }
 
-            // Sync root UI bounds for centralized interaction routing and tooltips.
             var rootUi = root.GetComponent<UIElement>();
-			if (rootUi == null)
-			{
-                EntityManager.AddComponent(root, new UIElement { Bounds = scaledRect, IsInteractable = true, Tooltip = "View Draw Pile", EventType = UIElementEventType.ViewDeck });
-			}
-			else
-			{
-				rootUi.Bounds = scaledRect;
-				rootUi.IsInteractable = true;
-				rootUi.Tooltip = "View Draw Pile";
-			}
+            if (rootUi == null)
+            {
+                EntityManager.AddComponent(root, new UIElement { Bounds = bounds, IsInteractable = true, Tooltip = "View Draw Pile", EventType = UIElementEventType.ViewDeck });
+            }
+            else
+            {
+                rootUi.Bounds = bounds;
+                rootUi.IsInteractable = true;
+                rootUi.Tooltip = "View Draw Pile";
+            }
         }
 
-        private void DrawBorder(Rectangle r, Color color, int thickness)
+        private float GetPulseScale()
         {
-            _spriteBatch.Draw(_pixel, new Rectangle(r.X, r.Y, r.Width, thickness), color);
-            _spriteBatch.Draw(_pixel, new Rectangle(r.X, r.Bottom - thickness, r.Width, thickness), color);
-            _spriteBatch.Draw(_pixel, new Rectangle(r.X, r.Y, thickness, r.Height), color);
-            _spriteBatch.Draw(_pixel, new Rectangle(r.Right - thickness, r.Y, thickness, r.Height), color);
+            if (_pulseTimeRemaining <= 0.0) return 1f;
+            float t = (float)(1.0 - (_pulseTimeRemaining / PulseDuration));
+            float wave = (float)Math.Sin(t * Math.PI);
+            return 1f + PulseAmplitude * wave;
+        }
+
+        private float GetDisplayScale(float pulseScale) => AssetScale * pulseScale;
+
+        private int GetDisplayWidth(float pulseScale) =>
+            (int)Math.Round(_pileTexture.Width * GetDisplayScale(pulseScale));
+
+        private int GetDisplayHeight(float pulseScale) =>
+            (int)Math.Round(_pileTexture.Height * GetDisplayScale(pulseScale));
+
+        private Rectangle GetBounds(Vector2 center, float pulseScale)
+        {
+            int w = GetDisplayWidth(pulseScale);
+            int h = GetDisplayHeight(pulseScale);
+            return new Rectangle(
+                (int)Math.Round(center.X - w / 2f),
+                (int)Math.Round(center.Y - h / 2f),
+                w,
+                h);
+        }
+
+        private void EnsurePileTexture()
+        {
+            if (_pileTexture != null) return;
+            _pileTexture = _imageAssets.TryGetTexture(PileAsset);
         }
 
         private void OnCardsDrawn(CardsDrawnEvent evt)
         {
-            _pulseTimeRemaining = PulseDuration; // trigger pulse
+            _pulseTimeRemaining = PulseDuration;
         }
 
         private void EnsureRootEntity()
@@ -161,13 +176,12 @@ namespace Crusaders30XX.ECS.Systems
             if (e == null)
             {
                 e = EntityManager.CreateEntity(RootEntityName);
-                // Seed approximate bottom-right position; UpdateEntity will correct on resize
-                int w = Game1.VirtualWidth;
-                int h = Game1.VirtualHeight;
-                int rectW = PanelWidth;
-                int rectH = PanelHeight;
+                int vw = Game1.VirtualWidth;
+                int vh = Game1.VirtualHeight;
+                int displayW = _pileTexture != null ? GetDisplayWidth(1f) : 0;
+                int displayH = _pileTexture != null ? GetDisplayHeight(1f) : 0;
                 int m = PanelMargin;
-                var center = new Vector2(w - rectW / 2f - m, h - rectH / 2f - m);
+                var center = new Vector2(vw - displayW / 2f - m, vh - displayH / 2f - m);
                 EntityManager.AddComponent(e, new Transform { Position = center, ZOrder = 10000 });
                 EntityManager.AddComponent(e, ParallaxLayer.GetUIParallaxLayer());
             }

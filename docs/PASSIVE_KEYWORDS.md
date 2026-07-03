@@ -45,7 +45,7 @@ This document summarizes all passive effects in the game. Each passive has a dur
 | Keyword | Effect |
 |---------|--------|
 | **Stun** | Skips the next X attacks |
-| **Slow** | Ambush attacks are X seconds faster |
+| **Slow** | Ambush attacks are X seconds faster. At the end of your turn, lose 1 slow |
 | **Wounded** | Takes X more damage from all sources |
 
 ---
@@ -54,8 +54,8 @@ This document summarizes all passive effects in the game. Each passive has a dur
 
 | Keyword | Effect |
 |---------|--------|
-| **Scar** | Lose X max HP for the run. Remove one scar when leaving battle after completing a quest node |
-| **Fear** | Attacks have X*10% chance to become ambush attacks |
+| **Scar** | Lose X max HP immediately. At battle start, lose 1 scar, but max HP is not restored until the next battle recalculates from remaining scars |
+| **Fear** | All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear |
 | **Intimidated** | At the start of the block phase, X cards from your hand are intimidated |
 | **MindFog** | At the end of your action phase, discard all cards in your hand |
 | **Silenced** | Cannot play pledged cards. Remove 1 silenced at end of action phase |

@@ -2,71 +2,41 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Utils;
 
 namespace Crusaders30XX.ECS.Objects.Enemies;
 
-/// <summary>
-/// A slow, armored demon whose attacks punish poor blocking decisions.
-/// Forces players to carefully manage their blocking card count.
-/// </summary>
+
 public class EarthDemon : EnemyBase
 {
-    private int StartingArmor = 1;
-
-    public EarthDemon(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+    public EarthDemon()
     {
-        Id = "earth_demon";
+        Id = EnemyId.EarthDemon;
         Name = "Earth Demon";
-        HealthPerCard = 0.715f;
-
-        // Earthen Resilience: Start of battle, gain 3 Armor
-        OnStartOfBattle = (entityManager) =>
-        {
-            EventQueueBridge.EnqueueTriggerAction("EarthDemon.OnStartOfBattle", () =>
-            {
-                EventManager.Publish(new ApplyPassiveEvent
-                {
-                    Target = entityManager.GetEntity("Enemy"),
-                    Type = AppliedPassiveType.Armor,
-                    Delta = StartingArmor
-                });
-            }, AppliedPassivesManagementSystem.Duration);
-        };
+        HP = 32;
     }
 
-    public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+    public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
-        // Attack weights: Tremor Strike (40%), Stone Barrage (35%), Earthen Wall (25%)
-        var random = Random.Shared.Next(0, 100);
-        if (random < 40)
-        {
-            return ["tremor_strike"];
-        }
-        else if (random < 75)
-        {
-            return ["stone_barrage"];
-        }
-        return ["earthen_wall"];
+        return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.TremorStrike, EnemyAttackId.StoneBarrage, EnemyAttackId.EarthenWall }, 1);
     }
 }
 
-/// <summary>
-/// Tremor Strike: 8 damage. If not blocked by 2+ cards, apply 1 Shackled.
-/// The "must block well" attack - creates tension between committing cards and accepting debuffs.
-/// </summary>
+
 public class TremorStrike : EnemyAttackBase
 {
     private int ShackledAmount = 2;
 
     public TremorStrike()
     {
-        Id = "tremor_strike";
+        Id = EnemyAttackId.TremorStrike;
         Name = "Tremor Strike";
-        Damage = 8;
+        Damage = 9;
         ConditionType = ConditionType.OnBlockedByAtLeast2Cards;
         Text = $"If not blocked by 2+ cards - Gain {ShackledAmount} shackled.";
 
@@ -82,11 +52,6 @@ public class TremorStrike : EnemyAttackBase
     }
 }
 
-/// <summary>
-/// Stone Barrage: 6 damage. On reveal, pick random color from player's hand.
-/// Apply 1 Bleed per blocking card of that color.
-/// The "choose your blockers carefully" attack - makes hand composition matter.
-/// </summary>
 public class StoneBarrage : EnemyAttackBase
 {
     private int BleedPerCard = 2;
@@ -94,14 +59,15 @@ public class StoneBarrage : EnemyAttackBase
 
     public StoneBarrage()
     {
-        Id = "stone_barrage";
+        Id = EnemyAttackId.StoneBarrage;
         Name = "Stone Barrage";
-        Damage = 4;
+        Damage = 10;
+        AttackEffectRecipe = EnemyRockBlastEffect();
         ConditionType = ConditionType.None;
 
         OnAttackReveal = (entityManager) =>
         {
-            Color = Cinderbolt.GetRandomCardColorInPlayerHand(EntityManager);
+            Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
             Text = Color.HasValue
                 ? $"Gain {BleedPerCard} bleed for each {Color.Value.ToString().ToLower()} card that blocks this."
                 : $"Gain {BleedPerCard} bleed for each card of the selected color that blocks this. No color is selected.";
@@ -123,29 +89,25 @@ public class StoneBarrage : EnemyAttackBase
     }
 }
 
-/// <summary>
-/// Earthen Wall: 5 damage. On attack reveal, enemy gains 2 Armor.
-/// The "scaling threat" attack - creates time pressure to kill quickly.
-/// </summary>
 public class EarthenWall : EnemyAttackBase
 {
-    private int ArmorGain = 1;
+    private int GuardAmount = 4;
 
     public EarthenWall()
     {
-        Id = "earthen_wall";
+        Id = EnemyAttackId.EarthenWall;
         Name = "Earthen Wall";
         Damage = 6;
         ConditionType = ConditionType.None;
-        Text = $"On attack - Gain {ArmorGain} armor.";
+        Text = $"On attack - Gain {GuardAmount} guard.";
 
         OnAttackReveal = (entityManager) =>
         {
             EventManager.Publish(new ApplyPassiveEvent
             {
                 Target = entityManager.GetEntity("Enemy"),
-                Type = AppliedPassiveType.Armor,
-                Delta = ArmorGain
+                Type = AppliedPassiveType.Guard,
+                Delta = GuardAmount
             });
         };
     }

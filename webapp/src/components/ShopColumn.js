@@ -68,7 +68,7 @@ export class MysteryColumn extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
       <section class="column column--mystery">
-        <h2 class="column__title">Mystery</h2>
+        <h2 class="column__title">Events</h2>
         <p class="column__subtitle">Timed windows hide medals, foes, and events</p>
         <div class="column__slots"></div>
       </section>

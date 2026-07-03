@@ -98,17 +98,15 @@ namespace Crusaders30XX.ECS.Systems
             }
             if (currentPhase == SubPhase.Block)
             {
-                TryQueueTutorial("medal");
                 TryQueueTutorial("equipment");
-                TryQueueTutorial("tribulation");
             }
         }
 
         private void QueueGuidedTutorials(GuidedTutorial guided, SubPhase phase)
         {
             foreach (string key in GuidedTutorialDefinitions.GetMessageKeys(
-                guided.Battle,
-                guided.Turn,
+                guided.Section,
+                guided.TurnWithinSection,
                 phase,
                 guided.ConfirmedAttackCountThisTurn))
             {
@@ -146,22 +144,22 @@ namespace Crusaders30XX.ECS.Systems
 
         private void TryQueueTutorial(string key)
         {
-            // Skip if already seen
             if (SaveCache.HasSeenTutorial(key))
                 return;
 
-            // Try to get tutorial definition
+            var guided = GuidedTutorialService.GetState(EntityManager);
+            if (key.StartsWith("teach_", StringComparison.Ordinal) && guided?.SessionSeenTeaches != null && guided.SessionSeenTeaches.Contains(key))
+                return;
+
             if (!TutorialDefinitionCache.TryGet(key, out var tutorial) || tutorial == null)
             {
                 LoggingService.Append("TutorialManager.QueueTutorial.notFound", new System.Text.Json.Nodes.JsonObject { ["key"] = key });
                 return;
             }
 
-            // Check conditions
             if (!CheckCondition(tutorial.condition))
                 return;
 
-            // Queue the tutorial
             _tutorialQueue.Enqueue(tutorial);
             LoggingService.Append("TutorialManager.QueueTutorial.queued", new System.Text.Json.Nodes.JsonObject { ["key"] = key });
         }
@@ -175,6 +173,8 @@ namespace Crusaders30XX.ECS.Systems
             {
                 case "has_cost_card":
                     return HasCostCardInHand();
+                case "has_non_free_card":
+                    return HasNonFreeCardInHand();
                 case "has_equipment":
                     return HasEquipment();
                 case "has_medal":
@@ -200,6 +200,24 @@ namespace Crusaders30XX.ECS.Systems
         private bool CanPledge()
         {
             return PledgeAvailabilityService.IsAvailable(EntityManager);
+        }
+
+        private bool HasNonFreeCardInHand()
+        {
+            var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
+            var deck = deckEntity?.GetComponent<Deck>();
+            if (deck == null || deck.Hand == null)
+                return false;
+
+            foreach (var card in deck.Hand)
+            {
+                var cardData = card.GetComponent<CardData>();
+                if (cardData?.Card == null) continue;
+                if (!cardData.Card.IsFreeAction)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool HasCostCardInHand()
@@ -253,9 +271,15 @@ namespace Crusaders30XX.ECS.Systems
             _activeTutorial = _tutorialQueue.Dequeue();
             _tutorialActive = true;
 
-            // Mark as seen immediately so it won't be queued again
-            if (!_activeTutorial.key.StartsWith("guided_", StringComparison.Ordinal))
+            if (_activeTutorial.key.StartsWith("teach_", StringComparison.Ordinal))
+            {
+                var guided = GuidedTutorialService.GetState(EntityManager);
+                guided?.SessionSeenTeaches?.Add(_activeTutorial.key);
+            }
+            else if (!_activeTutorial.key.StartsWith("guided_", StringComparison.Ordinal))
+            {
                 SaveCache.MarkTutorialSeen(_activeTutorial.key);
+            }
 
             LoggingService.Append("TutorialManager.StartNextTutorial", new System.Text.Json.Nodes.JsonObject { ["key"] = _activeTutorial.key });
             EventManager.Publish(new TutorialStartedEvent { Tutorial = _activeTutorial });
@@ -340,10 +364,6 @@ namespace Crusaders30XX.ECS.Systems
                     return GetCardWithCostBounds();
                 case "equipment":
                     return GetEquipmentBounds();
-                case "medal":
-                    return GetMedalBounds();
-                case "tribulation":
-                    return GetTribulationBounds();
                 default:
                     return Rectangle.Empty;
             }
@@ -497,8 +517,13 @@ namespace Crusaders30XX.ECS.Systems
                         ?? Enumerable.Empty<Rectangle>());
 
                 case "enemy_attack_display":
-                    // Return bounds for the enemy attack display area
                     return new Rectangle(Game1.VirtualWidth / 4, Game1.VirtualHeight / 4, Game1.VirtualWidth / 2, 150);
+                case "first_black_card":
+                    return GetFirstCardBoundsByColor(CardData.CardColor.Black);
+                case "first_red_card":
+                    return GetFirstCardBoundsByColor(CardData.CardColor.Red);
+                case "first_white_card":
+                    return GetFirstCardBoundsByColor(CardData.CardColor.White);
                 case "ap_and_smite_ap":
                     return Union(GetEntityBounds("UI_APTooltip"), CardBounds("smite"));
                 case "smite_damage":
@@ -531,6 +556,21 @@ namespace Crusaders30XX.ECS.Systems
             int right = valid.Max(rect => rect.Right);
             int bottom = valid.Max(rect => rect.Bottom);
             return new Rectangle(left, top, right - left, bottom - top);
+        }
+
+        private Rectangle GetFirstCardBoundsByColor(CardData.CardColor color)
+        {
+            var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
+            if (deck?.Hand == null) return Rectangle.Empty;
+
+            foreach (var card in deck.Hand)
+            {
+                var cardData = card.GetComponent<CardData>();
+                var ui = card.GetComponent<UIElement>();
+                if (cardData?.Color == color && ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
+                    return ui.Bounds;
+            }
+            return Rectangle.Empty;
         }
 
         private Rectangle GetCardWithCostBounds()

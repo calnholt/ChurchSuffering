@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Quest Reward Modal (Vertical Columns)</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Masthead: centered title and red rule
+    - Reward UI: three columns side by side; each column stacks cards vertically
+    - Cards: full in-game size (268x377; DefaultWidth x DefaultHeight)
+    - Modal shell: ~1120px wide
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #c41e3a;
+    --red-glow: rgba(196, 30, 58, 0.45);
+    --gold: #e8c84a;
+    --gold-dim: #a08030;
+    --panel-border: rgba(255, 255, 255, 0.85);
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --card-w: 268px;
+    --card-h: 377px;
+    --card-base-w: 118px;
+    --card-base-h: 168px;
+    --card-scale-x: calc(var(--card-w) / var(--card-base-w));
+    --card-scale-y: calc(var(--card-h) / var(--card-base-h));
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 4px;
+  }
+
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    max-width: 820px;
+    line-height: 1.5;
+  }
+
+  .page-main {
+    padding: 32px 40px 60px;
+  }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert-background-city.png') center / cover no-repeat;
+  }
+
+  .bg-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  /* --- Cards (base artboard scaled to in-game 268x377) --- */
+  .card-frame {
+    width: var(--card-w);
+    height: var(--card-h);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .card-frame .card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: scale(var(--card-scale-x), var(--card-scale-y));
+    transform-origin: top left;
+  }
+
+  .card-frame .card.is-incoming,
+  .card-frame .card.is-upgraded {
+    transform: scale(
+      calc(var(--card-scale-x) * 1.04),
+      calc(var(--card-scale-y) * 1.04)
+    );
+  }
+
+  .card {
+    width: 118px;
+    height: 168px;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  }
+
+  .card .bg { position: absolute; inset: 0; border-radius: 8px; background: #1c0c0c; }
+  .card.w .bg { background: #1a1814; }
+  .card.k .bg { background: #0e0e0e; }
+  .card .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 6; background: #cc2222; }
+  .card.w .stripe { background: #c0b8aa; }
+  .card.k .stripe { background: #555; }
+  .card .stat-gutter {
+    position: absolute; left: 6px; top: 0; bottom: 0; width: 28px; z-index: 1;
+    background: rgba(0,0,0,0.22);
+  }
+  .card .type-notch {
+    position: absolute; top: 0; right: 0; z-index: 7;
+    font-size: 0.38rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 6px 3px 8px; border-radius: 0 8px 0 8px;
+    background: rgba(200,30,30,0.15); color: #884433;
+  }
+  .card.w .type-notch { background: rgba(180,170,150,0.2); color: #666; }
+  .card.k .type-notch { background: rgba(80,80,80,0.25); color: #888; }
+  .card .stats {
+    position: absolute; left: 7px; top: 7px; bottom: 7px; width: 22px;
+    display: flex; flex-direction: column; z-index: 5;
+  }
+  .chip-slot { height: 30px; display: flex; flex-direction: column; flex-shrink: 0; }
+  .chip-slot-ap { margin-top: auto; flex-shrink: 0; }
+  .card .chip {
+    width: 22px; height: 22px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border-radius: 2px; flex-shrink: 0;
+  }
+  .card .chip .v { font-family: 'New Rocker', cursive; font-size: 0.65rem; line-height: 1; }
+  .card .chip .l { font-size: 0.35rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px; }
+  .card .chip-blk { border: 2.5px solid #777; background: rgba(80,80,80,0.15); color: #bbb; }
+  .card .chip-blk .l { color: #888; }
+  .card .chip-atk { background: #cc2222; color: #fff; }
+  .card .chip-atk .l { color: #ffccbb; }
+  .card .chip-ap { background: #330e0e; color: #dd4433; }
+  .card .chip-ap .l { color: #993322; }
+  .card.w .chip-ap { background: #2a2618; color: #aa9977; }
+  .card.w .chip-ap .l { color: #776655; }
+  .card .content {
+    position: relative; z-index: 3; height: 100%; display: flex; flex-direction: column;
+    margin-left: 32px; padding: 6px 6px 6px 0;
+  }
+  .card .cost-row { display: flex; gap: 3px; margin-bottom: 2px; min-height: 8px; }
+  .card .pip { width: 6px; height: 6px; border-radius: 50%; background: #666; }
+  .card .name { font-family: 'New Rocker', cursive; font-size: 0.62rem; letter-spacing: 1px; margin-bottom: 2px; color: #f0e0d8; }
+  .card .rule { height: 2px; margin-bottom: 4px; border-radius: 1px; background: #442020; }
+  .card.w .rule { background: #443820; }
+  .card.k .rule { background: #333; }
+  .card .desc { font-size: 7px; line-height: 1.3; flex: 1; color: #cc9988; }
+  .card.w .desc { color: #998877; }
+  .card.k .desc { color: #888; }
+  .card .art {
+    position: absolute; bottom: -4px; right: -6px; width: 84px; height: 74px;
+    z-index: 2; pointer-events: none;
+  }
+  .card .art img { width: 100%; height: 100%; object-fit: contain; }
+  .card.is-outgoing { opacity: 0.72; filter: saturate(0.75); }
+  .card.is-incoming { box-shadow: 0 0 20px rgba(196, 30, 58, 0.2); }
+  .card.is-upgraded { box-shadow: 0 0 20px rgba(255, 255, 255, 0.12); }
+
+  .card .chip { position: relative; }
+  .card .delta-tab {
+    position: absolute;
+    right: -9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.34rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 1px 3px;
+    border-radius: 2px;
+    line-height: 1.2;
+    z-index: 2;
+  }
+  .card .delta-tab.pos {
+    background: rgba(40, 120, 50, 0.9);
+    color: #d8ffd8;
+    border: 1px solid rgba(120, 220, 120, 0.5);
+  }
+
+  /* --- Modal --- */
+  .modal {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 1120px;
+    min-height: 520px;
+    background: rgba(8, 8, 8, 0.92);
+    border: 2px solid var(--panel-border);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 32px 80px rgba(0,0,0,0.75);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .masthead {
+    padding: 22px 24px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+
+  .masthead-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 34px;
+    letter-spacing: 4px;
+    color: var(--white-1);
+    text-shadow: 0 2px 16px rgba(0,0,0,0.8);
+  }
+
+  .red-rule {
+    width: 88px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--red-3), transparent);
+    flex-shrink: 0;
+  }
+
+  .exchange-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px 16px;
+    min-height: 0;
+  }
+
+  .reward-columns {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .reward-column {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    max-width: 340px;
+    padding: 14px 12px 16px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(30,0,0,0.15) 50%, rgba(0,0,0,0.45));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-top: 3px solid rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    text-align: center;
+    color: inherit;
+    font: inherit;
+  }
+
+  .reward-column:hover,
+  .reward-column.is-selected {
+    border-top-color: var(--red-3);
+    border-color: rgba(196, 30, 58, 0.45);
+    background: linear-gradient(180deg, rgba(40,0,0,0.5), rgba(80,0,0,0.25) 50%, rgba(40,0,0,0.5));
+    box-shadow: 0 0 16px rgba(196, 30, 58, 0.15);
+  }
+
+  .reward-column.is-upgrade {
+    background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(255,255,255,0.04) 50%, rgba(0,0,0,0.45));
+    border-top-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .reward-column.is-upgrade:hover,
+  .reward-column.is-upgrade.is-selected {
+    border-top-color: var(--white-2);
+    border-color: rgba(255, 255, 255, 0.4);
+    background: linear-gradient(180deg, rgba(20,20,20,0.5), rgba(255,255,255,0.08) 50%, rgba(20,20,20,0.5));
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.1);
+  }
+
+  .column-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .column-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .swap-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex-shrink: 0;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .swap-arrow .arrow-icon {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .swap-arrow .arrow-icon.arrow-trade {
+    width: 22px;
+    height: 36px;
+    filter: drop-shadow(0 0 6px var(--red-glow));
+  }
+
+  .swap-arrow .arrow-icon.arrow-upgrade {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35));
+  }
+
+  .swap-arrow .label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--white-3);
+  }
+
+  .swap-arrow.is-upgrade .label { display: none; }
+
+  .modal-footer {
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    background: rgba(0,0,0,0.25);
+    flex-shrink: 0;
+  }
+
+  .btn-skip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 160px;
+    height: 56px;
+    padding: 0 24px;
+    background: transparent;
+    border: 2px solid rgba(255,255,255,0.35);
+    color: var(--white-3);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .btn-skip:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--white-2);
+    color: var(--white-1);
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Quest Reward Modal — Vertical Columns</h1>
+  <p>
+    Three reward options side by side; each column stacks outgoing and incoming cards vertically
+    with a trade or upgrade arrow between them. Cards render at full in-game size (268x377).
+    Virtual resolution: 1920x1080.
+  </p>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler">
+    <div class="viewport">
+      <div class="bg-scene"></div>
+      <div class="bg-dim"></div>
+
+      <div class="modal">
+        <header class="masthead">
+          <h2 class="masthead-title">Purgatory Cleansed!</h2>
+          <div class="red-rule" aria-hidden="true"></div>
+        </header>
+
+        <div class="exchange-stage">
+          <div class="reward-columns" id="reward-columns"></div>
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn-skip" id="btn-skip">Skip Reward</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+
+  const REWARDS = [
+    {
+      kind: 'exchange',
+      out: { name: 'Strike', type: 'Attack', blk: 0, atk: 4, ap: 1, art: 'sword.png', color: 'w', desc: 'Deal 4 damage.' },
+      in:  { name: 'Smite', type: 'Attack', blk: 0, atk: 9, ap: 2, art: 'smite.png', color: 'r', desc: 'Deal 9 damage. Costs 2 AP.' }
+    },
+    {
+      kind: 'exchange',
+      out: { name: 'Hold the Line', type: 'Skill', blk: 6, atk: 0, ap: 1, art: 'hold_the_line.png', color: 'r', desc: 'Gain 6 block.' },
+      in:  { name: 'Reckoning', type: 'Attack', blk: 0, atk: 12, ap: 2, art: 'reckoning.png', color: 'r', desc: 'Deal 12 damage if you blocked last turn.' }
+    },
+    {
+      kind: 'upgrade',
+      base: { name: 'Smite', type: 'Attack', blk: 0, atk: 8, ap: 1, art: 'smite.png', color: 'r', desc: 'Deal 8 damage.' },
+      upgraded: { name: 'Smite+', type: 'Attack', blk: 0, atk: 9, ap: 1, art: 'smite.png', color: 'r', desc: 'Deal 9 damage.' },
+      deltas: { atk: 1 }
+    }
+  ];
+
+  let selectedIndex = -1;
+
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const vp = document.querySelector('.viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / GAME_W;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  function chipDeltaHtml(deltas, stat) {
+    const delta = deltas?.[stat];
+    if (!delta) return '';
+    const sign = delta > 0 ? '+' : '';
+    return `<span class="delta-tab pos">${sign}${delta}</span>`;
+  }
+
+  function cardInnerHtml(card, roleClass, deltas = null) {
+    const colorClass = card.color === 'w' ? ' w' : card.color === 'k' ? ' k' : '';
+    const blk = card.blk > 0
+      ? `<div class="chip-slot"><div class="chip chip-blk"><span class="v">${card.blk}</span><span class="l">BLK</span>${chipDeltaHtml(deltas, 'blk')}</div></div>`
+      : '<div class="chip-slot"></div>';
+    const atk = card.atk > 0
+      ? `<div class="chip-slot"><div class="chip chip-atk"><span class="v">${card.atk}</span><span class="l">DMG</span>${chipDeltaHtml(deltas, 'atk')}</div></div>`
+      : '<div class="chip-slot"></div>';
+    const pips = card.ap > 1
+      ? '<div class="pip"></div><div class="pip"></div>'
+      : card.ap === 1 ? '<div class="pip"></div>' : '';
+    return `
+      <article class="card${colorClass} ${roleClass}">
+        <div class="bg"></div>
+        <div class="stripe"></div>
+        <div class="stat-gutter"></div>
+        <div class="type-notch">${card.type}</div>
+        <div class="stats">
+          ${blk}
+          ${atk}
+          <div class="chip-slot-ap">
+            <div class="chip chip-ap"><span class="v">${card.ap}</span><span class="l">AP</span></div>
+          </div>
+        </div>
+        <div class="content">
+          <div class="cost-row">${pips}</div>
+          <div class="name">${card.name}</div>
+          <div class="rule"></div>
+          <div class="desc">${card.desc}</div>
+        </div>
+        <div class="art"><img src="../Content/CardArt/${card.art}" alt="${card.name}"></div>
+      </article>`;
+  }
+
+  function cardHtml(card, roleClass, deltas = null) {
+    return `
+      <div class="card-frame">
+        ${cardInnerHtml(card, roleClass, deltas)}
+      </div>`;
+  }
+
+  function tradeArrowHtml() {
+    return `
+      <svg class="arrow-icon arrow-trade" viewBox="0 0 48 96" aria-hidden="true">
+        <line x1="24" y1="6" x2="24" y2="62" stroke="#c41e3a" stroke-width="7" stroke-linecap="round"/>
+        <polyline points="10,50 24,76 38,50" fill="none" stroke="#c41e3a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+  }
+
+  function upgradePlusHtml() {
+    return `
+      <svg class="arrow-icon arrow-upgrade" viewBox="0 0 24 24" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19" stroke="#f0ece6" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="5" y1="12" x2="19" y2="12" stroke="#f0ece6" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>`;
+  }
+
+  function swapArrowHtml(isUpgrade) {
+    return `
+      <div class="swap-arrow${isUpgrade ? ' is-upgrade' : ''}" aria-hidden="true">
+        ${isUpgrade ? upgradePlusHtml() : tradeArrowHtml()}
+        <span class="label">Trade</span>
+      </div>`;
+  }
+
+  function exchangeColumnHtml(reward, i) {
+    return `
+      <button type="button" class="reward-column${selectedIndex === i ? ' is-selected' : ''}" data-index="${i}">
+        <div class="column-stack">
+          <div class="column-side">
+            ${cardHtml(reward.out, 'is-outgoing')}
+          </div>
+          ${swapArrowHtml(false)}
+          <div class="column-side is-reward">
+            ${cardHtml(reward.in, 'is-incoming')}
+          </div>
+        </div>
+      </button>`;
+  }
+
+  function upgradeColumnHtml(reward, i) {
+    return `
+      <button type="button" class="reward-column is-upgrade${selectedIndex === i ? ' is-selected' : ''}" data-index="${i}">
+        <div class="column-stack">
+          <div class="column-side">
+            ${cardHtml(reward.base, '')}
+          </div>
+          ${swapArrowHtml(true)}
+          <div class="column-side is-reward">
+            ${cardHtml(reward.upgraded, 'is-upgraded', reward.deltas)}
+          </div>
+        </div>
+      </button>`;
+  }
+
+  function rewardSummary(reward) {
+    return reward.kind === 'upgrade'
+      ? `Upgrade ${reward.base.name} (+${reward.deltas.atk} DMG)`
+      : `Exchange ${reward.out.name} -> ${reward.in.name}`;
+  }
+
+  function renderColumns() {
+    document.getElementById('reward-columns').innerHTML = REWARDS.map((reward, i) =>
+      reward.kind === 'upgrade' ? upgradeColumnHtml(reward, i) : exchangeColumnHtml(reward, i)
+    ).join('');
+
+    document.querySelectorAll('.reward-column').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedIndex = parseInt(btn.dataset.index, 10);
+        renderColumns();
+        alert(`Selected: ${rewardSummary(REWARDS[selectedIndex])}, +350 gold`);
+      });
+    });
+  }
+
+  document.getElementById('btn-skip').addEventListener('click', () => {
+    selectedIndex = -1;
+    renderColumns();
+    alert('Skipped deck reward. Proceed with +350 gold only.');
+  });
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', () => {
+    fitViewport();
+    renderColumns();
+  });
+  fitViewport();
+</script>
+</body>
+</html>

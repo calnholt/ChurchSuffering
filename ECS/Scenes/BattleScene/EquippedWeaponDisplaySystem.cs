@@ -4,7 +4,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.Diagnostics;
@@ -22,7 +21,7 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private Texture2D _weaponTex;
         private string _loadedWeaponId;
 		private const string RootEntityName = "UI_EquippedWeaponRoot";
@@ -44,13 +43,12 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Icon Scale", Step = 0.01f, Min = 0.05f, Max = 2f)]
 		public float IconScale { get; set; } = 1.2f;
 
-        public EquippedWeaponDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public EquippedWeaponDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
-            TryLoadWeaponTexture();
+            _imageAssets = imageAssets;
 
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhaseEvent);
         }
@@ -79,13 +77,9 @@ namespace Crusaders30XX.ECS.Systems
             if (_weaponTex != null && weaponId == _loadedWeaponId) return;
 
             _loadedWeaponId = weaponId;
-            Texture2D tex = null;
-            try { tex = _content.Load<Texture2D>(CrusaderPortraitAssets.ResolveWeaponCardArtAsset(weaponId)); } catch { tex = null; }
-            if (tex == null && weaponId != "sword")
-            {
-                try { tex = _content.Load<Texture2D>(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("sword")); } catch { tex = null; }
-            }
-            _weaponTex = tex;
+            _weaponTex = _imageAssets.GetTextureOrFallback(
+                CrusaderPortraitAssets.ResolveWeaponCardArtAsset(weaponId),
+                CrusaderPortraitAssets.ResolveWeaponCardArtAsset("sword"));
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -95,6 +89,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
+			TryLoadWeaponTexture();
 			EnsureRootEntity();
 			var discardRoot = EntityManager.GetEntity("UI_DiscardPileRoot");
 			var discardT = discardRoot?.GetComponent<Transform>();
@@ -116,6 +111,8 @@ namespace Crusaders30XX.ECS.Systems
             var player = GetRelevantEntities().FirstOrDefault();
             if (player == null) return;
 
+            TryLoadWeaponTexture();
+
             int r = System.Math.Max(4, CircleRadius);
             var circle = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, r);
             EnsureRootEntity();
@@ -130,11 +127,6 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch.Draw(circle, new Vector2(center.X - r, center.Y - r), gold);
 
             // Draw weapon icon centered if available
-            if (_weaponTex == null)
-            {
-                // Attempt lazy-load if initially null (e.g., player created after system)
-                TryLoadWeaponTexture();
-            }
             if (_weaponTex != null)
             {
                 // Fit within circle with padding, uniform scale
@@ -160,6 +152,11 @@ namespace Crusaders30XX.ECS.Systems
 				rootUi.Bounds = hitRect;
 				rootUi.TooltipPosition = TooltipPosition.Right;
 				rootUi.TooltipType = TooltipType.Card;
+				var tooltip = root.GetComponent<CardTooltip>();
+				if (tooltip != null)
+				{
+					tooltip.CardId = player.GetComponent<EquippedWeapon>()?.WeaponId;
+				}
 			}
         }
 
@@ -176,5 +173,4 @@ namespace Crusaders30XX.ECS.Systems
 	}
     }
 }
-
 

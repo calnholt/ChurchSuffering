@@ -10,9 +10,9 @@ public static class EnemyAttackTextHelper
       return $"{conditionText}{enemyAttackText}{percentageText}";
     }
 
-    public static string GetBlockThresholdText(int blockRequired, string effectText)
+    public static string GetBlockThresholdText(int damageDelta, string effectText)
     {
-      return $"Unless at least {blockRequired} damage is blocked - {effectText}";
+      return $"If this attack deals {damageDelta + 1} or more damage - {effectText}";
     }
 
     public static string GetDamageThresholdText(int minimumDamage, string effectText)
@@ -44,13 +44,11 @@ public static class EnemyAttackTextHelper
         case EnemyAttackTextType.Intimidate:
           return $"Intimidates {amount} card{(amount > 1 ? "s" : "")} from your hand (can't block with intimidated cards for the rest of the turn).";
         case EnemyAttackTextType.MustBeBlockedByAtLeast:
-          return $"This attack must be blocked with at least {amount} card{(amount > 1 ? "s" : "")}/equipment if possible.";
+          return $"This attack must be blocked with at least {amount} card{(amount > 1 ? "s" : "")}/equipment.";
         case EnemyAttackTextType.MustBeBlockedExactly:
-          return $"This attack must be blocked with exactly {amount} card{(amount > 1 ? "s" : "")}/equipment if possible.";
+          return $"This attack must be blocked with exactly {amount} card{(amount > 1 ? "s" : "")}/equipment.";
         case EnemyAttackTextType.Burn:
           return $"Gain {amount} burn.";
-        case EnemyAttackTextType.Penance:
-          return $"Gain {amount} penance.";
         case EnemyAttackTextType.Scar:
           return $"Gain {amount} scar{(amount > 1 ? "s" : "")}.";
         case EnemyAttackTextType.Armor:
@@ -114,7 +112,6 @@ public static class EnemyAttackTextHelper
     Fear,
     Intimidate,
     Wounded,
-    Penance,
     Scar,
     Aggression,
     Stealth,

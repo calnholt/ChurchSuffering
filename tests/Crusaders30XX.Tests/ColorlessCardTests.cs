@@ -1,6 +1,7 @@
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Events;
@@ -122,12 +123,12 @@ public sealed class ColorlessCardTests
 			var enemy = entityManager.CreateEntity("Enemy");
 			entityManager.AddComponent(enemy, new AttackIntent
 			{
+				ActiveAttackSequence = 1,
 				Planned =
 				[
 					new PlannedAttack
 					{
-						AttackId = "cinderbolt",
-						ContextId = "attack-1",
+						AttackId = EnemyAttackId.Cinderbolt,
 						AttackDefinition = new Cinderbolt(),
 					},
 				],
@@ -139,7 +140,6 @@ public sealed class ColorlessCardTests
 			EventManager.Publish(new BlockAssignmentAdded
 			{
 				Card = card,
-				ContextId = "attack-1",
 				DeltaBlock = 3,
 				Color = CardColorQualificationService.GetQualifiedColor(card)?.ToString(),
 			});
@@ -160,7 +160,7 @@ public sealed class ColorlessCardTests
 	}
 
 	[Fact]
-	public void Temporary_clone_inherits_colorless_without_run_deck_identity()
+	public void Temporary_clone_inherits_persistent_statuses_without_run_deck_identity()
 	{
 		var entityManager = new EntityManager();
 		var source = EntityFactory.CreateCardFromDefinition(
@@ -169,10 +169,23 @@ public sealed class ColorlessCardTests
 			CardData.CardColor.White,
 			cardKey: "strike|White",
 			persistForRun: true);
+		entityManager.AddComponent(source, new Frozen { Owner = source });
+		entityManager.AddComponent(source, new Brittle { Owner = source });
+		entityManager.AddComponent(source, new Scorched { Owner = source });
+		entityManager.AddComponent(source, new Thorned { Owner = source });
 		entityManager.AddComponent(source, new Colorless());
 
 		var clone = EntityFactory.CloneEntity(entityManager, source);
 
+		Assert.Same(clone, clone.GetComponent<Frozen>().Owner);
+		Assert.Same(clone, clone.GetComponent<Brittle>().Owner);
+		Assert.Same(clone, clone.GetComponent<Scorched>().Owner);
+		Assert.Same(clone, clone.GetComponent<Thorned>().Owner);
+		Assert.Same(clone, clone.GetComponent<Colorless>().Owner);
+		Assert.True(clone.HasComponent<Frozen>());
+		Assert.True(clone.HasComponent<Brittle>());
+		Assert.True(clone.HasComponent<Scorched>());
+		Assert.True(clone.HasComponent<Thorned>());
 		Assert.True(clone.HasComponent<Colorless>());
 		Assert.False(clone.HasComponent<RunDeckCard>());
 	}
@@ -188,7 +201,37 @@ public sealed class ColorlessCardTests
 		entityManager.AddComponent(card, new Colorless());
 		deck.Hand.Add(card);
 
-		Assert.Null(Cinderbolt.GetRandomCardColorInPlayerHand(entityManager));
+		Assert.Null(PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager));
+	}
+
+	[Fact]
+	public void Color_selection_returns_null_when_hand_has_only_pledged_cards()
+	{
+		var entityManager = new EntityManager();
+		var deckEntity = entityManager.CreateEntity("Deck");
+		var deck = new Deck();
+		entityManager.AddComponent(deckEntity, deck);
+		var card = CreateCard(entityManager, CardData.CardColor.Red);
+		entityManager.AddComponent(card, new Pledge());
+		deck.Hand.Add(card);
+
+		Assert.Null(PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager));
+	}
+
+	[Fact]
+	public void Color_selection_ignores_pledged_cards()
+	{
+		var entityManager = new EntityManager();
+		var deckEntity = entityManager.CreateEntity("Deck");
+		var deck = new Deck();
+		entityManager.AddComponent(deckEntity, deck);
+		var pledgedRed = CreateCard(entityManager, CardData.CardColor.Red);
+		entityManager.AddComponent(pledgedRed, new Pledge());
+		var playableWhite = CreateCard(entityManager, CardData.CardColor.White);
+		deck.Hand.Add(pledgedRed);
+		deck.Hand.Add(playableWhite);
+
+		Assert.Equal(CardData.CardColor.White, PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager));
 	}
 
 	[Fact]
@@ -211,7 +254,7 @@ public sealed class ColorlessCardTests
 
 		entityManager.RemoveComponent<Colorless>(first);
 
-		Assert.Equal(3, reap.GetConditionalDamage(entityManager, reapEntity));
+		Assert.Equal(2, reap.GetConditionalDamage(entityManager, reapEntity));
 	}
 
 	[Fact]
@@ -279,17 +322,19 @@ public sealed class ColorlessCardTests
 		try
 		{
 			SaveCache.StartNewRun();
-			string key = SaveCache.GetLoadout("loadout_1").cardIds.First();
-			SaveCache.SetRunCardRestrictionsForCard(
-				key,
+			var entry = SaveCache.GetLoadout("loadout_1").cards.First();
+			SaveCache.SetRunDeckEntryRestrictions(
+				"loadout_1",
+				entry.entryId,
 				[RunScopedStateService.RestrictionColorless]);
 			SaveCache.Reload();
 
 			var entityManager = new EntityManager();
 			RunDeckService.EnsureRunDeck(entityManager);
 			var card = entityManager.GetEntitiesWithComponent<RunDeckCard>()
-				.Single(entity => entity.GetComponent<RunDeckCard>().CardKey == key);
+				.Single(entity => entity.GetComponent<RunDeckCard>().EntryId == entry.entryId);
 
+			Assert.Equal(entry.cardKey, card.GetComponent<RunDeckCard>().CardKey);
 			Assert.True(card.HasComponent<Colorless>());
 			Assert.Contains(
 				TooltipTextService.ColorlessStatus,
@@ -303,6 +348,44 @@ public sealed class ColorlessCardTests
 	}
 
 	[Fact]
+	public void Colorless_status_tooltip_suppressed_during_guided_tutorial()
+	{
+		var entityManager = new EntityManager();
+		var tutorialEntity = entityManager.CreateEntity("GuidedTutorial");
+		entityManager.AddComponent(tutorialEntity, new GuidedTutorial { Section = 1 });
+
+		var card = CreateCard(entityManager, CardData.CardColor.Black);
+		entityManager.AddComponent(card, new Colorless { Owner = card });
+		entityManager.AddComponent(card, new UIElement { Tooltip = "Strike" });
+
+		var tooltip = TooltipTextService.BuildCardTooltip(card, card.GetComponent<UIElement>().Tooltip, entityManager);
+
+		Assert.DoesNotContain(TooltipTextService.ColorlessStatus, tooltip);
+		Assert.Contains("Strike", tooltip);
+	}
+
+	[Fact]
+	public void Colorless_status_tooltip_suppressed_during_tutorial_bubbles()
+	{
+		var entityManager = new EntityManager();
+		var card = CreateCard(entityManager, CardData.CardColor.Black);
+		entityManager.AddComponent(card, new Colorless { Owner = card });
+		entityManager.AddComponent(card, new UIElement { Tooltip = "Strike" });
+
+		StateSingleton.IsTutorialActive = true;
+		try
+		{
+			var tooltip = TooltipTextService.BuildCardTooltip(card, card.GetComponent<UIElement>().Tooltip, entityManager);
+			Assert.DoesNotContain(TooltipTextService.ColorlessStatus, tooltip);
+			Assert.Contains("Strike", tooltip);
+		}
+		finally
+		{
+			StateSingleton.IsTutorialActive = false;
+		}
+	}
+
+	[Fact]
 	public void Explicit_removal_prevents_later_rehydration()
 	{
 		EventManager.Clear();
@@ -310,14 +393,15 @@ public sealed class ColorlessCardTests
 		try
 		{
 			SaveCache.StartNewRun();
-			string key = SaveCache.GetLoadout("loadout_1").cardIds.First();
-			SaveCache.SetRunCardRestrictionsForCard(
-				key,
+			var entry = SaveCache.GetLoadout("loadout_1").cards.First();
+			SaveCache.SetRunDeckEntryRestrictions(
+				"loadout_1",
+				entry.entryId,
 				[RunScopedStateService.RestrictionColorless]);
 			var entityManager = new EntityManager();
 			RunDeckService.EnsureRunDeck(entityManager);
 			var card = entityManager.GetEntitiesWithComponent<RunDeckCard>()
-				.Single(entity => entity.GetComponent<RunDeckCard>().CardKey == key);
+				.Single(entity => entity.GetComponent<RunDeckCard>().EntryId == entry.entryId);
 			_ = new CardApplicationManagementSystem(entityManager);
 
 			EventManager.Publish(new RemoveCardApplication
@@ -328,7 +412,7 @@ public sealed class ColorlessCardTests
 			RunScopedStateService.HydrateRunCardRestrictions(entityManager);
 
 			Assert.False(card.HasComponent<Colorless>());
-			Assert.Empty(SaveCache.GetRunCardRestrictions(key));
+			Assert.Empty(SaveCache.GetRunDeckEntryRestrictions("loadout_1", entry.entryId));
 		}
 		finally
 		{
@@ -338,35 +422,41 @@ public sealed class ColorlessCardTests
 	}
 
 	[Fact]
-	public void Removing_last_card_entry_clears_stale_restrictions()
+	public void Exhaust_removes_only_target_duplicate_entry_and_its_restrictions()
 	{
 		EventManager.Clear();
 		SaveCache.DeleteSaveFilesIfPresent();
 		try
 		{
 			SaveCache.StartNewRun();
-			string key = SaveCache.GetLoadout("loadout_1").cardIds.First();
-			while (SaveCache.GetLoadout("loadout_1").cardIds.Count(entry => entry == key) > 1)
-			{
-				SaveCache.RemoveCardFromLoadout("loadout_1", key, publishChange: false);
-			}
-			SaveCache.SetRunCardRestrictionsForCard(
-				key,
+			var targetEntry = SaveCache.GetLoadout("loadout_1").cards.First();
+			var duplicateEntry = SaveCache.AddRunDeckEntry(
+				"loadout_1",
+				targetEntry.cardKey,
+				publishChange: false);
+			Assert.NotNull(duplicateEntry);
+			Assert.NotEqual(targetEntry.entryId, duplicateEntry.entryId);
+			SaveCache.SetRunDeckEntryRestrictions(
+				"loadout_1",
+				targetEntry.entryId,
 				[RunScopedStateService.RestrictionColorless]);
 			var entityManager = new EntityManager();
 			RunDeckService.EnsureRunDeck(entityManager);
 			var card = entityManager.GetEntitiesWithComponent<RunDeckCard>()
-				.Single(entity => entity.GetComponent<RunDeckCard>().CardKey == key);
+				.Single(entity => entity.GetComponent<RunDeckCard>().EntryId == targetEntry.entryId);
 
 			RunDeckService.ExhaustRunCard(entityManager, card);
 
-			Assert.Empty(SaveCache.GetRunCardRestrictions(key));
+			Assert.Null(SaveCache.GetRunDeckEntry("loadout_1", targetEntry.entryId));
+			Assert.Empty(SaveCache.GetRunDeckEntryRestrictions("loadout_1", targetEntry.entryId));
+			var survivingEntry = SaveCache.GetRunDeckEntry("loadout_1", duplicateEntry.entryId);
+			Assert.NotNull(survivingEntry);
+			Assert.Equal(targetEntry.cardKey, survivingEntry.cardKey);
 
-			SaveCache.AddCardToLoadout("loadout_1", key);
 			RunDeckService.EnsureRunDeck(entityManager);
-			var replacement = entityManager.GetEntitiesWithComponent<RunDeckCard>()
-				.Single(entity => entity.GetComponent<RunDeckCard>().CardKey == key);
-			Assert.False(replacement.HasComponent<Colorless>());
+			var duplicateCard = entityManager.GetEntitiesWithComponent<RunDeckCard>()
+				.Single(entity => entity.GetComponent<RunDeckCard>().EntryId == duplicateEntry.entryId);
+			Assert.False(duplicateCard.HasComponent<Colorless>());
 		}
 		finally
 		{

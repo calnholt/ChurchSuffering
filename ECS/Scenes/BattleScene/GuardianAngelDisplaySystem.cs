@@ -6,7 +6,6 @@ using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
@@ -20,27 +19,45 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
         private Texture2D _angelTexture;
         private Texture2D _pixel;
         private SpriteFont _font = FontSingleton.ChakraPetchFont;
 
         private float _t;
 		private Vector2 _pos;
-		private Vector2 _prevPos;
+		private Vector2 _lastMotionVelocity;
+		private int _loopIndex = int.MinValue;
+		private FlightLoopPreset _currentLoopPreset;
+		private FlightLoopPreset _nextLoopPreset;
 		private float _spawnAccumulator;
 		private static readonly Random _rand = new Random();
-		private struct DustParticle
+		private struct FlightLoopPreset
+		{
+			public float RadiusXScale;
+			public float RadiusYScale;
+			public float PhaseOffset;
+			public float BobScale;
+			public float BobPhase;
+			public float WobbleX;
+			public float WobbleY;
+			public float WobbleSpeed;
+			public float WobblePhase;
+		}
+		private struct SparkleParticle
 		{
 			public Vector2 Position;
 			public Vector2 Velocity;
 			public float Age;
 			public float Lifetime;
 			public float Size;
-			public float FlickerPeriod;
-			public float FlickerOffset;
+			public float TwinkleSpeed;
+			public float TwinklePhase;
+			public float DriftPhase;
+			public float DriftSpeed;
+			public float DriftStrength;
 		}
-		private readonly List<DustParticle> _dust = new List<DustParticle>();
+		private readonly List<SparkleParticle> _sparkles = new List<SparkleParticle>();
 
 		private const string GuardianEntityName = "GuardianAngel";
 
@@ -71,6 +88,14 @@ namespace Crusaders30XX.ECS.Systems
         public int VerticalBob { get; set; } = 7;
         [DebugEditable(DisplayName = "Vertical Bob Speed", Step = 0.05f, Min = 0.05f, Max = 10f)]
         public float VerticalBobSpeed { get; set; } = 1.15f;
+		[DebugEditable(DisplayName = "Motion Bounds X", Step = 5, Min = 1, Max = 2000)]
+		public int MotionBoundsX { get; set; } = 95;
+		[DebugEditable(DisplayName = "Motion Bounds Y", Step = 5, Min = 1, Max = 2000)]
+		public int MotionBoundsY { get; set; } = 48;
+		[DebugEditable(DisplayName = "Loop Variation", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float LoopVariation { get; set; } = 0.22f;
+		[DebugEditable(DisplayName = "Loop Wobble", Step = 1, Min = 0, Max = 500)]
+		public int LoopWobble { get; set; } = 8;
 
         // Appearance
         [DebugEditable(DisplayName = "Scale", Step = 0.01f, Min = 0.05f, Max = 4f)]
@@ -78,37 +103,43 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Alpha", Step = 0.05f, Min = 0f, Max = 1f)]
 		public float Alpha { get; set; } = 1f;
 		[DebugEditable(DisplayName = "Rotation Magnitude", Step = 0.01f, Min = 0f, Max = 1f)]
-		public float RotationMagnitude { get; set; } = 0f;
+		public float RotationMagnitude { get; set; } = 0.13f;
 		[DebugEditable(DisplayName = "Rotation Follow", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float RotationFollow { get; set; } = 0.33f;
+		public float RotationFollow { get; set; } = 0.18f;
 
-		// Sparkle dust trail settings
-		[DebugEditable(DisplayName = "Dust Spawn Rate (per sec)", Step = 1, Min = 0, Max = 200)]
-		public int DustSpawnRate { get; set; } = 14;
-		[DebugEditable(DisplayName = "Dust Speed Min", Step = 1, Min = 0, Max = 2000)]
-		public int DustSpeedMin { get; set; } = 22;
-		[DebugEditable(DisplayName = "Dust Speed Max", Step = 1, Min = 0, Max = 2000)]
-		public int DustSpeedMax { get; set; } = 43;
-		[DebugEditable(DisplayName = "Dust Align To Motion")]
-		public bool DustAlignToMotion { get; set; } = true;
-		[DebugEditable(DisplayName = "Dust Cone Half-Angle (deg)", Step = 1, Min = 0, Max = 180)]
-		public int DustConeHalfAngleDeg { get; set; } = 35;
-		[DebugEditable(DisplayName = "Dust Angle Min (deg)", Step = 1, Min = -180, Max = 180)]
-		public int DustAngleMinDeg { get; set; } = 180; // around downward
-		[DebugEditable(DisplayName = "Dust Angle Max (deg)", Step = 1, Min = -180, Max = 180)]
-		public int DustAngleMaxDeg { get; set; } = 160;
-		[DebugEditable(DisplayName = "Dust Lifetime Min (s)", Step = 0.01f, Min = 0.01f, Max = 5f)]
-		public float DustLifetimeMin { get; set; } = 0.6f;
-		[DebugEditable(DisplayName = "Dust Lifetime Max (s)", Step = 0.01f, Min = 0.01f, Max = 5f)]
-		public float DustLifetimeMax { get; set; } = 1.38f;
-		[DebugEditable(DisplayName = "Dust Size Min", Step = 0.01f, Min = 0.01f, Max = 3f)]
-		public float DustSizeMin { get; set; } = 0.9f;
-		[DebugEditable(DisplayName = "Dust Size Max", Step = 0.01f, Min = 0.01f, Max = 3f)]
-		public float DustSizeMax { get; set; } = 3f;
-		[DebugEditable(DisplayName = "Flicker Period Min (s)", Step = 0.01f, Min = 0.01f, Max = 2f)]
-		public float FlickerPeriodMin { get; set; } = 0.09f;
-		[DebugEditable(DisplayName = "Flicker Period Max (s)", Step = 0.01f, Min = 0.01f, Max = 2f)]
-		public float FlickerPeriodMax { get; set; } = 0.62f;
+		// Sparkle settings
+		[DebugEditable(DisplayName = "Sparkle Spawn Rate (per sec)", Step = 1, Min = 0, Max = 200)]
+		public int SparkleSpawnRate { get; set; } = 18;
+		[DebugEditable(DisplayName = "Sparkle Speed Min", Step = 1, Min = 0, Max = 2000)]
+		public int SparkleSpeedMin { get; set; } = 8;
+		[DebugEditable(DisplayName = "Sparkle Speed Max", Step = 1, Min = 0, Max = 2000)]
+		public int SparkleSpeedMax { get; set; } = 26;
+		[DebugEditable(DisplayName = "Sparkle Motion Influence", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float SparkleMotionInfluence { get; set; } = 0.18f;
+		[DebugEditable(DisplayName = "Sparkle Spawn Jitter X", Step = 1, Min = 0, Max = 200)]
+		public int SparkleSpawnJitterX { get; set; } = 14;
+		[DebugEditable(DisplayName = "Sparkle Spawn Jitter Y", Step = 1, Min = 0, Max = 200)]
+		public int SparkleSpawnJitterY { get; set; } = 10;
+		[DebugEditable(DisplayName = "Sparkle Gravity", Step = 1, Min = -500, Max = 500)]
+		public int SparkleGravity { get; set; } = 12;
+		[DebugEditable(DisplayName = "Sparkle Lift", Step = 1, Min = -500, Max = 500)]
+		public int SparkleLift { get; set; } = 5;
+		[DebugEditable(DisplayName = "Sparkle Drag", Step = 0.01f, Min = 0f, Max = 20f)]
+		public float SparkleDrag { get; set; } = 1.4f;
+		[DebugEditable(DisplayName = "Sparkle Drift", Step = 1, Min = 0, Max = 500)]
+		public int SparkleDrift { get; set; } = 14;
+		[DebugEditable(DisplayName = "Sparkle Lifetime Min (s)", Step = 0.01f, Min = 0.01f, Max = 5f)]
+		public float SparkleLifetimeMin { get; set; } = 0.85f;
+		[DebugEditable(DisplayName = "Sparkle Lifetime Max (s)", Step = 0.01f, Min = 0.01f, Max = 5f)]
+		public float SparkleLifetimeMax { get; set; } = 1.65f;
+		[DebugEditable(DisplayName = "Sparkle Size Min", Step = 0.01f, Min = 0.01f, Max = 8f)]
+		public float SparkleSizeMin { get; set; } = 1.1f;
+		[DebugEditable(DisplayName = "Sparkle Size Max", Step = 0.01f, Min = 0.01f, Max = 8f)]
+		public float SparkleSizeMax { get; set; } = 3.2f;
+		[DebugEditable(DisplayName = "Twinkle Speed Min", Step = 0.05f, Min = 0.05f, Max = 30f)]
+		public float TwinkleSpeedMin { get; set; } = 5.2f;
+		[DebugEditable(DisplayName = "Twinkle Speed Max", Step = 0.05f, Min = 0.05f, Max = 30f)]
+		public float TwinkleSpeedMax { get; set; } = 11.5f;
 
 		// Bubble settings
 		[DebugEditable(DisplayName = "Bubble Text Scale", Step = 0.01f, Min = 0.01f, Max = 3f)]
@@ -136,14 +167,13 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Bubble Text", Step = 1)]
 		public string DefaultStartBattleText { get; set; } = "You don't scare us!";
 
-        public GuardianAngelDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public GuardianAngelDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-			_content = content;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_imageAssets = imageAssets;
+			_pixel = _imageAssets.GetPixel(Color.White);
             // Load shared UI font
             // Listen for phase changes to show speech bubbles
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
@@ -173,20 +203,15 @@ namespace Crusaders30XX.ECS.Systems
 			var gt = guardian?.GetComponent<Transform>();
 			if (pt != null && gt != null)
 			{
-				var oldPos = _pos;
+				Vector2 oldPos = _pos;
 				Vector2 baseRight = pt.Position + new Vector2(OffsetX, OffsetY);
-				float ang = _t * AngularSpeed;
-				float xEllipse = MathF.Cos(ang);
-				float yEllipse = MathF.Sin(ang);
-				float xEight = MathF.Sin(ang);
-				float yEight = MathF.Sin(2f * ang);
-				float x = xEllipse * (1f - FigureEightMix) + xEight * FigureEightMix;
-				float y = yEllipse * (1f - FigureEightMix) + yEight * FigureEightMix;
-				Vector2 motion = new Vector2(x * RadiusX, y * RadiusY);
-				float bob = MathF.Sin(_t * VerticalBobSpeed) * VerticalBob;
-				motion.Y += bob;
+				Vector2 motion = GetBoundedMotionOffset();
 				_pos = baseRight + motion;
-				_prevPos = oldPos;
+				_lastMotionVelocity = dt > 0.0001f ? (_pos - oldPos) / dt : Vector2.Zero;
+
+				float targetRotation = GetTargetRotation(_lastMotionVelocity);
+				gt.Rotation = MathHelper.Lerp(gt.Rotation, targetRotation, MathHelper.Clamp(RotationFollow, 0.01f, 1f));
+
 				var tween = guardian.GetComponent<PositionTween>();
 				if (tween != null)
 				{
@@ -198,28 +223,32 @@ namespace Crusaders30XX.ECS.Systems
 				}
 			}
 
-			// Spawn dust based on accumulator
-			_spawnAccumulator += DustSpawnRate * dt;
+			// Spawn sparkles based on accumulator
+			_spawnAccumulator += SparkleSpawnRate * dt;
 			while (_spawnAccumulator >= 1f)
 			{
 				_spawnAccumulator -= 1f;
-				SpawnDust(_pos);
+				SpawnSparkle(_pos);
 			}
 
-			// Update dust particles
-			for (int i = _dust.Count - 1; i >= 0; i--)
+			// Update sparkle particles
+			for (int i = _sparkles.Count - 1; i >= 0; i--)
 			{
-				var p = _dust[i];
+				var p = _sparkles[i];
 				p.Age += dt;
 				if (p.Age >= p.Lifetime)
 				{
-					_dust.RemoveAt(i);
+					_sparkles.RemoveAt(i);
 					continue;
 				}
-				p.Position += p.Velocity * dt;
-				// Slight gravity to emphasize fall
-				p.Velocity.Y += 220f * dt;
-				_dust[i] = p;
+
+				p.DriftPhase += p.DriftSpeed * dt;
+				Vector2 drift = new Vector2(MathF.Sin(p.DriftPhase), MathF.Cos(p.DriftPhase * 0.73f)) * p.DriftStrength;
+				p.Position += (p.Velocity + drift) * dt;
+				p.Velocity.Y += (SparkleGravity - SparkleLift) * dt;
+				float drag = MathHelper.Clamp(1f - SparkleDrag * dt, 0f, 1f);
+				p.Velocity *= drag;
+				_sparkles[i] = p;
 			}
 
 			// Update bubble timer
@@ -233,6 +262,96 @@ namespace Crusaders30XX.ECS.Systems
 			}
             base.Update(gameTime);
         }
+
+		private Vector2 GetBoundedMotionOffset()
+		{
+			float safeSpeed = MathF.Max(0.05f, AngularSpeed);
+			float ang = _t * safeSpeed;
+			float cycle = ang / MathF.Tau;
+			int loopIndex = (int)MathF.Floor(cycle);
+			if (_loopIndex == int.MinValue)
+			{
+				_loopIndex = loopIndex;
+				_currentLoopPreset = CreateLoopPreset();
+				_nextLoopPreset = CreateLoopPreset();
+			}
+			else if (loopIndex != _loopIndex)
+			{
+				_loopIndex = loopIndex;
+				_currentLoopPreset = _nextLoopPreset;
+				_nextLoopPreset = CreateLoopPreset();
+			}
+
+			float loopT = cycle - MathF.Floor(cycle);
+			float blendT = SmoothStep(loopT);
+			FlightLoopPreset preset = Blend(_currentLoopPreset, _nextLoopPreset, blendT);
+			float variedAng = ang + preset.PhaseOffset;
+
+			float xEllipse = MathF.Cos(ang);
+			float yEllipse = MathF.Sin(ang);
+			float xEight = MathF.Sin(variedAng);
+			float yEight = MathF.Sin(2f * variedAng);
+			float x = xEllipse * (1f - FigureEightMix) + xEight * FigureEightMix;
+			float y = yEllipse * (1f - FigureEightMix) + yEight * FigureEightMix;
+			Vector2 motion = new Vector2(x * RadiusX * preset.RadiusXScale, y * RadiusY * preset.RadiusYScale);
+			float bob = MathF.Sin(_t * VerticalBobSpeed + preset.BobPhase) * VerticalBob * preset.BobScale;
+			float wobbleAng = _t * preset.WobbleSpeed + preset.WobblePhase;
+			motion += new Vector2(MathF.Sin(wobbleAng) * preset.WobbleX, MathF.Cos(wobbleAng * 1.31f) * preset.WobbleY);
+			motion.Y += bob;
+
+			float boundsX = MathF.Max(1f, MotionBoundsX);
+			float boundsY = MathF.Max(1f, MotionBoundsY);
+			motion.X = MathHelper.Clamp(motion.X, -boundsX, boundsX);
+			motion.Y = MathHelper.Clamp(motion.Y, -boundsY, boundsY);
+			return motion;
+		}
+
+		private FlightLoopPreset CreateLoopPreset()
+		{
+			float variation = MathHelper.Clamp(LoopVariation, 0f, 1f);
+			float scaleSpan = 0.35f * variation;
+			float wobble = MathF.Max(0f, LoopWobble) * variation;
+			return new FlightLoopPreset
+			{
+				RadiusXScale = Lerp(1f - scaleSpan, 1f + scaleSpan, NextFloat()),
+				RadiusYScale = Lerp(1f - scaleSpan, 1f + scaleSpan, NextFloat()),
+				PhaseOffset = Lerp(-0.32f, 0.32f, NextFloat()) * variation,
+				BobScale = Lerp(0.75f, 1.25f, NextFloat()),
+				BobPhase = Lerp(0f, MathF.Tau, NextFloat()),
+				WobbleX = Lerp(-wobble, wobble, NextFloat()),
+				WobbleY = Lerp(-wobble * 0.65f, wobble * 0.65f, NextFloat()),
+				WobbleSpeed = Lerp(0.7f, 1.6f, NextFloat()) * MathF.Max(0.05f, AngularSpeed),
+				WobblePhase = Lerp(0f, MathF.Tau, NextFloat())
+			};
+		}
+
+		private static FlightLoopPreset Blend(FlightLoopPreset a, FlightLoopPreset b, float t)
+		{
+			return new FlightLoopPreset
+			{
+				RadiusXScale = Lerp(a.RadiusXScale, b.RadiusXScale, t),
+				RadiusYScale = Lerp(a.RadiusYScale, b.RadiusYScale, t),
+				PhaseOffset = Lerp(a.PhaseOffset, b.PhaseOffset, t),
+				BobScale = Lerp(a.BobScale, b.BobScale, t),
+				BobPhase = Lerp(a.BobPhase, b.BobPhase, t),
+				WobbleX = Lerp(a.WobbleX, b.WobbleX, t),
+				WobbleY = Lerp(a.WobbleY, b.WobbleY, t),
+				WobbleSpeed = Lerp(a.WobbleSpeed, b.WobbleSpeed, t),
+				WobblePhase = Lerp(a.WobblePhase, b.WobblePhase, t)
+			};
+		}
+
+		private float GetTargetRotation(Vector2 velocity)
+		{
+			if (velocity.LengthSquared() < 0.01f) return 0f;
+			float speed = velocity.Length();
+			float speedT = MathHelper.Clamp(speed / 140f, 0f, 1f);
+			float direction = MathF.Atan2(velocity.Y, MathF.Max(1f, MathF.Abs(velocity.X)));
+			float horizontalBank = MathF.Sign(velocity.X) * speedT;
+			float verticalBank = MathHelper.Clamp(direction / MathHelper.PiOver2, -1f, 1f) * 0.25f;
+			float target = (horizontalBank + verticalBank) * MathF.Max(0f, RotationMagnitude);
+			return MathHelper.Clamp(target, -RotationMagnitude, RotationMagnitude);
+		}
 
 		private void OnChangeBattlePhase(ChangeBattlePhaseEvent e)
 		{
@@ -282,43 +401,43 @@ namespace Crusaders30XX.ECS.Systems
 			_bubbleTexW = 0; _bubbleTexH = 0;
 		}
 
-		private void SpawnDust(Vector2 origin)
+		private void SpawnSparkle(Vector2 origin)
 		{
 			if (_pixel == null) return;
-			float speed = Lerp(DustSpeedMin, DustSpeedMax, (float)_rand.NextDouble());
-			Vector2 dir;
-			if (DustAlignToMotion)
+			float speed = Lerp(SparkleSpeedMin, SparkleSpeedMax, NextFloat());
+			float rad = Lerp(0f, MathF.Tau, NextFloat());
+			Vector2 dir = new Vector2(MathF.Cos(rad), MathF.Sin(rad));
+			Vector2 jitter = new Vector2(
+				Lerp(-SparkleSpawnJitterX, SparkleSpawnJitterX, NextFloat()),
+				Lerp(-SparkleSpawnJitterY, SparkleSpawnJitterY, NextFloat())
+			);
+			Vector2 motionInfluence = -_lastMotionVelocity * MathHelper.Clamp(SparkleMotionInfluence, 0f, 1f);
+			float lifetime = Lerp(SparkleLifetimeMin, SparkleLifetimeMax, NextFloat());
+			float size = Lerp(SparkleSizeMin, SparkleSizeMax, NextFloat());
+			_sparkles.Add(new SparkleParticle
 			{
-				Vector2 vel = _pos - _prevPos;
-				if (vel.LengthSquared() < 0.0001f) vel = new Vector2(-1f, 0f);
-				float baseRad = MathF.Atan2(vel.Y, vel.X) + MathF.PI; // spray backward
-				float halfRad = MathHelper.ToRadians(DustConeHalfAngleDeg);
-				float offset = Lerp(-halfRad, halfRad, (float)_rand.NextDouble());
-				float rad = baseRad + offset;
-				dir = new Vector2(MathF.Cos(rad), MathF.Sin(rad));
-			}
-			else
-			{
-				float angleDeg = Lerp(DustAngleMinDeg, DustAngleMaxDeg, (float)_rand.NextDouble());
-				float rad = MathHelper.ToRadians(angleDeg);
-				dir = new Vector2(MathF.Cos(rad), MathF.Sin(rad));
-			}
-			float lifetime = Lerp(DustLifetimeMin, DustLifetimeMax, (float)_rand.NextDouble());
-			float size = Lerp(DustSizeMin, DustSizeMax, (float)_rand.NextDouble());
-			float flicker = Lerp(FlickerPeriodMin, FlickerPeriodMax, (float)_rand.NextDouble());
-			_dust.Add(new DustParticle
-			{
-				Position = origin,
-				Velocity = dir * speed,
+				Position = origin + jitter,
+				Velocity = dir * speed + motionInfluence,
 				Age = 0f,
 				Lifetime = lifetime,
 				Size = size,
-				FlickerPeriod = flicker,
-				FlickerOffset = (float)_rand.NextDouble() * flicker
+				TwinkleSpeed = Lerp(TwinkleSpeedMin, TwinkleSpeedMax, NextFloat()),
+				TwinklePhase = Lerp(0f, MathF.Tau, NextFloat()),
+				DriftPhase = Lerp(0f, MathF.Tau, NextFloat()),
+				DriftSpeed = Lerp(0.6f, 1.8f, NextFloat()),
+				DriftStrength = Lerp(0f, SparkleDrift, NextFloat())
 			});
 		}
 
 		private static float Lerp(float a, float b, float t) => a + (b - a) * t;
+
+		private static float SmoothStep(float t)
+		{
+			t = MathHelper.Clamp(t, 0f, 1f);
+			return t * t * (3f - 2f * t);
+		}
+
+		private static float NextFloat() => (float)_rand.NextDouble();
 
 		private static string WrapText(SpriteFont font, string text, int maxWidthPx, float scale)
 		{
@@ -367,8 +486,7 @@ namespace Crusaders30XX.ECS.Systems
         {
 			if (_angelTexture == null)
             {
-                // Content pipeline builds guardian_angel.png without extension
-                _angelTexture = _content.Load<Texture2D>("guardian_angel");
+                _angelTexture = _imageAssets.TryGetTexture("guardian_angel");
                 if (_angelTexture == null) return;
             }
 
@@ -379,19 +497,25 @@ namespace Crusaders30XX.ECS.Systems
 			Vector2 pos = gt.Position;
 
 			var origin = new Vector2(_angelTexture.Width / 2f, _angelTexture.Height / 2f);
-			// No rotation
-			float rotation = 0f;
+			float rotation = gt.Rotation;
 
             var color = Color.White * Alpha;
-			// Draw dust behind the angel
-			for (int i = 0; i < _dust.Count; i++)
+			// Draw sparkles behind the angel
+			for (int i = 0; i < _sparkles.Count; i++)
 			{
-				var p = _dust[i];
+				var p = _sparkles[i];
 				float lifeT = MathF.Min(1f, p.Age / MathF.Max(0.0001f, p.Lifetime));
-				float alpha = (1f - lifeT) * (0.6f + 0.4f * MathF.Sin(((p.Age + p.FlickerOffset) / MathF.Max(0.0001f, p.FlickerPeriod)) * MathF.Tau));
-				var c = new Color(255, 245, 230) * MathHelper.Clamp(alpha, 0f, 1f);
-				float s = p.Size;
-				_spriteBatch.Draw(_pixel, p.Position, null, c, 0f, Vector2.Zero, new Vector2(s, s), SpriteEffects.None, 0f);
+				float twinkle = 0.5f + 0.5f * MathF.Sin(p.TwinklePhase + p.Age * p.TwinkleSpeed);
+				float fadeIn = SmoothStep(MathHelper.Clamp(lifeT * 5f, 0f, 1f));
+				float fadeOut = 1f - SmoothStep(MathHelper.Clamp((lifeT - 0.62f) / 0.38f, 0f, 1f));
+				float alpha = fadeIn * fadeOut * (0.32f + 0.68f * twinkle);
+				var c = new Color(255, 248, 214) * MathHelper.Clamp(alpha, 0f, 1f);
+				float s = p.Size * (0.75f + 0.55f * twinkle);
+				Vector2 sparkleOrigin = new Vector2(0.5f, 0.5f);
+				_spriteBatch.Draw(_pixel, p.Position, null, c, 0f, sparkleOrigin, new Vector2(s, s), SpriteEffects.None, 0f);
+				Color glintColor = c * 0.55f;
+				_spriteBatch.Draw(_pixel, p.Position, null, glintColor, 0f, sparkleOrigin, new Vector2(s * 2.2f, 1f), SpriteEffects.None, 0f);
+				_spriteBatch.Draw(_pixel, p.Position, null, glintColor, 0f, sparkleOrigin, new Vector2(1f, s * 2.2f), SpriteEffects.None, 0f);
 			}
 
 			// Draw speech bubble (follows angel)
@@ -447,5 +571,3 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-
-

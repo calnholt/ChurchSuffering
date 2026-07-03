@@ -13,10 +13,10 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Rarity = Rarity.Starter;
             Name = "Forge Strike";
             Target = "Enemy";
-            Animation = "Attack";
+            VisualEffectRecipe = HeavyHammerEffect();
             Damage = 7;
             Cost = ["Any", "Any"];
-            Block = 2;
+            Block = 3;
             IsFreeAction = true;
 
             OnPlay = (entityManager, card) =>

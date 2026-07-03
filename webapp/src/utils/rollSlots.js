@@ -6,7 +6,7 @@ import events from '../data/events.json';
 import { randInt, pick } from './random.js';
 import { randomCost, randomRewards } from './resources.js';
 
-export const SHOP_SLOT_TYPES = ['medal', 'medal', 'equipment', 'cardUpgrade', 'cardReplace'];
+export const SHOP_SLOT_TYPES = ['medal', 'equipment', 'cardUpgrade', 'cardReplace'];
 export const SHOP_REFRESH_INTERVAL = 8;
 
 export function getNextShopRefreshAt(currentTime) {

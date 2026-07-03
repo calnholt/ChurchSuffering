@@ -2,6 +2,7 @@ using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Data.Ids;
 using Microsoft.Xna.Framework;
 using Crusaders30XX.Diagnostics;
 using System;
@@ -25,8 +26,9 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<ApplyEffect>(OnApplyEffect);
             EventManager.Subscribe<RemovePassive>(OnRemovePassive, priority: 1);
             EventManager.Subscribe<UpdatePassive>(OnUpdatePassive);
-            EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
+		EventManager.Subscribe<LoadSceneEvent>(OnLoadScene, priority: 1);
             EventManager.Subscribe<RemoveAllPassives>(OnRemoveAllPassives);
+            EventManager.Subscribe<EnemyKilledEvent>(OnEnemyKilled);
         }
 
         private void OnApplyEffect(ApplyEffect effect)
@@ -70,12 +72,12 @@ namespace Crusaders30XX.ECS.Systems
                 var enemyBase = enemy.GetComponent<Enemy>();
                 if (enemyBase != null && enemyBase.EnemyBase != null && enemyBase.EnemyBase.OnStartOfBattle != null)
                 {
-                    LoggingService.Append("AppliedPassivesManagementSystem.OnChangeBattlePhase.StartOfBattle", new System.Text.Json.Nodes.JsonObject { ["enemyId"] = enemyBase.EnemyBase.Id });
+                    LoggingService.Append("AppliedPassivesManagementSystem.OnChangeBattlePhase.StartOfBattle", new System.Text.Json.Nodes.JsonObject { ["enemyId"] = enemyBase.EnemyBase.Id.ToKey() });
                     EventManager.Publish(new StartDebuffAnimation { TargetIsPlayer = false });
                     enemyBase.EnemyBase.OnStartOfBattle(EntityManager);
                 }
                 EnemyShieldsMaintenance(enemy);
-                ConvertPenanceToScar(player);
+                RemoveOneScarAtStartOfBattle(player);
             }
             if (evt.Current == SubPhase.PlayerEnd)
             {
@@ -99,7 +101,23 @@ namespace Crusaders30XX.ECS.Systems
             else if (evt.Current == SubPhase.PreBlock)
             {
                 ApplyStartOfPreBlockPassives(enemy);
+                ApplySubZeroFreeze(player);
             }
+        }
+
+        private void ApplySubZeroFreeze(Entity player)
+        {
+            var ap = player?.GetComponent<AppliedPassives>();
+            if (ap == null || ap.Passives == null) return;
+            if (!ap.Passives.TryGetValue(AppliedPassiveType.SubZero, out int stacks) || stacks <= 0) return;
+
+            EventManager.Publish(new ApplyCardApplicationEvent
+            {
+                Amount = stacks,
+                Type = CardApplicationType.Frozen,
+                Target = CardApplicationTarget.Hand,
+            });
+            EventManager.Publish(new PassiveTriggered { Owner = player, Type = AppliedPassiveType.SubZero });
         }
 
         private void OnLoadScene(LoadSceneEvent @event)
@@ -121,14 +139,6 @@ namespace Crusaders30XX.ECS.Systems
             {
                 if (keep.Contains(passive)) continue;
                 EventManager.Publish(new RemovePassive { Owner = player, Type = passive });
-            }
-
-            if (@event.PreviousScene == SceneId.Battle && @event.Scene != SceneId.Battle)
-            {
-                if (ap.Passives.TryGetValue(AppliedPassiveType.Scar, out int scarStacks) && scarStacks > 0)
-                {
-                    EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Scar, Delta = -1 });
-                }
             }
 
             if (player.HasComponent<Player>())
@@ -161,18 +171,33 @@ namespace Crusaders30XX.ECS.Systems
             }, Duration);
         }
 
-        private void ConvertPenanceToScar(Entity player)
+        private void RemoveOneScarAtStartOfBattle(Entity player)
         {
-            var ap = player.GetComponent<AppliedPassives>();
-            if (ap == null) return;
-            if (ap.Passives.TryGetValue(AppliedPassiveType.Penance, out int penanceStacks) && penanceStacks > 0)
+            var ap = player?.GetComponent<AppliedPassives>();
+            if (ap == null || ap.Passives == null) return;
+            if (!ap.Passives.TryGetValue(AppliedPassiveType.Scar, out int scarStacks) || scarStacks <= 0) return;
+
+            EventQueueBridge.EnqueueTriggerAction("AppliedPassivesManagementSystem.RemoveOneScarAtStartOfBattle", () =>
             {
-                EventQueueBridge.EnqueueTriggerAction("AppliedPassivesManagementSystem.ApplyStartOfTurnPassives.Inferno", () =>
-                {
-                    EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Scar, Delta = penanceStacks });
-                    EventManager.Publish(new RemovePassive { Owner = player, Type = AppliedPassiveType.Penance });
-                }, Duration);
-            }
+                EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Scar, Delta = -1 });
+                EventManager.Publish(new PassiveTriggered { Owner = player, Type = AppliedPassiveType.Scar });
+            }, Duration);
+        }
+
+        private void OnEnemyKilled(EnemyKilledEvent evt)
+        {
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            RemoveOneFearAtBattleEnd(player);
+        }
+
+        private void RemoveOneFearAtBattleEnd(Entity player)
+        {
+            var ap = player?.GetComponent<AppliedPassives>();
+            if (ap == null || ap.Passives == null) return;
+            if (!ap.Passives.TryGetValue(AppliedPassiveType.Fear, out int fearStacks) || fearStacks <= 0) return;
+
+            EventManager.Publish(new ApplyPassiveEvent { Target = player, Type = AppliedPassiveType.Fear, Delta = -1 });
+            EventManager.Publish(new PassiveTriggered { Owner = player, Type = AppliedPassiveType.Fear });
         }
         private void ApplyStartOfTurnPassives(Entity owner)
         {
@@ -221,10 +246,9 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     EventQueueBridge.EnqueueTriggerAction("AppliedPassivesManagementSystem.ApplyStartOfTurnPassives.Stun", () =>
                     {
-                        EventManager.Publish(new ShowStunnedOverlay { ContextId = enemy.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault()?.ContextId });
+                        EventManager.Publish(new ShowStunnedOverlay());
                         EventManager.Publish(new PassiveTriggered { Owner = enemy, Type = AppliedPassiveType.Stun });
                         EventManager.Publish(new UpdatePassive { Owner = enemy, Type = AppliedPassiveType.Stun, Delta = -1 });
-                        var ctx = intent.Planned[0].ContextId;
                         intent.Planned.RemoveAt(0);
                         if (intent.Planned.Count == 0)
                         {
@@ -304,11 +328,9 @@ namespace Crusaders30XX.ECS.Systems
             switch (e.Type)
             {
                 case AppliedPassiveType.Frostbite:
-                    if (next >= TooltipTextService.FrostbiteThreshold)
+                    if (e.Delta > 0 && next >= TooltipTextService.FrostbiteThreshold)
                     {
-                        EventManager.Publish(new FrostbiteTriggered { Target = e.Target });
-                        EventManager.Publish(new ModifyHpRequestEvent { Source = e.Target, Target = e.Target, Delta = -TooltipTextService.FrostbiteDamage, DamageType = ModifyTypeEnum.Effect });
-                        EventManager.Publish(new UpdatePassive { Owner = e.Target, Type = AppliedPassiveType.Frostbite, Delta = -TooltipTextService.FrostbiteDamage });
+                        ResolveFrostbiteThresholds(e.Target, ap, next);
                     }
                     break;
                 default:
@@ -318,6 +340,59 @@ namespace Crusaders30XX.ECS.Systems
             if (e.Target.HasComponent<Player>() && GetRunLongPassives().Contains(e.Type))
             {
                 RunScopedStateService.SyncRunLongPassivesFromPlayer(e.Target);
+            }
+        }
+
+        private void ResolveFrostbiteThresholds(Entity target, AppliedPassives passives, int totalStacks)
+        {
+            int threshold = TooltipTextService.FrostbiteThreshold;
+            if (target == null || passives?.Passives == null || threshold <= 0) return;
+
+            int triggerCount = totalStacks / threshold;
+            if (triggerCount <= 0) return;
+
+            int remainingStacks = totalStacks % threshold;
+            if (remainingStacks > 0)
+            {
+                passives.Passives[AppliedPassiveType.Frostbite] = remainingStacks;
+            }
+            else
+            {
+                passives.Passives.Remove(AppliedPassiveType.Frostbite);
+            }
+
+            for (int i = 0; i < triggerCount; i++)
+            {
+                EventManager.Publish(new FrostbiteTriggered
+                {
+                    Target = target,
+                    DamageAmount = TooltipTextService.FrostbiteDamage,
+                    TriggerIndex = i + 1,
+                    TriggerCount = triggerCount
+                });
+
+                var request = new ReplaceableEffectRequest
+                {
+                    Kind = ReplaceableEffectKind.FrostbiteThresholdDamage,
+                    OriginalSource = target,
+                    OriginalTarget = target,
+                    OriginalDelta = -TooltipTextService.FrostbiteDamage,
+                    DamageType = ModifyTypeEnum.Effect,
+                    PassiveType = AppliedPassiveType.Frostbite.ToString()
+                };
+
+                EventManager.Publish(request);
+
+                if (!request.IsHandled)
+                {
+                    EventManager.Publish(new ModifyHpRequestEvent
+                    {
+                        Source = target,
+                        Target = target,
+                        Delta = -TooltipTextService.FrostbiteDamage,
+                        DamageType = ModifyTypeEnum.Effect
+                    });
+                }
             }
         }
 
@@ -407,8 +482,8 @@ namespace Crusaders30XX.ECS.Systems
             {
                 var ap = owner.GetComponent<AppliedPassives>();
                 if (ap == null || ap.Passives == null) continue;
-                ap.Passives.TryGetValue(passive, out int stacks);
-                EventManager.Publish(new UpdatePassive { Owner = owner, Type = passive, Delta = -stacks });
+                if (!ap.Passives.TryGetValue(passive, out int stacks) || stacks <= 0) continue;
+                EventManager.Publish(new UpdatePassive { Owner = owner, Type = passive, Delta = -1 });
                 EventManager.Publish(new PassiveTriggered { Owner = owner, Type = passive });
             }
         }
@@ -419,6 +494,7 @@ namespace Crusaders30XX.ECS.Systems
             {
                 AppliedPassiveType.DowseWithHolyWater,
                 AppliedPassiveType.Aggression,
+                AppliedPassiveType.Galvanize,
                 AppliedPassiveType.Sharpen,
                 AppliedPassiveType.Might,
                 AppliedPassiveType.CarpeDiem,
@@ -430,6 +506,7 @@ namespace Crusaders30XX.ECS.Systems
             return new HashSet<AppliedPassiveType>
             {
                 AppliedPassiveType.Silenced,
+                AppliedPassiveType.Slow,
             };
         }
 
@@ -442,6 +519,7 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Power,
                 AppliedPassiveType.Armor,
                 AppliedPassiveType.Wounded,
+                AppliedPassiveType.Slow,
                 AppliedPassiveType.Inferno,
                 AppliedPassiveType.Stealth,
                 AppliedPassiveType.Poison,
@@ -457,8 +535,8 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Guard,
                 AppliedPassiveType.Anathema,
                 AppliedPassiveType.Plunder,
-                AppliedPassiveType.SanguineCurse,
-                AppliedPassiveType.Vigor
+                AppliedPassiveType.Vigor,
+                AppliedPassiveType.Enflamed,
             };
         }
         public static HashSet<AppliedPassiveType> GetRunLongPassives()
@@ -469,6 +547,7 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Scar,
                 AppliedPassiveType.Bleed,
                 AppliedPassiveType.Shackled,
+                AppliedPassiveType.Fear,
             };
         }
 
@@ -477,14 +556,8 @@ namespace Crusaders30XX.ECS.Systems
             return new HashSet<AppliedPassiveType>
             {
                 AppliedPassiveType.Webbing,
-                AppliedPassiveType.Penance,
-                AppliedPassiveType.Fear,
-                AppliedPassiveType.Enflamed,
                 AppliedPassiveType.Sealed,
-                AppliedPassiveType.Silenced,
             };
         }
     }
 }
-
-

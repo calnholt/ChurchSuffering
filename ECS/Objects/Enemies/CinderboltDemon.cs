@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Services;
@@ -12,22 +12,22 @@ namespace Crusaders30XX.ECS.Objects.Enemies
     public class CinderboltDemon : EnemyBase
     {
       private bool UsedInsidiousBolt = false;
-        public CinderboltDemon(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+        public CinderboltDemon()
         {
-            Id = "cinderbolt_demon";
+            Id = EnemyId.CinderboltDemon;
             Name = "Cinderbolt Demon";
-            HealthPerCard = 1.485f;
+            HP = 30;
         }
 
-        public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+        public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
         {
           var random = Random.Shared.Next(0, 100);
           if (!UsedInsidiousBolt && (turnNumber == 3 && random < 50 || turnNumber > 3))
           {
             UsedInsidiousBolt = true;
-            return ["insidious_bolt"];
+            return [EnemyAttackId.InsidiousBolt];
           }
-          return ["cinderbolt"];
+          return [EnemyAttackId.Cinderbolt];
         }
     }
 }
@@ -39,12 +39,12 @@ public class Cinderbolt : EnemyAttackBase
   private CardData.CardColor? Color;
     public Cinderbolt()
     {
-        Id = "cinderbolt";
+        Id = EnemyAttackId.Cinderbolt;
         Name = "Cinderbolt";
         Damage = 10;
         OnAttackReveal = (entityManager) =>
         {
-          Color = Cinderbolt.GetRandomCardColorInPlayerHand(EntityManager);
+          Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
           Text = Color.HasValue
             ? $"Gain {Burn} burn if at least one {Color.Value.ToString().ToLower()} card blocks this."
             : $"Gain {Burn} burn if a card of the selected color blocks this. No color is selected.";
@@ -60,22 +60,6 @@ public class Cinderbolt : EnemyAttackBase
           }
         };
     }
-
-    public static CardData.CardColor? GetRandomCardColorInPlayerHand(EntityManager entityManager)
-    {
-      var deckEntity = entityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
-      var deck = deckEntity?.GetComponent<Deck>();
-      var hand = deck?.Hand;
-      if (hand == null) return null;
-      var colors = hand
-        .Select(CardColorQualificationService.GetQualifiedColor)
-        .Where(color => color.HasValue)
-        .Select(color => color.Value)
-        .Distinct()
-        .ToList();
-      if (colors.Count == 0) return null;
-      return colors[Random.Shared.Next(0, colors.Count)];
-    }
 }
 
 public class InsidiousBolt : EnemyAttackBase
@@ -85,13 +69,13 @@ public class InsidiousBolt : EnemyAttackBase
   private CardData.CardColor? Color;
   public InsidiousBolt()
   {
-    Id = "insidious_bolt";
+    Id = EnemyAttackId.InsidiousBolt;
     Name = "Insidious Bolt";
     Damage = 10;
 
     OnAttackReveal = (entityManager) =>
     {
-      Color = Cinderbolt.GetRandomCardColorInPlayerHand(EntityManager);
+      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
       Text = Color.HasValue
         ? $"Gain {Scar} scar if at least one {Color.Value.ToString().ToLower()} card blocks this."
         : $"Gain {Scar} scar if a card of the selected color blocks this. No color is selected.";

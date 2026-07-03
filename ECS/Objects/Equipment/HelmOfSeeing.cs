@@ -20,6 +20,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Uses = 1;
       Color = CardData.CardColor.Red;
       Text = $"Draw {Cards} card. Lose {Cost} use and {Courage} courage.";
+      ActivationEffectRecipe = DefensiveGuardEffect();
       CanActivateDuringActionPhase = true;
       CanActivate = () => {
         return RemainingUses == Uses && EntityManager.GetEntitiesWithComponent<Courage>().FirstOrDefault()?.GetComponent<Courage>().Amount >= Courage;
@@ -27,8 +28,6 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       OnActivate = (entityManager, entity) =>
       {
         EventManager.Publish(new RequestDrawCardsEvent { Count = Cards });
-        EventQueue.EnqueueRule(new QueuedStartBuffAnimation(true));
-        EventQueue.EnqueueRule(new QueuedWaitBuffComplete(true));
         EventManager.Publish(new ModifyCourageRequestEvent { Delta = -Courage, Type = ModifyCourageType.Spent });
         for (int i = 0; i < Cost; i++)
         {

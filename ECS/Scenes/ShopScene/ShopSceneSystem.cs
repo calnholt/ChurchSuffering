@@ -5,8 +5,8 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly World _world;
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private bool _firstLoad = true;
 		private string _shopTitle = "Shop";
 		private string _shopId = string.Empty;
@@ -28,13 +28,13 @@ namespace Crusaders30XX.ECS.Systems
 		private LoadoutButtonDisplaySystem _loadoutButtonDisplaySystem;
 		private ForSaleDisplaySystem _forSaleDisplaySystem;
 
-		public ShopSceneSystem(EntityManager em, SystemManager sm, World world, GraphicsDevice gd, SpriteBatch sb, ContentManager content) : base(em)
+		public ShopSceneSystem(EntityManager em, SystemManager sm, World world, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(em)
 		{
 			_systemManager = sm;
 			_world = world;
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			_content = content;
+			_imageAssets = imageAssets;
 			EventManager.Subscribe<SetShopTitle>(_ =>
 			{
 				_shopTitle = string.IsNullOrWhiteSpace(_.Title) ? "Shop" : _.Title;
@@ -97,9 +97,9 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (!_firstLoad) return;
 			_firstLoad = false;
-			_shopBackgroundDisplaySystem = new ShopBackgroundDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_shopBackgroundDisplaySystem = new ShopBackgroundDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_shopBackgroundDisplaySystem);
-			_forSaleDisplaySystem = new ForSaleDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
+			_forSaleDisplaySystem = new ForSaleDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_forSaleDisplaySystem);
 			_loadoutButtonDisplaySystem = new LoadoutButtonDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_world.AddSystem(_loadoutButtonDisplaySystem);
@@ -108,5 +108,4 @@ namespace Crusaders30XX.ECS.Systems
 		protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
 	}
 }
-
 

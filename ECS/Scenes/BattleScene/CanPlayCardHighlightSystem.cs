@@ -95,12 +95,12 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
             }
 
             // Check for active attack intent during block phase
-            bool hasActiveAttack = false;
+            PlannedAttack activePlannedAttack = null;
             if (phase.Sub == SubPhase.Block)
             {
                 var enemy = EntityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
                 var pa = enemy?.GetComponent<AttackIntent>()?.Planned?.FirstOrDefault();
-                hasActiveAttack = pa != null && !string.IsNullOrEmpty(pa.ContextId);
+                activePlannedAttack = pa;
             }
 
             // Build set of playable cards
@@ -120,7 +120,7 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
                 if (phase.Sub == SubPhase.Action)
                     canPlay = IsPlayableInAction(cardEntity, data, ap, appliedPassives, costEligibleCards);
                 else if (phase.Sub == SubPhase.Block)
-                    canPlay = IsPlayableInBlock(cardEntity, data, hasActiveAttack);
+                    canPlay = IsPlayableInBlock(cardEntity, data, activePlannedAttack);
 
                 if (canPlay)
                     _playableCards.Add(cardEntity);
@@ -133,14 +133,14 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
         {
             if (!_playableCards.Contains(evt.Entity)) return;
 
-            var t = evt.Transform;
-            if (t == null) return;
-
-            var cardRect = CardGeometryService.GetVisualRect(_cachedGeometrySettings, t.Position);
+            var geometry = CardGeometryService.GetVisualGeometry(EntityManager, evt.Entity, evt.Transform?.Position);
+            var cardRect = geometry.Bounds;
 
             if (cardRect.Width <= 1 || cardRect.Height <= 1) return;
 
-            DrawGlow(cardRect, t.Rotation, _cachedCornerRadius, _cachedBorderThickness, _cachedSettings, _cachedPulseAmount, _cachedGlowColor);
+            int cornerRadius = (int)Math.Round(_cachedCornerRadius * geometry.Scale);
+            int borderThickness = (int)Math.Round(_cachedBorderThickness * geometry.Scale);
+            DrawGlow(cardRect, geometry.Rotation, cornerRadius, borderThickness, _cachedSettings, _cachedPulseAmount, _cachedGlowColor);
         }
 
         // --- Action phase playability check ---
@@ -184,32 +184,10 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
         }
 
         // --- Block phase playability check ---
-        private bool IsPlayableInBlock(Entity cardEntity, CardData data, bool hasActiveAttack)
+        private bool IsPlayableInBlock(Entity cardEntity, CardData data, PlannedAttack activePlannedAttack)
         {
-            if (!hasActiveAttack) return false;
-
-            var card = data.Card;
-
-            // Weapons can't block
-            if (card.IsWeapon) return false;
-
-            // Tokens can't block
-            if (card.IsToken) return false;
-
-            // Intimidated cards can't block
-            if (cardEntity.GetComponent<Intimidated>() != null) return false;
-
-            // Pledged cards can't block
-            if (cardEntity.GetComponent<Pledge>() != null) return false;
-
-            // Cards marked as cannot block this attack
-            if (cardEntity.GetComponent<CannotBlockThisAttack>() != null) return false;
-
-            // Block-type cards need CanPlay check (e.g., Stalwart courage cost)
-            if (card.Type == CardType.Block && card.CanPlay != null && !card.CanPlay(EntityManager, cardEntity))
-                return false;
-
-            return true;
+            return activePlannedAttack != null
+                && EnemyBlockerEligibilityService.IsEligibleHandBlocker(EntityManager, cardEntity, activePlannedAttack);
         }
 
         // --- Build list of cards eligible to pay costs (excludes weapons, tokens, yellow, pledged) ---

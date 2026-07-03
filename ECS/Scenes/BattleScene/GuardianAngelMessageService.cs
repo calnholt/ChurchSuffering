@@ -92,7 +92,6 @@ namespace Crusaders30XX.ECS.Systems
             case GuardianMessageType.Penanace:
             {
                 return [
-                    "Say you're sorry! Penance time! :3",
                     "Mercy given, but lessons learned.",
                     "Confess and be bonked gently.",
                     "Repentance is cute, too!"

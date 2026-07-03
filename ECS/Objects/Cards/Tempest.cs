@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
@@ -7,16 +8,17 @@ namespace Crusaders30XX.ECS.Objects.Cards
     public class Tempest : CardBase
     {
         private int TemperanceAmount = 5;
+        private List<string> CostUpgrade = ["Any"];
         public Tempest()
         {
             CardId = "tempest";
             Name = "Tempest";
             Target = "Enemy";
             Text = $"Gain {TemperanceAmount} temperance.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Cost = ["White"];
             Damage = 2;
-            Block = 3;
+            Block = 2;
             IsFreeAction = true;
 
             OnPlay = (entityManager, card) =>
@@ -32,6 +34,10 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     DamageType = ModifyTypeEnum.Attack 
                 });
                 EventManager.Publish(new ModifyTemperanceEvent { Delta = TemperanceAmount });
+            };
+            OnUpgrade = (entityManager, card) =>
+            {
+                Cost = CostUpgrade;
             };
         }
     }

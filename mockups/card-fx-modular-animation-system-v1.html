@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX - Modular Card FX Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0a0d;
+    --panel: #141217;
+    --panel-2: #1b181f;
+    --line: #302a35;
+    --text: #eee9df;
+    --muted: #8d8790;
+    --dim: #5f5862;
+    --red: #c72232;
+    --red-bright: #ef3448;
+    --white: #fff5df;
+    --black: #060508;
+    --gold: #d9b663;
+    --steel: #8f96a0;
+    --blue: #74a8d8;
+    --green: #79b982;
+    --card-w: 214px;
+    --card-h: 304px;
+    --duration: 820ms;
+    --fx-intensity: 1;
+    --particle-mult: 1;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 60% 44% at 50% 0%, rgba(199, 34, 50, 0.10), transparent 60%),
+      linear-gradient(180deg, #0f0d12 0%, var(--bg) 48%, #070609 100%);
+    color: var(--text);
+    font-family: "Chakra Petch", sans-serif;
+    padding: 22px;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  .shell {
+    width: min(1440px, 100%);
+    margin: 0 auto;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    margin: 0 0 4px;
+    font-family: "New Rocker", cursive;
+    font-size: clamp(2rem, 4vw, 3.15rem);
+    line-height: 0.95;
+    letter-spacing: 1px;
+    color: var(--white);
+    text-shadow: 0 0 22px rgba(239, 52, 72, 0.25);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .status-pill {
+    min-width: 230px;
+    border: 1px solid var(--line);
+    background: rgba(20, 18, 23, 0.85);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .status-pill .label {
+    color: var(--dim);
+    font-size: 0.64rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .status-pill .value {
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-top: 2px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(520px, 1fr) 340px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .panel {
+    background: rgba(20, 18, 23, 0.92);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.36);
+  }
+
+  .panel-header {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    padding: 0 12px;
+  }
+
+  .panel-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c8c0ba;
+  }
+
+  .panel-kicker {
+    color: var(--dim);
+    font-size: 0.62rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .panel-body {
+    padding: 12px;
+  }
+
+  .stage-panel {
+    overflow: hidden;
+  }
+
+  .stage-tools {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .play-btn,
+  .small-btn {
+    border: 1px solid #4b3238;
+    background: linear-gradient(180deg, #d22e3d, #931720);
+    color: #fff6ef;
+    border-radius: 6px;
+    min-height: 34px;
+    padding: 0 14px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .small-btn {
+    background: #1b181f;
+    border-color: #3a333f;
+    color: #d8d1cb;
+  }
+
+  .play-btn:hover,
+  .small-btn:hover {
+    filter: brightness(1.12);
+  }
+
+  .battle-stage {
+    position: relative;
+    min-height: 640px;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+      linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.50)),
+      url("../Content/desert-background-city.png") center / cover no-repeat,
+      #100d10;
+  }
+
+  .battle-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 40% 22% at 31% 55%, rgba(255, 245, 223, 0.08), transparent 70%),
+      radial-gradient(ellipse 35% 20% at 70% 58%, rgba(239, 52, 72, 0.10), transparent 72%),
+      linear-gradient(180deg, transparent 58%, rgba(0, 0, 0, 0.58));
+    z-index: 0;
+  }
+
+  .combat-row {
+    position: absolute;
+    inset: 70px 36px 70px;
+    display: grid;
+    grid-template-columns: minmax(180px, 0.72fr) minmax(260px, 1.05fr) minmax(180px, 0.72fr);
+    align-items: center;
+    gap: 20px;
+    z-index: 2;
+  }
+
+  .side-label {
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.38);
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .figure {
+    position: relative;
+    width: min(170px, 100%);
+    aspect-ratio: 1 / 1.25;
+    margin: 0 auto;
+  }
+
+  .figure .body {
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    width: 72px;
+    height: 126px;
+    transform: translateX(-50%);
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    border-radius: 34px 34px 8px 8px;
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.45);
+  }
+
+  .figure .head {
+    position: absolute;
+    left: 50%;
+    top: 12%;
+    width: 58px;
+    height: 58px;
+    transform: translateX(-50%);
+    border-radius: 50% 50% 42% 42%;
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .figure.player .body,
+  .figure.player .head {
+    border-color: rgba(255, 245, 223, 0.30);
+  }
+
+  .figure.enemy .body,
+  .figure.enemy .head {
+    border-color: rgba(239, 52, 72, 0.34);
+  }
+
+  .card-zone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .card-shell {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    transform-style: preserve-3d;
+    z-index: 5;
+    display: none;
+  }
+
+  .card {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #dcd7ce;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(0, 0, 0, 0.35);
+  }
+
+  .card.red { background: #210c0f; color: #eee0d5; }
+  .card.black { background: #121014; color: #ece9e2; }
+
+  .card .stripe {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: var(--red);
+    z-index: 4;
+  }
+
+  .card .gutter {
+    position: absolute;
+    left: 6px;
+    top: 0;
+    bottom: 0;
+    width: 50px;
+    background: rgba(0, 0, 0, 0.08);
+    z-index: 1;
+  }
+
+  .card.red .gutter,
+  .card.black .gutter {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .card .notch {
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding: 5px 10px 6px 14px;
+    border-radius: 0 8px 0 8px;
+    background: rgba(0, 0, 0, 0.08);
+    color: #877f78;
+    font-size: 0.48rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    z-index: 3;
+  }
+
+  .card.red .notch,
+  .card.black .notch {
+    color: #9c5b61;
+    background: rgba(239, 52, 72, 0.12);
+  }
+
+  .chip {
+    position: absolute;
+    left: 13px;
+    top: 13px;
+    width: 38px;
+    height: 38px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "New Rocker", cursive;
+    font-size: 1.15rem;
+    color: #2a2421;
+    background: rgba(0, 0, 0, 0.08);
+    z-index: 4;
+  }
+
+  .card.red .chip,
+  .card.black .chip {
+    color: #efe6dc;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .card-art {
+    position: absolute;
+    left: 66px;
+    right: 12px;
+    top: 48px;
+    bottom: 74px;
+    border-radius: 4px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.14), transparent 28%),
+      linear-gradient(145deg, rgba(199, 34, 50, 0.30), rgba(0, 0, 0, 0.16)),
+      #9b9080;
+  }
+
+  .card.red .card-art {
+    background:
+      radial-gradient(circle at 50% 48%, rgba(239, 52, 72, 0.28), transparent 32%),
+      linear-gradient(145deg, rgba(120, 0, 8, 0.55), rgba(0, 0, 0, 0.30)),
+      #241114;
+  }
+
+  .card.black .card-art {
+    background:
+      radial-gradient(circle at 50% 48%, rgba(255, 245, 223, 0.12), transparent 30%),
+      linear-gradient(145deg, rgba(60, 56, 64, 0.42), rgba(0, 0, 0, 0.38)),
+      #18161a;
+  }
+
+  .card-art::before,
+  .card-art::after {
+    content: "";
+    position: absolute;
+    inset: 18% 34%;
+    background: rgba(255, 245, 223, 0.22);
+  }
+
+  .card-art::before {
+    width: 12px;
+    left: calc(50% - 6px);
+  }
+
+  .card-art::after {
+    height: 12px;
+    top: calc(50% - 6px);
+    inset-inline: 18%;
+  }
+
+  .card-title {
+    position: absolute;
+    left: 66px;
+    right: 12px;
+    bottom: 40px;
+    font-family: "New Rocker", cursive;
+    font-size: 1rem;
+    line-height: 1.05;
+    color: #28231f;
+  }
+
+  .card.red .card-title,
+  .card.black .card-title {
+    color: #f1e5da;
+  }
+
+  .card-text {
+    position: absolute;
+    left: 66px;
+    right: 12px;
+    bottom: 13px;
+    color: #756e68;
+    font-size: 0.52rem;
+    line-height: 1.35;
+  }
+
+  .card.red .card-text,
+  .card.black .card-text {
+    color: #9f9290;
+  }
+
+  .fx-layer,
+  .screen-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 7;
+  }
+
+  .screen-layer {
+    z-index: 6;
+    mix-blend-mode: screen;
+  }
+
+  .screen-layer.target-player .white-wash {
+    background: radial-gradient(circle at 30% 50%, rgba(255, 245, 223, 0.96), rgba(255, 245, 223, 0.22) 18%, transparent 44%);
+  }
+
+  .screen-layer.target-player .shockwave-screen {
+    left: 30%;
+  }
+
+  .screen-layer.target-player .slash-band {
+    animation-name: slashBandMirror;
+  }
+
+  .screen-layer.target-player .smoke-screen {
+    background:
+      radial-gradient(circle at 32% 50%, rgba(55, 47, 50, 0.86), rgba(12, 10, 12, 0.54) 18%, transparent 35%),
+      radial-gradient(circle at 22% 34%, rgba(85, 16, 28, 0.52), rgba(18, 12, 14, 0.42) 20%, transparent 38%),
+      radial-gradient(circle at 42% 66%, rgba(45, 40, 42, 0.72), rgba(10, 8, 10, 0.45) 18%, transparent 34%);
+  }
+
+  .target-point {
+    position: absolute;
+    left: 72%;
+    top: 50%;
+    width: 1px;
+    height: 1px;
+  }
+
+  .control-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .group-title {
+    color: #c8c0ba;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .toggle-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 36px;
+    border: 1px solid #342e39;
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: #19161d;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--red);
+  }
+
+  .toggle span {
+    color: #d8d1cb;
+    font-size: 0.68rem;
+    line-height: 1.12;
+  }
+
+  .toggle:has(input:checked) {
+    border-color: rgba(239, 52, 72, 0.65);
+    background: rgba(199, 34, 50, 0.12);
+  }
+
+  .row-control {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .row-control label {
+    color: var(--muted);
+    font-size: 0.66rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  select,
+  input[type="range"] {
+    width: 100%;
+  }
+
+  select {
+    min-height: 34px;
+    background: #17141b;
+    color: var(--text);
+    border: 1px solid #342e39;
+    border-radius: 6px;
+    padding: 0 8px;
+  }
+
+  input[type="range"] {
+    accent-color: var(--red);
+  }
+
+  .recipe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 48px;
+  }
+
+  .tag {
+    border: 1px solid #3a333f;
+    border-radius: 999px;
+    padding: 5px 8px;
+    color: #c8c0ba;
+    background: #19161d;
+    font-size: 0.58rem;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+  }
+
+  .family-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .swatch {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--red);
+  }
+
+  .swatch.white { background: #f4ead8; }
+  .swatch.red { background: #c72232; }
+  .swatch.black { background: #08070a; border: 1px solid #333; }
+  .swatch.gold { background: #d9b663; }
+  .swatch.steel { background: #8f96a0; }
+
+  .fx {
+    position: absolute;
+    left: var(--x, 72%);
+    top: var(--y, 50%);
+    pointer-events: none;
+    transform-origin: center;
+  }
+
+  .white-wash {
+    position: absolute;
+    inset: -20%;
+    background: radial-gradient(circle at 72% 50%, rgba(255, 245, 223, 0.96), rgba(255, 245, 223, 0.22) 18%, transparent 44%);
+    opacity: 0;
+    animation: whiteWash var(--duration) ease-out forwards;
+  }
+
+  .red-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 52% 50%, transparent 26%, rgba(124, 0, 12, 0.36) 58%, rgba(0, 0, 0, 0.84) 100%);
+    opacity: 0;
+    mix-blend-mode: multiply;
+    animation: redVignette var(--duration) ease-in-out forwards;
+  }
+
+  .shockwave-screen {
+    position: absolute;
+    left: 72%;
+    top: 50%;
+    width: 48px;
+    height: 48px;
+    margin: -24px 0 0 -24px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 245, 223, 0.72);
+    box-shadow: 0 0 0 16px rgba(239, 52, 72, 0.10), 0 0 50px rgba(255, 245, 223, 0.18);
+    opacity: 0;
+    animation: shockwaveScreen var(--duration) cubic-bezier(0.08, 0.82, 0.18, 1) forwards;
+  }
+
+  .slash-band {
+    position: absolute;
+    left: 2%;
+    top: 48%;
+    width: 112%;
+    height: 58px;
+    transform: translateX(-20%) rotate(-23deg);
+    background: linear-gradient(90deg, transparent, rgba(255, 245, 223, 0.06), rgba(255, 245, 223, 0.65), rgba(239, 52, 72, 0.30), transparent);
+    opacity: 0;
+    animation: slashBand 520ms ease-out forwards;
+  }
+
+  .smoke-screen {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background:
+      radial-gradient(circle at 68% 50%, rgba(55, 47, 50, 0.86), rgba(12, 10, 12, 0.54) 18%, transparent 35%),
+      radial-gradient(circle at 78% 34%, rgba(85, 16, 28, 0.52), rgba(18, 12, 14, 0.42) 20%, transparent 38%),
+      radial-gradient(circle at 58% 66%, rgba(45, 40, 42, 0.72), rgba(10, 8, 10, 0.45) 18%, transparent 34%);
+    filter: blur(7px);
+    mix-blend-mode: normal;
+    animation: smokeScreen var(--duration) ease-out forwards;
+  }
+
+  .sword-arc {
+    --x: 72%;
+    --y: 50%;
+    width: 280px;
+    height: 64px;
+    margin: -32px 0 0 -140px;
+    background: linear-gradient(90deg, transparent 0%, rgba(239, 52, 72, 0.48) 16%, rgba(255, 245, 223, 0.98) 48%, rgba(255, 245, 223, 0.92) 58%, transparent 100%);
+    clip-path: polygon(0 48%, 10% 30%, 48% 40%, 94% 0, 100% 14%, 58% 62%, 12% 72%);
+    transform: rotate(-28deg) translateX(-120px) scaleX(0.24);
+    filter: drop-shadow(0 0 14px rgba(239, 52, 72, 0.66));
+    opacity: 0;
+    animation: swordArc 520ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .sword-arc::after {
+    content: "";
+    position: absolute;
+    left: 30px;
+    top: 34px;
+    width: 210px;
+    height: 13px;
+    background: linear-gradient(90deg, transparent, rgba(239, 52, 72, 0.78), transparent);
+    clip-path: polygon(0 48%, 88% 8%, 100% 42%, 12% 100%);
+  }
+
+  .sword-arc.mirror {
+    animation-name: swordArcMirror;
+  }
+
+  .cross-slash {
+    --x: 72%;
+    --y: 50%;
+    width: 250px;
+    height: 250px;
+    margin: -125px 0 0 -125px;
+    opacity: 0;
+    filter: drop-shadow(0 0 16px rgba(239, 52, 72, 0.56));
+    animation: crossSlash 560ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .cross-slash::before,
+  .cross-slash::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 260px;
+    height: 18px;
+    margin: -9px 0 0 -130px;
+    background: linear-gradient(90deg, transparent 0%, rgba(239, 52, 72, 0.62) 18%, rgba(255, 245, 223, 0.98) 48%, rgba(255, 245, 223, 0.84) 58%, transparent 100%);
+    border-radius: 999px;
+    transform-origin: center;
+  }
+
+  .cross-slash::before {
+    transform: rotate(34deg) scaleX(0.2);
+    animation: crossSlashA 560ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .cross-slash::after {
+    transform: rotate(-34deg) scaleX(0.2);
+    animation: crossSlashB 560ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .claw-slash {
+    --x: 30%;
+    --y: 50%;
+    width: 230px;
+    height: 190px;
+    margin: -95px 0 0 -115px;
+    opacity: 0;
+    filter: drop-shadow(0 0 14px rgba(239, 52, 72, 0.64));
+    animation: clawSlash 620ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .claw-slash span,
+  .claw-slash::before,
+  .claw-slash::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 190px;
+    height: 16px;
+    margin: -8px 0 0 -95px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, rgba(255, 245, 223, 0.98) 38%, rgba(239, 52, 72, 0.72) 62%, transparent);
+    transform-origin: center;
+  }
+
+  .claw-slash::before {
+    transform: translateY(-42px) rotate(24deg) scaleX(0.16);
+    animation: clawSlashA 620ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .claw-slash span {
+    transform: rotate(18deg) scaleX(0.16);
+    animation: clawSlashB 620ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .claw-slash::after {
+    transform: translateY(42px) rotate(12deg) scaleX(0.16);
+    animation: clawSlashC 620ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .bite-impact {
+    --x: 30%;
+    --y: 50%;
+    width: 210px;
+    height: 170px;
+    margin: -85px 0 0 -105px;
+    opacity: 0;
+    border-radius: 50%;
+    border: 4px solid rgba(239, 52, 72, 0.48);
+    box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.34), 0 0 22px rgba(239, 52, 72, 0.34);
+    animation: biteImpact 700ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .bite-impact::before,
+  .bite-impact::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 150px;
+    height: 44px;
+    margin-left: -75px;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 13px, rgba(255, 245, 223, 0.95) 13px 23px, transparent 23px 38px);
+    filter: drop-shadow(0 0 8px rgba(255, 245, 223, 0.34));
+  }
+
+  .bite-impact::before {
+    top: 8px;
+    clip-path: polygon(0 0, 100% 0, 88% 100%, 12% 100%);
+    transform: translateY(-42px) scaleY(0.5);
+    animation: biteTop 700ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .bite-impact::after {
+    bottom: 8px;
+    clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%);
+    transform: translateY(42px) scaleY(0.5);
+    animation: biteBottom 700ms cubic-bezier(0.12, 0.95, 0.18, 1) forwards;
+  }
+
+  .rock-blast {
+    --x: 30%;
+    --y: 50%;
+    width: 190px;
+    height: 190px;
+    margin: -95px 0 0 -95px;
+    opacity: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, rgba(255, 245, 223, 0.94) 0 8%, rgba(217, 182, 99, 0.72) 9% 19%, rgba(68, 56, 48, 0.74) 20% 38%, transparent 39%),
+      conic-gradient(from 18deg, transparent 0 8%, rgba(143, 150, 160, 0.74) 9% 14%, transparent 15% 22%, rgba(73, 63, 59, 0.82) 23% 30%, transparent 31% 43%, rgba(217, 182, 99, 0.52) 44% 50%, transparent 51% 64%, rgba(92, 82, 76, 0.84) 65% 74%, transparent 75% 100%);
+    filter: drop-shadow(0 0 18px rgba(217, 182, 99, 0.28));
+    animation: rockBlast 760ms cubic-bezier(0.08, 0.88, 0.18, 1) forwards;
+  }
+
+  .rock-blast::before,
+  .rock-blast::after {
+    content: "";
+    position: absolute;
+    width: 42px;
+    height: 38px;
+    background: #2b2421;
+    border: 1px solid rgba(255, 245, 223, 0.12);
+    clip-path: polygon(18% 12%, 76% 0, 100% 42%, 82% 100%, 24% 86%, 0 38%);
+  }
+
+  .rock-blast::before {
+    left: 32px;
+    top: 24px;
+    animation: rockChunkA 760ms cubic-bezier(0.08, 0.88, 0.18, 1) forwards;
+  }
+
+  .rock-blast::after {
+    right: 24px;
+    bottom: 26px;
+    animation: rockChunkB 760ms cubic-bezier(0.08, 0.88, 0.18, 1) forwards;
+  }
+
+  .hammer-arc {
+    --x: 50%;
+    --y: 50%;
+    width: 240px;
+    height: 110px;
+    margin: -55px 0 0 0;
+    transform-origin: 0 55px;
+    opacity: 0;
+    filter: drop-shadow(0 0 18px rgba(239, 52, 72, 0.34));
+    animation: hammerArc 560ms cubic-bezier(0.18, 0.86, 0.16, 1) forwards;
+  }
+
+  .hammer-arc.mirror {
+    margin: -55px 0 0 -240px;
+    transform-origin: 240px 55px;
+    animation-name: hammerArcMirror;
+  }
+
+  .hammer-arc::before {
+    content: "";
+    position: absolute;
+    left: 122px;
+    top: 31px;
+    width: 112px;
+    height: 48px;
+    background: #050407;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(255, 245, 223, 0.10);
+  }
+
+  .hammer-arc::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 48px;
+    width: 132px;
+    height: 14px;
+    background: #050407;
+    border-radius: 8px 2px 2px 8px;
+    box-shadow: 0 0 0 2px rgba(255, 245, 223, 0.08);
+  }
+
+  .cross-bloom {
+    --x: 30%;
+    --y: 48%;
+    width: 120px;
+    height: 120px;
+    margin: -60px 0 0 -60px;
+    opacity: 0;
+    animation: crossBloom 820ms ease-out forwards;
+  }
+
+  .cross-bloom::before,
+  .cross-bloom::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    background: rgba(255, 245, 223, 0.94);
+    box-shadow: 0 0 34px rgba(255, 245, 223, 0.55);
+    transform: translate(-50%, -50%);
+  }
+
+  .cross-bloom::before {
+    width: 18px;
+    height: 112px;
+  }
+
+  .cross-bloom::after {
+    width: 94px;
+    height: 16px;
+  }
+
+  .ring {
+    --x: 72%;
+    --y: 50%;
+    width: 80px;
+    height: 80px;
+    margin: -40px 0 0 -40px;
+    border: 3px solid rgba(255, 245, 223, 0.90);
+    border-radius: 50%;
+    box-shadow: 0 0 25px rgba(255, 245, 223, 0.32), inset 0 0 18px rgba(199, 34, 50, 0.16);
+    opacity: 0;
+    animation: ringExpand var(--duration) cubic-bezier(0.08, 0.82, 0.18, 1) forwards;
+  }
+
+  .halo {
+    --x: 30%;
+    --y: 35%;
+    width: 160px;
+    height: 44px;
+    margin: -22px 0 0 -80px;
+    border: 5px solid rgba(255, 245, 223, 0.90);
+    border-radius: 50%;
+    box-shadow: 0 0 26px rgba(255, 245, 223, 0.38);
+    opacity: 0;
+    animation: haloRise 980ms ease-out forwards;
+  }
+
+  .beam {
+    --x: 72%;
+    --y: 50%;
+    width: 120px;
+    height: 580px;
+    margin: -340px 0 0 -60px;
+    background: linear-gradient(90deg, transparent, rgba(255, 245, 223, 0.76), transparent);
+    filter: blur(1px);
+    opacity: 0;
+    animation: verticalBeam 980ms ease-out forwards;
+  }
+
+  .rays {
+    --x: 72%;
+    --y: 50%;
+    width: 310px;
+    height: 310px;
+    margin: -155px 0 0 -155px;
+    background: conic-gradient(from 0deg, rgba(255, 245, 223, 0.00), rgba(255, 245, 223, 0.50), rgba(255, 245, 223, 0.00) 12%, transparent 18%, rgba(239, 52, 72, 0.25) 24%, transparent 32%, rgba(255, 245, 223, 0.42) 39%, transparent 48%, rgba(255, 245, 223, 0.00));
+    border-radius: 50%;
+    opacity: 0;
+    animation: raysSpin 1120ms ease-out forwards;
+  }
+
+  .shard,
+  .debris {
+    width: 22px;
+    height: 34px;
+    margin: -17px 0 0 -11px;
+    background: var(--red-bright);
+    clip-path: polygon(50% 0, 100% 76%, 62% 100%, 0 42%);
+    opacity: 0;
+    animation: scatter 850ms cubic-bezier(0.1, 0.85, 0.2, 1) forwards;
+  }
+
+  .debris {
+    background: #1d1719;
+    border: 1px solid rgba(255, 245, 223, 0.14);
+  }
+
+  .smoke {
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 38% 36%, rgba(130, 116, 116, 0.82), rgba(45, 39, 41, 0.76) 48%, rgba(116, 18, 32, 0.30) 72%, transparent 86%);
+    filter: blur(1.5px);
+    mix-blend-mode: normal;
+    opacity: 0;
+    animation: smokeBlob 1050ms ease-out forwards;
+  }
+
+  .crack-segment {
+    width: var(--len);
+    height: 8px;
+    margin: -4px 0 0 0;
+    background: rgba(239, 52, 72, 0.94);
+    clip-path: polygon(0 50%, 10% 14%, 24% 54%, 38% 20%, 52% 62%, 66% 22%, 82% 58%, 100% 34%, 94% 78%, 76% 54%, 62% 88%, 44% 58%, 30% 92%, 16% 60%, 0 82%);
+    box-shadow: 0 0 12px rgba(239, 52, 72, 0.54), 0 0 2px rgba(255, 245, 223, 0.38);
+    opacity: 0;
+    transform: rotate(var(--rot)) scaleX(0.04);
+    transform-origin: left center;
+    animation: crackSegment 780ms cubic-bezier(0.08, 0.88, 0.18, 1) forwards;
+  }
+
+  .crack-segment.branch {
+    height: 5px;
+    margin-top: -2.5px;
+    opacity: 0;
+    animation-delay: 70ms;
+  }
+
+  .hit-flash {
+    --x: 72%;
+    --y: 50%;
+    width: 130px;
+    height: 130px;
+    margin: -65px 0 0 -65px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 1), rgba(255, 245, 223, 0.34) 34%, transparent 62%);
+    border-radius: 50%;
+    opacity: 0;
+    animation: hitFlash 430ms ease-out forwards;
+  }
+
+  .battle-stage.is-shaking .combat-row {
+    animation: cameraShake 400ms steps(2, end);
+  }
+
+  .battle-stage.is-punching .combat-row {
+    animation: punchZoom 520ms cubic-bezier(0.08, 0.88, 0.18, 1);
+  }
+
+  .battle-stage.is-shaking.is-punching .combat-row {
+    animation: punchZoom 520ms cubic-bezier(0.08, 0.88, 0.18, 1), cameraShake 400ms steps(2, end);
+  }
+
+  .battle-stage.is-hitstop .combat-row {
+    animation-play-state: paused;
+  }
+
+  .battle-stage.is-hitstop .fx,
+  .battle-stage.is-hitstop .screen-layer > * {
+    animation-play-state: paused !important;
+    filter: contrast(1.2) brightness(1.08);
+  }
+
+  .card-shell.playing {
+    animation: cardCast var(--duration) cubic-bezier(0.12, 0.88, 0.18, 1);
+  }
+
+  @keyframes whiteWash {
+    0%, 8% { opacity: 0; transform: scale(0.45); }
+    22% { opacity: calc(0.58 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: scale(1.3); }
+  }
+
+  @keyframes redVignette {
+    0% { opacity: 0; }
+    16%, 42% { opacity: calc(0.72 * var(--fx-intensity)); }
+    30% { opacity: calc(0.38 * var(--fx-intensity)); }
+    100% { opacity: 0; }
+  }
+
+  @keyframes shockwaveScreen {
+    0%, 14% { opacity: 0; transform: scale(0.2); }
+    24% { opacity: calc(0.92 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: scale(9.5); }
+  }
+
+  @keyframes slashBand {
+    0% { opacity: 0; transform: translateX(-42%) rotate(-23deg) scaleX(0.28); }
+    26% { opacity: calc(0.95 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: translateX(38%) rotate(-23deg) scaleX(1); }
+  }
+
+  @keyframes slashBandMirror {
+    0% { opacity: 0; transform: translateX(38%) rotate(23deg) scaleX(0.28); }
+    26% { opacity: calc(0.95 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: translateX(-42%) rotate(23deg) scaleX(1); }
+  }
+
+  @keyframes smokeScreen {
+    0% { opacity: 0; transform: scale(0.88) translateY(14px); }
+    22%, 68% { opacity: calc(0.78 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: scale(1.16) translateY(-12px); }
+  }
+
+  @keyframes swordArc {
+    0%, 5% { opacity: 0; transform: rotate(-28deg) translateX(-118px) scaleX(0.20); }
+    18% { opacity: 1; }
+    34%, 46% { opacity: 1; transform: rotate(-28deg) translateX(0) scaleX(1); }
+    100% { opacity: 0; transform: rotate(-28deg) translateX(86px) scaleX(0.92); }
+  }
+
+  @keyframes swordArcMirror {
+    0%, 5% { opacity: 0; transform: rotate(28deg) translateX(118px) scaleX(0.20); }
+    18% { opacity: 1; }
+    34%, 46% { opacity: 1; transform: rotate(28deg) translateX(0) scaleX(1); }
+    100% { opacity: 0; transform: rotate(28deg) translateX(-86px) scaleX(0.92); }
+  }
+
+  @keyframes crossSlash {
+    0%, 6% { opacity: 0; transform: scale(0.88); }
+    16%, 52% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.08); }
+  }
+
+  @keyframes crossSlashA {
+    0%, 6% { transform: rotate(34deg) translateX(-70px) scaleX(0.18); }
+    30%, 52% { transform: rotate(34deg) translateX(0) scaleX(1); }
+    100% { transform: rotate(34deg) translateX(44px) scaleX(0.92); }
+  }
+
+  @keyframes crossSlashB {
+    0%, 18% { transform: rotate(-34deg) translateX(70px) scaleX(0.18); }
+    42%, 56% { transform: rotate(-34deg) translateX(0) scaleX(1); }
+    100% { transform: rotate(-34deg) translateX(-44px) scaleX(0.92); }
+  }
+
+  @keyframes clawSlash {
+    0%, 8% { opacity: 0; transform: scale(0.86); }
+    18%, 56% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.08); }
+  }
+
+  @keyframes clawSlashA {
+    0%, 8% { transform: translate(78px, -42px) rotate(24deg) scaleX(0.16); }
+    30%, 54% { transform: translate(0, -42px) rotate(24deg) scaleX(1); }
+    100% { transform: translate(-46px, -42px) rotate(24deg) scaleX(0.84); }
+  }
+
+  @keyframes clawSlashB {
+    0%, 14% { transform: translateX(86px) rotate(18deg) scaleX(0.16); }
+    36%, 58% { transform: translateX(0) rotate(18deg) scaleX(1); }
+    100% { transform: translateX(-52px) rotate(18deg) scaleX(0.84); }
+  }
+
+  @keyframes clawSlashC {
+    0%, 20% { transform: translate(94px, 42px) rotate(12deg) scaleX(0.16); }
+    42%, 62% { transform: translate(0, 42px) rotate(12deg) scaleX(1); }
+    100% { transform: translate(-58px, 42px) rotate(12deg) scaleX(0.84); }
+  }
+
+  @keyframes biteImpact {
+    0%, 8% { opacity: 0; transform: scale(1.32); }
+    24%, 58% { opacity: 1; transform: scale(0.98); }
+    100% { opacity: 0; transform: scale(1.08); }
+  }
+
+  @keyframes biteTop {
+    0%, 8% { transform: translateY(-48px) scaleY(0.5); }
+    24%, 58% { transform: translateY(0) scaleY(1); }
+    100% { transform: translateY(-8px) scaleY(0.9); }
+  }
+
+  @keyframes biteBottom {
+    0%, 8% { transform: translateY(48px) scaleY(0.5); }
+    24%, 58% { transform: translateY(0) scaleY(1); }
+    100% { transform: translateY(8px) scaleY(0.9); }
+  }
+
+  @keyframes rockBlast {
+    0%, 10% { opacity: 0; transform: scale(0.22) rotate(-12deg); }
+    24%, 48% { opacity: 1; transform: scale(1.02) rotate(8deg); }
+    100% { opacity: 0; transform: scale(1.9) rotate(22deg); }
+  }
+
+  @keyframes rockChunkA {
+    0%, 14% { transform: translate(0, 0) rotate(0deg) scale(0.5); }
+    100% { transform: translate(-76px, -54px) rotate(-96deg) scale(1.08); }
+  }
+
+  @keyframes rockChunkB {
+    0%, 14% { transform: translate(0, 0) rotate(0deg) scale(0.5); }
+    100% { transform: translate(88px, 62px) rotate(118deg) scale(1.15); }
+  }
+
+  @keyframes hammerArc {
+    0% { opacity: 0; transform: rotate(-110deg); }
+    10% { opacity: 1; }
+    72%, 84% { opacity: 1; transform: rotate(0deg); }
+    100% { opacity: 0; transform: rotate(3deg); }
+  }
+
+  @keyframes hammerArcMirror {
+    0% { opacity: 0; transform: rotate(110deg); }
+    10% { opacity: 1; }
+    72%, 84% { opacity: 1; transform: rotate(0deg); }
+    100% { opacity: 0; transform: rotate(-3deg); }
+  }
+
+  @keyframes crossBloom {
+    0%, 12% { opacity: 0; transform: scale(0.22) rotate(0deg); }
+    38% { opacity: 1; transform: scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: scale(1.65) rotate(12deg); }
+  }
+
+  @keyframes ringExpand {
+    0%, 8% { opacity: 0; transform: scale(0.24); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: scale(4.3); }
+  }
+
+  @keyframes haloRise {
+    0% { opacity: 0; transform: translateY(48px) scale(0.58); }
+    24%, 56% { opacity: 0.95; }
+    100% { opacity: 0; transform: translateY(-58px) scale(1.16); }
+  }
+
+  @keyframes verticalBeam {
+    0% { opacity: 0; transform: scaleY(0.35); }
+    28%, 60% { opacity: calc(0.74 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: scaleY(1.02); }
+  }
+
+  @keyframes raysSpin {
+    0% { opacity: 0; transform: scale(0.4) rotate(-18deg); }
+    28%, 60% { opacity: calc(0.58 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: scale(1.5) rotate(36deg); }
+  }
+
+  @keyframes scatter {
+    0%, 18% { opacity: 0; transform: translate(0, 0) rotate(0deg) scale(0.5); }
+    26% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(var(--scale)); }
+  }
+
+  @keyframes smokeBlob {
+    0% { opacity: 0; transform: translate(0, 10px) scale(0.36); }
+    18%, 68% { opacity: calc(0.82 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.05); }
+  }
+
+  @keyframes crackSegment {
+    0%, 14% { opacity: 0; transform: rotate(var(--rot)) translateX(0) scaleX(0.04); }
+    26%, 66% { opacity: 1; transform: rotate(var(--rot)) translateX(var(--start)) scaleX(1); }
+    100% { opacity: 0; transform: rotate(var(--rot)) translateX(var(--start)) scaleX(1.06); }
+  }
+
+  @keyframes hitFlash {
+    0%, 14% { opacity: 0; transform: scale(0.35); }
+    22% { opacity: calc(0.94 * var(--fx-intensity)); }
+    100% { opacity: 0; transform: scale(1.9); }
+  }
+
+  @keyframes cameraShake {
+    0% { transform: translate(0, 0); }
+    12% { transform: translate(9px, -5px); }
+    24% { transform: translate(-7px, 4px); }
+    36% { transform: translate(5px, 7px); }
+    48% { transform: translate(-4px, -5px); }
+    60% { transform: translate(7px, 3px); }
+    100% { transform: translate(0, 0); }
+  }
+
+  @keyframes punchZoom {
+    0% { transform: scale(1); }
+    20% { transform: scale(1.035); }
+    50% { transform: scale(0.988); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes cardCast {
+    0% { transform: translateY(0) rotate(0); }
+    12% { transform: translateY(-18px) rotate(-1.5deg); }
+    28% { transform: translateY(4px) rotate(1deg); }
+    100% { transform: translateY(0) rotate(0); }
+  }
+
+  @media (max-width: 1180px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 820px) {
+    body { padding: 14px; }
+
+    .topbar {
+      display: block;
+    }
+
+    .status-pill {
+      margin-top: 12px;
+      min-width: 0;
+    }
+
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .battle-stage {
+      min-height: 560px;
+    }
+
+    .combat-row {
+      inset: 58px 14px 60px;
+      grid-template-columns: 1fr;
+      grid-template-rows: 110px 1fr 110px;
+      gap: 8px;
+    }
+
+    .side-wrap {
+      display: none;
+    }
+
+    .toggle-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div>
+      <h1>Modular Card FX</h1>
+      <div class="subtitle">Composable card animation controls for Crusaders30XX</div>
+    </div>
+    <div class="status-pill">
+      <div class="label">Current recipe</div>
+      <div class="value" id="currentRecipe">Forge Strike</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel stage-panel">
+      <div class="panel-header">
+        <div class="panel-title">Playback Stage</div>
+        <div class="stage-tools">
+          <button class="small-btn" id="randomizeBtn" type="button">Seed</button>
+          <button class="play-btn" id="playBtn" type="button">Play</button>
+        </div>
+      </div>
+      <div class="battle-stage" id="stage">
+        <div class="screen-layer" id="screenLayer"></div>
+        <div class="combat-row" id="combatRow">
+          <div class="side-wrap">
+            <div class="side-label" id="playerSideLabel">Source</div>
+            <div class="figure player">
+              <div class="head"></div>
+              <div class="body"></div>
+            </div>
+          </div>
+          <div class="card-zone">
+            <div class="card-shell" id="cardShell">
+              <div class="card black" id="card">
+                <div class="stripe"></div>
+                <div class="gutter"></div>
+                <div class="notch" id="cardFamily">Martial</div>
+                <div class="chip" id="cardCost">2</div>
+                <div class="card-art"></div>
+                <div class="card-title" id="cardTitle">Forge Strike</div>
+                <div class="card-text" id="cardText">Heavy blow. Break armor. Stun if forged.</div>
+              </div>
+            </div>
+          </div>
+          <div class="side-wrap">
+            <div class="side-label" id="enemySideLabel">Target</div>
+            <div class="figure enemy">
+              <div class="head"></div>
+              <div class="body"></div>
+            </div>
+          </div>
+        </div>
+        <div class="fx-layer" id="fxLayer"></div>
+      </div>
+    </section>
+
+    <section class="panel control-panel">
+      <div class="panel-header">
+        <div class="panel-title">Modules</div>
+        <div class="panel-kicker">Toggle FX</div>
+      </div>
+      <div class="panel-body control-stack">
+        <div>
+          <div class="group-title">Timing</div>
+          <div class="row-control">
+            <label for="timingSelect">Profile</label>
+            <select id="timingSelect">
+              <option value="SnapImpact">SnapImpact</option>
+              <option value="HeavyImpact">HeavyImpact</option>
+              <option value="HolyRise">HolyRise</option>
+              <option value="RitualPulse">RitualPulse</option>
+              <option value="DefensiveLock">DefensiveLock</option>
+              <option value="FlickerChaos">FlickerChaos</option>
+            </select>
+          </div>
+          <div class="row-control">
+            <label for="targetSelect">Target</label>
+            <select id="targetSelect">
+              <option value="Enemy">Enemy</option>
+              <option value="Player">Player</option>
+            </select>
+          </div>
+          <div class="row-control">
+            <label for="intensityRange">Intensity</label>
+            <input id="intensityRange" type="range" min="0.5" max="1.45" step="0.05" value="1">
+          </div>
+          <div class="row-control">
+            <label for="particleRange">Particles</label>
+            <input id="particleRange" type="range" min="0.5" max="1.7" step="0.1" value="1">
+          </div>
+        </div>
+
+        <div>
+          <div class="group-title">Screen Treatment</div>
+          <div class="toggle-grid" id="screenToggles"></div>
+        </div>
+
+        <div>
+          <div class="group-title">Primitives</div>
+          <div class="toggle-grid" id="primitiveToggles"></div>
+        </div>
+
+        <div>
+          <div class="group-title">Motion</div>
+          <div class="toggle-grid" id="motionToggles"></div>
+        </div>
+
+        <div>
+          <div class="group-title">Active Recipe</div>
+          <div class="recipe" id="recipeTags"></div>
+          <div class="family-strip">
+            <div class="swatch white"></div>
+            <div class="swatch red"></div>
+            <div class="swatch black"></div>
+            <div class="swatch gold"></div>
+            <div class="swatch steel"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const moduleLabels = {
+    screen: {
+      whiteWash: "White wash",
+      redVignette: "Red vignette",
+      shockwave: "Shockwave",
+      slashBand: "Slash band",
+      smoke: "Smoke"
+    },
+    primitive: {
+      swordArc: "Sword arc",
+      crossSlash: "Cross slash",
+      clawSlash: "Claw slash",
+      bite: "Bite",
+      rockBlast: "Rock blast",
+      hammerArc: "Hammer arc",
+      crossBloom: "Cross bloom",
+      ring: "Ring",
+      halo: "Halo",
+      beam: "Beam",
+      rays: "Rays",
+      shards: "Jagged shards",
+      debris: "Debris",
+      smokeBlobs: "Smoke blobs",
+      cracks: "Cracks",
+      hitFlash: "Hit flash"
+    },
+    motion: {
+      shake: "Shake",
+      punch: "Punch zoom",
+      hitstop: "Hit-stop"
+    }
+  };
+
+  const initialRecipe = {
+    name: "Enemy Rock Blast",
+    timing: "HeavyImpact",
+    target: "Player",
+    cardFamily: "Enemy",
+    cardCost: "!",
+    cardTitle: "Rock Blast",
+    cardText: "Incoming hit. Impact bursts over the player.",
+    tags: ["Enemy", "Rock", "Blast", "Impact"],
+    modules: ["rockBlast", "ring", "debris", "smokeBlobs", "hitFlash", "shockwave", "shake", "punch", "hitstop"]
+  };
+
+  const state = {
+    seed: 4
+  };
+
+  const screenToggles = document.getElementById("screenToggles");
+  const primitiveToggles = document.getElementById("primitiveToggles");
+  const motionToggles = document.getElementById("motionToggles");
+  const recipeTags = document.getElementById("recipeTags");
+  const timingSelect = document.getElementById("timingSelect");
+  const targetSelect = document.getElementById("targetSelect");
+  const intensityRange = document.getElementById("intensityRange");
+  const particleRange = document.getElementById("particleRange");
+  const currentRecipe = document.getElementById("currentRecipe");
+  const stage = document.getElementById("stage");
+  const cardShell = document.getElementById("cardShell");
+  const fxLayer = document.getElementById("fxLayer");
+  const screenLayer = document.getElementById("screenLayer");
+  const cardFamily = document.getElementById("cardFamily");
+  const cardCost = document.getElementById("cardCost");
+  const cardTitle = document.getElementById("cardTitle");
+  const cardText = document.getElementById("cardText");
+  const playerSideLabel = document.getElementById("playerSideLabel");
+  const enemySideLabel = document.getElementById("enemySideLabel");
+  const playerTargetModules = new Set(["clawSlash", "bite", "rockBlast"]);
+
+  function createToggles(target, group) {
+    Object.entries(moduleLabels[group]).forEach(([key, label]) => {
+      const wrap = document.createElement("label");
+      wrap.className = "toggle";
+      wrap.innerHTML = `<input type="checkbox" data-module="${key}"><span>${label}</span>`;
+      target.appendChild(wrap);
+    });
+  }
+
+  function checkedModules() {
+    return [...document.querySelectorAll("[data-module]:checked")].map((input) => input.dataset.module);
+  }
+
+  function setModuleChecked(key, value) {
+    const input = document.querySelector(`[data-module="${key}"]`);
+    if (input) input.checked = value;
+  }
+
+  function renderRecipeTags(tags) {
+    recipeTags.innerHTML = tags.map((tag) => `<span class="tag">${tag}</span>`).join("");
+  }
+
+  function initializeRecipe() {
+    timingSelect.value = initialRecipe.timing;
+    targetSelect.value = initialRecipe.target;
+    currentRecipe.textContent = initialRecipe.name;
+    cardFamily.textContent = initialRecipe.cardFamily;
+    cardCost.textContent = initialRecipe.cardCost;
+    cardTitle.textContent = initialRecipe.cardTitle;
+    cardText.textContent = initialRecipe.cardText;
+    initialRecipe.modules.forEach((module) => setModuleChecked(module, true));
+    renderRecipeTags(initialRecipe.tags);
+  }
+
+  function timingDuration(profile) {
+    return {
+      SnapImpact: 560,
+      HeavyImpact: 840,
+      HolyRise: 1100,
+      RitualPulse: 980,
+      DefensiveLock: 720,
+      FlickerChaos: 860
+    }[profile] || 820;
+  }
+
+  function addScreen(className) {
+    const el = document.createElement("div");
+    el.className = className;
+    screenLayer.appendChild(el);
+  }
+
+  function addFx(className, x, y, vars = {}) {
+    const el = document.createElement("div");
+    el.className = `fx ${className}`;
+    el.style.setProperty("--x", `${x}%`);
+    el.style.setProperty("--y", `${y}%`);
+    Object.entries(vars).forEach(([key, value]) => el.style.setProperty(key, value));
+    if (className === "claw-slash") {
+      el.appendChild(document.createElement("span"));
+    }
+    fxLayer.appendChild(el);
+    return el;
+  }
+
+  function seededRandom(seed) {
+    let value = Math.sin(seed) * 10000;
+    return value - Math.floor(value);
+  }
+
+  function rand(index, min, max) {
+    return min + seededRandom(state.seed + index * 11.731) * (max - min);
+  }
+
+  function targetContext(modules) {
+    const playerForced = [...modules].some((module) => playerTargetModules.has(module));
+    const playerTargeted = targetSelect.value === "Player" || playerForced;
+
+    return {
+      isPlayer: playerTargeted,
+      targetX: playerTargeted ? 30 : 72,
+      targetY: 50,
+      sourceX: playerTargeted ? 72 : 30,
+      sourceY: 48,
+      particleStart: playerTargeted ? 165 : -175,
+      particleEnd: playerTargeted ? 355 : 15,
+      shardStart: playerTargeted ? 170 : -155,
+      shardEnd: playerTargeted ? 335 : 10
+    };
+  }
+
+  function updateSideLabels(context) {
+    playerSideLabel.textContent = context.isPlayer ? "Target" : "Source";
+    enemySideLabel.textContent = context.isPlayer ? "Source" : "Target";
+  }
+
+  function mirroredClass(className, context) {
+    return context.isPlayer ? `${className} mirror` : className;
+  }
+
+  function scatterMany(className, count, options = {}) {
+    const originX = options.originX ?? 72;
+    const originY = options.originY ?? 52;
+    for (let i = 0; i < count; i++) {
+      const angle = rand(i, options.startAngle ?? -170, options.endAngle ?? 40) * Math.PI / 180;
+      const distance = rand(i + 40, options.minDistance ?? 90, options.maxDistance ?? 230);
+      const dx = Math.cos(angle) * distance;
+      const dy = Math.sin(angle) * distance + rand(i + 70, -20, 40);
+      addFx(className, originX + rand(i + 90, -3, 3), originY + rand(i + 100, -4, 4), {
+        "--dx": `${dx}px`,
+        "--dy": `${dy}px`,
+        "--rot": `${rand(i + 110, -240, 240)}deg`,
+        "--scale": rand(i + 120, 0.6, 1.35).toFixed(2)
+      });
+    }
+  }
+
+  function addSmokeBlobs(count, context) {
+    for (let i = 0; i < count; i++) {
+      addFx("smoke", context.targetX + rand(i, -5, 6), context.targetY + 2 + rand(i + 10, -5, 6), {
+        "--dx": `${rand(i + 20, context.isPlayer ? 16 : -62, context.isPlayer ? 82 : 62)}px`,
+        "--dy": `${rand(i + 30, -82, -24)}px`
+      });
+    }
+  }
+
+  function addCracks(context) {
+    const baseAngles = [-46, -22, 4, 28, 54];
+
+    baseAngles.forEach((angle, i) => {
+      const baseRot = context.isPlayer ? 180 - angle : angle;
+      const rot = baseRot + rand(i + 210, -9, 9);
+      const len = rand(i + 220, 72, 138);
+      addFx("crack-segment", context.targetX + rand(i + 230, -0.8, 0.8), context.targetY + 8 + rand(i + 240, -0.5, 0.7), {
+        "--rot": `${rot}deg`,
+        "--len": `${len}px`,
+        "--start": `${rand(i + 250, 0, 8)}px`
+      });
+
+      if (i > 0) {
+        const branchRot = rot + (i % 2 === 0 ? rand(i + 260, 22, 42) : rand(i + 260, -42, -22));
+        const branchOffset = rand(i + 270, 18, 46);
+        const branchX = context.targetX + Math.cos(rot * Math.PI / 180) * branchOffset * 0.018;
+        const branchY = context.targetY + 8 + Math.sin(rot * Math.PI / 180) * branchOffset * 0.018;
+        addFx("crack-segment branch", branchX, branchY, {
+          "--rot": `${branchRot}deg`,
+          "--len": `${rand(i + 280, 34, 64)}px`,
+          "--start": `${rand(i + 290, 8, 28)}px`
+        });
+      }
+    });
+  }
+
+  function playFx() {
+    const modules = new Set(checkedModules());
+    const context = targetContext(modules);
+    const duration = timingDuration(timingSelect.value);
+    const intensity = Number(intensityRange.value);
+    const particleMult = Number(particleRange.value);
+
+    fxLayer.innerHTML = "";
+    screenLayer.innerHTML = "";
+    screenLayer.classList.toggle("target-player", context.isPlayer);
+    updateSideLabels(context);
+    stage.classList.remove("is-shaking", "is-punching", "is-hitstop");
+    cardShell.classList.remove("playing");
+    void stage.offsetWidth;
+
+    stage.style.setProperty("--duration", `${duration}ms`);
+    stage.style.setProperty("--fx-intensity", intensity);
+    stage.style.setProperty("--particle-mult", particleMult);
+
+    if (modules.has("whiteWash")) addScreen("white-wash");
+    if (modules.has("redVignette")) addScreen("red-vignette");
+    if (modules.has("shockwave")) addScreen("shockwave-screen");
+    if (modules.has("slashBand")) addScreen("slash-band");
+    if (modules.has("smoke")) addScreen("smoke-screen");
+
+    if (modules.has("shake")) stage.classList.add("is-shaking");
+    if (modules.has("punch")) stage.classList.add("is-punching");
+    if (modules.has("hitstop")) {
+      const stopStart = Math.min(210, duration * 0.24);
+      const stopEnd = stopStart + 145;
+      window.setTimeout(() => stage.classList.add("is-hitstop"), stopStart);
+      window.setTimeout(() => stage.classList.remove("is-hitstop"), stopEnd);
+    }
+
+    cardShell.classList.add("playing");
+
+    if (modules.has("swordArc")) addFx(mirroredClass("sword-arc", context), context.targetX, context.targetY);
+    if (modules.has("crossSlash")) addFx("cross-slash", context.targetX, context.targetY);
+    if (modules.has("clawSlash")) addFx("claw-slash", 30, 50);
+    if (modules.has("bite")) addFx("bite-impact", 30, 50);
+    if (modules.has("rockBlast")) addFx("rock-blast", 30, 50);
+    if (modules.has("hammerArc")) addFx(mirroredClass("hammer-arc", context), context.isPlayer ? 70 : 50, context.targetY);
+    if (modules.has("crossBloom")) addFx("cross-bloom", context.sourceX, context.sourceY);
+    if (modules.has("ring")) addFx("ring", context.targetX, context.targetY);
+    if (modules.has("halo")) addFx("halo", context.sourceX, 35);
+    if (modules.has("beam")) addFx("beam", context.targetX, context.targetY);
+    if (modules.has("rays")) addFx("rays", context.targetX, context.targetY);
+    if (modules.has("cracks")) addCracks(context);
+    if (modules.has("hitFlash")) addFx("hit-flash", context.targetX, context.targetY);
+
+    if (modules.has("shards")) {
+      scatterMany("shard", Math.round(11 * particleMult), {
+        originX: context.targetX,
+        originY: context.targetY + 2,
+        startAngle: context.shardStart,
+        endAngle: context.shardEnd,
+        minDistance: 70,
+        maxDistance: 210
+      });
+    }
+
+    if (modules.has("debris")) {
+      scatterMany("debris", Math.round(12 * particleMult), {
+        originX: context.targetX,
+        originY: context.targetY + 2,
+        startAngle: context.particleStart,
+        endAngle: context.particleEnd,
+        minDistance: 95,
+        maxDistance: 250
+      });
+    }
+
+    if (modules.has("smokeBlobs")) addSmokeBlobs(Math.round(7 * particleMult), context);
+
+    window.setTimeout(() => {
+      stage.classList.remove("is-shaking", "is-punching", "is-hitstop");
+      cardShell.classList.remove("playing");
+    }, duration + 130);
+  }
+
+  createToggles(screenToggles, "screen");
+  createToggles(primitiveToggles, "primitive");
+  createToggles(motionToggles, "motion");
+  initializeRecipe();
+
+  document.getElementById("playBtn").addEventListener("click", playFx);
+  document.getElementById("randomizeBtn").addEventListener("click", () => {
+    state.seed += 17;
+    playFx();
+  });
+
+  document.querySelectorAll("[data-module], #timingSelect, #targetSelect, #intensityRange, #particleRange").forEach((control) => {
+    control.addEventListener("change", () => {
+      if (playerTargetModules.has(control.dataset.module) && control.checked) {
+        targetSelect.value = "Player";
+      }
+
+      currentRecipe.textContent = "Custom Recipe";
+      renderRecipeTags(checkedModules().slice(0, 8));
+    });
+  });
+
+  window.setTimeout(playFx, 250);
+</script>
+</body>
+</html>

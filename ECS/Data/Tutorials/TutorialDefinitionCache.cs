@@ -38,10 +38,7 @@ namespace Crusaders30XX.ECS.Data.Tutorials
                 };
             }
 
-            Add("equipment", "Equipment can block or activate for an effect. Most equipment has limited uses.", "equipment", "Equipment", "right", "has_equipment");
-            Add("medal", "Medals provide passive benefits. You can equip up to three.", "medal", "Medal", "bottom", "has_medal");
-            Add("tribulation", "Tribulations change a quest. Hover over the chalice to review the current effects.", "entity_name", "TribulationChalice", "right", "has_tribulation");
-            Add("threat", "Threat increases enemy aggression at the start of its turn.", "entity_name", "UI_ThreatTooltip", "right", "threat_enabled");
+            Add("equipment", "Equipment can block or activate for an effect. Uses are limited.", "equipment", "Equipment", "right", "has_equipment");
             return definitions;
         }
     }

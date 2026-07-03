@@ -14,6 +14,7 @@ namespace Crusaders30XX.ECS.Factories
                 "iron_resolve" => new IronResolve(),
                 "measured_breath" => new MeasuredBreath(),
                 "radiance" => new Radiance(),
+                "static_surge" => new StaticSurge(),
                 "unsheath" => new Unsheath(),
                 _ => null
             };
@@ -28,6 +29,7 @@ namespace Crusaders30XX.ECS.Factories
                 { "iron_resolve", new IronResolve() },
                 { "measured_breath", new MeasuredBreath() },
                 { "radiance", new Radiance() },
+                { "static_surge", new StaticSurge() },
                 { "unsheath", new Unsheath() },
             };
         }

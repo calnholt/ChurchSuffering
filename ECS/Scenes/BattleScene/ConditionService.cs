@@ -30,6 +30,17 @@ namespace Crusaders30XX.ECS.Systems
 			return !blockedAtResolution && !gameplayBlocked;
 		}
 
+		public static bool EvaluateBlockRequiredToPreventEffect(
+			int blockRequired,
+			EnemyAttackProgress progress,
+			int predictedFinalDamage)
+		{
+			if (progress == null) return false;
+			if (progress.FullyPreventedBySpecial) return true;
+			if (predictedFinalDamage <= 0) return true;
+			return progress.AssignedBlockTotal >= blockRequired;
+		}
+
 		public static bool Evaluate(ConditionType conditionType, EntityManager entityManager, EnemyAttackProgress progress)
 		{
 			switch (conditionType)

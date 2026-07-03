@@ -1,6 +1,7 @@
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Data.Save;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -50,6 +51,35 @@ namespace Crusaders30XX.ECS.Systems
                     EventManager.Publish(new CloseCardListModalEvent { });
                     break;
                 }
+                case UIElementEventType.ClimbShopSlotSelect:
+                {
+                    if (!IsClimbScene(entityManager)) break;
+                    if (WouldBlockClickDuringPreview(entity, entityManager)) break;
+                    HandleClimbShopSlotSelected(entity, entityManager);
+                    break;
+                }
+                case UIElementEventType.ClimbEncounterSlotSelect:
+                {
+                    if (!IsClimbScene(entityManager)) break;
+                    if (WouldBlockClickDuringPreview(entity, entityManager)) break;
+                    var action = entity.GetComponent<ClimbEncounterSlotAction>();
+                    if (action != null)
+                    {
+                        EventManager.Publish(new ClimbEncounterSlotSelectedEvent { SlotId = action.SlotId });
+                    }
+                    break;
+                }
+                case UIElementEventType.ClimbEventSlotSelect:
+                {
+                    if (!IsClimbScene(entityManager)) break;
+                    if (WouldBlockClickDuringPreview(entity, entityManager)) break;
+                    var action = entity.GetComponent<ClimbEventSlotAction>();
+                    if (action != null)
+                    {
+                        EventManager.Publish(new ClimbEventSlotSelectedEvent { SlotId = action.SlotId });
+                    }
+                    break;
+                }
                 case UIElementEventType.QuestSelect:
                 {
                     EventManager.Publish(new QuestSelectRequested { Entity = entity });
@@ -67,21 +97,52 @@ namespace Crusaders30XX.ECS.Systems
                 }
                 case UIElementEventType.LeaveShop:
                 {
-                    EventManager.Publish(new ShowTransition { Scene = SceneId.Location, SkipHold = true });
+                    EventManager.Publish(new ShowTransition { Scene = SceneId.Climb, SkipHold = true });
                     break;
                 }
                 case UIElementEventType.OpenLoadout:
                 {
+                    if (entity.GetComponent<ClimbLoadoutButton>() != null)
+                    {
+                        if (!IsClimbScene(entityManager)) break;
+                        EventManager.Publish(new ClimbLoadoutOpenRequestedEvent());
+                    }
+
                     var deckEntity = RunDeckService.EnsureRunDeck(entityManager);
                     var deck = deckEntity?.GetComponent<Deck>();
                     if (deck?.Cards != null)
                     {
-                        EventManager.Publish(new OpenCardListModalEvent { Title = "Loadout", Cards = deck.Cards.ToList() });
+                        bool isClimb = IsClimbScene(entityManager);
+                        EventManager.Publish(new OpenCardListModalEvent
+                        {
+                            Title = isClimb ? "Run Overview" : "Loadout",
+                            Cards = deck.Cards.ToList(),
+                            Mode = isClimb ? CardListModalMode.Inventory : CardListModalMode.CardList,
+                        });
                     }
                     break;
                 }
                 case UIElementEventType.CardClicked:
                 {
+                    var cardListModal = entityManager.GetEntitiesWithComponent<CardListModal>()
+                        .FirstOrDefault()
+                        ?.GetComponent<CardListModal>();
+                    if (cardListModal?.IsOpen == true && cardListModal.IsSelectable)
+                    {
+                        var cards = (cardListModal.Cards ?? new List<Entity>())
+                            .Where(e => e != null && e.GetComponent<CardData>() != null)
+                            .OrderBy(e => e.GetComponent<CardData>().Card.CardId)
+                            .ToList();
+                        EventManager.Publish(new CardListModalCardSelectedEvent
+                        {
+                            Card = entity,
+                            CardIndex = cards.FindIndex(e => e == entity),
+                            SelectionContext = cardListModal.SelectionContext ?? string.Empty,
+                        });
+                        EventManager.Publish(new CloseCardListModalEvent());
+                        break;
+                    }
+
                     var payStateEntity = entityManager.GetEntitiesWithComponent<PayCostOverlayState>().FirstOrDefault();
                     var payState = payStateEntity?.GetComponent<PayCostOverlayState>();
                     if (payState != null && payState.IsOpen)
@@ -161,7 +222,12 @@ namespace Crusaders30XX.ECS.Systems
                     var deck = deckEntity?.GetComponent<Deck>();
                     if (deck != null)
                     {
-                        EventManager.Publish(new OpenCardListModalEvent { Title = "Draw Pile", Cards = deck.DrawPile.ToList() });
+                        EventManager.Publish(new OpenCardListModalEvent
+                        {
+                            Title = "Draw Pile",
+                            Cards = deck.DrawPile.ToList(),
+                            Mode = CardListModalMode.CardList,
+                        });
                     }
                     break;
                 }
@@ -171,7 +237,12 @@ namespace Crusaders30XX.ECS.Systems
                     var deck = deckEntity?.GetComponent<Deck>();
                     if (deck != null)
                     {
-                        EventManager.Publish(new OpenCardListModalEvent { Title = "Discard Pile", Cards = deck.DiscardPile.ToList() });
+                        EventManager.Publish(new OpenCardListModalEvent
+                        {
+                            Title = "Discard Pile",
+                            Cards = deck.DiscardPile.ToList(),
+                            Mode = CardListModalMode.CardList,
+                        });
                     }
                     break;
                 }
@@ -184,6 +255,112 @@ namespace Crusaders30XX.ECS.Systems
                     break;
                 }
             }
+        }
+
+        private static void HandleClimbShopSlotSelected(Entity entity, EntityManager entityManager)
+        {
+            var action = entity.GetComponent<ClimbShopSlotAction>();
+            if (action == null || action.SlotIndex < 0) return;
+            EventManager.Publish(new ClimbShopSlotSelectedEvent { SlotIndex = action.SlotIndex });
+
+            var climb = SaveCache.GetClimbState();
+            var slot = climb?.shopSlots != null && action.SlotIndex < climb.shopSlots.Count
+                ? climb.shopSlots[action.SlotIndex]
+                : null;
+            if (slot == null || slot.isSold || string.Equals(slot.kind, ClimbShopSlotKinds.Empty, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (!string.Equals(slot.kind, ClimbShopSlotKinds.Replacement, StringComparison.OrdinalIgnoreCase))
+            {
+                ClimbShopService.TryPurchaseSlot(entityManager, action.SlotIndex);
+                return;
+            }
+
+            if (!ClimbShopService.TryOpenReplacementOffer(action.SlotIndex)) return;
+
+            var eligibleCards = BuildEligibleReplacementCards(entityManager);
+            if (eligibleCards.Count == 0)
+            {
+                ClimbShopService.CancelReplacementOffer();
+                return;
+            }
+
+            EventManager.Publish(new OpenCardListModalEvent
+            {
+                Title = "Replace a Card",
+                Cards = eligibleCards,
+                IsSelectable = true,
+                SelectionContext = CardListSelectionContexts.ClimbReplacement,
+                Mode = CardListModalMode.CardList,
+            });
+        }
+
+        private static List<Entity> BuildEligibleReplacementCards(EntityManager entityManager)
+        {
+            ClearCardListSelectionMetadata(entityManager);
+
+            var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+            var deckEntity = RunDeckService.EnsureRunDeck(entityManager);
+            var deck = deckEntity?.GetComponent<Deck>();
+			if (loadout?.cards == null || deck?.Cards == null) return new List<Entity>();
+
+            var usedEntityIds = new HashSet<int>();
+            var result = new List<Entity>();
+			for (int i = 0; i < loadout.cards.Count; i++)
+			{
+				var entry = loadout.cards[i];
+				if (entry == null) continue;
+				string cardKey = entry.cardKey;
+                if (!ClimbShopService.IsReplacementEligible(cardKey)) continue;
+
+                var card = deck.Cards.FirstOrDefault(e =>
+                    e != null
+                    && e.IsActive
+					&& !usedEntityIds.Contains(e.Id)
+					&& string.Equals(e.GetComponent<RunDeckCard>()?.EntryId, entry.entryId, StringComparison.Ordinal));
+                if (card == null) continue;
+
+                usedEntityIds.Add(card.Id);
+                entityManager.AddComponent(card, new CardListModalSelectionMetadata
+				{
+					SelectionContext = CardListSelectionContexts.ClimbReplacement,
+					EntryId = entry.entryId,
+					CardKey = cardKey,
+                    SourceIndex = i,
+                });
+                result.Add(card);
+            }
+
+            return result;
+        }
+
+        private static void ClearCardListSelectionMetadata(EntityManager entityManager)
+        {
+            foreach (var entity in entityManager.GetEntitiesWithComponent<CardListModalSelectionMetadata>().ToList())
+            {
+                entityManager.RemoveComponent<CardListModalSelectionMetadata>(entity);
+            }
+        }
+
+        private static bool WouldBlockClickDuringPreview(Entity entity, EntityManager entityManager)
+        {
+            var slot = entity.GetComponent<ClimbSlotPresentation>();
+            if (slot == null || string.IsNullOrWhiteSpace(slot.SlotId)) return false;
+
+            var preview = entityManager.GetEntity(ClimbHeaderLayoutSystem.RootName)?.GetComponent<ClimbPreviewState>();
+            return preview?.IsActive == true
+                && !string.Equals(preview.SourceSlotId, slot.SlotId, StringComparison.OrdinalIgnoreCase)
+                && preview.WouldVanishSlotIds.Contains(slot.SlotId);
+        }
+
+        private static bool IsClimbScene(EntityManager entityManager)
+        {
+            return entityManager.GetEntitiesWithComponent<SceneState>()
+                .FirstOrDefault()
+                ?.GetComponent<SceneState>()
+                ?.Current == SceneId.Climb;
         }
     }
 }

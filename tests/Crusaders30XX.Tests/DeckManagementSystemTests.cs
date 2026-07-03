@@ -1,5 +1,6 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
@@ -40,26 +41,42 @@ public class DeckManagementSystemTests
     public void Run_deck_cards_do_not_get_suppress_stat_delta_display()
     {
         EventManager.Clear();
-        var entityManager = new EntityManager();
-        const string cardKey = "strike|Black";
+        SaveCache.DeleteSaveFilesIfPresent();
+        try
+        {
+            SaveCache.StartNewRun();
+            var entityManager = new EntityManager();
+            const string cardKey = "strike|Black";
+            var entry = SaveCache.AddRunDeckEntry(
+                RunDeckService.PrimaryLoadoutId,
+                cardKey,
+                publishChange: false);
+            Assert.NotNull(entry);
 
-        RunDeckService.AddCardFromKey(entityManager, cardKey);
+            RunDeckService.AddCardFromEntry(entityManager, entry.entryId);
 
-        var deckCard = entityManager
-            .GetEntitiesWithComponent<RunDeckCard>()
-            .FirstOrDefault(e => e.GetComponent<RunDeckCard>()?.CardKey == cardKey);
+            var deckCard = entityManager
+                .GetEntitiesWithComponent<RunDeckCard>()
+                .FirstOrDefault(e => e.GetComponent<RunDeckCard>()?.EntryId == entry.entryId);
 
-        Assert.NotNull(deckCard);
-        Assert.False(deckCard.HasComponent<SuppressStatDeltaDisplay>());
+            Assert.NotNull(deckCard);
+            Assert.Equal(cardKey, deckCard.GetComponent<RunDeckCard>().CardKey);
+            Assert.False(deckCard.HasComponent<SuppressStatDeltaDisplay>());
 
-        var previewCard = EntityFactory.CreateCardFromDefinition(
-            entityManager,
-            "strike",
-            CardData.CardColor.Black,
-            suppressStatDeltaDisplay: true);
+            var previewCard = EntityFactory.CreateCardFromDefinition(
+                entityManager,
+                "strike",
+                CardData.CardColor.Black,
+                suppressStatDeltaDisplay: true);
 
-        Assert.NotNull(previewCard);
-        Assert.True(previewCard.HasComponent<SuppressStatDeltaDisplay>());
+            Assert.NotNull(previewCard);
+            Assert.True(previewCard.HasComponent<SuppressStatDeltaDisplay>());
+        }
+        finally
+        {
+            EventManager.Clear();
+            SaveCache.DeleteSaveFilesIfPresent();
+        }
     }
 
     [Fact]
@@ -70,30 +87,45 @@ public class DeckManagementSystemTests
         SaveCache.StartNewRun();
 
         var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
-        loadout.cardIds.Clear();
-        loadout.cardIds.Add("smite|Red");
-        loadout.cardIds.Add("smite|White");
-        loadout.cardIds.Add("fervor|Red");
+        loadout.cards =
+        [
+            new LoadoutCardEntry
+            {
+                entryId = SaveCache.AllocateRunDeckEntryId(),
+                cardKey = "smite|Red",
+                isStarter = true,
+            },
+            new LoadoutCardEntry
+            {
+                entryId = SaveCache.AllocateRunDeckEntryId(),
+                cardKey = "smite|White",
+                isStarter = true,
+            },
+            new LoadoutCardEntry
+            {
+                entryId = SaveCache.AllocateRunDeckEntryId(),
+                cardKey = "fervor|Red",
+                isStarter = false,
+            },
+        ];
         SaveCache.SaveLoadout(loadout);
-
-        var save = SaveCache.GetAll();
-        save.starterCardKeys.Clear();
-        save.starterCardKeys.Add("smite|Red");
-        save.starterCardKeys.Add("smite|White");
+        var nonStarterEntryId = loadout.cards.Single(entry => !entry.isStarter).entryId;
+        var starterEntryIds = loadout.cards.Where(entry => entry.isStarter).Select(entry => entry.entryId).ToHashSet();
 
         var entityManager = new EntityManager();
         _ = new DeckManagementSystem(entityManager);
         RunDeckService.EnsureRunDeck(entityManager);
 
-        var beforeCount = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cardIds.Count;
+        var beforeCount = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards.Count;
         Assert.Equal(3, beforeCount);
 
         EventManager.Publish(new RemoveRandomCardEvent { Amount = 1 });
 
         var after = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
-        Assert.Equal(2, after.cardIds.Count);
-        Assert.Contains("fervor|Red", after.cardIds);
-        Assert.Equal(1, after.cardIds.Count(k => SaveCache.IsStarterCardKey(k)));
+        Assert.Equal(2, after.cards.Count);
+        Assert.Contains(after.cards, entry => entry.entryId == nonStarterEntryId && entry.cardKey == "fervor|Red");
+        Assert.Equal(1, after.cards.Count(entry => entry.isStarter));
+        Assert.Single(starterEntryIds.Where(entryId => after.cards.All(entry => entry.entryId != entryId)));
     }
 
     [Fact]

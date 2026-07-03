@@ -24,6 +24,20 @@ public class PledgeDrawSystemTests
 	}
 
 	[Fact]
+	public void CalculateCardsToDraw_ignores_token_cards()
+	{
+		var entityManager = new EntityManager();
+		var tokenCard = CreateCard(entityManager, new CardBase { CardId = "token", IsToken = true });
+
+		int cardsToDraw = DrawHandSystem.CalculateCardsToDraw(
+			intellect: 4,
+			maxHandSize: 4,
+			hand: [tokenCard]);
+
+		Assert.Equal(4, cardsToDraw);
+	}
+
+	[Fact]
 	public void CalculateCardsToDraw_counts_unpledged_non_weapon_cards()
 	{
 		var entityManager = new EntityManager();

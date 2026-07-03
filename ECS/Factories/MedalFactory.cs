@@ -1,56 +1,58 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Medals;
 
 namespace Crusaders30XX.ECS.Factories
 {
-    /// <summary>
-    /// Factory for creating MedalBase instances from medal IDs
-    /// </summary>
     public static class MedalFactory
     {
-        /// <summary>
-        /// Creates a MedalBase instance from a medal ID string
-        /// </summary>
-        /// <param name="medalId">The medal ID (e.g., "st_luke")</param>
-        /// <returns>The corresponding MedalBase instance, or null if not found</returns>
-        public static MedalBase Create(string medalId)
-        {
-            return medalId switch
+        private static readonly IReadOnlyDictionary<MedalId, Func<MedalBase>> MedalConstructors =
+            new Dictionary<MedalId, Func<MedalBase>>
             {
-                "st_luke" => new StLuke(),
-                "st_michael" => new StMichael(),
-                "st_nicholas" => new StNicholas(),
-                "st_peter" => new StPeter(),
-                "st_louie_ix" => new StLouieIX(),
-                "st_sebastian" => new StSebastian(),
-                "st_francis_de_sales" => new StFrancisDeSales(),
-                "st_homobonus" => new StHomobonus(),
-                "st_clare" => new StClare(),
-                "st_joan_of_arc" => new StJoanOfArc(),
-                _ => null
+                { MedalId.StLuke, () => new StLuke() },
+                { MedalId.StMichael, () => new StMichael() },
+                { MedalId.StNicholas, () => new StNicholas() },
+                { MedalId.StPeter, () => new StPeter() },
+                { MedalId.StPaulMiki, () => new StPaulMiki() },
+                { MedalId.StLouieIX, () => new StLouieIX() },
+                { MedalId.StSebastian, () => new StSebastian() },
+                { MedalId.StFrancisDeSales, () => new StFrancisDeSales() },
+                { MedalId.StHomobonus, () => new StHomobonus() },
+                { MedalId.StClare, () => new StClare() },
+                { MedalId.StElijah, () => new StElijah() },
+                { MedalId.StJoanOfArc, () => new StJoanOfArc() },
+                { MedalId.StJerome, () => new StJerome() },
+                { MedalId.StLonginus, () => new StLonginus() },
+                { MedalId.StBenedict, () => new StBenedict() },
+                { MedalId.StSimonOfCyrene, () => new StSimonOfCyrene() },
+                { MedalId.StAugustine, () => new StAugustine() },
+                { MedalId.StOlaf, () => new StOlaf() },
+                { MedalId.StRita, () => new StRita() },
+                { MedalId.StChristopher, () => new StChristopher() },
+                { MedalId.StLawrence, () => new StLawrence() },
             };
+
+        public static MedalBase Create(MedalId medalId)
+        {
+            return MedalConstructors.TryGetValue(medalId, out var create)
+                ? create()
+                : null;
         }
 
-        /// <summary>
-        /// Returns a dictionary of all available medals, keyed by medal ID
-        /// </summary>
-        /// <returns>A dictionary mapping medal IDs to MedalBase instances</returns>
-        public static Dictionary<string, MedalBase> GetAllMedals()
+        public static MedalBase Create(string medalId)
         {
-            return new Dictionary<string, MedalBase>
-            {
-                { "st_luke", new StLuke() },
-                { "st_michael", new StMichael() },
-                { "st_nicholas", new StNicholas() },
-                { "st_peter", new StPeter() },
-                { "st_louie_ix", new StLouieIX() },
-                { "st_sebastian", new StSebastian() },
-                { "st_francis_de_sales", new StFrancisDeSales() },
-                { "st_homobonus", new StHomobonus() },
-                { "st_clare", new StClare() },
-                { "st_joan_of_arc", new StJoanOfArc() },
-            };
+            return GameIdExtensions.TryParseMedalId(medalId, out var parsed)
+                ? Create(parsed)
+                : null;
+        }
+
+        public static Dictionary<MedalId, MedalBase> GetAllMedals()
+        {
+            return MedalConstructors.ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value());
         }
     }
 }
-

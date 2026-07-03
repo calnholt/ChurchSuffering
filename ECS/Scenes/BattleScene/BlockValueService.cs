@@ -23,15 +23,8 @@ namespace Crusaders30XX.ECS.Systems
 
         public static int GetTotalBlockValue(Entity card)
         {
-          var modifiedBlock = card.GetComponent<ModifiedBlock>();
-          if (modifiedBlock == null)
-          {
-            return GetBaseBlockValue(card);
-          }
-          var baseBlock = GetBaseBlockValue(card);
-          return modifiedBlock.Modifications
-            .Where(m => !card.HasComponent<Colorless>() || m.Reason != "Black card")
-            .Sum(m => m.Delta) + baseBlock;
+          var entityManager = card?.GetComponent<CardData>()?.Card?.EntityManager;
+          return CardStatModifierService.GetCardBlock(entityManager, card).TotalValue;
         }
 
         public static int GetBaseBlockValue(Entity card)

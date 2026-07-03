@@ -8,6 +8,7 @@ using Crusaders30XX.ECS.Objects.Enemies;
 using System;
 using Crusaders30XX.ECS.Objects.Medals;
 using Crusaders30XX.ECS.Objects.Equipment;
+using Crusaders30XX.ECS.Data.Ids;
 
 namespace Crusaders30XX.ECS.Components
 {
@@ -96,7 +97,7 @@ namespace Crusaders30XX.ECS.Components
 
         public Entity Owner { get; set; }
         
-        public string Id { get; set; } = "demon";
+        public EnemyId Id { get; set; } = EnemyId.Demon;
 
         public string Name { get; set; } = "";
         public int MaxHealth { get; set; } = 40;
@@ -229,6 +230,8 @@ namespace Crusaders30XX.ECS.Components
         CourageGained,
         CourageLost,
         NumberOfAttacksHitPlayer,
+        CardsMilled,
+        CursesRemoved,
     }
     
     /// <summary>
@@ -398,19 +401,13 @@ namespace Crusaders30XX.ECS.Components
         LeaveShop,
         OpenLoadout,
         CardClicked,
+        ClimbShopSlotSelect,
+        ClimbEncounterSlotSelect,
+        ClimbEventSlotSelect,
     }
 
     /// <summary>
-    /// Marker for the difficulty display entity associated with an enemy.
-    /// </summary>
-    public class DifficultyDisplayMarker : IComponent
-    {
-        public Entity Owner { get; set; }
-        public Entity EnemyEntity { get; set; }
-    }
-
-    /// <summary>
-    /// Anchor published by HPDisplaySystem describing the last drawn HP bar rectangle for an entity.
+    /// Anchor published by health display systems describing an entity's HP track rectangle.
     /// Used by other UI systems to align elements relative to the HP bar.
     /// </summary>
     public class HPBarAnchor : IComponent
@@ -420,7 +417,7 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
-    /// Per-entity override for HP bar positioning and size.
+    /// Per-entity override for the legacy plunder HP gauge positioning and size.
     /// When present, HPDisplaySystem uses these values instead of its global defaults.
     /// </summary>
     public class HPBarOverride : IComponent
@@ -449,6 +446,9 @@ namespace Crusaders30XX.ECS.Components
         public string CardId { get; set; } = "";
         public float TooltipScale { get; set; } = 0.6f;
         public CardData.CardColor? CardColor { get; set; }
+        public bool IsUpgraded { get; set; }
+        public bool CrossfadeUpgradePreview { get; set; }
+        public List<string> PreviewRestrictionNames { get; set; } = new();
     }
 
     /// <summary>
@@ -471,7 +471,6 @@ namespace Crusaders30XX.ECS.Components
     public class MarkedForSpecificDiscard : IComponent
     {
         public Entity Owner { get; set; }
-        public string ContextId { get; set; }
     }
     
     /// <summary>
@@ -497,6 +496,43 @@ namespace Crusaders30XX.ECS.Components
     public class Brittle : IComponent
     {
         public Entity Owner { get; set; }
+    }
+
+    /// <summary>
+    /// Marks a card as scorched. Rendered with the scorched fire shader.
+    /// </summary>
+    public class Scorched : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
+    /// <summary>
+    /// Marks a card as thorned. Rendered with the thorny vines shader.
+    /// </summary>
+    public class Thorned : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
+    /// <summary>
+    /// Marks a card as cursed. Rendered with the cursed cracks shader.
+    /// </summary>
+    public class Cursed : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
+    /// <summary>
+    /// Stores the original runtime definition for a card that is currently shown
+    /// and played as Curse.
+    /// </summary>
+    public class CursedOriginalCard : IComponent
+    {
+        public Entity Owner { get; set; }
+        public string CardId { get; set; } = "";
+        public CardData.CardColor Color { get; set; } = CardData.CardColor.White;
+        public bool IsUpgraded { get; set; }
+        public bool IsStarter { get; set; }
     }
 
     /// <summary>
@@ -664,6 +700,14 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
+    /// Temporarily hides readability-blocking card overlays while inspecting a hovered card.
+    /// </summary>
+    public class SuppressCardVisualEffects : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
+    /// <summary>
     /// State for the on-screen profiler overlay
     /// </summary>
     public class ProfilerOverlay : IComponent
@@ -676,6 +720,13 @@ namespace Crusaders30XX.ECS.Components
     /// <summary>
     /// Component representing a generic card list modal
     /// </summary>
+    public enum CardListModalMode
+    {
+        Auto,
+        CardList,
+        Inventory,
+    }
+
     public class CardListModal : IComponent
     {
         public Entity Owner { get; set; }
@@ -683,6 +734,20 @@ namespace Crusaders30XX.ECS.Components
         public string Title { get; set; } = "";
         public List<Entity> Cards { get; set; } = new();
         public int ScrollOffset { get; set; } = 0;
+        public int BuildScrollOffset { get; set; } = 0;
+        public bool IsSelectable { get; set; } = false;
+        public string SelectionContext { get; set; } = string.Empty;
+        public int SelectedCardIndex { get; set; } = -1;
+        public CardListModalMode Mode { get; set; } = CardListModalMode.Auto;
+    }
+
+    public class CardListModalSelectionMetadata : IComponent
+    {
+        public Entity Owner { get; set; }
+        public string SelectionContext { get; set; } = string.Empty;
+        public string EntryId { get; set; } = string.Empty;
+        public string CardKey { get; set; } = string.Empty;
+        public int SourceIndex { get; set; } = -1;
     }
 
     /// <summary>
@@ -691,6 +756,12 @@ namespace Crusaders30XX.ECS.Components
     public class CardListModalClose : IComponent
     {
         public Entity Owner { get; set; }
+    }
+
+    public class ClimbShopSlotAction : IComponent
+    {
+        public Entity Owner { get; set; }
+        public int SlotIndex { get; set; } = -1;
     }
 
     /// <summary>
@@ -713,7 +784,7 @@ namespace Crusaders30XX.ECS.Components
         B,
         X,
         Y,
-        Back,
+        View,
         Start,
         LB,
         RB
@@ -740,6 +811,12 @@ namespace Crusaders30XX.ECS.Components
         public Entity ParentEntity { get; set; }
         public HotKeyPosition Position { get; set; } = HotKeyPosition.Below;
         public bool IsActive { get; set; } = true;
+        public bool AllowWhenNonInteractable { get; set; } = false;
+    }
+
+    public class TutorialInteractionPermitted : IComponent
+    {
+        public Entity Owner { get; set; }
     }
 
     /// <summary>
@@ -810,6 +887,15 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
+    /// Exact, short-lived play context attached while a card's OnPlay delegate resolves.
+    /// </summary>
+    public class CardPlayStatContext : IComponent
+    {
+        public Entity Owner { get; set; }
+        public List<Entity> PaymentCards { get; set; } = new();
+    }
+
+    /// <summary>
     /// Singleton-like world component describing the current battlefield location.
     /// Other systems read this instead of subscribing to an event.
     /// </summary>
@@ -851,6 +937,8 @@ namespace Crusaders30XX.ECS.Components
         public SubPhase Sub { get; set; } = SubPhase.StartBattle;
         public int TurnNumber { get; set; } = 1; // enemy turn counter
         public bool DefeatPresentationActive { get; set; }
+        public bool BattleAnimationActive { get; set; }
+        public bool PendingBlockConfirm { get; set; }
     }
 
     /// <summary>
@@ -871,6 +959,7 @@ namespace Crusaders30XX.ECS.Components
         public Entity Owner { get; set; }
         public int Max { get; set; } = 40;
         public int Current { get; set; } = 40;
+        public int UnscarredMax { get; set; }
     }
 
     /// <summary>
@@ -881,8 +970,8 @@ namespace Crusaders30XX.ECS.Components
         public const int DefaultWidth = 268;
         public const int DefaultHeight = 377;
         public const int DefaultCornerRadius = 10;
-        public const int DefaultOffsetYExtra = 25;
-        public const int DefaultGap = -20;
+        public const int DefaultOffsetYExtra = -98;
+        public const int DefaultGap = -77;
         public const int DefaultHighlightBorderThickness = 5;
 
         public Entity Owner { get; set; }
@@ -1028,7 +1117,6 @@ namespace Crusaders30XX.ECS.Components
         public bool Started { get; set; }
         public float StartScale { get; set; } = 0.35f;
         public float EndScale { get; set; } = 0.3f;
-        public string ContextId { get; set; }
         public bool Completed { get; set; }
     }
 
@@ -1069,7 +1157,6 @@ namespace Crusaders30XX.ECS.Components
         Wounded,
         Webbing,
         Inferno,
-        Penance,
         Aggression,
         Stealth,
         Poison,
@@ -1095,12 +1182,12 @@ namespace Crusaders30XX.ECS.Components
         Silenced,
         Sealed,
         Plunder,
-        SanguineCurse,
         Marksman,
         Sharpen,
         Might,
         Vigor,
-        CarpeDiem
+        CarpeDiem,
+        Galvanize
     }
 
     public class PassiveMeterComponent : IComponent
@@ -1264,7 +1351,6 @@ namespace Crusaders30XX.ECS.Components
     {
         Lose1HP,
         Lose2HP,
-        Gain1Penance,
         Gain2Bleed,
         Gain1Burn
     }

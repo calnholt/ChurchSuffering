@@ -23,12 +23,19 @@ public class Game1 : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     private RasterizerState _spriteRasterizer;
+    private ImageAssetService _imageAssets;
     private DebugMenuSystem _debugMenuSystem;
     private EntityListOverlaySystem _entityListOverlaySystem;
     private TransitionDisplaySystem _transitionDisplaySystem;
     private CardDisplaySystem _cardDisplaySystem;
+    private FrozenDisplaySystem _frozenDisplaySystem;
+    private ThornedDisplaySystem _thornedDisplaySystem;
     private BrittleDisplaySystem _brittleDisplaySystem;
+    private ScorchedDisplaySystem _scorchedDisplaySystem;
+    private CursedDisplaySystem _cursedDisplaySystem;
+    private SealDisplaySystem _sealDisplaySystem;
     private PlayerInputSystem _playerInputSystem;
+    private ControllerRumbleSystem _controllerRumbleSystem;
     private UIInteractionSystem _uiInteractionSystem;
 	private CurrencyDisplaySystem _currencyDisplaySystem;
 	private GoldManagementService _goldManagementService;
@@ -40,6 +47,7 @@ public class Game1 : Game
     private WayStationDisplaySystem _wayStationDisplaySystem;
     private BattleSceneSystem _battleSceneSystem;
     private LocationSceneSystem _locationSceneSystem;
+    private ClimbSceneSystem _climbSceneSystem;
     private ShopSceneSystem _shopSceneSystem;
     private AchievementSceneSystem _achievementSceneSystem;
     private TooltipTextDisplaySystem _tooltipTextDisplaySystem;
@@ -66,6 +74,9 @@ public class Game1 : Game
     private NarrativeEventModalDisplaySystem _narrativeEventModalDisplaySystem;
     private CardListModalSystem _cardListModalSystem;
     private HowToPlayOverlaySystem _howToPlayOverlaySystem;
+    private PauseMenuDisplaySystem _pauseMenuDisplaySystem;
+    private PauseMenuSliderDisplaySystem _pauseMenuSliderDisplaySystem;
+    private GameOverOverlayDisplaySystem _gameOverOverlayDisplaySystem;
     private DisplaySnapshotHost _snapshotHost;
     private readonly DisplaySnapshotLaunchOptions _snapshotOptions;
     private readonly TestFightLaunchOptions _testFightOptions;
@@ -150,6 +161,8 @@ public class Game1 : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _spriteRasterizer = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
+        _imageAssets = new ImageAssetService(Content, GraphicsDevice);
+        EventManager.Subscribe<DeleteCachesEvent>(_ => _imageAssets.ClearTransientCaches());
 
         // Initialize FontSingleton with both fonts
         FontSingleton.Initialize(Content);
@@ -171,32 +184,46 @@ public class Game1 : Game
         // Add parent scene systems only
         _drippingBloodDisplaySystem = new DrippingBloodDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _titleMenuDisplaySystem = new TitleMenuDisplaySystem(_world, _spriteBatch);
-        _wayStationDisplaySystem = new WayStationDisplaySystem(_world, GraphicsDevice, _spriteBatch, Content);
-        _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
-        _locationSceneSystem = new LocationSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
-        _shopSceneSystem = new ShopSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
+        _wayStationDisplaySystem = new WayStationDisplaySystem(_world, GraphicsDevice, _spriteBatch, _imageAssets);
+        _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        _locationSceneSystem = new LocationSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        _shopSceneSystem = new ShopSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, _imageAssets);
         _achievementSceneSystem = new AchievementSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
         _debugMenuSystem = new DebugMenuSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _world.SystemManager);
         _entityListOverlaySystem = new EntityListOverlaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _transitionDisplaySystem = new TransitionDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _cardDisplaySystem = new CardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cardDisplaySystem = new CardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _frozenDisplaySystem = new FrozenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _thornedDisplaySystem = new ThornedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _scorchedDisplaySystem = new ScorchedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cursedDisplaySystem = new CursedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        var sealTexture = _imageAssets.GetRequiredTexture("seal");
+        _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
+        _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        var playerInputAdapter = new MonoGamePlayerInputAdapter();
         _playerInputSystem = new PlayerInputSystem(
             _world.EntityManager,
-            new MonoGamePlayerInputAdapter());
+            playerInputAdapter);
+        _controllerRumbleSystem = new ControllerRumbleSystem(
+            _world.EntityManager,
+            playerInputAdapter);
         _uiInteractionSystem = new UIInteractionSystem(_world.EntityManager);
+        _pauseMenuDisplaySystem = new PauseMenuDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
+        _pauseMenuSliderDisplaySystem = new PauseMenuSliderDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
+        _gameOverOverlayDisplaySystem = new GameOverOverlayDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _tooltipTextDisplaySystem = new TooltipTextDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _hintTooltipDisplaySystem = new HintTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _hintTooltipDisplaySystem = new HintTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _cardTooltipDisplaySystem = new CardTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _locationNameDisplaySystem = new LocationNameDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-		_currencyDisplaySystem = new CurrencyDisplaySystem(GraphicsDevice, _spriteBatch, Content);
+		_currencyDisplaySystem = new CurrencyDisplaySystem(GraphicsDevice, _spriteBatch, _imageAssets);
 		_goldManagementService = new GoldManagementService();
 		_cardApplicationManagementSystem = new CardApplicationManagementSystem(_world.EntityManager);
 		_deckManagementSystem = new DeckManagementSystem(_world.EntityManager);
         _profilerSystem = new ProfilerSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         // _worldMapSystem = new LocationSelectDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _cursorDisplaySystem = new CursorDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cursorDisplaySystem = new CursorDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _cursorTrailDisplaySystem = new CursorTrailDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _hotKeySystem = new HotKeySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _hotKeyProgressRingSystem = new HotKeyProgressRingSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _world.SystemManager);
@@ -210,6 +237,7 @@ public class Game1 : Game
         _world.AddSystem(_wayStationDisplaySystem);
         _world.AddSystem(_battleSceneSystem);
         _world.AddSystem(_locationSceneSystem);
+        _world.AddSystem(_climbSceneSystem);
         _world.AddSystem(_shopSceneSystem);
         _world.AddSystem(_achievementSceneSystem);
         _world.AddSystem(new TimerSchedulerSystem(_world.EntityManager));
@@ -225,10 +253,20 @@ public class Game1 : Game
         _world.AddSystem(_entityListOverlaySystem);
         _world.AddSystem(_transitionDisplaySystem);
         _world.AddSystem(_cardDisplaySystem);
+        _world.AddSystem(_frozenDisplaySystem);
+        _world.AddSystem(_thornedDisplaySystem);
         _world.AddSystem(_brittleDisplaySystem);
+        _world.AddSystem(_scorchedDisplaySystem);
+        _world.AddSystem(_cursedDisplaySystem);
+        _world.AddSystem(_sealDisplaySystem);
         _world.AddSystem(_dialogDisplaySystem);
+        _world.AddSystem(new ModalAnimationSystem(_world.EntityManager), SystemUpdatePhase.Input);
         _world.AddSystem(_playerInputSystem, SystemUpdatePhase.Input);
+        _world.AddSystem(_controllerRumbleSystem, SystemUpdatePhase.Input);
         _world.AddSystem(_uiInteractionSystem, SystemUpdatePhase.Interaction);
+        _world.AddSystem(_pauseMenuDisplaySystem);
+        _world.AddSystem(_pauseMenuSliderDisplaySystem);
+        _world.AddSystem(_gameOverOverlayDisplaySystem);
         _world.AddSystem(_tooltipTextDisplaySystem);
         _world.AddSystem(_hintTooltipDisplaySystem);
         _world.AddSystem(_cardTooltipDisplaySystem);
@@ -251,11 +289,11 @@ public class Game1 : Game
         _world.AddSystem(_treasureStartSystem);
         _eventStartSystem = new EventStartSystem(_world.EntityManager);
         _world.AddSystem(_eventStartSystem);
-        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_rewardModalDisplaySystem);
-        _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_narrativeEventModalDisplaySystem);
-        _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
+        _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_cardListModalSystem);
         _howToPlayOverlaySystem = new HowToPlayOverlaySystem(
             _world.EntityManager,
@@ -267,6 +305,8 @@ public class Game1 : Game
         _world.AddComponent(howToPlayEntity, new HowToPlayOverlay());
         _world.AddComponent(howToPlayEntity, new DontDestroyOnLoad());
         _world.AddSystem(new RunDeckLifecycleSystem(_world.EntityManager));
+        _world.AddSystem(new ClimbEventSystem(_world.EntityManager));
+        _world.AddSystem(new ClimbEncounterSystem(_world.EntityManager));
         // Global music manager
         _world.AddSystem(new MusicManagerSystem(_world.EntityManager, Content));
         // Global sound effect manager
@@ -496,12 +536,26 @@ public class Game1 : Game
         if (_snapshotHost?.IsActive == true)
         {
             _snapshotHost.DrawScene(_spriteBatch);
+            FrameProfiler.Measure("PauseMenuDisplaySystem.Draw.Snapshot", _pauseMenuDisplaySystem.Draw);
+            FrameProfiler.Measure("PauseMenuSliderDisplaySystem.Draw.Snapshot", _pauseMenuSliderDisplaySystem.Draw);
             _spriteBatch.End();
             return;
         }
 
-        // Delegate drawing to active parent systems
+        // Character-event dialogue deliberately isolates the dialogue against the
+        // undimmed Climb background. All normal scene and global foreground draws
+        // are skipped until the correlated dialogue completes.
         var scene = _world.EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault().GetComponent<SceneState>();
+        bool backgroundOnlyClimbDialogue = IsBackgroundOnlyClimbDialogue(scene);
+        if (backgroundOnlyClimbDialogue)
+        {
+            MeasureInclusiveSceneDraw("ClimbSceneSystem.DrawBackgroundOnly", _climbSceneSystem.DrawBackgroundOnly);
+            FrameProfiler.Measure("DialogDisplaySystem.Draw", _dialogDisplaySystem.Draw);
+            DrawCursor();
+            return;
+        }
+
+        // Delegate drawing to active parent systems
         switch(scene.Current)
         {
             case SceneId.TitleMenu:
@@ -525,6 +579,11 @@ public class Game1 : Game
                 _spriteBatch.End();
                 // Resume normal alpha-blend UI drawing state
                 _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer);
+                break;
+            }
+            case SceneId.Climb:
+            {
+                MeasureInclusiveSceneDraw("ClimbSceneSystem.Draw", _climbSceneSystem.Draw);
                 break;
             }
             case SceneId.Location:
@@ -563,7 +622,12 @@ public class Game1 : Game
         FrameProfiler.Measure("LocationNameDisplaySystem.Draw", _locationNameDisplaySystem.Draw);
         FrameProfiler.Measure("RewardModalDisplaySystem.Draw", _rewardModalDisplaySystem.Draw);
         FrameProfiler.Measure("NarrativeEventModalDisplaySystem.Draw", _narrativeEventModalDisplaySystem.Draw);
-        FrameProfiler.Measure("CardListModalSystem.Draw", _cardListModalSystem.Draw);
+        FrameProfiler.Measure("CardListModalSystem.DrawBackdrop", _cardListModalSystem.DrawBackdrop);
+        if (_cardListModalSystem?.IsSelectableOpen() == true)
+        {
+            FrameProfiler.Measure("UIElementHighlightSystem.Draw.CardListModal", _uiElementHighlightSystem.Draw);
+        }
+        FrameProfiler.Measure("CardListModalSystem.DrawForeground", _cardListModalSystem.DrawForeground);
         FrameProfiler.Measure("HowToPlayOverlaySystem.Draw", _howToPlayOverlaySystem.Draw);
         FrameProfiler.Measure("TooltipDisplaySystem.Draw", _tooltipTextDisplaySystem.Draw);
         FrameProfiler.Measure("HintTooltipDisplaySystem.Draw", _hintTooltipDisplaySystem.Draw);
@@ -573,21 +637,37 @@ public class Game1 : Game
         FrameProfiler.Measure("DebugMenuSystem.Draw", _debugMenuSystem.Draw);
         FrameProfiler.Measure("EntityListOverlaySystem.Draw", _entityListOverlaySystem.Draw);
         FrameProfiler.Measure("DialogDisplaySystem.Draw", _dialogDisplaySystem.Draw);
+        FrameProfiler.Measure("PauseMenuDisplaySystem.Draw", _pauseMenuDisplaySystem.Draw);
+        FrameProfiler.Measure("PauseMenuSliderDisplaySystem.Draw", _pauseMenuSliderDisplaySystem.Draw);
+        FrameProfiler.Measure("GameOverOverlayDisplaySystem.Draw", _gameOverOverlayDisplaySystem.Draw);
         FrameProfiler.Measure("TransitionDisplaySystem.Draw", _transitionDisplaySystem.Draw);
         FrameProfiler.Measure("UIElementBorderDebugSystem.Draw", _uiElementBorderDebugSystem.Draw);
         // Cursor blur trail (additive pass before cursor) — skip in card debug mode
-        _spriteBatch.End();
-        if (_snapshotHost?.ShouldSkipGlobalOverlays != true)
-        {
-            if (ShaderRuntimeOptions.ShadersEnabled)
-            {
-                _cursorTrailDisplaySystem.DrawTrail(_sceneRt);
-            }
+        DrawCursor();
+    }
 
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer);
-            FrameProfiler.Measure("CursorDisplaySystem.Draw", _cursorDisplaySystem.Draw);
-            _spriteBatch.End();
+    private bool IsBackgroundOnlyClimbDialogue(SceneState scene)
+    {
+        if (scene?.Current != SceneId.Climb) return false;
+        var state = _world.EntityManager.GetEntitiesWithComponent<DialogOverlayState>()
+            .FirstOrDefault()
+            ?.GetComponent<DialogOverlayState>();
+        return state?.IsActive == true && state.BackgroundOnly;
+    }
+
+    private void DrawCursor()
+    {
+        _spriteBatch.End();
+        if (_snapshotHost?.ShouldSkipGlobalOverlays == true) return;
+
+        if (ShaderRuntimeOptions.ShadersEnabled)
+        {
+            _cursorTrailDisplaySystem.DrawTrail(_sceneRt);
         }
+
+        _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer);
+        FrameProfiler.Measure("CursorDisplaySystem.Draw", _cursorDisplaySystem.Draw);
+        _spriteBatch.End();
     }
 
 	protected override void UnloadContent()
@@ -611,6 +691,7 @@ public class Game1 : Game
 		LoggingService.Flush();
 		try { _currencyDisplaySystem?.Dispose(); } catch { }
 		try { _goldManagementService?.Dispose(); } catch { }
+		try { _imageAssets?.Dispose(); } catch { }
 		base.UnloadContent();
 	}
 

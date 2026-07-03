@@ -9,7 +9,6 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Content;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -24,13 +23,14 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private readonly Dictionary<string, Texture2D> _textures = new Dictionary<string, Texture2D>();
 
         private class AnimationInstance
         {
             public int TargetEntityId;
             public Entity Target;
+            public Guid PresentationId;
             public Texture2D Texture;
             public float AgeSeconds;
             public float FadeInDurationSeconds;
@@ -69,12 +69,12 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Max Concurrent", Step = 1, Min = 1, Max = 64)]
         public int MaxConcurrent { get; set; } = 8;
 
-        public SplashEffectAnimationDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public SplashEffectAnimationDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
             LoadTextures();
             EventManager.Subscribe<ModifyHpEvent>(OnModifyHp);
             EventManager.Subscribe<ApplyPassiveEvent>(OnApplyPassive);
@@ -92,7 +92,6 @@ namespace Crusaders30XX.ECS.Systems
                 "gain-power", 
                 "gain-bleed", 
                 "gain-frostbite", 
-                "gain-penance", 
                 "gain-slow", 
                 "gain-sub-zero",
                 "gain-windchill",
@@ -102,14 +101,7 @@ namespace Crusaders30XX.ECS.Systems
             };
             foreach (var key in textureKeys)
             {
-                try
-                {
-                    _textures[key] = _content.Load<Texture2D>(key);
-                }
-                catch
-                {
-                    _textures[key] = null;
-                }
+                _textures[key] = _imageAssets.TryGetTexture(key);
             }
         }
 
@@ -132,6 +124,7 @@ namespace Crusaders30XX.ECS.Systems
                 bool expired = anim.AgeSeconds >= anim.TotalDurationSeconds;
                 if (expired)
                 {
+                    PublishCompletion(anim);
                     _animations.RemoveAt(i);
                     continue;
                 }
@@ -142,8 +135,9 @@ namespace Crusaders30XX.ECS.Systems
 
         private void OnModifyHp(ModifyHpEvent e)
         {
-            // Only show for damage (negative delta) and attack type
-            if (e.Delta >= 0 || e.DamageType != ModifyTypeEnum.Attack)
+            // Only show for damage. Player self-damage effects still get damage text,
+            // but not an attack splash.
+            if (e.Delta >= 0)
                 return;
 
             var target = ResolveTarget(e.Target);
@@ -153,15 +147,16 @@ namespace Crusaders30XX.ECS.Systems
             Texture2D textureToUse = null;
             bool isPlayerTarget = target.HasComponent<Player>();
             bool isPlayerSource = e.Source != null && e.Source.HasComponent<Player>();
+            bool isEnemyTarget = target.HasComponent<Enemy>();
 
-            if (isPlayerTarget)
+            if (isPlayerTarget && e.DamageType == ModifyTypeEnum.Attack)
             {
                 // Player is being attacked - use enemy attack splash
                 _textures.TryGetValue("enemy-attack-splash", out textureToUse);
             }
-            else if (isPlayerSource)
+            else if (isEnemyTarget && (isPlayerSource || e.DamageType == ModifyTypeEnum.Effect))
             {
-                // Player is attacking - use player attack splash
+                // Player attacks and enemy-facing effect damage use the enemy hit splash.
                 _textures.TryGetValue("player-attack-splash", out textureToUse);
             }
             else
@@ -175,21 +170,44 @@ namespace Crusaders30XX.ECS.Systems
             if (_animations.Count >= MaxConcurrent)
             {
                 // Drop oldest
+                PublishCompletion(_animations[0]);
                 _animations.RemoveAt(0);
             }
 
             float totalDuration = FadeInDurationSeconds + HoldDurationSeconds + FadeOutDurationSeconds;
 
+            if (e.PresentationId != Guid.Empty)
+            {
+                EventManager.Publish(new BattlePresentationStarted
+                {
+                    PresentationId = e.PresentationId,
+                    Target = target,
+                    Kind = BattlePresentationKind.DamageSplash
+                });
+            }
+
             _animations.Add(new AnimationInstance
             {
                 TargetEntityId = target.Id,
                 Target = target,
+                PresentationId = e.PresentationId,
                 Texture = textureToUse,
                 AgeSeconds = 0f,
                 FadeInDurationSeconds = FadeInDurationSeconds,
                 HoldDurationSeconds = HoldDurationSeconds,
                 FadeOutDurationSeconds = FadeOutDurationSeconds,
                 TotalDurationSeconds = totalDuration
+            });
+        }
+
+        private static void PublishCompletion(AnimationInstance anim)
+        {
+            if (anim == null || anim.PresentationId == Guid.Empty) return;
+            EventManager.Publish(new BattlePresentationCompleted
+            {
+                PresentationId = anim.PresentationId,
+                Target = anim.Target,
+                Kind = BattlePresentationKind.DamageSplash
             });
         }
 
@@ -208,12 +226,12 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Burn => "gain-burn",
                 AppliedPassiveType.Armor => "gain-armor",
                 AppliedPassiveType.Aggression => "gain-aggression",
+                AppliedPassiveType.Galvanize => "gain-aggression",
                 AppliedPassiveType.Sharpen => "gain-aggression",
                 AppliedPassiveType.Might => "gain-power",
                 AppliedPassiveType.Power => "gain-power",
                 AppliedPassiveType.Bleed => "gain-bleed",
                 AppliedPassiveType.Frostbite => "gain-frostbite",
-                AppliedPassiveType.Penance => "gain-penance",
                 AppliedPassiveType.Slow => "gain-slow",
                 AppliedPassiveType.SubZero => "gain-sub-zero",
                 AppliedPassiveType.Wounded => "gain-wounded",
@@ -399,4 +417,3 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-

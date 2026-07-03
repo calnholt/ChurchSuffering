@@ -6,7 +6,6 @@ using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.Diagnostics;
-using Microsoft.Xna.Framework.Content;
 using System.Linq;
 using Crusaders30XX.ECS.Data.Locations;
 
@@ -20,19 +19,19 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly ContentManager _content;
+        private readonly ImageAssetService _imageAssets;
         private Texture2D _background;
 
         // Debug-adjustable vertical offset for background positioning
         [DebugEditable(DisplayName = "Offset Y", Step = 2, Min = -2000, Max = 2000)]
         public int OffsetY { get; set; } = 0;
 
-        public BattleBackgroundSystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+        public BattleBackgroundSystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
-            _content = content;
+            _imageAssets = imageAssets;
 
             EventManager.Subscribe<ChangeBattleLocationEvent>(OnChangeLocation);
             LoggingService.Append("BattleBackgroundSystem.ctor", new System.Text.Json.Nodes.JsonObject { ["message"] = "subscribed to ChangeBattleLocationEvent" });
@@ -70,10 +69,10 @@ namespace Crusaders30XX.ECS.Systems
                 }
 
 				// Load the background texture, preferring explicit override then POI background, else default per location.
-				string path = ResolveBackgroundPath(evt, battlefield);
+                string path = ResolveBackgroundPath(evt, battlefield);
                 if (!string.IsNullOrWhiteSpace(path))
                 {
-                    _background = _content.Load<Texture2D>(path);
+					_background = _imageAssets.TryGetTexture(path);
                 }
             }
             catch (Exception ex)
@@ -85,7 +84,7 @@ namespace Crusaders30XX.ECS.Systems
 		private static string RemoveExtension(string p)
 		{
 			if (string.IsNullOrWhiteSpace(p)) return p;
-			try { return System.IO.Path.GetFileNameWithoutExtension(p); }
+			try { return System.IO.Path.ChangeExtension(p, null); }
 			catch { return p; }
 		}
 
@@ -118,9 +117,14 @@ namespace Crusaders30XX.ECS.Systems
 			// 3) Fallback per battlefield location
 			return battlefield.Location switch
 			{
-				BattleLocation.Desert => "desert-background",
-				BattleLocation.Forest => "forest-background",
-				BattleLocation.Cathedral => "cathedral-background",
+				BattleLocation.Desert => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.Desert),
+				BattleLocation.Tundra => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.Tundra),
+				BattleLocation.Jungle => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.Jungle),
+				BattleLocation.Volcano => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.Volcano),
+				BattleLocation.TheGate => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.TheGate),
+				BattleLocation.Forest => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.Forest),
+				BattleLocation.Cathedral => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.Cathedral),
+				BattleLocation.Gothic => BattleLocationAssetService.GetBackgroundAsset(BattleLocation.Gothic),
 				_ => null
 			};
 		}
@@ -152,5 +156,4 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-
 

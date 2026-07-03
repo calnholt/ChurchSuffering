@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
@@ -8,6 +9,8 @@ namespace Crusaders30XX.ECS.Objects.Cards
     {
         private int VigorGained = 1;
 
+        private List<string> CostUpgrade = ["Red", "Black", "Any", "Any", "Any", "Any"];
+        private int DamageUpgrade = 6;
         public IronCovenant()
         {
             CardId = "iron_covenant";
@@ -15,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Enemy";
             Text = $"When this is pledged, gain {VigorGained} vigor.";
             Cost = ["Red", "Black", "Any", "Any", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 15;
             Block = 3;
 
@@ -42,6 +45,11 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     Type = AppliedPassiveType.Vigor,
                     Delta = VigorGained
                 });
+            };
+            OnUpgrade = (entityManager, card) =>
+            {
+                Cost = CostUpgrade;
+                Damage += DamageUpgrade;
             };
         }
     }

@@ -21,22 +21,22 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnLoadoutCardAdded(LoadoutCardAdded evt)
 		{
-			if (evt == null || string.IsNullOrWhiteSpace(evt.CardKey)) return;
+			if (evt == null || string.IsNullOrWhiteSpace(evt.EntryId)) return;
 			if (!string.Equals(evt.LoadoutId, RunDeckService.PrimaryLoadoutId, System.StringComparison.OrdinalIgnoreCase))
 			{
 				return;
 			}
-			RunDeckService.AddCardFromKey(EntityManager, evt.CardKey);
+			RunDeckService.AddCardFromEntry(EntityManager, evt.EntryId);
 		}
 
 		private void OnLoadoutCardRemoved(LoadoutCardRemoved evt)
 		{
-			if (evt == null || string.IsNullOrWhiteSpace(evt.CardKey)) return;
+			if (evt == null || string.IsNullOrWhiteSpace(evt.EntryId)) return;
 			if (!string.Equals(evt.LoadoutId, RunDeckService.PrimaryLoadoutId, System.StringComparison.OrdinalIgnoreCase))
 			{
 				return;
 			}
-			RunDeckService.RemoveCardByKey(EntityManager, evt.CardKey);
+			RunDeckService.RemoveCardByEntryId(EntityManager, evt.EntryId);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()

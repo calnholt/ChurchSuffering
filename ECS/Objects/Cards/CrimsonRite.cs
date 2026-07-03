@@ -3,20 +3,21 @@ using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Systems;
 
 namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class CrimsonRite : CardBase
     {
-        private List<string> CostUpgrade = ["Any", "Any"];
+        private List<string> CostUpgrade = ["Any, Any"];
         public CrimsonRite()
         {
             CardId = "crimson_rite";
             Name = "Crimson Rite";
             Target = "Enemy";
             Cost = ["Black", "Any"];
-            Animation = "Attack";
-            Damage = 5;
+            VisualEffectRecipe = PlayerAttackEffect();
+            Damage = 3;
             Block = 3;
             Text = "Heal X HP where X is the damage dealt from this attack.";
 
@@ -24,43 +25,52 @@ namespace Crusaders30XX.ECS.Objects.Cards
             {
                 var player = entityManager.GetEntity("Player");
                 var enemy = entityManager.GetEntity("Enemy");
-                int damage = GetDerivedDamage(entityManager, card);
+                int rawDamage = GetDerivedDamage(entityManager, card);
+                var attackPreview = new ModifyHpRequestEvent
+                {
+                    Source = player,
+                    Target = enemy,
+                    AttackCard = card,
+                    DamageType = ModifyTypeEnum.Attack
+                };
+                int damageDealt = AppliedPassivesService.GetPreviewAttackDamage(attackPreview, rawDamage, ReadOnly: true);
 
                 EventManager.Publish(new ModifyHpRequestEvent
                 {
                     Source = player,
                     Target = enemy,
-                    Delta = -damage,
+                    Delta = -rawDamage,
                     AttackCard = card,
 
                     DamageType = ModifyTypeEnum.Attack
                 });
 
-                Action<ModifyHpEvent> healHandler = null;
-                healHandler = (evt) =>
+                if (IsUpgraded)
                 {
-                    if (evt.Target == enemy && evt.Source == player && evt.DamageType == ModifyTypeEnum.Attack)
+                    EventManager.Publish(new ApplyPassiveEvent
                     {
-                        EventManager.Unsubscribe(healHandler);
-                        int healedAmount = Math.Abs(evt.Delta);
-                        if (healedAmount > 0)
-                        {
-                            EventManager.Publish(new ModifyHpRequestEvent
-                            {
-                                Source = enemy,
-                                Target = player,
-                                Delta = healedAmount,
-                                DamageType = ModifyTypeEnum.Heal
-                            });
-                        }
-                    }
-                };
-                EventManager.Subscribe(healHandler);
+                        Target = player,
+                        Type = AppliedPassiveType.Aegis,
+                        Delta = damageDealt
+                    });
+                }
+                else
+                { 
+                    EventManager.Publish(new ModifyHpRequestEvent
+                    {
+                        Source = enemy,
+                        Target = player,
+                        Delta = damageDealt,
+                        DamageType = ModifyTypeEnum.Heal
+                    });
+                }
+                
             };
 
             OnUpgrade = (entityManager, card) =>
             {
                 Cost = CostUpgrade;
+                Text = "Gain X aegis where X is the damage dealt from this attack.";
             };
         }
     }

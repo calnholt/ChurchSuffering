@@ -22,7 +22,7 @@ public class TitleMenuResumeRoutingTests
 	}
 
 	[Fact]
-	public void Active_run_with_incomplete_start_quest_routes_to_battle_path()
+	public void Active_run_with_incomplete_start_quest_routes_to_climb()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.CompleteGuidedTutorial();
@@ -30,7 +30,7 @@ public class TitleMenuResumeRoutingTests
 
 		Assert.True(SaveCache.IsRunActive());
 		Assert.False(SaveCache.IsStartQuestCompleted());
-		Assert.Null(TitleMenuResumeService.ResolveDirectTransitionScene());
+		Assert.Equal(SceneId.Climb, TitleMenuResumeService.ResolveDirectTransitionScene());
 	}
 
 	[Fact]
@@ -57,7 +57,7 @@ public class TitleMenuResumeRoutingTests
 			Assert.Equal(SceneId.WayStation, TitleMenuResumeService.ResolveDirectTransitionScene());
 			Assert.True(SaveCache.IsGuidedTutorialCompleted());
 			Assert.False(SaveCache.IsRunActive());
-			Assert.Contains("pledge", SaveCache.GetAll().seenTutorials);
+			Assert.Contains("teach_pledge", SaveCache.GetAll().seenTutorials);
 			Assert.Contains("guided_tutorial", SaveCache.GetAll().seenTutorials);
 		}
 		finally
@@ -67,7 +67,7 @@ public class TitleMenuResumeRoutingTests
 	}
 
 	[Fact]
-	public void Active_run_with_completed_start_quest_routes_to_Location()
+	public void Active_run_with_completed_start_quest_routes_to_Climb()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.CompleteGuidedTutorial();
@@ -76,7 +76,7 @@ public class TitleMenuResumeRoutingTests
 
 		Assert.True(SaveCache.IsRunActive());
 		Assert.True(SaveCache.IsStartQuestCompleted());
-		Assert.Equal(SceneId.Location, TitleMenuResumeService.ResolveDirectTransitionScene());
+		Assert.Equal(SceneId.Climb, TitleMenuResumeService.ResolveDirectTransitionScene());
 	}
 
 	[Fact]

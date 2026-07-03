@@ -53,6 +53,10 @@ namespace Crusaders30XX.ECS.Systems
 			});
 			FrameProfiler.Measure("FrozenCardDisplaySystem.OnCardRenderScaledEvent", () => OnCardRenderScaledEvent(evt));
 		});
+		EventManager.Subscribe<CardRenderScaledRotatedEvent>(evt =>
+			FrameProfiler.Measure(
+				"FrozenCardDisplaySystem.OnCardRenderScaledRotatedEvent",
+				() => OnCardRenderScaledRotatedEvent(evt)));
 	}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -71,61 +75,67 @@ namespace Crusaders30XX.ECS.Systems
 		{
 		}
 
-	private Rectangle ComputeCardBounds(Vector2 position)
-	{
-			_settings ??= CardGeometryService.GetSettings(EntityManager);
-			return CardGeometryService.GetVisualRect(_settings, position);
-	}
-
 	private void OnCardRenderEvent(CardRenderEvent evt)
 	{
 		if (!ShouldRenderFrost(evt.Card)) return;
 
-		var transform = evt.Card.GetComponent<Transform>();
-		var ui = evt.Card.GetComponent<UIElement>();
-		if (transform == null || ui == null) return;
+		var geometry = CardGeometryService.GetVisualGeometry(EntityManager, evt.Card, evt.Position);
+		var center = geometry.Center;
+		center.X += FrostOffsetX * geometry.Scale;
+		center.Y += FrostOffsetY * geometry.Scale;
 
-		// Compute bounds exactly like CardHighlightSystem for consistent alignment
-		var bounds = ComputeCardBounds(transform.Position);
-		var center = new Vector2(bounds.X + bounds.Width / 2f, bounds.Y + bounds.Height / 2f);
-
-		// Apply offset
-		center.X += FrostOffsetX;
-		center.Y += FrostOffsetY;
-
-		// Render with card bounds dimensions
-		DrawFrostOverlay(center, bounds.Width, bounds.Height, 1f);
+		DrawFrostOverlay(center, geometry.Bounds.Width, geometry.Bounds.Height, geometry.Scale, geometry.Rotation);
 	}
 
 	private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
 	{
 		if (!ShouldRenderFrost(evt.Card)) return;
+		using var clip = CardRenderClipScope.Apply(_graphicsDevice, evt.ClipRect);
 
-		var transform = evt.Card.GetComponent<Transform>();
-		if (transform == null) return;
+		var geometry = CardGeometryService.GetVisualGeometry(
+			EntityManager,
+			evt.Card,
+			evt.Position,
+			evt.Scale);
+		var center = geometry.Center;
+		center.X += FrostOffsetX * geometry.Scale;
+		center.Y += FrostOffsetY * geometry.Scale;
 
-		// Get card dimensions and settings
 		_settings ??= CardGeometryService.GetSettings(EntityManager);
 		int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
 		int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
-		var center = CardGeometryService.GetVisualCenter(_settings, evt.Position, evt.Scale);
+		DrawFrostOverlay(center, cardWidth, cardHeight, geometry.Scale, 0f);
+	}
 
-		// Apply frost-specific offsets (scaled by event scale)
-		center.X += FrostOffsetX * evt.Scale;
-		center.Y += FrostOffsetY * evt.Scale;
+	private void OnCardRenderScaledRotatedEvent(CardRenderScaledRotatedEvent evt)
+	{
+		if (!ShouldRenderFrost(evt.Card)) return;
 
-		// Render with scaled card dimensions
-		DrawFrostOverlay(center, cardWidth, cardHeight, evt.Scale);
+		var geometry = CardGeometryService.GetVisualGeometry(
+			EntityManager,
+			evt.Card,
+			evt.Position,
+			evt.Scale);
+		var center = geometry.Center;
+		center.X += FrostOffsetX * geometry.Scale;
+		center.Y += FrostOffsetY * geometry.Scale;
+
+		_settings ??= CardGeometryService.GetSettings(EntityManager);
+		int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
+		int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
+		DrawFrostOverlay(center, cardWidth, cardHeight, geometry.Scale, geometry.Rotation);
 	}
 
 	private bool ShouldRenderFrost(Entity card)
 	{
-		return card != null 
-			&& card.GetComponent<Frozen>() != null 
+		return !ShaderRuntimeOptions.ShadersEnabled
+			&& card != null
+			&& card.GetComponent<Frozen>() != null
+			&& card.GetComponent<SuppressCardVisualEffects>() == null
 			&& _frostTexture != null;
 	}
 
-	private void DrawFrostOverlay(Vector2 center, float cardWidth, float cardHeight, float scale)
+	private void DrawFrostOverlay(Vector2 center, float cardWidth, float cardHeight, float scale, float rotation)
 	{
 		// Calculate final alpha
 		float finalAlpha = FrostAlpha / 255f;
@@ -142,7 +152,7 @@ namespace Crusaders30XX.ECS.Systems
 			center,
 			null,
 			Color.White * finalAlpha,
-			0,
+			rotation,
 			new Vector2(_frostTexture.Width / 2f, _frostTexture.Height / 2f),
 			spriteScale,
 			SpriteEffects.None,
@@ -151,4 +161,3 @@ namespace Crusaders30XX.ECS.Systems
 	}
 	}
 }
-

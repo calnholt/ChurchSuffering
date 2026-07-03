@@ -14,7 +14,10 @@ namespace Crusaders30XX.ECS.Services
 		public const string RestrictionFrozen = "Frozen";
 		public const string RestrictionSealed = "Sealed";
 		public const string RestrictionBrittle = "Brittle";
+		public const string RestrictionScorched = "Scorched";
+		public const string RestrictionThorned = "Thorned";
 		public const string RestrictionColorless = "Colorless";
+		public const string RestrictionCursed = "Cursed";
 
 		public static void HydrateRunLongPassivesOntoPlayer(Entity player)
 		{
@@ -59,9 +62,9 @@ namespace Crusaders30XX.ECS.Services
 			foreach (var card in entityManager.GetEntitiesWithComponent<RunDeckCard>())
 			{
 				if (!card.IsActive) continue;
-				var key = card.GetComponent<RunDeckCard>()?.CardKey;
-				if (string.IsNullOrWhiteSpace(key)) continue;
-				ApplySavedRestrictionsToCard(entityManager, card, key);
+				var entryId = card.GetComponent<RunDeckCard>()?.EntryId;
+				if (string.IsNullOrWhiteSpace(entryId)) continue;
+				ApplySavedRestrictionsToCard(entityManager, card, entryId);
 			}
 		}
 
@@ -69,14 +72,17 @@ namespace Crusaders30XX.ECS.Services
 		{
 			if (TestFightRuntime.IsActive) return;
 			if (card == null) return;
-			var key = card.GetComponent<RunDeckCard>()?.CardKey;
-			if (string.IsNullOrWhiteSpace(key)) return;
+			var entryId = card.GetComponent<RunDeckCard>()?.EntryId;
+			if (string.IsNullOrWhiteSpace(entryId)) return;
 			var names = new List<string>();
 			if (card.HasComponent<Frozen>()) names.Add(RestrictionFrozen);
 			if (card.HasComponent<Sealed>()) names.Add(RestrictionSealed);
 			if (card.HasComponent<Brittle>()) names.Add(RestrictionBrittle);
+			if (card.HasComponent<Scorched>()) names.Add(RestrictionScorched);
+			if (card.HasComponent<Thorned>()) names.Add(RestrictionThorned);
 			if (card.HasComponent<Colorless>()) names.Add(RestrictionColorless);
-			SaveCache.SetRunCardRestrictionsForCard(key, names);
+			if (card.HasComponent<Cursed>()) names.Add(RestrictionCursed);
+			SaveCache.SetRunDeckEntryRestrictions(RunDeckService.PrimaryLoadoutId, entryId, names);
 		}
 
 		public static void ClearRunCardRestrictionComponents(EntityManager entityManager)
@@ -88,9 +94,17 @@ namespace Crusaders30XX.ECS.Services
 			}
 		}
 
-		private static void ApplySavedRestrictionsToCard(EntityManager entityManager, Entity card, string cardKey)
+		public static void ApplySavedRestrictionsToCard(
+			EntityManager entityManager,
+			Entity card,
+			string entryId,
+			string loadoutId = null)
 		{
-			foreach (var restriction in SaveCache.GetRunCardRestrictions(cardKey))
+			if (card == null || string.IsNullOrWhiteSpace(entryId)) return;
+			string resolvedLoadoutId = string.IsNullOrWhiteSpace(loadoutId)
+				? RunDeckService.PrimaryLoadoutId
+				: loadoutId;
+			foreach (var restriction in SaveCache.GetRunDeckEntryRestrictions(resolvedLoadoutId, entryId))
 			{
 				ApplyRestrictionComponent(entityManager, card, restriction);
 			}
@@ -118,13 +132,29 @@ namespace Crusaders30XX.ECS.Services
 						if (entityManager != null) entityManager.AddComponent(card, new Brittle { Owner = card });
 					}
 					break;
+				case RestrictionScorched:
+					if (card.GetComponent<Scorched>() == null)
+					{
+						if (entityManager != null) entityManager.AddComponent(card, new Scorched { Owner = card });
+					}
+					break;
+				case RestrictionThorned:
+					if (card.GetComponent<Thorned>() == null)
+					{
+						if (entityManager != null) entityManager.AddComponent(card, new Thorned { Owner = card });
+					}
+					break;
 				case RestrictionColorless:
 					if (card.GetComponent<Colorless>() == null)
 					{
 						if (entityManager != null) entityManager.AddComponent(card, new Colorless { Owner = card });
 					}
 					break;
+				case RestrictionCursed:
+					CardApplicationManagementSystem.ApplyCursedRuntime(entityManager, card);
+					break;
 			}
+			CardApplicationManagementSystem.RefreshCursedCardPresentation(entityManager, card);
 		}
 
 		private static void StripRestrictionComponents(EntityManager entityManager, Entity card)
@@ -133,7 +163,10 @@ namespace Crusaders30XX.ECS.Services
 			if (card.HasComponent<Shackle>()) entityManager.RemoveComponent<Shackle>(card);
 			if (card.HasComponent<Sealed>()) entityManager.RemoveComponent<Sealed>(card);
 			if (card.HasComponent<Brittle>()) entityManager.RemoveComponent<Brittle>(card);
+			if (card.HasComponent<Scorched>()) entityManager.RemoveComponent<Scorched>(card);
+			if (card.HasComponent<Thorned>()) entityManager.RemoveComponent<Thorned>(card);
 			if (card.HasComponent<Colorless>()) entityManager.RemoveComponent<Colorless>(card);
+			if (card.HasComponent<Cursed>()) CardApplicationManagementSystem.RemoveCursedRuntime(entityManager, card);
 		}
 	}
 }

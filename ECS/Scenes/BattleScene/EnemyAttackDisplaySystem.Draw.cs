@@ -47,6 +47,8 @@ namespace Crusaders30XX.ECS.Systems
 
 		private DrawContext? BuildDrawContext()
 		{
+			if (BattleInputGate.ShouldSuppressEnemyAttackDisplay(EntityManager)) return null;
+
 			var enemy = GetRelevantEntities().FirstOrDefault();
 			var intent = enemy?.GetComponent<AttackIntent>();
 			if (intent == null || intent.Planned.Count == 0 || _contentFont == null || _bodyFont == null) return null;
@@ -67,7 +69,7 @@ namespace Crusaders30XX.ECS.Systems
 			// Build text lines
 			var lines = new List<(string text, float scale, Color color)>();
 			lines.Add((def.Name, TitleScale, Color.White));
-			var progress = FindEnemyAttackProgress(pa.ContextId);
+			var progress = FindEnemyAttackProgress();
 			if (progress != null)
 			{
 				bool conditionMet = GuidedTutorialService.IsActive(EntityManager)
@@ -323,17 +325,12 @@ namespace Crusaders30XX.ECS.Systems
 		private void DrawConfirmButton(DrawContext ctx)
 		{
 			Entity primaryBtn = EntityManager.GetEntity("UIButton_ConfirmEnemyAttack");
-			bool isAnimating = IsAnyBlockAssignmentAnimating();
 			var ui = primaryBtn?.GetComponent<UIElement>();
-			bool tutorialRequirementMet = BattleInputGate.IsTutorialActionAllowed(
-				EntityManager,
-				TutorialAction.ConfirmBlocks);
 			var isInteractable = ui?.IsInteractable ?? false;
-			bool showConfirm = ctx.PhaseNow == SubPhase.Block
-				&& !_confirmedForContext.Contains(ctx.PlannedAttack.ContextId)
-				&& tutorialRequirementMet
-				&& isInteractable
-				&& !isAnimating;
+			bool showConfirm = isInteractable
+				&& EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(
+					EntityManager,
+					_confirmedAttackSequences);
 
 			if (showConfirm)
 			{

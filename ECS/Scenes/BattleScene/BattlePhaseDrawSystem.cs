@@ -2,7 +2,6 @@ using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 
@@ -55,36 +54,6 @@ namespace Crusaders30XX.ECS.Systems
 		{
 		}
 
-		private void CheckForPlayerDeath()
-		{
-			var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
-			var deck = deckEntity?.GetComponent<Deck>();
-			if (deck == null) return;
-			// Count non-weapon cards in hand
-			int nonWeaponHandCount = 0;
-			foreach (var e in deck.Hand)
-			{
-				if (e.HasComponent<AnimatingHandToDiscard>()) continue;
-				if (e.HasComponent<AnimatingHandToZone>()) continue;
-				if (e.HasComponent<AnimatingHandToDrawPile>()) continue;
-
-				var cd = e.GetComponent<CardData>();
-				if (cd == null) continue;
-				string id = cd.Card.CardId ?? string.Empty;
-				if (string.IsNullOrEmpty(id)) continue;
-				var card = CardFactory.Create(id);
-				if (card != null)
-				{
-					if (!card.IsWeapon) nonWeaponHandCount++;
-				}
-				else
-				{
-					// If we can't find the definition, count it as non-weapon (fallback)
-					nonWeaponHandCount++;
-				}
-			}
-		}
-
 		private void DrawUpToIntellect(SubPhase phase)
 		{
 			var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
@@ -106,7 +75,13 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				EventQueueBridge.EnqueueTriggerAction("DrawHandSystem.DrawCard", () => EventManager.Publish(new RequestDrawCardsEvent { Count = 1 }), 0.12f);
 			}
-			CheckForPlayerDeath();
+			EventQueueBridge.EnqueueTriggerAction("DrawHandSystem.StartOfTurnDrawResolved", () => EventManager.Publish(new StartOfTurnDrawResolvedEvent
+			{
+				Player = player,
+				Deck = deckEntity,
+				Phase = phase,
+				RequestedDrawCount = toDraw
+			}), 0f);
 		}
 
 		public static int CalculateCardsToDraw(int intellect, int maxHandSize, System.Collections.Generic.IEnumerable<Entity> hand)
@@ -161,5 +136,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-
-

@@ -3,10 +3,12 @@
   { "id": "st_francis_de_sales", "name": "St. Francis de Sales" },
   { "id": "st_homobonus", "name": "St. Homobonus" },
   { "id": "st_joan_of_arc", "name": "St. Joan of Arc" },
+  { "id": "st_jerome", "name": "St. Jerome" },
   { "id": "st_louie_ix", "name": "St. Louie IX, King of France" },
   { "id": "st_luke", "name": "St. Luke the Evangelist" },
   { "id": "st_michael", "name": "St. Michael the Archangel" },
   { "id": "st_nicholas", "name": "St. Nicholas the Bishop" },
+  { "id": "st_paul_miki", "name": "St. Paul Miki" },
   { "id": "st_peter", "name": "St. Peter the Apostle" },
   { "id": "st_sebastian", "name": "St. Sebastian" }
 ]

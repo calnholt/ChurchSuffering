@@ -2,6 +2,7 @@ using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Dialog;
+using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Systems;
@@ -24,13 +25,13 @@ public class EnemyPhaseFlowSystemTests
 			var world = BuildWorld(out var phaseState, out var enemy, out var definition);
 			_ = new EnemyPhaseFlowSystem(world.EntityManager);
 
-			EncounterDialogueRequested request = null;
+			DialogueSequenceRequested request = null;
 			int resetCount = 0;
 			int defeatPresentationCount = 0;
 			int enemyKilledCount = 0;
 			int rewardCount = 0;
 			int startBattleCount = 0;
-			EventManager.Subscribe<EncounterDialogueRequested>(evt => request = evt);
+			EventManager.Subscribe<DialogueSequenceRequested>(evt => request = evt);
 			EventManager.Subscribe<EnemyPhaseResetEvent>(_ => resetCount++);
 			EventManager.Subscribe<BeginDefeatPresentationEvent>(_ => defeatPresentationCount++);
 			EventManager.Subscribe<EnemyKilledEvent>(_ => enemyKilledCount++);
@@ -43,7 +44,7 @@ public class EnemyPhaseFlowSystemTests
 			Assert.Equal(1, definition.CurrentPhase);
 			Assert.True(phaseState.DefeatPresentationActive);
 
-			EventManager.Publish(new EncounterDialogueCompleted
+			EventManager.Publish(new DialogueSequenceCompleted
 			{
 				DefinitionId = request.DefinitionId,
 				SegmentId = request.SegmentId,
@@ -85,9 +86,185 @@ public class EnemyPhaseFlowSystemTests
 		}
 	}
 
-	private static void Complete(EncounterDialogueRequested request)
+	[Fact]
+	public void Phase_dialogue_waits_for_active_card_visual_effect_completion()
 	{
-		EventManager.Publish(new EncounterDialogueCompleted
+		EventManager.Clear();
+		EventQueue.Clear();
+		TimerScheduler.Clear();
+		DialogDefinitionCache.Reload();
+
+		try
+		{
+			var world = BuildWorld(out var phaseState, out var enemy, out var definition);
+			_ = new EnemyPhaseFlowSystem(world.EntityManager);
+			var player = world.EntityManager.GetEntity("Player");
+			var effectId = Guid.NewGuid();
+			var effectEntity = world.CreateEntity("ActiveCardEffect");
+			world.AddComponent(effectEntity, new ActiveVisualEffect
+			{
+				RequestId = effectId,
+				Source = player,
+				Target = enemy,
+				SourceKind = VisualEffectSourceKind.Card,
+				IsPreview = false,
+			});
+
+			DialogueSequenceRequested request = null;
+			EventManager.Subscribe<DialogueSequenceRequested>(evt => request = evt);
+
+			EventManager.Publish(new EnemyPhaseLethalEvent { Enemy = enemy });
+
+			Assert.Null(request);
+			Assert.True(phaseState.DefeatPresentationActive);
+			Assert.Equal(1, definition.CurrentPhase);
+
+			EventManager.Publish(new VisualEffectCompleted { RequestId = Guid.NewGuid(), IsPreview = false });
+			Assert.Null(request);
+
+			EventManager.Publish(new VisualEffectCompleted { RequestId = effectId, IsPreview = false });
+			Assert.NotNull(request);
+			Assert.Equal("phase_1_end", request.SegmentId);
+		}
+		finally
+		{
+			EventManager.Clear();
+			EventQueue.Clear();
+			TimerScheduler.Clear();
+		}
+	}
+
+	[Fact]
+	public void Phase_dialogue_waits_for_all_lethal_damage_presentations()
+	{
+		EventManager.Clear();
+		EventQueue.Clear();
+		TimerScheduler.Clear();
+		DialogDefinitionCache.Reload();
+
+		try
+		{
+			var world = BuildWorld(out _, out var enemy, out _);
+			_ = new EnemyPhaseFlowSystem(world.EntityManager);
+			var presentationId = Guid.NewGuid();
+			DialogueSequenceRequested request = null;
+			EventManager.Subscribe<DialogueSequenceRequested>(evt => request = evt);
+
+			EventManager.Publish(new BattlePresentationStarted
+			{
+				PresentationId = presentationId,
+				Target = enemy,
+				Kind = BattlePresentationKind.DamageSplash,
+			});
+			EventManager.Publish(new BattlePresentationStarted
+			{
+				PresentationId = presentationId,
+				Target = enemy,
+				Kind = BattlePresentationKind.DamageNumber,
+			});
+
+			EventManager.Publish(new EnemyPhaseLethalEvent
+			{
+				Enemy = enemy,
+				DamagePresentationId = presentationId,
+				DamageType = ModifyTypeEnum.Effect,
+			});
+
+			Assert.Null(request);
+
+			EventManager.Publish(new BattlePresentationCompleted
+			{
+				PresentationId = Guid.NewGuid(),
+				Target = enemy,
+				Kind = BattlePresentationKind.DamageSplash,
+			});
+			Assert.Null(request);
+
+			EventManager.Publish(new BattlePresentationCompleted
+			{
+				PresentationId = presentationId,
+				Target = enemy,
+				Kind = BattlePresentationKind.DamageSplash,
+			});
+			Assert.Null(request);
+
+			EventManager.Publish(new BattlePresentationCompleted
+			{
+				PresentationId = presentationId,
+				Target = enemy,
+				Kind = BattlePresentationKind.DamageNumber,
+			});
+			Assert.NotNull(request);
+			Assert.Equal("phase_1_end", request.SegmentId);
+		}
+		finally
+		{
+			EventManager.Clear();
+			EventQueue.Clear();
+			TimerScheduler.Clear();
+		}
+	}
+
+	[Fact]
+	public void Final_phase_victory_dialogue_waits_for_damage_presentation_before_defeat_presentation()
+	{
+		EventManager.Clear();
+		EventQueue.Clear();
+		TimerScheduler.Clear();
+		DialogDefinitionCache.Reload();
+
+		try
+		{
+			var world = BuildWorld(out _, out var enemy, out var definition);
+			definition.CurrentPhase = 3;
+			_ = new EnemyPhaseFlowSystem(world.EntityManager);
+			var presentationId = Guid.NewGuid();
+			DialogueSequenceRequested request = null;
+			int defeatPresentationCount = 0;
+			EventManager.Subscribe<DialogueSequenceRequested>(evt => request = evt);
+			EventManager.Subscribe<BeginDefeatPresentationEvent>(_ => defeatPresentationCount++);
+
+			EventManager.Publish(new BattlePresentationStarted
+			{
+				PresentationId = presentationId,
+				Target = enemy,
+				Kind = BattlePresentationKind.DamageNumber,
+			});
+			EventManager.Publish(new EnemyPhaseLethalEvent
+			{
+				Enemy = enemy,
+				DamagePresentationId = presentationId,
+				DamageType = ModifyTypeEnum.Effect,
+			});
+
+			Assert.Null(request);
+			Assert.Equal(0, defeatPresentationCount);
+
+			EventManager.Publish(new BattlePresentationCompleted
+			{
+				PresentationId = presentationId,
+				Target = enemy,
+				Kind = BattlePresentationKind.DamageNumber,
+			});
+
+			Assert.NotNull(request);
+			Assert.Equal("victory", request.SegmentId);
+			Complete(request);
+			Assert.Equal(0, defeatPresentationCount);
+			TimerScheduler.Update(0.11f);
+			Assert.Equal(1, defeatPresentationCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+			EventQueue.Clear();
+			TimerScheduler.Clear();
+		}
+	}
+
+	private static void Complete(DialogueSequenceRequested request)
+	{
+		EventManager.Publish(new DialogueSequenceCompleted
 		{
 			DefinitionId = request.DefinitionId,
 			SegmentId = request.SegmentId,

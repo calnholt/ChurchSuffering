@@ -12,10 +12,11 @@ using Crusaders30XX.ECS.Singletons;
 namespace Crusaders30XX.ECS.Systems
 {
 	/// <summary>
-	/// Renders a horizontal HP bar below entities with an HP component.
-	/// Currently positioned relative to the player's portrait anchor.
+	/// Legacy renderer retained only for the plundered-card damage gauge.
+	/// Technical debt: move that gauge into PlunderDisplaySystem, then delete this system.
 	/// </summary>
-	[DebugTab("HP Display")]
+	[Obsolete("Legacy renderer retained only for the plundered-card damage gauge; move that gauge into PlunderDisplaySystem before deleting this system.")]
+	[DebugTab("Legacy Plunder HP Display")]
 	public class HPDisplaySystem : Core.System
 	{
 		private readonly GraphicsDevice _graphicsDevice;
@@ -116,12 +117,12 @@ namespace Crusaders30XX.ECS.Systems
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
 		{
 			return EntityManager.GetEntitiesWithComponent<Crusaders30XX.ECS.Components.HP>()
-				.Where(ShouldRenderLegacyHp);
+				.Where(ShouldRenderLegacyPlunderHp);
 		}
 
-		internal static bool ShouldRenderLegacyHp(Entity entity)
+		internal static bool ShouldRenderLegacyPlunderHp(Entity entity)
 		{
-			return entity != null && !entity.HasComponent<Player>();
+			return entity != null && entity.HasComponent<Plundered>();
 		}
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
@@ -283,20 +284,18 @@ namespace Crusaders30XX.ECS.Systems
 			if (isPlayer && IncomingDamageFlashEnabled && hp.Max > 0)
 			{
 				int totalIncoming = 0;
-				// Only consider the active intent(s): the first planned attack per enemy
-				var activeCtxIds = EntityManager.GetEntitiesWithComponent<AttackIntent>()
+				var activeSequences = EntityManager.GetEntitiesWithComponent<AttackIntent>()
 					.Select(en => en.GetComponent<AttackIntent>())
 					.Where(ai => ai != null && ai.Planned.Count > 0)
-					.Select(ai => ai.Planned[0]?.ContextId)
-					.Where(ctx => !string.IsNullOrEmpty(ctx))
+					.Select(ai => ai.ActiveAttackSequence)
 					.ToList();
 
-				if (activeCtxIds.Count > 0)
+				if (activeSequences.Count > 0)
 				{
 					foreach (var e in EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>())
 					{
 						var p = e.GetComponent<EnemyAttackProgress>();
-						if (p != null && p.ActualDamage > 0 && activeCtxIds.Contains(p.ContextId))
+						if (p != null && p.ActualDamage > 0 && activeSequences.Contains(p.AttackSequence))
 						{
 							totalIncoming += p.ActualDamage;
 						}

@@ -1,6 +1,7 @@
 using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
 using Xunit;
@@ -67,7 +68,7 @@ public class EnemyPhaseResetServiceTests
 			EnemyBase = definition,
 		});
 		world.AddComponent(enemy, new HP { Max = 30, Current = 0 });
-		world.AddComponent(enemy, new EnemyArsenal { AttackIds = new() { "fallen_shepherd_phase_1" } });
+		world.AddComponent(enemy, new EnemyArsenal { AttackIds = new() { EnemyAttackId.FallenShepherdPhase1 } });
 		world.AddComponent(enemy, new AttackIntent());
 		world.AddComponent(enemy, new NextTurnAttackIntent());
 		world.AddComponent(enemy, new AppliedPassives
@@ -86,7 +87,7 @@ public class EnemyPhaseResetServiceTests
 
 		Assert.True(reset);
 		Assert.Equal(2, definition.CurrentPhase);
-		Assert.Equal(new[] { "fallen_shepherd_phase_2" }, enemy.GetComponent<EnemyArsenal>().AttackIds);
+		Assert.Equal(new[] { EnemyAttackId.FallenShepherdPhase2 }, enemy.GetComponent<EnemyArsenal>().AttackIds);
 		Assert.Equal(25, player.GetComponent<HP>().Current);
 		Assert.Equal(30, enemy.GetComponent<HP>().Current);
 		Assert.Equal(7, phaseEntity.GetComponent<PhaseState>().TurnNumber);

@@ -71,7 +71,6 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     EventId = enemyId,
                     EventType = QueuedEventType.Enemy,
-                    Difficulty = EnemyDifficulty.Easy,
                 });
             }
 

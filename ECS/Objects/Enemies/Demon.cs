@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Utils;
@@ -11,25 +12,25 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
 
 public class Demon : EnemyBase
 {
-  public Demon(EnemyDifficulty difficulty = EnemyDifficulty.Easy) : base(difficulty)
+  public Demon()
   {
-    Id = "demon";
+    Id = EnemyId.Demon;
     Name = "Demon";
-    HealthPerCard = 1.265f;
+    HP = 29;
   }
 
-  public override IEnumerable<string> GetAttackIds(EntityManager entityManager, int turnNumber)
+  public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
     var random = Random.Shared.Next(0, 100);
     if (random >= 60)
     {
-      return ["razor_maw"];
+      return [EnemyAttackId.RazorMaw];
     }
     else if (random >= 20)
     {
-      return ["scorching_claw"];
+      return [EnemyAttackId.ScorchingClaw];
     }
-    return ["infernal_execution"];
+    return [EnemyAttackId.InfernalExecution];
   }
 }
 
@@ -38,13 +39,14 @@ public class RazorMaw : EnemyAttackBase
   private int Burn = 1;
   public RazorMaw()
   {
-    Id = "razor_maw";
+    Id = EnemyAttackId.RazorMaw;
     Name = "Razor Maw";
-    Damage = 7;
-    ConditionType = ConditionType.OnHit;
-    Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Burn, 1, ConditionType);
+    Damage = 9;
+    AttackEffectRecipe = EnemyBiteEffect();
+    BlockRequiredToPreventEffect = 7;
+    Text = $"{EnemyAttackTextHelper.GetBlockThresholdText(Damage - BlockRequiredToPreventEffect.Value, EnemyAttackTextHelper.GetText(EnemyAttackTextType.Burn, Burn, ConditionType))}";
 
-    OnAttackHit = (entityManager) =>
+    OnDamageThresholdMet = (entityManager) =>
     {
       EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Burn, Delta = Burn });
     };
@@ -53,12 +55,13 @@ public class RazorMaw : EnemyAttackBase
 
 public class ScorchingClaw : EnemyAttackBase
 {
-  private int Burn = 2;
+  private int Burn = 1;
   public ScorchingClaw()
   {
-    Id = "scorching_claw";
+    Id = EnemyAttackId.ScorchingClaw;
     Name = "Scorching Claw";
     Damage = 10;
+    AttackEffectRecipe = EnemyClawSlashEffect();
     ConditionType = ConditionType.OnBlockedByAtLeast2Cards;
     Text = EnemyAttackTextHelper.GetText(EnemyAttackTextType.Burn, Burn, ConditionType);
 
@@ -75,7 +78,7 @@ public class InfernalExecution : EnemyAttackBase
   private int Threshold = 2;
   public InfernalExecution()
   {
-    Id = "infernal_execution";
+    Id = EnemyAttackId.InfernalExecution;
     Name = "Infernal Execution";
     Damage = 8;
     ConditionType = ConditionType.MustBeBlockedByAtLeast2Cards;

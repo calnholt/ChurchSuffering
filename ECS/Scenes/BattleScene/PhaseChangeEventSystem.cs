@@ -12,7 +12,7 @@ namespace Crusaders30XX.ECS.Systems
     public class PhaseChangeEventSystem : Core.System
     {
         private bool _waitingForAnimation = false;
-        private string _lastSeenContextId = null;
+        private int _lastSeenAttackSequence = -1;
         private int _lastTurn = -1;
         private bool _firstBlockProcessed = false;
 
@@ -35,11 +35,11 @@ namespace Crusaders30XX.ECS.Systems
                         _firstBlockProcessed = false;
                     }
 
-                // For subsequent blocks in same turn, clear waiting flag and reset context so attack display triggers
+                // For subsequent blocks in same turn, clear waiting flag and reset sequence so attack display triggers
                 if (_firstBlockProcessed)
                 {
                     _waitingForAnimation = false;
-                    _lastSeenContextId = null; // Reset so new attack context is detected
+                    _lastSeenAttackSequence = -1;
                 }
                 }
             });
@@ -60,7 +60,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<DeleteCachesEvent>(_ => {
                 LoggingService.Append("PhaseChangeEventSystem.OnDeleteCachesEvent", new JsonObject { });
                 _waitingForAnimation = false;
-                _lastSeenContextId = null;
+                _lastSeenAttackSequence = -1;
                 _lastTurn = -1;
                 _firstBlockProcessed = false;
             });
@@ -90,7 +90,7 @@ namespace Crusaders30XX.ECS.Systems
                 return;
             }
 
-            var currentContextId = intent.Planned[0].ContextId;
+            var currentSequence = intent.ActiveAttackSequence;
 
             var phaseState = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
             if (phaseState == null)
@@ -109,7 +109,7 @@ namespace Crusaders30XX.ECS.Systems
             if (phaseState.Sub == SubPhase.Block && !_firstBlockProcessed)
             {
                 _waitingForAnimation = true;
-                _lastSeenContextId = null;
+                _lastSeenAttackSequence = -1;
                 return; // Don't trigger - wait for BattlePhaseAnimationCompleteEvent
             }
             var enemy = EntityManager.GetEntitiesWithComponent<Enemy>().FirstOrDefault();
@@ -122,18 +122,14 @@ namespace Crusaders30XX.ECS.Systems
             {
                 return;
             }
-            if (currentContextId != _lastSeenContextId && phaseState.Sub == SubPhase.Block && enemyCmp.CurrentHealth > 0)
+            if (currentSequence != _lastSeenAttackSequence && phaseState.Sub == SubPhase.Block && enemyCmp.CurrentHealth > 0)
             {
                 if (!_waitingForAnimation)
                 {
-                    EventManager.Publish(new TriggerEnemyAttackDisplayEvent { ContextId = currentContextId });
-                    _lastSeenContextId = currentContextId;
-                }
-                else
-                {
+                    EventManager.Publish(new TriggerEnemyAttackDisplayEvent());
+                    _lastSeenAttackSequence = currentSequence;
                 }
             }
         }
     }
 }
-

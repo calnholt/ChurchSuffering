@@ -15,25 +15,31 @@ namespace Crusaders30XX.ECS.Services
 		// --- Constants ---
 		public static readonly int FrostbiteThreshold = 3;
 		public static readonly int FrostbiteDamage = 3;
-		public static readonly int SanguineCurseThreshold = 7;
+		public static readonly float GalvanizeBonusFraction = 0.5f;
 
 		// --- Card status tooltips ---
 
 		/// <summary>
 		/// Returns the full tooltip text for a card entity: base tooltip text plus any appended
-		/// status-effect descriptions (Frozen, Brittle, Colorless, Intimidated, Shackle, Pledge, Sealed, Recoil).
+		/// status-effect descriptions (Frozen, Brittle, Scorched, Thorned, Colorless, Intimidated, Shackle, Pledge, Sealed, Recoil).
 		/// </summary>
-		public static string BuildCardTooltip(Entity entity, string baseText)
+		public static string BuildCardTooltip(Entity entity, string baseText, EntityManager entityManager = null)
 		{
 			string text = baseText;
 
 			if (entity.GetComponent<Frozen>() != null)
-				text += Sep(text) + "This card is frozen - when played, gain 1 frostbite. Lasts for the rest of the quest.";
+				text += Sep(text) + "This card is frozen - when played, gain 1 frostbite. Lasts for the rest of the climb.";
 
 			if (entity.GetComponent<Brittle>() != null)
-				text += Sep(text) + "This card is brittle - if you block an attack with only this card, mill 1. Lasts for the rest of the run.";
+				text += Sep(text) + "This card is brittle - if you block an attack with only this card, mill 1. Lasts for the rest of the climb.";
 
-			if (entity.GetComponent<Colorless>() != null)
+			if (entity.GetComponent<Scorched>() != null)
+				text += Sep(text) + "This card is scorched - when pledged, lose 1 HP. Lasts for the rest of the climb.";
+
+			if (entity.GetComponent<Thorned>() != null)
+				text += Sep(text) + "This card is thorned - when discarded to pay a card cost, gain 1 scar. Lasts for the rest of the climb.";
+
+			if (entity.GetComponent<Colorless>() != null && !ShouldSuppressColorlessStatus(entityManager))
 				text += Sep(text) + ColorlessStatus;
 
 			if (entity.GetComponent<Intimidated>() != null)
@@ -66,12 +72,16 @@ namespace Crusaders30XX.ECS.Services
 
 		private static string Sep(string text) => string.IsNullOrWhiteSpace(text) ? "" : "\n\n";
 
+		private static bool ShouldSuppressColorlessStatus(EntityManager entityManager) =>
+			StateSingleton.IsTutorialActive
+			|| (entityManager != null && GuidedTutorialService.IsActive(entityManager));
+
 		// --- Passive tooltip text ---
 
 		public static string GetPassiveText(AppliedPassiveType type, bool isPlayer, int stacks)
 		{
 			var text = GetPassiveTooltip(type, isPlayer, stacks);
-			var suffix = " (Quest)";
+			var suffix = " (Climb)";
 			if (AppliedPassivesManagementSystem.GetTurnPassives().Contains(type))
 				suffix = " (Turn)";
 			else if (AppliedPassivesManagementSystem.GetBattlePassives().Contains(type))
@@ -86,7 +96,7 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Burn:
 					return $"At the start of {(isPlayer ? "your" : "the enemy's")} turn, {(isPlayer ? "you take" : "it takes")} {stacks} damage.";
 				case AppliedPassiveType.Slow:
-					return $"Ambush attacks are {stacks} second{(stacks == 1 ? "" : "s")} faster.";
+					return $"Ambush attacks are {stacks} second{(stacks == 1 ? "" : "s")} faster. At the end of your turn, lose 1 slow.";
 				case AppliedPassiveType.Aegis:
 					return $"Prevents the next {stacks} damage from any source.";
 				case AppliedPassiveType.Stun:
@@ -100,11 +110,11 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Inferno:
 					return $"At the start of your turn, gain {stacks} burn{(stacks == 1 ? "" : "s")}.";
 				case AppliedPassiveType.Scar:
-					return $"Lose {stacks} max HP. Remove one scar at the end of the quest.";
-				case AppliedPassiveType.Penance:
-					return "Your attacks deal 1 less damage if you have 1 or more penance. At the start of the next battle, these are converted to scars.";
+					return $"Lose {stacks} max HP. At the start of battle, lose 1 scar. Max HP is not restored until the next battle recalculates from remaining scars.";
 				case AppliedPassiveType.Aggression:
 					return $"Your next non-weapon attack this turn gains {stacks} damage.";
+				case AppliedPassiveType.Galvanize:
+					return $"The next non-weapon attack this turn deals {GalvanizeBonusFraction * 100}% more damage. Bonus damage is rounded up.";
 				case AppliedPassiveType.Sharpen:
 					return $"Your next weapon attack this turn gains {stacks} damage.";
 				case AppliedPassiveType.Might:
@@ -122,13 +132,13 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Guard:
 					return $"Prevents the next {stacks} damage from attacks. Any damage removes all guard. At the start of the enemy turn, converts to 1 aggression.";
 				case AppliedPassiveType.Fear:
-					return $"Attacks have a {stacks * 10}% chance to become ambush attacks.";
+					return "All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear.";
 				case AppliedPassiveType.Siphon:
 					return $"For each point of courage this enemy removes from you, it heals {stacks * Succubus.SiphonMultiplier} HP.";
 				case AppliedPassiveType.Thorns:
 					return $"You gain {stacks} bleed whenever you attack this enemy.";
 				case AppliedPassiveType.Bleed:
-					return "While you have bleed, lose 1 HP for each color you block with using 2 or more cards (including equipment), then remove one bleed per trigger.";
+					return "When you block with 2 or more cards of the same color, lose 1HP then remove one bleed stack.";
 				case AppliedPassiveType.Rage:
 					return $"{(isPlayer ? "You" : "The enemy")} gain{(isPlayer ? "" : "s")} {stacks} power at the start of the {(isPlayer ? "action phase" : "block phase")}.";
 				case AppliedPassiveType.Intellect:
@@ -159,10 +169,8 @@ namespace Crusaders30XX.ECS.Services
 					return "Sealed cards cost HP equal to remaining seals when played or discarded to pay for costs. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed.";
 				case AppliedPassiveType.Plunder:
 					return "At the start of the block phase, steals a card from your deck. Deal enough damage to rescue it.";
-				case AppliedPassiveType.SanguineCurse:
-					return $"When this enemy is dealt {SanguineCurseThreshold} or more damage in a single turn, you gain 1 penance.";
 				case AppliedPassiveType.Marksman:
-					return "Each turn a random card in your hand is marked. Playing a marked card removes the mark and applies the negative effect. Blocking with a marked card moves the mark to a different card and changes the negative effect. If you don't play a marked card on your action phase, gain 1 penance.";
+					return "Each turn a random card in your hand is marked. Playing a marked card removes the mark and applies the negative effect. Blocking with a marked card moves the mark to a different card and changes the negative effect.";
 				case AppliedPassiveType.CarpeDiem:
 					return "At the end of the turn, lose all courage.";
 				default:
@@ -188,13 +196,15 @@ namespace Crusaders30XX.ECS.Services
 			i = lowerText.IndexOf("inferno");
 			if (i >= 0) matches.Add((i, "X Inferno- At the start of the turn, gain X burn."));
 			i = lowerText.IndexOf("slow");
-			if (i >= 0) matches.Add((i, "X Slow - Ambush attacks are X second faster."));
+			if (i >= 0) matches.Add((i, "X Slow - Ambush attacks are X second faster. At the end of your turn, lose 1 slow."));
 			i = lowerText.IndexOf("aegis");
 			if (i >= 0) matches.Add((i, " X Aegis - Prevent the next X damage from any source."));
 			i = lowerText.IndexOf("burn");
 			if (i >= 0) matches.Add((i, "X Burn - At the start of the turn, take X damage."));
 			i = lowerText.IndexOf("aggression");
 			if (i >= 0) matches.Add((i, "X Aggression - Your next non-weapon attack this turn gains +X damage."));
+			i = lowerText.IndexOf("galvanize");
+			if (i >= 0) matches.Add((i, $"Galvanize - The next non-weapon attack this turn deals {GalvanizeBonusFraction * 100}% more damage. Bonus damage is rounded up."));
 			i = lowerText.IndexOf("power");
 			if (i >= 0) matches.Add((i, "X Power - Your attacks deal +X damage."));
 			i = lowerText.IndexOf("sharpen");
@@ -203,12 +213,14 @@ namespace Crusaders30XX.ECS.Services
 			if (i >= 0) matches.Add((i, "X Might - Your attacks deal +X damage this turn."));
 			i = lowerText.IndexOf("vigor");
 			if (i >= 0) matches.Add((i, "X Vigor - The next non-weapon card with a cost you play costs X discard less."));
-			i = lowerText.IndexOf("penance");
-			if (i >= 0) matches.Add((i, "X Penance - Your attacks deal -1 less damage. At the start of the next battle, these are converted to scars."));
 			var showScar = lowerText.IndexOf("scar ") >= 0 || lowerText.IndexOf("scars") >= 0 || lowerText.IndexOf("scars ") >= 0 || lowerText.IndexOf("scar.") >= 0;
-			if (showScar) matches.Add((i, "X Scar - Lose X max HP. Remove one scar at the end of the quest."));
+			if (showScar)
+			{
+				i = lowerText.IndexOf("scar");
+				matches.Add((i, "X Scar - Lose X max HP. At the start of battle, lose 1 scar. Max HP is not restored until the next battle recalculates from remaining scars."));
+			}
 			i = lowerText.IndexOf("fear");
-			if (i >= 0) matches.Add((i, "X Fear - Attacks have a (X*10)% chance to become ambush attacks this quest."));
+			if (i >= 0) matches.Add((i, "X Fear - All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear."));
 			i = lowerText.IndexOf("wounded");
 			if (i >= 0) matches.Add((i, "X Wounded - Take X more damage from all sources this battle."));
 			i = lowerText.IndexOf("armor");
@@ -216,13 +228,21 @@ namespace Crusaders30XX.ECS.Services
 			i = lowerText.IndexOf("guard");
 			if (i >= 0) matches.Add((i, "X Guard - Prevents the next X damage from attacks. Any damage removes all guard. At the start of the enemy turn, converts to 1 aggression."));
 			i = lowerText.IndexOf("bleed");
-			if (i >= 0) matches.Add((i, "X Bleed - While you have bleed, lose 1 HP for each color you block with using 2 or more cards (including equipment), then remove one bleed per trigger. Lasts for the rest of the run."));
+			if (i >= 0) matches.Add((i, "X Bleed - While you have bleed, lose 1 HP when you block with 2 or more cards of the same color, then remove one bleed stack. Lasts for the rest of the climb."));
 			i = lowerText.IndexOf("mill");
 			if (i >= 0) matches.Add((i, "Mill X - Discard the top X cards of your deck."));
+			i = lowerText.IndexOf("resurrect");
+			if (i >= 0) matches.Add((i, "Resurrect X - draw X random cards from your discard pile."));
 			i = lowerText.IndexOf("frostbite");
 			if (i >= 0) matches.Add((i, $"X Frostbite - When you have 3 stacks of frostbite, take {FrostbiteDamage} damage and lose 3 frostbite."));
 			i = lowerText.IndexOf("frozen");
 			if (i >= 0) matches.Add((i, "Frozen - When you play a frozen card, gain 1 frostbite."));
+			i = lowerText.IndexOf("brittle");
+			if (i >= 0) matches.Add((i, "Brittle - If you block an attack with only this card, mill 1."));
+			i = lowerText.IndexOf("scorched");
+			if (i >= 0) matches.Add((i, "Scorched - When pledged, lose 1 HP."));
+			i = lowerText.IndexOf("thorned");
+			if (i >= 0) matches.Add((i, "Thorned - When discarded to pay a card cost, gain 1 scar."));
 			if (matches.Count == 0) return string.Empty;
 			i = lowerText.IndexOf("darkness");
 			if (i >= 0) matches.Add((i, "X Darkness - The enemy loses X damage when you pledge a card."));

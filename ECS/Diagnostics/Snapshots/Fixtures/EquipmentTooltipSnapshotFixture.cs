@@ -54,7 +54,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ctx.World.EntityManager,
 				ctx.GraphicsDevice,
 				ctx.SpriteBatch,
-				ctx.Content)
+				ctx.ImageAssets)
 			{
 				LeftMargin = 500,
 				TopMargin = 420,
@@ -63,7 +63,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ctx.World.EntityManager,
 				ctx.GraphicsDevice,
 				ctx.SpriteBatch,
-				ctx.Content);
+				ctx.ImageAssets);
 			_display.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(1d / 60d)));
 			var root = ctx.World.EntityManager.GetEntitiesWithComponent<EquipmentDisplayRoot>()
 				.First();

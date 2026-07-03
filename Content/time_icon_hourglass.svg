@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 16" width="48" height="64">
+  <path
+    id="sand"
+    d="M5.15 8.85 L6.85 8.85 L9.55 13.85 L2.45 13.85 Z"
+    fill="white"
+  />
+  <path
+    id="frame"
+    d="M2 1.35 H10 L6.75 8 L10 14.65 H2 L5.25 8 Z"
+    fill="none"
+    stroke="white"
+    stroke-width="1.45"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+</svg>

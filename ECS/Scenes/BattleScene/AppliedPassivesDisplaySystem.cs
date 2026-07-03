@@ -167,6 +167,11 @@ namespace Crusaders30XX.ECS.Systems
             foreach (var e in entities)
             {
                 bool isPlayer = e.GetComponent<Player>() != null;
+                if (!isPlayer && BattleInputGate.ShouldSuppressEnemyAttackDisplay(EntityManager))
+                {
+                    CleanupTooltipUiForOwner(e.Id, new System.Collections.Generic.HashSet<AppliedPassiveType>());
+                    continue;
+                }
                 var ap = e.GetComponent<AppliedPassives>();
                 var t = e.GetComponent<Transform>();
                 if (ap == null || ap.Passives == null || t == null)
@@ -305,7 +310,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private Boolean ShowStacks(AppliedPassiveType type)
         {
-            return !(new List<AppliedPassiveType> { AppliedPassiveType.Stealth, AppliedPassiveType.MindFog, AppliedPassiveType.Plunder, AppliedPassiveType.CarpeDiem }).Contains(type);
+            return !(new List<AppliedPassiveType> { AppliedPassiveType.Stealth, AppliedPassiveType.MindFog, AppliedPassiveType.Plunder, AppliedPassiveType.CarpeDiem, AppliedPassiveType.Galvanize }).Contains(type);
         }
 
         private void OnPassiveTriggered(PassiveTriggered e)

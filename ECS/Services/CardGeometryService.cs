@@ -6,6 +6,14 @@ using Microsoft.Xna.Framework;
 
 namespace Crusaders30XX.ECS.Services
 {
+    public readonly struct CardVisualGeometry
+    {
+        public Rectangle Bounds { get; init; }
+        public Vector2 Center { get; init; }
+        public float Scale { get; init; }
+        public float Rotation { get; init; }
+    }
+
     public static class CardGeometryService
     {
         public static CardGeometrySettings GetSettings(EntityManager entityManager)
@@ -47,6 +55,30 @@ namespace Crusaders30XX.ECS.Services
         {
             var rect = GetVisualRect(settings, position, scale);
             return new Vector2(rect.X + rect.Width / 2f, rect.Y + rect.Height / 2f);
+        }
+
+        public static CardVisualGeometry GetVisualGeometry(
+            EntityManager entityManager,
+            Entity card,
+            Vector2? positionOverride = null,
+            float? scaleOverride = null,
+            float? rotationOverride = null)
+        {
+            var settings = GetSettings(entityManager);
+            var transform = card?.GetComponent<Transform>();
+
+            Vector2 position = positionOverride ?? transform?.Position ?? Vector2.Zero;
+            float scale = scaleOverride ?? transform?.Scale.X ?? 1f;
+            float rotation = rotationOverride ?? transform?.Rotation ?? 0f;
+
+            var bounds = GetVisualRect(settings, position, scale);
+            return new CardVisualGeometry
+            {
+                Bounds = bounds,
+                Center = new Vector2(bounds.X + bounds.Width / 2f, bounds.Y + bounds.Height / 2f),
+                Scale = scale,
+                Rotation = rotation,
+            };
         }
     }
 }

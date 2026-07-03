@@ -19,7 +19,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Cost = ["Any","Any"];
             Text = $"If two red cards are discarded to play this, this gains +{DamageBonus} damage.";
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Block = 3;
             Damage = 8;
 

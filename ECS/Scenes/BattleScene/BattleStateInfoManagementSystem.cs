@@ -27,9 +27,10 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
             EventManager.Subscribe<TrackingEvent>(OnTrackingEvent);
             EventManager.Subscribe<ModifyCourageRequestEvent>(OnModifyCourage);
-            EventManager.Subscribe<SetCourageEvent>(OnSetCourageEvent);
+            EventManager.Subscribe<SetCourageEvent>(OnSetCourageEvent, priority: 10);
             EventManager.Subscribe<ApplyEffect>(OnApplyEffect);
             EventManager.Subscribe<ModifyHpEvent>(OnModifyHp);
+            EventManager.Subscribe<TopCardRemovedForMillEvent>(OnTopCardRemovedForMill);
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -79,6 +80,16 @@ namespace Crusaders30XX.ECS.Systems
             var st = player.GetComponent<BattleStateInfo>();
             if (st == null) return;
             st.PlayerActionPhaseAttackHits++;
+        }
+
+        private void OnTopCardRemovedForMill(TopCardRemovedForMillEvent evt)
+        {
+            if (evt?.Card == null) return;
+            OnTrackingEvent(new TrackingEvent
+            {
+                Type = TrackingTypeEnum.CardsMilled.ToString(),
+                Delta = 1
+            });
         }
 
         private void ClearBattleTracking()
@@ -146,7 +157,7 @@ namespace Crusaders30XX.ECS.Systems
           var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
           var courage = player.GetComponent<Courage>();
           var delta = courage.Amount - e.Amount;
-          OnTrackingEvent(new TrackingEvent { Type = delta > 0 ? TrackingTypeEnum.CourageGained.ToString() : TrackingTypeEnum.CourageLost.ToString(), Delta = Math.Abs(delta) });
+          OnTrackingEvent(new TrackingEvent { Type = delta > 0 ? TrackingTypeEnum.CourageLost.ToString() : TrackingTypeEnum.CourageGained.ToString(), Delta = Math.Abs(delta) });
         }
         private void OnApplyEffect(ApplyEffect e)
         {

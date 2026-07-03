@@ -10,7 +10,7 @@ namespace Crusaders30XX.ECS.Objects.Medals
         {
             Id = "st_louie_ix";
             Name = "St. Louie IX, King of France";
-            Text = "At the start of every third turn, gain 1 aggression.";
+            Text = "At the start of every third turn, gain 1 might.";
             MaxCount = 3;
         }
 
@@ -36,7 +36,7 @@ namespace Crusaders30XX.ECS.Objects.Medals
 
         public override void Activate()
         {
-            EventManager.Publish(new ApplyPassiveEvent { Target = EntityManager.GetEntity("Player"), Type = AppliedPassiveType.Aggression, Delta = 1 });
+            EventManager.Publish(new ApplyPassiveEvent { Target = EntityManager.GetEntity("Player"), Type = AppliedPassiveType.Might, Delta = 1 });
         }
 
         public override void Dispose()

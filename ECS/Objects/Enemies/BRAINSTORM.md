@@ -86,7 +86,7 @@ Simple sustain threat. Chip damage now extends the fight - every point you let t
 ## Holy Theme
 
 ### Fallen Angel (block threshold)
-"Each time you block with X+ cards, Y bad thing happens." (Penance, aggression, burn, aegis, etc.)
+"Each time you block with X+ cards, Y bad thing happens." (aggression, burn, aegis, etc.)
 
 Linker+ender pattern forces you to block two attacks, but over-committing cards to blocking crosses a threshold that punishes you. Creates a "just enough" blocking puzzle - assign the minimum cards needed to survive.
 

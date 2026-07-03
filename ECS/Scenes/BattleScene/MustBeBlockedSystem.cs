@@ -21,7 +21,7 @@ namespace Crusaders30XX.ECS.Systems
         public enum MustBeBlockedByType { None, AtLeast, Exactly }
         private MustBeBlockedByType requirementType = MustBeBlockedByType.None;
         private int mustBeBlockedThreshold = 0;
-        private string mustBeBlockedContextId;
+        private int mustBeBlockedAttackSequence = -1;
         private EnemyAttackBase mustBeBlockedAttackDefinition;
         
         // Cache previous state to prevent flickering UI updates
@@ -69,7 +69,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             requirementType = MustBeBlockedByType.None;
             mustBeBlockedThreshold = 0;
-            mustBeBlockedContextId = null;
+            mustBeBlockedAttackSequence = -1;
             mustBeBlockedAttackDefinition = null;
             previousFulfilledState = null;
             previousPlayedCardsCount = -1;
@@ -80,11 +80,34 @@ namespace Crusaders30XX.ECS.Systems
             var enemy = EntityManager.GetEntity("Enemy");
             var intent = enemy?.GetComponent<AttackIntent>();
             var plannedAttack = intent?.Planned?.FirstOrDefault();
-            mustBeBlockedContextId = plannedAttack?.ContextId;
+            mustBeBlockedAttackSequence = intent?.ActiveAttackSequence ?? -1;
             mustBeBlockedAttackDefinition = plannedAttack?.AttackDefinition;
+            if (mustBeBlockedAttackDefinition == null
+                || !EnemyAttackMustBlockRequirementService.TryGetRequirement(
+                    mustBeBlockedAttackDefinition.ConditionType,
+                    out var activeRequirement)
+                || activeRequirement.Threshold != evt.Threshold
+                || !RequirementTypesMatch(activeRequirement.Type, evt.Type))
+            {
+                ResetBlockRequirement();
+                return;
+            }
+
             mustBeBlockedThreshold = evt.Threshold;
             requirementType = evt.Type;
-            LoggingService.Append("MustBeBlockedSystem.InitializeBlockRequirement", new System.Text.Json.Nodes.JsonObject { ["contextId"] = mustBeBlockedContextId, ["attackName"] = mustBeBlockedAttackDefinition?.Name, ["threshold"] = mustBeBlockedThreshold, ["requirementType"] = requirementType.ToString() });
+            LoggingService.Append("MustBeBlockedSystem.InitializeBlockRequirement", new System.Text.Json.Nodes.JsonObject { ["attackSequence"] = mustBeBlockedAttackSequence, ["attackName"] = mustBeBlockedAttackDefinition?.Name, ["threshold"] = mustBeBlockedThreshold, ["requirementType"] = requirementType.ToString() });
+        }
+
+        private static bool RequirementTypesMatch(
+            EnemyAttackMustBlockRequirementService.RequirementType activeRequirementType,
+            MustBeBlockedByType eventRequirementType)
+        {
+            return activeRequirementType switch
+            {
+                EnemyAttackMustBlockRequirementService.RequirementType.AtLeast => eventRequirementType == MustBeBlockedByType.AtLeast,
+                EnemyAttackMustBlockRequirementService.RequirementType.Exactly => eventRequirementType == MustBeBlockedByType.Exactly,
+                _ => false
+            };
         }
 
         private List<Entity> GetEligibleBlockCards(Deck deck)
@@ -162,9 +185,6 @@ namespace Crusaders30XX.ECS.Systems
                 return;
             }
             if (evt.Current != SubPhase.PreBlock) return;
-            var ui = EntityManager.GetEntity("UIButton_ConfirmEnemyAttack").GetComponent<UIElement>();
-            ui.IsInteractable = true;
-            ui.IsHidden = false;
             LoggingService.Append("MustBeBlockedSystem.OnChangeBattlePhaseEvent", new System.Text.Json.Nodes.JsonObject { ["phase"] = evt.Current.ToString() });
             blockCount = 0;
             
@@ -172,22 +192,19 @@ namespace Crusaders30XX.ECS.Systems
             
         }
 
-        protected override void UpdateEntity(Entity entity, GameTime gameTime) 
+        public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
             if (requirementType == MustBeBlockedByType.None) return;
-            if (string.IsNullOrEmpty(mustBeBlockedContextId)) return;
-            
-            var confirmBtn = EntityManager.GetEntity("UIButton_ConfirmEnemyAttack");
-            if (confirmBtn == null) return;
-            var ui = confirmBtn.GetComponent<UIElement>();
-            if (ui == null) return;
+            if (mustBeBlockedAttackSequence < 0) return;
+
             var progress = EntityManager.GetEntitiesWithComponent<EnemyAttackProgress>()
-                .FirstOrDefault(e => e.GetComponent<EnemyAttackProgress>()?.ContextId == mustBeBlockedContextId);
+                .FirstOrDefault(e => e.GetComponent<EnemyAttackProgress>()?.AttackSequence == mustBeBlockedAttackSequence);
             if (progress == null) return;
             var progressComponent = progress.GetComponent<EnemyAttackProgress>();
             if (progressComponent == null) return;
             
-            var blockCount = progressComponent.PlayedCards;
+            blockCount = progressComponent.PlayedCards;
             
             // Only process if the card count has actually changed (prevents redundant evaluations)
             if (blockCount == previousPlayedCardsCount)
@@ -205,14 +222,14 @@ namespace Crusaders30XX.ECS.Systems
             }
             
             previousFulfilledState = isFullfilled;
-            ui.IsHidden = !isFullfilled;
-            ui.IsInteractable = isFullfilled;
             
             if (mustBeBlockedAttackDefinition != null)
             {
                 // mustBeBlockedAttackDefinition.isTextConditionFulfilled = isFullfilled;
             }
         }
+
+        protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
         private void OnAmbushTimerExpired(AmbushTimerExpired evt)
         {
             try
@@ -226,11 +243,11 @@ namespace Crusaders30XX.ECS.Systems
                 var enemy = EntityManager.GetEntity("Enemy");
                 var intent = enemy?.GetComponent<AttackIntent>();
                 var pa = intent?.Planned?.FirstOrDefault();
-                if (pa == null || !pa.IsAmbush || string.IsNullOrEmpty(pa.ContextId))
+                if (pa == null || !pa.IsAmbush)
                 {
                     return;
                 }
-                if (!string.Equals(pa.ContextId, evt.ContextId, StringComparison.Ordinal))
+                if (intent.ActiveAttackSequence != evt.AttackSequence)
                 {
                     return;
                 }
@@ -278,7 +295,6 @@ namespace Crusaders30XX.ECS.Systems
                             Card = card,
                             Deck = deckEntity,
                             Destination = CardZoneType.AssignedBlock,
-                            ContextId = pa.ContextId,
                             Reason = "AssignBlockAutoAmbush"
                         });
                         var abc = card.GetComponent<AssignedBlockCard>();
@@ -298,7 +314,6 @@ namespace Crusaders30XX.ECS.Systems
                     string color = CardColorQualificationService.GetQualifiedColor(card)?.ToString();
                     EventManager.Publish(new BlockAssignmentAdded
                     {
-                        ContextId = pa.ContextId,
                         Card = card,
                         Color = color,
                         DeltaBlock = blockVal
@@ -313,7 +328,7 @@ namespace Crusaders30XX.ECS.Systems
 
         protected override IEnumerable<Entity> GetRelevantEntities()
         {
-            return new List<Entity> { EntityManager.GetEntity("UIButton_ConfirmEnemyAttack") };
+            return Array.Empty<Entity>();
         }
 
     }

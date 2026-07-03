@@ -29,6 +29,12 @@ namespace Crusaders30XX.ECS.Rendering
 		private static readonly Dictionary<(int deviceId, int size), Texture2D> _diamondCache = new();
 		// Cache "any" cost diamond pip textures (tri-color diamond)
 		private static readonly Dictionary<(int deviceId, int size), Texture2D> _anyDiamondPipCache = new();
+		// Cache arbitrary polygon masks by device, dimensions, and caller-provided shape key
+		private static readonly Dictionary<(int deviceId, int width, int height, string shapeKey), Texture2D> _polygonMaskCache = new();
+		// Cache antialiased ring masks by device, dimensions, and thickness
+		private static readonly Dictionary<(int deviceId, int width, int height, float thickness), Texture2D> _ringMaskCache = new();
+		// Cache soft radial circle masks by device, diameter, and normalized stops
+		private static readonly Dictionary<(int deviceId, int diameter, float innerStop, float outerStop), Texture2D> _softRadialCircleCache = new();
 
 		public static Texture2D GetAntiAliasedCircle(GraphicsDevice device, int radius)
 		{
@@ -66,6 +72,160 @@ namespace Crusaders30XX.ECS.Rendering
 			circle.SetData(data);
 			_aaCircleCache[key] = circle;
 			return circle;
+		}
+
+		public static Texture2D GetAntialiasedPolygonMask(
+			GraphicsDevice device,
+			int width,
+			int height,
+			string shapeKey,
+			IReadOnlyList<Vector2> normalizedPoints)
+		{
+			width = System.Math.Max(1, width);
+			height = System.Math.Max(1, height);
+			shapeKey ??= string.Empty;
+			int deviceId = device?.GetHashCode() ?? 0;
+			var key = (deviceId, width, height, shapeKey);
+			if (_polygonMaskCache.TryGetValue(key, out var existing) && existing != null) return existing;
+
+			var tex = new Texture2D(device, width, height);
+			var data = new Color[width * height];
+			var points = new Vector2[normalizedPoints?.Count ?? 0];
+			for (int i = 0; i < points.Length; i++)
+			{
+				points[i] = new Vector2(
+					MathHelper.Clamp(normalizedPoints[i].X, 0f, 1f) * width,
+					MathHelper.Clamp(normalizedPoints[i].Y, 0f, 1f) * height);
+			}
+
+			float[] offsets = { 0.25f, 0.75f };
+			const float sampleCount = 4f;
+			for (int y = 0; y < height; y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					int hits = 0;
+					for (int sy = 0; sy < offsets.Length; sy++)
+					{
+						for (int sx = 0; sx < offsets.Length; sx++)
+						{
+							if (IsPointInPolygon(x + offsets[sx], y + offsets[sy], points))
+							{
+								hits++;
+							}
+						}
+					}
+
+					byte alpha = (byte)MathHelper.Clamp((int)System.Math.Round(hits / sampleCount * 255f), 0, 255);
+					data[y * width + x] = Color.FromNonPremultiplied(255, 255, 255, alpha);
+				}
+			}
+
+			tex.SetData(data);
+			_polygonMaskCache[key] = tex;
+			return tex;
+		}
+
+		public static Texture2D GetAntialiasedRingMask(GraphicsDevice device, int width, int height, float thicknessPx)
+		{
+			width = System.Math.Max(1, width);
+			height = System.Math.Max(1, height);
+			thicknessPx = System.Math.Max(1f, thicknessPx);
+			int deviceId = device?.GetHashCode() ?? 0;
+			var key = (
+				deviceId,
+				width,
+				height,
+				(float)System.Math.Round(thicknessPx, 2)
+			);
+			if (_ringMaskCache.TryGetValue(key, out var existing) && existing != null) return existing;
+
+			var tex = new Texture2D(device, width, height);
+			var data = new Color[width * height];
+			float rx = width * 0.5f;
+			float ry = height * 0.5f;
+			float halfThickness = thicknessPx * 0.5f;
+			float radius = System.Math.Min(rx, ry);
+			for (int y = 0; y < height; y++)
+			{
+				float py = y + 0.5f - ry;
+				for (int x = 0; x < width; x++)
+				{
+					float px = x + 0.5f - rx;
+					float nx = rx <= 0.001f ? 0f : px / rx;
+					float ny = ry <= 0.001f ? 0f : py / ry;
+					float dist = (float)System.Math.Sqrt(nx * nx + ny * ny) * radius;
+					float edgeDistance = System.Math.Abs(dist - radius + halfThickness);
+					float alpha;
+					if (edgeDistance <= halfThickness - 0.5f) alpha = 1f;
+					else if (edgeDistance >= halfThickness + 0.5f) alpha = 0f;
+					else alpha = 1f - (edgeDistance - (halfThickness - 0.5f));
+					byte alphaByte = (byte)MathHelper.Clamp((int)System.Math.Round(alpha * 255f), 0, 255);
+					data[y * width + x] = Color.FromNonPremultiplied(255, 255, 255, alphaByte);
+				}
+			}
+
+			tex.SetData(data);
+			_ringMaskCache[key] = tex;
+			return tex;
+		}
+
+		public static Texture2D GetSoftRadialCircle(GraphicsDevice device, int diameter, float innerStop, float outerStop)
+		{
+			diameter = System.Math.Max(1, diameter);
+			innerStop = MathHelper.Clamp(innerStop, 0f, 1f);
+			outerStop = MathHelper.Clamp(outerStop, innerStop + 0.001f, 1f);
+			int deviceId = device?.GetHashCode() ?? 0;
+			var key = (
+				deviceId,
+				diameter,
+				(float)System.Math.Round(innerStop, 3),
+				(float)System.Math.Round(outerStop, 3)
+			);
+			if (_softRadialCircleCache.TryGetValue(key, out var existing) && existing != null) return existing;
+
+			var tex = new Texture2D(device, diameter, diameter);
+			var data = new Color[diameter * diameter];
+			float radius = diameter * 0.5f;
+			for (int y = 0; y < diameter; y++)
+			{
+				float dy = y + 0.5f - radius;
+				for (int x = 0; x < diameter; x++)
+				{
+					float dx = x + 0.5f - radius;
+					float d = (float)System.Math.Sqrt(dx * dx + dy * dy) / radius;
+					float alpha = d <= innerStop
+						? 1f
+						: d >= outerStop
+							? 0f
+							: 1f - (d - innerStop) / (outerStop - innerStop);
+					alpha = alpha * alpha * (3f - 2f * alpha);
+					byte alphaByte = (byte)MathHelper.Clamp((int)System.Math.Round(alpha * 255f), 0, 255);
+					data[y * diameter + x] = Color.FromNonPremultiplied(255, 255, 255, alphaByte);
+				}
+			}
+
+			tex.SetData(data);
+			_softRadialCircleCache[key] = tex;
+			return tex;
+		}
+
+		private static bool IsPointInPolygon(float x, float y, IReadOnlyList<Vector2> points)
+		{
+			if (points == null || points.Count < 3) return false;
+			bool inside = false;
+			for (int i = 0, j = points.Count - 1; i < points.Count; j = i++)
+			{
+				var pi = points[i];
+				var pj = points[j];
+				bool crosses = (pi.Y > y) != (pj.Y > y);
+				if (crosses)
+				{
+					float atX = (pj.X - pi.X) * (y - pi.Y) / (pj.Y - pi.Y) + pi.X;
+					if (x < atX) inside = !inside;
+				}
+			}
+			return inside;
 		}
 
 		/// <summary>
@@ -682,5 +842,4 @@ namespace Crusaders30XX.ECS.Rendering
 		}
 	}
 }
-
 

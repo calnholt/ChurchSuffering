@@ -309,7 +309,8 @@
 
 .space-card-compact--mystery .space-card-compact__meta {
   grid-column: 2 / -1;
-  justify-content: space-between;
+  display: flex;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -423,15 +424,4 @@
 
 .space-slot--expired .space-card-compact__time-block__cost .time-display {
   opacity: 0.45;
-}
-
-.space-card-compact__window {
-  font-size: 0.65rem;
-  color: var(--white-3);
-  letter-spacing: 0.5px;
-  background: none;
-  border: none;
-  display: flex;
-  align-items: center;
-  height: 100%;
 }

@@ -6,7 +6,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class CarpeDiem : CardBase
     {
-        private int CourageGain = 4;
+        private int CourageGain = 5;
         private int MightGainUpgrade = 1;
 
         public CarpeDiem()
@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             IsFreeAction = true;
             Type = CardType.Prayer;
             Block = 2;
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
 
             OnPlay = (entityManager, card) =>
             {

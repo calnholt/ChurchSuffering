@@ -4,9 +4,9 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
+using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -16,7 +16,6 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
 		private readonly SpriteFont _font = FontSingleton.ContentFont;
 		private Texture2D _goldTexture;
 		private int _currentGold;
@@ -66,21 +65,11 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Left Edge Angle (deg)", Step = 1f, Min = -45f, Max = 45f)]
 		public float LeftEdgeAngleDegrees { get; set; } = 8f;
 
-		public CurrencyDisplaySystem(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public CurrencyDisplaySystem(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_content = content;
-
-			// Attempt to load coin texture; tolerate missing asset
-			try
-			{
-				_goldTexture = _content.Load<Texture2D>("gold");
-			}
-			catch
-			{
-				_goldTexture = null;
-			}
+			_goldTexture = imageAssets.TryGetTexture("gold");
 
 			// Seed current gold
 			try { _currentGold = SaveCache.GetGold(); } catch { _currentGold = 0; }
@@ -178,5 +167,4 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-
 

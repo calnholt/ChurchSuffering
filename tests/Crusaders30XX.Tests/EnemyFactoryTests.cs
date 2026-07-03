@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
@@ -14,13 +15,12 @@ public class EnemyFactoryTests
 	[Fact]
 	public void Fallen_shepherd_is_registered_as_a_boss()
 	{
-		var enemy = EnemyFactory.Create("fallen_shepherd", EnemyDifficulty.Hard);
-		var allEnemies = EnemyFactory.GetAllEnemies(EnemyDifficulty.Hard);
+		var enemy = EnemyFactory.Create(EnemyId.FallenShepherd);
+		var allEnemies = EnemyFactory.GetAllEnemies();
 
 		var shepherd = Assert.IsType<FallenShepherd>(enemy);
-		Assert.Equal(EnemyDifficulty.Hard, shepherd.Difficulty);
 		Assert.True(shepherd.IsBoss);
-		Assert.IsType<FallenShepherd>(allEnemies["fallen_shepherd"]);
+		Assert.IsType<FallenShepherd>(allEnemies[EnemyId.FallenShepherd]);
 	}
 
 	[Fact]
@@ -54,15 +54,13 @@ public class EnemyFactoryTests
 		var enemyEntity = EntityFactory.CreateEnemyFromId(
 			world,
 			"fallen_shepherd",
-			world.EntityManager,
-			EnemyDifficulty.Medium);
+			world.EntityManager);
 
 		var enemy = enemyEntity.GetComponent<Enemy>();
 		var arsenal = enemyEntity.GetComponent<EnemyArsenal>();
-		Assert.Equal("fallen_shepherd", enemy.Id);
+		Assert.Equal(EnemyId.FallenShepherd, enemy.Id);
 		Assert.IsType<FallenShepherd>(enemy.EnemyBase);
-		Assert.Equal(EnemyDifficulty.Medium, enemy.EnemyBase.Difficulty);
-		Assert.Equal(new[] { "fallen_shepherd_phase_1" }, arsenal.AttackIds);
+		Assert.Equal(new[] { EnemyAttackId.FallenShepherdPhase1 }, arsenal.AttackIds);
 	}
 
 	[Fact]

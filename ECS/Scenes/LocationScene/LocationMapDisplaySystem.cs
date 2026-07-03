@@ -9,9 +9,9 @@ using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Input;
+using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
@@ -64,14 +64,13 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Max Zoom", Step = 0.1f, Min = 1f, Max = 5f)]
 		public float MaxZoom { get; set; } = 1.0f;
 
-		public LocationMapDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
+		public LocationMapDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
-			_backgroundTexture = content.Load<Texture2D>("desert_background_location");
+			_pixel = imageAssets.GetPixel(Color.White);
+			_backgroundTexture = imageAssets.GetRequiredTexture("desert_background_location");
 			// Restore zoom state from singleton on system creation
 			MapScale = StateSingleton.LocationMapZoom;
 			EventManager.Subscribe<LockLocationCameraEvent>(_ => { _locked = _.Locked; });
@@ -383,4 +382,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-

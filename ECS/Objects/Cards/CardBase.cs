@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Systems;
 
@@ -46,10 +47,10 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
         public int GetDerivedDamage(EntityManager entityManager, Entity card)
         {
-            return GetConditionalDamage(entityManager, card) + AttackDamageValueService.GetTotalDamageValue(card);
+            return CardStatModifierService.GetCardDamage(entityManager, card, CardStatQueryMode.Resolution).TotalValue;
         }
         
-        public string Animation { get; set; } = "";
+        public VisualEffectRecipe VisualEffectRecipe { get; protected set; }
         public CardType Type { get; set; } = CardType.Attack;
         public string Target { get; set; } = "";
         public bool IsFreeAction { get; set; } = false;
@@ -85,6 +86,41 @@ namespace Crusaders30XX.ECS.Objects.Cards
         public Func<EntityManager, Entity, bool>? CanPlay { get; protected set; } = (a, b) => true;
         public Action<EntityManager, Entity>? OnCantPlay { get; protected set; }
         public Func<EntityManager, Entity, int>? GetConditionalDamage { get; protected set; } = (a, b) => 0;
+
+        protected static VisualEffectRecipe PlayerAttackEffect()
+        {
+            return VisualEffectPresets.PlayerAttack();
+        }
+
+        protected static VisualEffectRecipe PlayerBuffEffect()
+        {
+            return VisualEffectPresets.PlayerBuff();
+        }
+
+        protected static VisualEffectRecipe LightSlashEffect()
+        {
+            return VisualEffectPresets.LightSlash();
+        }
+
+        protected static VisualEffectRecipe HeavyHammerEffect()
+        {
+            return VisualEffectPresets.HeavyHammer();
+        }
+
+        protected static VisualEffectRecipe HolyStrikeEffect()
+        {
+            return VisualEffectPresets.HolyStrike();
+        }
+
+        protected static VisualEffectRecipe HolySupportEffect()
+        {
+            return VisualEffectPresets.HolySupport();
+        }
+
+        protected static VisualEffectRecipe DefensiveGuardEffect()
+        {
+            return VisualEffectPresets.DefensiveGuard();
+        }
 
         public virtual void Initialize(EntityManager entityManager, Entity cardEntity)
         {

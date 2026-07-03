@@ -1,9 +1,25 @@
 [
+  { "id": "crimson_cuirass", "name": "Crimson Cuirass" },
+  { "id": "crimson_greathelm", "name": "Crimson Greathelm" },
+  { "id": "crimson_greaves", "name": "Crimson Greaves" },
+  { "id": "crimson_vambraces", "name": "Crimson Vambraces" },
   { "id": "helm_of_seeing", "name": "Helm of Seeing" },
+  { "id": "ivory_coif", "name": "Ivory Coif" },
+  { "id": "ivory_treads", "name": "Ivory Treads" },
+  { "id": "ivory_vest", "name": "Ivory Vest" },
+  { "id": "ivory_wraps", "name": "Ivory Wraps" },
   { "id": "knightly_helm", "name": "Knightly Helm" },
   { "id": "knightly_chest", "name": "Knightly Chest" },
   { "id": "pierced_heart_plate", "name": "Pierced Heart Plate" },
   { "id": "knightly_gauntlets", "name": "Knightly Gauntlets" },
   { "id": "purging_bracers", "name": "Purging Bracers" },
-  { "id": "knightly_grieves", "name": "Knightly Grieves" }
+  { "id": "knightly_grieves", "name": "Knightly Grieves" },
+  { "id": "pale_cuirass", "name": "Pale Cuirass" },
+  { "id": "pale_greathelm", "name": "Pale Greathelm" },
+  { "id": "pale_greaves", "name": "Pale Greaves" },
+  { "id": "pale_vambraces", "name": "Pale Vambraces" },
+  { "id": "scarlet_coif", "name": "Scarlet Coif" },
+  { "id": "scarlet_treads", "name": "Scarlet Treads" },
+  { "id": "scarlet_vest", "name": "Scarlet Vest" },
+  { "id": "scarlet_wraps", "name": "Scarlet Wraps" }
 ]

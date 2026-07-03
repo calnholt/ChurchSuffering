@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -21,13 +22,16 @@ namespace Crusaders30XX.ECS.Systems
         private readonly ContentManager _content;
         private readonly Dictionary<SfxTrack, SoundEffect> _soundCache = new();
         private readonly List<SoundEffectInstance> _activeInstances = new();
+        private int _sfxVolumeLevel;
         [DebugEditable(DisplayName = "Mute")]
         public bool Mute { get; set; } = false;
 
         public SoundEffectManagerSystem(EntityManager entityManager, ContentManager content) : base(entityManager)
         {
             _content = content;
+            _sfxVolumeLevel = SaveCache.GetSfxVolumeLevel();
             EventManager.Subscribe<PlaySfxEvent>(OnPlaySfx);
+            EventManager.Subscribe<AudioSettingsChangedEvent>(OnAudioSettingsChanged);
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -71,7 +75,7 @@ namespace Crusaders30XX.ECS.Systems
 
                 // Create and configure instance
                 var instance = soundEffect.CreateInstance();
-                instance.Volume = MathHelper.Clamp(evt.Volume, 0f, 1f);
+                instance.Volume = ApplyUserVolume(evt.Volume);
                 instance.Pitch = MathHelper.Clamp(evt.Pitch, -1f, 1f);
                 instance.Pan = MathHelper.Clamp(evt.Pan, -1f, 1f);
                 
@@ -86,6 +90,18 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
             catch { }
+        }
+
+        private void OnAudioSettingsChanged(AudioSettingsChangedEvent evt)
+        {
+            if (evt == null) return;
+            _sfxVolumeLevel = Math.Clamp(evt.SfxVolumeLevel, 0, 100);
+        }
+
+        private float ApplyUserVolume(float authoredVolume)
+        {
+            float scalar = _sfxVolumeLevel / (float)SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL;
+            return MathHelper.Clamp(authoredVolume * scalar, 0f, 1f);
         }
 
         private SoundEffect ResolveSoundEffect(SfxTrack track)
@@ -132,4 +148,3 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-

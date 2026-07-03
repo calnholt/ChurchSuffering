@@ -2,11 +2,20 @@ using System.Collections.Generic;
 
 namespace Crusaders30XX.ECS.Data.Loadouts
 {
+	public class LoadoutCardEntry
+	{
+		public string entryId { get; set; } = string.Empty;
+		public string cardKey { get; set; } = string.Empty;
+		public bool isStarter { get; set; }
+		public bool countsAsTraded { get; set; }
+		public List<string> restrictions { get; set; } = new();
+	}
+
 	public class LoadoutDefinition
 	{
 		public string id { get; set; }
 		public string name { get; set; }
-		public List<string> cardIds { get; set; } = new();
+		public List<LoadoutCardEntry> cards { get; set; } = new();
 		public string weaponId { get; set; }
 		public string temperanceId { get; set; }
 		public string chestId { get; set; }
@@ -16,6 +25,5 @@ namespace Crusaders30XX.ECS.Data.Loadouts
 		public List<string> medalIds { get; set; } = new();
 	}
 }
-
 
 

@@ -73,7 +73,7 @@ public class StarterDeckSaveTests
 	}
 
 	[Fact]
-	public void StartNewRun_persists_starterCardKeys_matching_loadout()
+	public void StartNewRun_persists_structured_starter_entries_with_stable_ids()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.StartNewRun();
@@ -82,11 +82,17 @@ public class StarterDeckSaveTests
 		var loadout = save.loadouts?.FirstOrDefault(l => l.id == "loadout_1");
 
 		Assert.NotNull(loadout);
-		Assert.Equal(DeckRules.StartingDeckSize, save.starterCardKeys?.Count ?? 0);
-		Assert.Equal(loadout.cardIds.Count, save.starterCardKeys.Count);
-		foreach (var key in save.starterCardKeys)
+		Assert.Equal(DeckRules.StartingDeckSize, loadout.cards.Count);
+		Assert.Equal(loadout.cards.Count, loadout.cards.Select(entry => entry.entryId).Distinct().Count());
+		Assert.Equal(loadout.cards.Count, save.nextRunDeckEntryId);
+		for (int i = 0; i < loadout.cards.Count; i++)
 		{
-			Assert.Contains(key, loadout.cardIds);
+			var entry = loadout.cards[i];
+			Assert.Equal($"run_card_{i}", entry.entryId);
+			Assert.False(string.IsNullOrWhiteSpace(entry.cardKey));
+			Assert.True(entry.isStarter);
+			Assert.False(entry.countsAsTraded);
+			Assert.Empty(entry.restrictions);
 		}
 	}
 }

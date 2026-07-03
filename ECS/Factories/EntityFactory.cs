@@ -10,6 +10,7 @@ using Crusaders30XX.ECS.Systems;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Objects.Medals;
@@ -123,7 +124,7 @@ namespace Crusaders30XX.ECS.Factories
             // Attach Action Points component by default
             world.AddComponent(entity, new ActionPoints { Current = 0 });
             // Attach HP component
-            world.AddComponent(entity, new HP { Max = 20, Current = 30 });
+            world.AddComponent(entity, new HP { Max = 20, Current = 20, UnscarredMax = 20 });
             // Equip default medals (can equip multiple later). For now, just st_luke.
             foreach (var medalId in loadout.medalIds)
             {
@@ -284,7 +285,8 @@ namespace Crusaders30XX.ECS.Factories
             string cardKey = null,
             bool persistForRun = false,
             bool suppressStatDeltaDisplay = false,
-            bool isUpgraded = false)
+            bool isUpgraded = false,
+            string runDeckEntryId = null)
         {
             var card = CardFactory.Create(cardId);
             if (card == null) return null;
@@ -340,7 +342,11 @@ namespace Crusaders30XX.ECS.Factories
                 {
                     key = RunDeckService.BuildCardKey(cardId, color, isUpgraded);
                 }
-                entityManager.AddComponent(entity, new RunDeckCard { CardKey = key });
+                entityManager.AddComponent(entity, new RunDeckCard
+                {
+                    EntryId = runDeckEntryId ?? string.Empty,
+                    CardKey = key,
+                });
                 entityManager.AddComponent(entity, new DontDestroyOnLoad());
             }
             else
@@ -395,9 +401,9 @@ namespace Crusaders30XX.ECS.Factories
             uiElement.TooltipType = TooltipType.Card;
         }
 
-        public static Entity CreateEnemyFromId(World world, string enemyId, EntityManager entityManager, EnemyDifficulty difficulty = EnemyDifficulty.Easy)
+        public static Entity CreateEnemyFromId(World world, string enemyId, EntityManager entityManager)
         {
-            var def = EnemyFactory.Create(enemyId, difficulty);
+            var def = EnemyFactory.Create(enemyId);
             if (def == null)
             {
                 throw new InvalidOperationException($"Cannot spawn enemy: unknown enemy ID '{enemyId ?? string.Empty}'.");
@@ -417,21 +423,21 @@ namespace Crusaders30XX.ECS.Factories
             {
                 throw new InvalidOperationException("Cannot spawn enemy: player deck is missing or empty.");
             }
-            int deckCount = deck.Cards.Count;
-            if (HasEquippedMedal(entityManager, StClare.MedalId))
-            {
-                deckCount = Math.Max(0, deckCount - 4);
-            }
-            if (isGuidedTutorial)
-            {
-                var tutorial = GuidedTutorialService.GetState(entityManager);
-                int hp = GuidedTutorialDefinitions.GetBattle(tutorial.Battle).EnemyHp;
-                def.MaxHealth = hp;
-                def.CurrentHealth = hp;
-            }
+            int baseCardCountReduction = HasEquippedMedal(entityManager, StClare.MedalId) ? 4 : 0;
+            float deckHealthWeight = RunDeckService.CalculateEnemyHealthDeckWeight(
+                entityManager,
+                deck.Cards.Count,
+                baseCardCountReduction);
+			if (isGuidedTutorial)
+			{
+				var tutorial = GuidedTutorialService.GetState(entityManager);
+				int hp = GuidedTutorialDefinitions.GetSection(tutorial.Section).EnemyHp;
+				def.MaxHealth = hp;
+				def.CurrentHealth = hp;
+			}
             else
             {
-                def.ApplyHealthFromDeckSize(deckCount);
+                def.ApplyHealthFromDeckWeight(deckHealthWeight);
                 ApplyWayStationEnemyHealthModifier(def);
             }
             if (def.MaxHealth <= 0)
@@ -445,11 +451,11 @@ namespace Crusaders30XX.ECS.Factories
             // var numEquippedEquipment = world.EntityManager.GetEntitiesWithComponent<EquippedEquipment>().Count();
             // int equipmentHpModifier = numEquippedEquipment * 3;
             // def.MaxHealth += equipmentHpModifier;
-            var enemy = new Enemy { Id = def.Id, Name = def.Id, MaxHealth = def.MaxHealth, CurrentHealth = def.CurrentHealth, EnemyBase = def };
+            var enemy = new Enemy { Id = def.Id, Name = def.Id.ToKey(), MaxHealth = def.MaxHealth, CurrentHealth = def.CurrentHealth, EnemyBase = def };
             var enemyTransform = new Transform { Position = new Vector2(world.EntityManager.GetEntitiesWithComponent<Player>().Any() ? 1200 : 1000, 260), Scale = Vector2.One };
             world.AddComponent(enemyEntity, enemy);
             world.AddComponent(enemyEntity, enemyTransform);
-            world.AddComponent(enemyEntity, new UIElement { Tooltip = def.Name ?? def.Id, IsInteractable = false , TooltipPosition = TooltipPosition.Above });
+            world.AddComponent(enemyEntity, new UIElement { Tooltip = def.Name ?? def.Id.ToKey(), IsInteractable = false , TooltipPosition = TooltipPosition.Above });
             world.AddComponent(enemyEntity, new HP { Max = enemy.MaxHealth, Current = enemy.CurrentHealth });
             world.AddComponent(enemyEntity, new PortraitInfo { TextureWidth = 0, TextureHeight = 0, CurrentScale = 1f });
             world.AddComponent(enemyEntity, new EnemyArsenal { AttackIds = [.. def.GetAttackIds(world.EntityManager, 0)] });
@@ -562,7 +568,7 @@ namespace Crusaders30XX.ECS.Factories
 					{
 						displayName = string.IsNullOrWhiteSpace(card.Name) ? id : card.Name;
 					}
-					else if (itemType == ForSaleItemType.Medal && MedalFactory.GetAllMedals().TryGetValue(id, out var medal) && medal != null)
+					else if (itemType == ForSaleItemType.Medal && MedalFactory.Create(id) is { } medal)
 					{
 						displayName = string.IsNullOrWhiteSpace(medal.Name) ? id : medal.Name;
 					}
@@ -796,14 +802,42 @@ namespace Crusaders30XX.ECS.Factories
                 entityManager.AddComponent(clonedEntity, clonedModifiedDamage);
             }
 
-            // Copy Frozen status
+            // Copy persistent card statuses
             if (sourceEntity.HasComponent<Frozen>())
             {
                 entityManager.AddComponent(clonedEntity, new Frozen { Owner = clonedEntity });
             }
+            if (sourceEntity.HasComponent<Brittle>())
+            {
+                entityManager.AddComponent(clonedEntity, new Brittle { Owner = clonedEntity });
+            }
+            if (sourceEntity.HasComponent<Scorched>())
+            {
+                entityManager.AddComponent(clonedEntity, new Scorched { Owner = clonedEntity });
+            }
+            if (sourceEntity.HasComponent<Thorned>())
+            {
+                entityManager.AddComponent(clonedEntity, new Thorned { Owner = clonedEntity });
+            }
             if (sourceEntity.HasComponent<Colorless>())
             {
                 entityManager.AddComponent(clonedEntity, new Colorless { Owner = clonedEntity });
+            }
+            if (sourceEntity.HasComponent<Cursed>())
+            {
+                entityManager.AddComponent(clonedEntity, new Cursed { Owner = clonedEntity });
+            }
+            var sourceCursedOriginal = sourceEntity.GetComponent<CursedOriginalCard>();
+            if (sourceCursedOriginal != null)
+            {
+                entityManager.AddComponent(clonedEntity, new CursedOriginalCard
+                {
+                    Owner = clonedEntity,
+                    CardId = sourceCursedOriginal.CardId,
+                    Color = sourceCursedOriginal.Color,
+                    IsUpgraded = sourceCursedOriginal.IsUpgraded,
+                    IsStarter = sourceCursedOriginal.IsStarter,
+                });
             }
 
             // Copy Hint
@@ -823,11 +857,14 @@ namespace Crusaders30XX.ECS.Factories
             {
                 entityManager.AddComponent(clonedEntity, new CardTooltip
                 {
-                    Owner = clonedEntity,
-                    CardId = sourceCardTooltip.CardId,
-                    TooltipScale = sourceCardTooltip.TooltipScale,
-                    CardColor = sourceCardTooltip.CardColor,
-                });
+					Owner = clonedEntity,
+					CardId = sourceCardTooltip.CardId,
+					TooltipScale = sourceCardTooltip.TooltipScale,
+					CardColor = sourceCardTooltip.CardColor,
+					IsUpgraded = sourceCardTooltip.IsUpgraded,
+					CrossfadeUpgradePreview = sourceCardTooltip.CrossfadeUpgradePreview,
+					PreviewRestrictionNames = new List<string>(sourceCardTooltip.PreviewRestrictionNames ?? new List<string>()),
+				});
             }
 
             // Copy DontDestroyOnReload

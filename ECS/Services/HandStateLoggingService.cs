@@ -121,6 +121,13 @@ namespace Crusaders30XX.ECS.Services
             string id = cardData.Card?.CardId ?? string.Empty;
             if (string.IsNullOrEmpty(id)) return "empty CardId";
 
+            var cardOnEntity = cardData.Card;
+            if (cardOnEntity != null)
+            {
+                if (cardOnEntity.IsWeapon) return "weapon";
+                if (cardOnEntity.IsToken) return "token";
+            }
+
             var cardBase = CardFactory.Create(id);
             if (cardBase == null)
             {
@@ -129,6 +136,7 @@ namespace Crusaders30XX.ECS.Services
             }
 
             if (cardBase.IsWeapon) return "weapon";
+            if (cardBase.IsToken) return "token";
 
             counts = true;
             return "non-weapon";

@@ -16,7 +16,7 @@ This supersedes ADR 0003's assumption that quest rewards enforce copy limits.
 
 1. **Persist unresolved offers**: a quest reward creates a deck reward offer that remains part of active-run save state until resolved. Loading an active run with an unresolved offer resumes that offer rather than creating a new randomized reward.
 
-2. **Exchange semantics**: resolving the offer chooses exactly one lane and replaces that lane's targeted loadout entry in place.
+2. **Exchange semantics**: resolving the offer chooses exactly one lane and replaces that lane's targeted loadout entry in place. "In place" preserves the ordered deck position, not run-entry identity: the outgoing entry ends and the incoming card receives a new entry ID.
 
 3. **Copy-limit bypass**: deck reward exchanges ignore copy limits. Copy limits remain a starting-deck construction rule, not a cap on run-grown decks.
 
@@ -24,6 +24,6 @@ This supersedes ADR 0003's assumption that quest rewards enforce copy limits.
 
 ## Consequences
 
-- **Positive**: Reward interruption is recoverable without rerolling rewards, and run-grown decks have one duplicate policy across shops and deck reward exchanges.
+- **Positive**: Reward interruption is recoverable without rerolling rewards, run-grown decks have one duplicate policy across shops and deck reward exchanges, and replacement cannot accidentally carry entry-owned restrictions to the incoming card.
 
 - **Negative**: Run decks can exceed copy limits through more than one source, so UI and deck logic must treat copy-limit violations as valid active-run states.

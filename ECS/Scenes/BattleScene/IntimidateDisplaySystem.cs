@@ -36,7 +36,7 @@ namespace Crusaders30XX.ECS.Systems
 		public int OverlayAlpha { get; set; } = 155;
 
 		[DebugEditable(DisplayName = "Overlay Corner Radius", Step = 1, Min = 0, Max = 64)]
-		public int OverlayCornerRadius { get; set; } = 16;
+		public int OverlayCornerRadius { get; set; } = 10;
 
 		[DebugEditable(DisplayName = "Shadow Red", Step = 5, Min = 0, Max = 255)]
 		public int ShadowRed { get; set; } = 0;
@@ -134,31 +134,29 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 
-	private Rectangle ComputeCardBounds(Vector2 position)
-	{
-		_settings ??= CardGeometryService.GetSettings(EntityManager);
-		return CardGeometryService.GetVisualRect(_settings, position);
-	}
-
-		private void OnCardRenderEvent(CardRenderEvent evt)
+	private void OnCardRenderEvent(CardRenderEvent evt)
 		{
 			// Only draw overlay for intimidated cards
 			var card = evt.Card;
-			if (card == null || card.GetComponent<Intimidated>() == null) return;
-			var transform = card.GetComponent<Transform>();
+			if (card == null
+				|| card.GetComponent<Intimidated>() == null
+				|| card.GetComponent<SuppressCardVisualEffects>() != null) return;
 			var ui = card.GetComponent<UIElement>();
-			if (transform == null || ui == null) return;
+			if (ui == null) return;
 
-			// Compute bounds exactly like CardHighlightSystem for consistent alignment
-			var bounds = ComputeCardBounds(transform.Position);
-			var center = new Vector2(bounds.X + bounds.Width / 2f, bounds.Y + bounds.Height / 2f);
+			var geometry = CardGeometryService.GetVisualGeometry(EntityManager, card, evt.Position);
+			var bounds = geometry.Bounds;
+			var center = geometry.Center;
 
 			// Measure text size (unscaled) so the origin remains centered regardless of TextScale
 			var textSizeUnscaled = _font.MeasureString(IntimidateText);
 
 			// Get or create rounded rect texture for overlay (match the card's visual radius)
 			_settings ??= CardGeometryService.GetSettings(EntityManager);
-			int baseRadius = OverlayCornerRadius > 0 ? OverlayCornerRadius : (_settings?.CardCornerRadius ?? CardGeometrySettings.DefaultCornerRadius);
+			int baseRadiusSetting = _settings?.CardCornerRadius ?? CardGeometrySettings.DefaultCornerRadius;
+			int baseRadius = OverlayCornerRadius > 0
+				? (int)Math.Round(OverlayCornerRadius * geometry.Scale)
+				: (int)Math.Round(baseRadiusSetting * geometry.Scale);
 			var overlayKey = (bounds.Width, bounds.Height, baseRadius);
 			if (!_roundedRectCache.TryGetValue(overlayKey, out var roundedRect))
 			{
@@ -178,7 +176,7 @@ namespace Crusaders30XX.ECS.Systems
 				center,
 				null,
 				overlayColor,
-				transform.Rotation,
+				geometry.Rotation,
 				new Vector2(bounds.Width / 2f, bounds.Height / 2f),
 				1f,
 				SpriteEffects.None,
@@ -186,22 +184,23 @@ namespace Crusaders30XX.ECS.Systems
 			);
 
 			// Calculate rotation (combine card rotation with the intimidate rotation)
-			float rotation = transform.Rotation + MathHelper.ToRadians(RotationDegrees);
+			float rotation = geometry.Rotation + MathHelper.ToRadians(RotationDegrees);
 
 			// Text position (centered on card)
 			var textOrigin = textSizeUnscaled / 2f;
 
 			// Resolve animated scale and alpha
 			_animByEntityId.TryGetValue(card.Id, out var anim);
-			float scaleNow = TextScale * (anim?.CurrentScale > 0f ? anim.CurrentScale : 1f);
+			float scaleNow = TextScale * geometry.Scale * (anim?.CurrentScale > 0f ? anim.CurrentScale : 1f);
 			float alphaNow = MathHelper.Clamp(anim?.CurrentAlpha ?? 1f, 0f, 1f);
+			var shadowOffset = new Vector2(ShadowOffsetX * geometry.Scale, ShadowOffsetY * geometry.Scale);
 
 			// Draw shadow/bold layer first
 			var shadowColor = new Color(ShadowRed, ShadowGreen, ShadowBlue) * alphaNow;
 			_spriteBatch.DrawString(
 				_font,
 				IntimidateText,
-				center + new Vector2(ShadowOffsetX, ShadowOffsetY),
+				center + shadowOffset,
 				shadowColor,
 				rotation,
 				textOrigin,

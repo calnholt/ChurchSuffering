@@ -14,9 +14,9 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Ark of the Covenant";
             Target = "Player";
             Text = $"When this card is discarded to pay for a card cost, heal {HealAmount} HP.";
-            Animation = "Buff";
-            Type = CardType.Relic;
-            Block = 1;
+            VisualEffectRecipe = PlayerBuffEffect();
+            Type = CardType.Block;
+            Block = 3;
 
             OnDiscardedForCost = (entityManager, card) =>
             {

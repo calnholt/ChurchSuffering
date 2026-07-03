@@ -2,9 +2,9 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.Diagnostics;
 using System;
@@ -20,7 +20,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly ContentManager _content;
+		private readonly ImageAssetService _imageAssets;
 		private Texture2D _background;
 
 		private string _backgroundAsset = string.Empty;
@@ -28,12 +28,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Offset Y", Step = 2, Min = -2000, Max = 2000)]
 		public int OffsetY { get; set; } = 0;
 
-		public ShopBackgroundDisplaySystem(EntityManager entityManager, GraphicsDevice gd, SpriteBatch sb, ContentManager content)
+		public ShopBackgroundDisplaySystem(EntityManager entityManager, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets)
 			: base(entityManager)
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
-			_content = content;
+			_imageAssets = imageAssets;
 
 			EventManager.Subscribe<SetShopTitle>(OnSetShopTitle);
 			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
@@ -99,15 +99,7 @@ namespace Crusaders30XX.ECS.Systems
 		private Texture2D SafeLoadTexture(string assetName)
 		{
 			if (string.IsNullOrWhiteSpace(assetName)) return null;
-			try
-			{
-				return _content.Load<Texture2D>(assetName);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ShopBackgroundDisplaySystem] Failed to load texture '{assetName}': {ex.Message}");
-				return null;
-			}
+			return _imageAssets.TryGetTexture(assetName);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()

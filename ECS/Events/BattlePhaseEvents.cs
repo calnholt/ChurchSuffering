@@ -20,4 +20,20 @@ namespace Crusaders30XX.ECS.Events
 	}
 
 	public class ShowStartOfBattleAnimationEvent { }
+
+	public class ShowVictoryAnimationEvent { }
+
+	public class VictoryAnimationCompleteEvent { }
+
+	public class ShuffleDeckAnimationRequested
+	{
+		public System.Guid RequestId { get; set; }
+		public string Reason { get; set; } = string.Empty;
+		public string TargetEntityName { get; set; } = "UI_DrawPileRoot";
+	}
+
+	public class ShuffleDeckAnimationCompleted
+	{
+		public System.Guid RequestId { get; set; }
+	}
 }

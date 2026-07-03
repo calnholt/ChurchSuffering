@@ -10,18 +10,9 @@ namespace Crusaders30XX.ECS.Services
     {
         public static EnemyAttackBase GetPlannedAttack(EntityManager entityManager)
         {
-            var intent = entityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-            if (intent == null) return null;
-            var planned = intent.GetComponent<AttackIntent>().Planned.FirstOrDefault();
-            if (planned == null) return null;
+            if (!EnemyAttackFlowService.TryGetCurrentEnemyAttack(entityManager, out _, out _, out var planned))
+                return null;
             return planned.AttackDefinition;
-        }
-
-        public static string GetContextId(EntityManager entityManager)
-        {
-            var intent = entityManager.GetEntitiesWithComponent<AttackIntent>().FirstOrDefault();
-            if (intent == null) return null;
-            return intent.GetComponent<AttackIntent>().Planned.FirstOrDefault()?.ContextId;
         }
 
         public static BattleStateInfo GetBattleStateInfo(EntityManager entityManager)

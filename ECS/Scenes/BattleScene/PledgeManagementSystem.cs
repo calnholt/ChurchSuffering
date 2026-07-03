@@ -20,6 +20,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged);
             EventManager.Subscribe<PledgeCardRequested>(OnPledgeCardRequested);
             EventManager.Subscribe<ApplyPledgeToCardRequested>(OnApplyPledgeToCardRequested);
+            EventManager.Subscribe<PledgeRandomCardFromDiscardRequested>(OnPledgeRandomCardFromDiscardRequested);
             EventManager.Subscribe<RemovePledgeFromCardRequested>(OnRemovePledgeFromCardRequested);
             EventManager.Subscribe<StartBattleRequested>(_ => ClearAllPledges());
             EventManager.Subscribe<EnemyPhaseResetEvent>(_ => ClearAllPledges());
@@ -45,6 +46,25 @@ namespace Crusaders30XX.ECS.Systems
         {
             if (evt?.Card == null) return;
             AddPledgeToCard(evt.Card, evt.MarkPledgedThisActionPhase);
+        }
+
+        private void OnPledgeRandomCardFromDiscardRequested(PledgeRandomCardFromDiscardRequested evt)
+        {
+            if (PledgeService.HasPledgedCardInHand(EntityManager)) return;
+
+            var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
+            var deck = deckEntity?.GetComponent<Deck>();
+            if (deck == null || deck.DiscardPile.Count == 0) return;
+
+            var card = deck.DiscardPile[Random.Shared.Next(deck.DiscardPile.Count)];
+            EventManager.Publish(new CardMoveRequested
+            {
+                Card = card,
+                Deck = deckEntity,
+                Destination = CardZoneType.Hand,
+                Reason = "PledgeRandomCardFromDiscard"
+            });
+            AddPledgeToCard(card, true);
         }
 
         private void OnRemovePledgeFromCardRequested(RemovePledgeFromCardRequested evt)

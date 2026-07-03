@@ -36,10 +36,8 @@ namespace Crusaders30XX.ECS.Systems
             var player = EntityManager.GetEntity("Player");
             if (player == null) return;
 
-            int vigorStacks = VigorService.GetPlayerVigorStacks(EntityManager);
-            if (vigorStacks <= 0) return;
-
-            int consumed = Math.Min(vigorStacks, costCount);
+            int consumed = VigorService.GetWaivedPipCount(card, evt.VigorStacksAtPlay);
+            if (consumed <= 0) return;
             EventManager.Publish(new ApplyPassiveEvent
             {
                 Target = player,

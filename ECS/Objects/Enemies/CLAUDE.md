@@ -13,12 +13,12 @@ For detailed design philosophy and rationale, see `DESIGN_PHILOSOPHY.md`.
 
 ## Quick Reference
 
-### HealthPerCard
+### HP
 
-- **Range:** ~0.43 - 1.6 (`HealthPerCard` on each enemy)
-- **Max HP at spawn:** `Round(HealthPerCard * Deck.Cards.Count)` via `EnemyBase.ApplyHealthFromDeckSize` in `EntityFactory.CreateEnemyFromId`
-- **30-card deck:** same max HP as legacy Easy base (e.g. Skeletal Archer 19, Sniper 48)
-- **Difficulty** does not affect max HP; it still affects attacks/passives where defined (e.g. Skeleton armor, Shadow anathema)
+- **Range:** ~14 - 53 (`HP` on each enemy; max HP at a 20-card reference deck)
+- **Max HP at spawn:** `Round(HP * deckWeight / 20)` via `EnemyBase.ApplyHealthFromDeckWeight` in `EntityFactory.CreateEnemyFromId`
+- **deckWeight:** card count plus climb-time bonus from `RunDeckService.CalculateEnemyHealthDeckWeight`
+- **Difficulty** does not affect max HP directly; `WayStationRunSetupSingleton.EnemyHealthModifier` scales spawn HP (e.g. Skeleton 26 at 20 cards -> 21 Easy / 23 Normal / 26 Hard)
 
 ### Damage Ranges
 
@@ -55,7 +55,7 @@ For detailed design philosophy and rationale, see `DESIGN_PHILOSOPHY.md`.
 1. **What's the identity?** (one sentence)
 2. **What decision does the player make?** (beyond "block the big attack")
 3. **Attack pattern?** (single/linker+ender/multi-jab/alternating)
-4. **HealthPerCard tier?** (fragile ~0.43-0.6 / standard ~0.65-0.95 / tough ~1.0+)
+4. **HP tier?** (fragile ~14-17 / standard ~22-30 / tough ~31-42 / boss-tier ~43+)
 5. **Scaling?** (does the enemy get worse if fight drags?)
 6. **Conditions?** (1-2 max, reinforce identity)
 7. **Counterplay?** (smart play should mitigate)

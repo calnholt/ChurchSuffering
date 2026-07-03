@@ -17,7 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"Gain {PowerGained} power.";
             Cost = ["Any"];
-            Animation = "Buff";
+            VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
             IsFreeAction = true;

@@ -23,6 +23,8 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<ApplyRecoilEvent>(OnApplyRecoil);
             EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
             EventManager.Subscribe<AttackResolved>(OnAttackResolved);
+            EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
+            EventManager.Subscribe<EnemyPhaseResetEvent>(_ => RemoveAllRecoilWithoutPenalty());
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -77,6 +79,22 @@ namespace Crusaders30XX.ECS.Systems
                     Delta = -recoil.Stacks,
                     DamageType = ModifyTypeEnum.Attack
                 });
+                EntityManager.RemoveComponent<Recoil>(card);
+            }
+        }
+
+        private void OnBeginDefeatPresentation(BeginDefeatPresentationEvent evt)
+        {
+            if (evt?.IsPreview == true) return;
+            RemoveAllRecoilWithoutPenalty();
+        }
+
+        private void RemoveAllRecoilWithoutPenalty()
+        {
+            var recoilCards = EntityManager.GetEntitiesWithComponent<Recoil>().ToList();
+            foreach (var card in recoilCards)
+            {
+                LoggingService.Append("RecoilManagementSystem.RemoveAllRecoilWithoutPenalty", new System.Text.Json.Nodes.JsonObject { ["cardId"] = card.GetComponent<CardData>()?.Card?.CardId ?? "unknown" });
                 EntityManager.RemoveComponent<Recoil>(card);
             }
         }

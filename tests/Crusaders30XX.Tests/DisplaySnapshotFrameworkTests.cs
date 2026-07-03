@@ -72,6 +72,7 @@ public sealed class DisplaySnapshotFrameworkTests
     [Theory]
     [InlineData("card", "strike", "card", "strike.png")]
     [InlineData("brittle-card", "strike.png", "brittle-card", "strike.png")]
+    [InlineData("frozen-card", "strike.png", "frozen-card", "strike.png")]
     [InlineData("colorless-card", "all-printed-colors", "colorless-card", "all-printed-colors.png")]
     [InlineData("quest-reward-modal", "gold-500", "quest-reward-modal", "gold-500.png")]
     [InlineData("narrative-event-modal", "icebound-tithe-options-3", "narrative-event-modal", "icebound-tithe-options-3.png")]

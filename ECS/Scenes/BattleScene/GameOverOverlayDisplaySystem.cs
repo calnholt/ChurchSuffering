@@ -17,6 +17,7 @@ namespace Crusaders30XX.ECS.Systems
 	[DebugTab("Game Over Overlay")]
 	public class GameOverOverlayDisplaySystem : Core.System
 	{
+		private const string OverlayStateEntityName = "GameOverOverlayState";
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly SpriteFont _font = FontSingleton.TitleFont;
@@ -40,10 +41,6 @@ namespace Crusaders30XX.ECS.Systems
 
 		public string MessageText { get; set; } = "Thy Will Be Done";
 
-		private bool _active;
-		private float _elapsed;
-		private bool _sceneSwitched;
-
 		public GameOverOverlayDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb) : base(em)
 		{
 			_graphicsDevice = gd;
@@ -58,20 +55,51 @@ namespace Crusaders30XX.ECS.Systems
 		private void OnDeleteCachesEvent(DeleteCachesEvent evt)
 		{
 			LoggingService.Append("GameOverOverlayDisplaySystem.OnDeleteCachesEvent", new System.Text.Json.Nodes.JsonObject());
-			_active = false;
-			_elapsed = 0f;
-			_sceneSwitched = false;
+			ResetOverlayState();
+			StateSingleton.PreventClicking = false;
 		}
 
 		private void BeginRunEndOverlay()
 		{
 			if (TestFightRuntime.IsActive) return;
-			if (GuidedTutorialService.IsActive(EntityManager)) return;
-			if (_active) return;
+			var state = EnsureOverlayState();
+			if (state.IsActive) return;
 			LoggingService.Append("GameOverOverlayDisplaySystem.BeginRunEndOverlay", new System.Text.Json.Nodes.JsonObject());
-			_active = true;
-			_elapsed = 0f;
-			_sceneSwitched = false;
+			state.IsActive = true;
+			state.Elapsed = 0f;
+			state.SceneSwitched = false;
+			StateSingleton.PreventClicking = true;
+		}
+
+		public static bool IsOverlayActive(EntityManager entityManager)
+		{
+			return entityManager.GetEntitiesWithComponent<GameOverOverlayState>()
+				.Any(entity => entity.GetComponent<GameOverOverlayState>()?.IsActive == true);
+		}
+
+		private GameOverOverlayState EnsureOverlayState()
+		{
+			var entity = EntityManager.GetEntity(OverlayStateEntityName);
+			if (entity == null)
+			{
+				entity = EntityManager.CreateEntity(OverlayStateEntityName);
+				EntityManager.AddComponent(entity, new GameOverOverlayState());
+			}
+			return entity.GetComponent<GameOverOverlayState>();
+		}
+
+		private GameOverOverlayState GetOverlayState()
+		{
+			return EntityManager.GetEntity(OverlayStateEntityName)?.GetComponent<GameOverOverlayState>();
+		}
+
+		private void ResetOverlayState()
+		{
+			var state = GetOverlayState();
+			if (state == null) return;
+			state.IsActive = false;
+			state.Elapsed = 0f;
+			state.SceneSwitched = false;
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -82,28 +110,37 @@ namespace Crusaders30XX.ECS.Systems
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
-			if (!_active) return;
-			_elapsed += (float)gameTime.ElapsedGameTime.TotalSeconds;
+			var state = GetOverlayState();
+			if (state?.IsActive != true) return;
+			state.Elapsed += (float)gameTime.ElapsedGameTime.TotalSeconds;
 			float total = System.Math.Max(0.0001f, OverlayFadeInSeconds) + System.Math.Max(0.0001f, TextFadeOutSeconds);
-			if (!_sceneSwitched && _elapsed >= total)
+			if (!state.SceneSwitched && state.Elapsed >= total)
 			{
-				RunLifecycleService.EndCurrentRun(EntityManager);
-				EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Menu });
-				EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation, SkipWipe = true });
-				_sceneSwitched = true;
-				_active = false; // stop drawing after switch
+				if (GuidedTutorialService.IsActive(EntityManager))
+				{
+					GuidedTutorialService.RestartSection(EntityManager);
+				}
+				else
+				{
+					RunLifecycleService.EndCurrentRun(EntityManager);
+					EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Menu });
+					EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation, SkipWipe = true });
+				}
+				state.SceneSwitched = true;
+				state.IsActive = false;
 			}
 		}
 
 		public void Draw()
 		{
-			if (!_active || _font == null) return;
+			var state = GetOverlayState();
+			if (state?.IsActive != true || _font == null) return;
 			int w = Game1.VirtualWidth;
 			int h = Game1.VirtualHeight;
 
 			// Phase timings
-			float tOverlay = MathHelper.Clamp(_elapsed / System.Math.Max(0.0001f, OverlayFadeInSeconds), 0f, 1f);
-			float tTextFade = MathHelper.Clamp((_elapsed - OverlayFadeInSeconds) / System.Math.Max(0.0001f, TextFadeOutSeconds), 0f, 1f);
+			float tOverlay = MathHelper.Clamp(state.Elapsed / System.Math.Max(0.0001f, OverlayFadeInSeconds), 0f, 1f);
+			float tTextFade = MathHelper.Clamp((state.Elapsed - OverlayFadeInSeconds) / System.Math.Max(0.0001f, TextFadeOutSeconds), 0f, 1f);
 
 			// 1) Draw background overlay first; it reaches full opacity and stays black
 			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, w, h), new Color(0f, 0f, 0f, tOverlay));

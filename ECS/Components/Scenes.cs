@@ -2,6 +2,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Dialog;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using System.Collections.Generic;
 
@@ -13,6 +14,7 @@ namespace Crusaders30XX.ECS.Components
 		WayStation,
 		Internal_QueueEventsMenu,
 		WorldMap,
+		Climb,
 		Battle,
 		Location,
 		Shop,
@@ -25,6 +27,49 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 		public SceneId Current { get; set; } = SceneId.Internal_QueueEventsMenu;
+	}
+
+	public class GameOverOverlayState : IComponent
+	{
+		public Entity Owner { get; set; }
+		public bool IsActive { get; set; }
+		public float Elapsed { get; set; }
+		public bool SceneSwitched { get; set; }
+	}
+
+	public enum ModalAnimationPhase
+	{
+		Hidden,
+		Entering,
+		Visible,
+		Exiting
+	}
+
+	public class ModalAnimation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public ModalAnimationPhase Phase { get; set; } = ModalAnimationPhase.Hidden;
+		public bool RequestedVisible { get; set; }
+		public float ElapsedSeconds { get; set; }
+		public float EnterDurationSeconds { get; set; } = 0.28f;
+		public float ExitDurationSeconds { get; set; } = 0.28f;
+		public float ShellDurationSeconds { get; set; } = 0.22f;
+		public float StartScale { get; set; } = 0.75f;
+		public float StartBrightness { get; set; } = 1.5f;
+		public float DimExitHoldPercent { get; set; } = 0.58f;
+		public float VisibleShadowAlpha { get; set; } = 0.65f;
+		public string InputContextId { get; set; } = string.Empty;
+		public int ExitSequence { get; set; }
+		public int CompletedExitSequence { get; set; }
+
+		public bool IsHidden => Phase == ModalAnimationPhase.Hidden;
+		public bool IsAnimating => Phase == ModalAnimationPhase.Entering || Phase == ModalAnimationPhase.Exiting;
+	}
+
+	public class ModalInputSuppression : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string ContextId { get; set; } = string.Empty;
 	}
 
 	/// <summary>
@@ -58,7 +103,10 @@ namespace Crusaders30XX.ECS.Components
 		public List<QueuedEvent> Events { get; set; } = new List<QueuedEvent>();
 		public int CurrentIndex = -1;
 		public bool IsFirst = false;
-		// Quest context for dialog lookup
+		public bool IsClimbEncounter { get; set; }
+		public string ClimbEncounterSlotId { get; set; } = string.Empty;
+		public BattleLocation? BattleLocation { get; set; }
+		// Encounter context for dialog lookup
 		public string LocationId { get; set; } = string.Empty;
 		public int QuestIndex { get; set; } = 0;
 	}
@@ -67,7 +115,6 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public string EventId;
 		public QueuedEventType EventType = QueuedEventType.Enemy;
-		public EnemyDifficulty Difficulty { get; set; } = EnemyDifficulty.Easy;
 		public List<EnemyModification> Modifications { get; set; } = new List<EnemyModification>();
 	}
 
@@ -94,7 +141,7 @@ namespace Crusaders30XX.ECS.Components
 	}
 
 	/// <summary>
-	/// Quest selection overlay state for WorldMap scene.
+	/// Encounter selection overlay state for the legacy WorldMap scene.
 	/// </summary>
 	public class QuestSelectState : IComponent
 	{
@@ -144,6 +191,8 @@ namespace Crusaders30XX.ECS.Components
 		public Entity Owner { get; set; }
 	}
 
+	public enum DialogPhase { Idle, Intro, Active, Outro }
+
 	/// <summary>
 	/// Overlay state for battle dialog sequences.
 	/// </summary>
@@ -151,16 +200,18 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 		public bool IsActive { get; set; } = false;
+		public DialogPhase Phase { get; set; } = DialogPhase.Idle;
 		public List<DialogLine> Lines { get; set; } = new List<DialogLine>();
 		public int Index { get; set; } = 0;
-		public bool IsEncounterDialogue { get; set; }
+		public bool IsCorrelatedSequence { get; set; }
+		public bool BackgroundOnly { get; set; }
 		public string DefinitionId { get; set; } = string.Empty;
 		public string SegmentId { get; set; } = string.Empty;
 		public System.Guid RequestId { get; set; }
 	}
 
 		/// <summary>
-		/// Overlay state for the simple quest reward modal shown after the last battle in a quest.
+		/// Overlay state for the encounter reward modal shown after the last battle in an encounter.
 		/// </summary>
 		public class NarrativeEventOverlayState : IComponent
 		{
@@ -168,14 +219,15 @@ namespace Crusaders30XX.ECS.Components
 			public bool IsOpen { get; set; } = false;
 			public string RunMapEventId { get; set; } = string.Empty;
 			public string EventTypeId { get; set; } = string.Empty;
+			public string ResolutionContextId { get; set; } = string.Empty;
 		}
 
 		public class QuestRewardOverlayState : IComponent
 		{
 			public Entity Owner { get; set; }
 			public bool IsOpen { get; set; } = false;
-			public string Message { get; set; } = "Quest Complete";
-			public string TitleLine1 { get; set; } = "Quest";
+			public string Message { get; set; } = "Encounter Complete";
+			public string TitleLine1 { get; set; } = "Encounter";
 			public string TitleLine2 { get; set; } = "Complete!";
 			public int RewardGold { get; set; } = 0;
 			public bool HasCardReward { get; set; } = false;
@@ -187,11 +239,17 @@ namespace Crusaders30XX.ECS.Components
 			public string RewardMedalId { get; set; } = string.Empty;
 			public bool HasEquipmentReward { get; set; } = false;
 			public string RewardEquipmentId { get; set; } = string.Empty;
+			public bool IsEncounterReward { get; set; } = false;
+			public ClimbResourceSave ClimbResources { get; set; }
 			public bool DismissToLocation { get; set; } = true;
+			public SceneId DismissScene { get; set; } = SceneId.Location;
 			public bool DismissInProgress { get; set; } = false;
 			public bool CardSelectionInProgress { get; set; } = false;
 			public int SelectedRewardCardIndex { get; set; } = -1;
 			public float CardSelectionElapsedSeconds { get; set; } = 0f;
+			public bool DeckColumnSelectionInProgress { get; set; } = false;
+			public int SelectedDeckRewardColumnIndex { get; set; } = -1;
+			public float DeckColumnSelectionElapsedSeconds { get; set; } = 0f;
 		}
 
 	public class PendingQuestDialog : IComponent

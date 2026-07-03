@@ -14,7 +14,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Name = "Absolution";
             Target = "Enemy";
             Cost = ["Any", "Any", "Any"];
-            Animation = "Attack";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 10;
             Block = 3;
 
@@ -36,8 +36,9 @@ namespace Crusaders30XX.ECS.Objects.Cards
             {
                 if (IsUpgraded)
                 {
-                    EventManager.Publish(new ModifyCourageEvent {
-                        Delta = CourageUpgradeAmount
+                    EventManager.Publish(new ModifyCourageRequestEvent {
+                        Delta = CourageUpgradeAmount,
+                        Type = ModifyCourageType.Gain
                     });
                 }
             };

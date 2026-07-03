@@ -728,12 +728,7 @@ namespace Crusaders30XX.ECS.Systems
 
             foreach (var card in candidates)
             {
-                var cardKey = card.GetComponent<RunDeckCard>()?.CardKey;
-                RunDeckService.ExhaustRunCard(EntityManager, card);
-                if (!string.IsNullOrWhiteSpace(cardKey))
-                {
-                    SaveCache.RemoveStarterCardKey(cardKey);
-                }
+				RunDeckService.ExhaustRunCard(EntityManager, card);
             }
 
             LoggingService.Append("DeckManagementSystem.OnRemoveRandomCard", new System.Text.Json.Nodes.JsonObject

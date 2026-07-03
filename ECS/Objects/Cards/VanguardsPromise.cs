@@ -1,4 +1,3 @@
-using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
@@ -8,13 +7,14 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class VanguardsPromise : CardBase
     {
+        private int DamageUpgrade = 1;
         public VanguardsPromise()
         {
             CardId = "vanguards_promise";
             Name = "Vanguard's Promise";
             Target = "Enemy";
-            Text = "If you have no pledged card, pledge the top card of your deck.";
-            Animation = "Attack";
+            Text = "If you have no pledged card, pledge a random card from your discard pile.";
+            VisualEffectRecipe = PlayerAttackEffect();
             Damage = 2;
             Block = 2;
             IsFreeAction = true;
@@ -33,20 +33,12 @@ namespace Crusaders30XX.ECS.Objects.Cards
                 });
 
                 if (PledgeService.HasPledgedCardInHand(entityManager)) return;
+                EventManager.Publish(new PledgeRandomCardFromDiscardRequested());
+            };
 
-                var deckEntity = entityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
-                var deck = deckEntity?.GetComponent<Deck>();
-                if (deck == null || deck.DrawPile.Count == 0) return;
-
-                var topCard = deck.DrawPile[0];
-                EventManager.Publish(new CardMoveRequested
-                {
-                    Card = topCard,
-                    Deck = deckEntity,
-                    Destination = CardZoneType.Hand,
-                    Reason = "VanguardsPromise"
-                });
-                EventManager.Publish(new ApplyPledgeToCardRequested { Card = topCard });
+            OnUpgrade = (entityManager, card) =>
+            {
+                Damage += DamageUpgrade;
             };
         }
     }
