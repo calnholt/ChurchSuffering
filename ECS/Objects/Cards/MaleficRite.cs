@@ -20,6 +20,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = BlockAmount;
+            IsFreeAction = true;
 
             OnPlay = (entityManager, card) =>
             {
