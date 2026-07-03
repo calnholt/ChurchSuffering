@@ -204,6 +204,12 @@ namespace Crusaders30XX.ECS.Systems
 				CurrentPhase = enemy.GetComponent<Enemy>()?.EnemyBase?.CurrentPhase ?? 1,
 			});
 
+			var enemyId = enemy.GetComponent<Enemy>()?.EnemyBase?.Id;
+			if (enemyId == EnemyId.FallenShepherd)
+			{
+				EventQueue.EnqueueRule(new QueuedShuffleDeckAnimationEvent("FallenShepherdPhase"));
+			}
+
 			EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<ChangeBattlePhaseEvent>(
 				"Rule.ChangePhase.EnemyStart",
 				new ChangeBattlePhaseEvent { Current = SubPhase.EnemyStart }));

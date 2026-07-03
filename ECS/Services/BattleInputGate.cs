@@ -16,6 +16,7 @@ namespace Crusaders30XX.ECS.Services
 		{
 			var phase = entityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
 			return (phase != null && phase.DefeatPresentationActive)
+				|| (phase != null && phase.BattleAnimationActive)
 				|| IsEnemyDefeated(entityManager)
 				|| (includePendingBlockConfirm && phase?.PendingBlockConfirm == true)
 				|| StateSingleton.IsActive;

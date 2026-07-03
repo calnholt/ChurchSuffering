@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crusaders30XX — Deck Shuffle Animation Variants</title>
+<title>Crusaders30XX — Corner Convergence Shuffle</title>
 <link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /*
@@ -12,16 +12,13 @@
     - Archetype: D — Scene HUD / battle overlay
     - Draw pile anchor: bottom-right battle HUD (~draw pile icon)
     - Card geometry: 268x377 default (CardVisualSettings); mockup uses scaled mini cards
-    - Three candidate shuffle presentations for player turn / reshuffle moments
   */
   :root {
     --bg: #0c0b0f;
     --panel: #141318;
-    --muted: #666;
     --text: #eee;
     --text-dim: #888;
-    --red: #c41e3a;
-    --red-glow: rgba(196, 30, 58, 0.45);
+    --accent: #4a8fe0;
     --game-w: 1920px;
     --game-h: 1080px;
     --card-w: 52px;
@@ -39,7 +36,7 @@
   }
 
   .page-header {
-    max-width: 900px;
+    max-width: 640px;
     margin: 0 auto 36px;
     text-align: center;
   }
@@ -58,13 +55,11 @@
     color: var(--text-dim);
     font-size: 0.78rem;
     line-height: 1.6;
-    max-width: 720px;
-    margin: 0 auto;
   }
 
   .viewport-scaler {
     width: 100%;
-    max-width: min(calc(100vw - 48px), 1320px);
+    max-width: min(calc(100vw - 48px), 900px);
     margin: 0 auto 40px;
     position: relative;
     overflow: hidden;
@@ -96,71 +91,71 @@
     background: rgba(0, 0, 0, 0.55);
   }
 
-  .demos-row {
+  .demo-shell {
     position: absolute;
-    inset: 32px 20px 20px;
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 16px;
-    z-index: 2;
-  }
-
-  .demo-column {
-    flex: 1;
-    min-width: 0;
-    background: rgba(10, 9, 13, 0.90);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 8px;
+    inset: 48px 80px 48px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px 12px 14px;
-    position: relative;
+    z-index: 2;
   }
 
-  .demo-column.variant-1 { border-top: 3px solid #e44; }
-  .demo-column.variant-2 { border-top: 3px solid #4a8fe0; }
-  .demo-column.variant-3 { border-top: 3px solid #e8a020; }
+  .demo-header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
 
   .demo-label {
-    font-size: 0.54rem;
+    font-size: 0.58rem;
     letter-spacing: 3px;
     text-transform: uppercase;
-    margin-bottom: 2px;
+    color: var(--accent);
+    margin-bottom: 4px;
   }
-  .variant-1 .demo-label { color: #e44; }
-  .variant-2 .demo-label { color: #4a8fe0; }
-  .variant-3 .demo-label { color: #e8a020; }
 
   .demo-title {
-    font-size: 0.88rem;
+    font-size: 1.1rem;
     font-weight: 600;
     letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    text-align: center;
+    margin-bottom: 6px;
   }
 
   .demo-desc {
-    font-size: 0.58rem;
+    font-size: 0.68rem;
     color: var(--text-dim);
-    line-height: 1.4;
-    text-align: center;
-    max-width: 280px;
-    margin-bottom: 10px;
-    min-height: 48px;
+    line-height: 1.5;
+    max-width: 420px;
+  }
+
+  .timeline {
+    width: 100%;
+    max-width: 480px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 2px;
+    margin: 16px 0 10px;
+    overflow: hidden;
+  }
+
+  .timeline-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #2868b0, #4a8fe0);
+    transition: width 0.05s linear;
   }
 
   .stage-wrap {
     position: relative;
     flex: 1;
     width: 100%;
-    min-height: 280px;
-    border-radius: 6px;
+    max-width: 520px;
+    min-height: 360px;
+    border-radius: 8px;
     background:
       radial-gradient(ellipse 50% 40% at 50% 50%, rgba(200, 180, 150, 0.04), transparent),
-      #0c0b10;
-    margin-bottom: 10px;
+      rgba(12, 11, 16, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     overflow: hidden;
   }
 
@@ -172,16 +167,16 @@
   .phase-label {
     position: absolute;
     left: 50%;
-    top: 14px;
+    top: 16px;
     transform: translateX(-50%);
-    font-size: 0.58rem;
+    font-size: 0.62rem;
     letter-spacing: 3px;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.35);
     pointer-events: none;
     z-index: 5;
     white-space: nowrap;
-    transition: opacity 0.3s, color 0.3s;
+    transition: color 0.3s;
   }
 
   .phase-label.active {
@@ -191,8 +186,8 @@
 
   .deck-target {
     position: absolute;
-    right: 18px;
-    bottom: 18px;
+    right: 24px;
+    bottom: 24px;
     width: 64px;
     height: 88px;
     border: 1px dashed rgba(255, 255, 255, 0.14);
@@ -225,9 +220,7 @@
     transition: opacity 0.4s;
   }
 
-  .cross-guide.visible {
-    opacity: 1;
-  }
+  .cross-guide.visible { opacity: 1; }
 
   .cross-guide::before,
   .cross-guide::after {
@@ -254,12 +247,13 @@
   }
 
   .replay-btn {
-    padding: 7px 18px;
+    margin-top: 14px;
+    padding: 8px 22px;
     background: #1e1c24;
     border: 1px solid #3a3644;
     color: #f0ece6;
     font-family: 'Chakra Petch', sans-serif;
-    font-size: 0.66rem;
+    font-size: 0.68rem;
     letter-spacing: 2px;
     text-transform: uppercase;
     border-radius: 4px;
@@ -272,27 +266,6 @@
     border-color: #5a5564;
   }
 
-  .timeline {
-    width: 100%;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 2px;
-    margin-bottom: 8px;
-    overflow: hidden;
-  }
-
-  .timeline-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: 2px;
-    transition: width 0.05s linear;
-  }
-
-  .variant-1 .timeline-fill { background: linear-gradient(90deg, #a22, #e44); }
-  .variant-2 .timeline-fill { background: linear-gradient(90deg, #2868b0, #4a8fe0); }
-  .variant-3 .timeline-fill { background: linear-gradient(90deg, #b07010, #e8a020); }
-
-  /* Mini card styling */
   .shuffle-card {
     position: absolute;
     width: var(--card-w);
@@ -304,26 +277,11 @@
     transform-origin: center center;
   }
 
-  .shuffle-card .bg {
-    position: absolute;
-    inset: 0;
-    border-radius: 4px;
-  }
-
-  .shuffle-card .stripe {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    z-index: 2;
-  }
-
+  .shuffle-card .bg { position: absolute; inset: 0; border-radius: 4px; }
+  .shuffle-card .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; z-index: 2; }
   .shuffle-card .name {
     position: absolute;
-    left: 7px;
-    right: 4px;
-    top: 8px;
+    left: 7px; right: 4px; top: 8px;
     font-family: 'New Rocker', cursive;
     font-size: 9px;
     letter-spacing: 0.5px;
@@ -332,13 +290,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
   .shuffle-card .chip {
     position: absolute;
-    left: 6px;
-    bottom: 6px;
-    width: 16px;
-    height: 16px;
+    left: 6px; bottom: 6px;
+    width: 16px; height: 16px;
     border-radius: 2px;
     font-size: 7px;
     font-weight: 700;
@@ -352,19 +307,17 @@
   .shuffle-card.w .stripe { background: #999; }
   .shuffle-card.w .name { color: #1a1a1a; }
   .shuffle-card.w .chip { background: #cc2222; color: #fff; }
-
   .shuffle-card.r .bg { background: #1c0c0c; }
   .shuffle-card.r .stripe { background: #cc2222; }
   .shuffle-card.r .name { color: #f0e0d8; }
   .shuffle-card.r .chip { background: #330e0e; color: #dd4433; }
-
   .shuffle-card.k .bg { background: #131313; }
   .shuffle-card.k .stripe { background: #cc2222; }
   .shuffle-card.k .name { color: #e8e4e0; }
   .shuffle-card.k .chip { background: #1e1e1e; color: #dd4433; }
 
   .notes {
-    max-width: 900px;
+    max-width: 640px;
     margin: 0 auto;
     padding: 20px 24px;
     background: var(--panel);
@@ -404,10 +357,10 @@
 <body>
 
 <header class="page-header">
-  <h1>Deck Shuffle Animations</h1>
+  <h1>Corner Convergence Shuffle</h1>
   <p>
-    Three candidate full-screen shuffle presentations for battle reshuffles.
-    Each plays in a 1920x1080 battle viewport. Click <strong>Replay</strong> on any column to re-run.
+    Cards launch diagonally from all four screen corners, sweep inward along curved paths
+    to form a cross, then assemble into the draw pile. Click <strong>Replay</strong> to re-run.
   </p>
 </header>
 
@@ -416,58 +369,26 @@
     <div class="bg-scene"></div>
     <div class="bg-dim"></div>
 
-    <div class="demos-row">
-      <!-- Variant 1: Cross Assembly -->
-      <div class="demo-column variant-1" data-variant="cross">
-        <div class="demo-label">Variant A</div>
-        <div class="demo-title">Cross Assembly</div>
+    <div class="demo-shell">
+      <div class="demo-header">
+        <div class="demo-label">Deck Shuffle</div>
+        <div class="demo-title">Corner Convergence</div>
         <div class="demo-desc">
-          Cards fly in from each screen edge to form a glowing cross, hold briefly,
-          then cascade into the draw pile corner with "Assembling the deck".
+          Each card originates from a screen corner and arcs inward to its cross-arm slot.
+          Top-arm cards alternate from TL/TR; bottom from BL/BR; left from TL/BL; right from TR/BR.
         </div>
-        <div class="timeline"><div class="timeline-fill" id="timeline-cross"></div></div>
-        <div class="stage-wrap">
-          <div class="cross-guide" id="cross-guide"></div>
-          <div class="phase-label" id="phase-cross">Ready</div>
-          <div class="deck-target"></div>
-          <div class="stage-canvas" id="stage-cross"></div>
-        </div>
-        <button class="replay-btn" data-replay="cross">Replay</button>
       </div>
 
-      <!-- Variant 2: Riffle Shuffle -->
-      <div class="demo-column variant-2" data-variant="riffle">
-        <div class="demo-label">Variant B</div>
-        <div class="demo-title">Riffle Shuffle</div>
-        <div class="demo-desc">
-          Classic table shuffle: deck splits into two halves, corners lift,
-          cards interleave in alternating drops, then square up on the pile.
-        </div>
-        <div class="timeline"><div class="timeline-fill" id="timeline-riffle"></div></div>
-        <div class="stage-wrap">
-          <div class="phase-label" id="phase-riffle">Ready</div>
-          <div class="deck-target"></div>
-          <div class="stage-canvas" id="stage-riffle"></div>
-        </div>
-        <button class="replay-btn" data-replay="riffle">Replay</button>
+      <div class="timeline"><div class="timeline-fill" id="timeline-corners"></div></div>
+
+      <div class="stage-wrap">
+        <div class="cross-guide" id="cross-guide"></div>
+        <div class="phase-label" id="phase">Ready</div>
+        <div class="deck-target"></div>
+        <div class="stage-canvas" id="stage"></div>
       </div>
 
-      <!-- Variant 3: Cascade Peel -->
-      <div class="demo-column variant-3" data-variant="cascade">
-        <div class="demo-label">Variant C</div>
-        <div class="demo-title">Cascade Peel</div>
-        <div class="demo-desc">
-          Overhand style: cards peel from the top in a sweeping arc,
-          fan out mid-air, then tuck back into a neat stack at the draw pile.
-        </div>
-        <div class="timeline"><div class="timeline-fill" id="timeline-cascade"></div></div>
-        <div class="stage-wrap">
-          <div class="phase-label" id="phase-cascade">Ready</div>
-          <div class="deck-target"></div>
-          <div class="stage-canvas" id="stage-cascade"></div>
-        </div>
-        <button class="replay-btn" data-replay="cascade">Replay</button>
-      </div>
+      <button class="replay-btn" id="replay-btn">Replay</button>
     </div>
   </div>
 </div>
@@ -475,10 +396,10 @@
 <section class="notes">
   <h2>Implementation Notes</h2>
   <ul>
-    <li><strong>Cross Assembly</strong> — 4 directional ingress groups (top/bottom/left/right); each card's start position is off-screen on the matching axis. Phase 1 (~1.1s): ease-out to cross slots. Phase 2 (~0.9s): staggered converge to draw-pile anchor with scale-down.</li>
-    <li><strong>Riffle Shuffle</strong> — Split deck entity into left/right stacks with slight rotation; alternating Y-drop with 40ms stagger mimics interleave. Final 200ms: compress stack + subtle bounce.</li>
-    <li><strong>Cascade Peel</strong> — Sequential peel using quadratic bezier arcs; fan spread at apex then tuck. Good for shorter decks or subtle reshuffle feedback.</li>
-    <li>All variants should block input briefly (like MillCardSystem) and publish completion before draw animations begin.</li>
+    <li><strong>Phase 1 (~1.2s)</strong> — 20 cards in 4 corner groups; quadratic bezier from corner to cross-arm slot with outward-bowed control point.</li>
+    <li><strong>Phase 2 (~0.3s)</strong> — Hold on completed cross with guide overlay visible.</li>
+    <li><strong>Phase 3 (~0.9s)</strong> — Staggered converge to draw-pile anchor with scale-down to 0.72.</li>
+    <li>Block input briefly during animation; publish completion before draw animations begin.</li>
   </ul>
 </section>
 
@@ -490,16 +411,15 @@
   const VARIANTS = ['w', 'r', 'k'];
   const CARD_W = 52;
   const CARD_H = 73;
+  const PER_ARM = 5;
+  const CROSS_ARM = 55;
+  const SLOT_GAP = 14;
 
-  // Easing helpers
   const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
   const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-  const easeOutBack = t => {
-    const c1 = 1.70158;
-    const c3 = c1 + 1;
-    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-  };
   const lerp = (a, b, t) => a + (b - a) * t;
+
+  let runner = null;
 
   function scaleViewport() {
     const scaler = document.getElementById('scaler');
@@ -514,28 +434,24 @@
   scaleViewport();
 
   function createCardEl(index) {
-    const variant = VARIANTS[index % 3];
-    const name = CARD_NAMES[index % CARD_NAMES.length];
-    const atk = (index % 5) + 1;
     const el = document.createElement('div');
-    el.className = `shuffle-card ${variant}`;
+    el.className = `shuffle-card ${VARIANTS[index % 3]}`;
     el.innerHTML = `
       <div class="bg"></div>
       <div class="stripe"></div>
-      <div class="name">${name}</div>
-      <div class="chip">${atk}</div>
+      <div class="name">${CARD_NAMES[index % CARD_NAMES.length]}</div>
+      <div class="chip">${(index % 5) + 1}</div>
     `;
     return el;
   }
 
   function getStageMetrics(stageEl) {
-    const rect = stageEl.getBoundingClientRect();
     const parent = stageEl.parentElement.getBoundingClientRect();
     return {
       w: parent.width,
       h: parent.height,
-      deckX: parent.width - 18 - 32 - CARD_W / 2,
-      deckY: parent.height - 18 - 44 - CARD_H / 2,
+      deckX: parent.width - 24 - 32 - CARD_W / 2,
+      deckY: parent.height - 24 - 44 - CARD_H / 2,
       cx: parent.width / 2,
       cy: parent.height / 2
     };
@@ -547,9 +463,47 @@
     el.style.zIndex = Math.round(y + rot * 0.1);
   }
 
+  function buildCrossAssignments() {
+    const assignments = [];
+    for (let i = 0; i < PER_ARM; i++) {
+      assignments.push({ arm: 'top', slot: i });
+      assignments.push({ arm: 'bottom', slot: i });
+      assignments.push({ arm: 'left', slot: i });
+      assignments.push({ arm: 'right', slot: i });
+    }
+    return assignments;
+  }
+
+  function crossTarget(m, arm, slot) {
+    const offset = (slot - (PER_ARM - 1) / 2) * SLOT_GAP;
+    switch (arm) {
+      case 'top': return { x: m.cx + offset * 0.3, y: m.cy - CROSS_ARM + slot * SLOT_GAP * 0.55, rot: 0 };
+      case 'bottom': return { x: m.cx + offset * 0.3, y: m.cy + CROSS_ARM - slot * SLOT_GAP * 0.55, rot: 180 };
+      case 'left': return { x: m.cx - CROSS_ARM + slot * SLOT_GAP * 0.55, y: m.cy + offset * 0.3, rot: -90 };
+      case 'right': return { x: m.cx + CROSS_ARM - slot * SLOT_GAP * 0.55, y: m.cy + offset * 0.3, rot: 90 };
+    }
+  }
+
+  function cornerStart(m, corner) {
+    const margin = 60;
+    switch (corner) {
+      case 'tl': return { x: -margin, y: -margin, rot: 45 };
+      case 'tr': return { x: m.w + margin, y: -margin, rot: -45 };
+      case 'bl': return { x: -margin, y: m.h + margin, rot: -45 };
+      case 'br': return { x: m.w + margin, y: m.h + margin, rot: 45 };
+    }
+  }
+
+  function bezier2(p0x, p0y, p1x, p1y, p2x, p2y, t) {
+    const u = 1 - t;
+    return {
+      x: u * u * p0x + 2 * u * t * p1x + t * t * p2x,
+      y: u * u * p0y + 2 * u * t * p1y + t * t * p2y
+    };
+  }
+
   class AnimRunner {
-    constructor(id, duration, onFrame, onComplete) {
-      this.id = id;
+    constructor(duration, onFrame, onComplete) {
       this.duration = duration;
       this.onFrame = onFrame;
       this.onComplete = onComplete;
@@ -568,7 +522,7 @@
         const elapsed = ts - this.startTime;
         const t = Math.min(1, elapsed / this.duration);
         this.onFrame(t, elapsed);
-        const timeline = document.getElementById(`timeline-${this.id}`);
+        const timeline = document.getElementById('timeline-corners');
         if (timeline) timeline.style.width = `${t * 100}%`;
         if (t >= 1) {
           this.running = false;
@@ -586,14 +540,9 @@
     }
   }
 
-  const runners = {};
-
-  // ─────────────────────────────────────────────
-  // VARIANT A: Cross Assembly
-  // ─────────────────────────────────────────────
-  function playCross() {
-    const stage = document.getElementById('stage-cross');
-    const phase = document.getElementById('phase-cross');
+  function play() {
+    const stage = document.getElementById('stage');
+    const phase = document.getElementById('phase');
     const guide = document.getElementById('cross-guide');
     stage.innerHTML = '';
     guide.classList.remove('visible');
@@ -601,78 +550,55 @@
     phase.classList.remove('active');
 
     const m = getStageMetrics(stage);
-    const cardCount = 20;
     const cards = [];
-    const crossArm = 55;
-    const slotGap = 14;
+    const cornerMap = {
+      top: (slot) => slot % 2 === 0 ? 'tl' : 'tr',
+      bottom: (slot) => slot % 2 === 0 ? 'bl' : 'br',
+      left: (slot) => slot % 2 === 0 ? 'tl' : 'bl',
+      right: (slot) => slot % 2 === 0 ? 'tr' : 'br',
+    };
 
-    // Assign cards to cross arms: top, bottom, left, right
-    const assignments = [];
-    const perArm = 5;
-    for (let i = 0; i < perArm; i++) {
-      assignments.push({ arm: 'top', slot: i, index: i });
-      assignments.push({ arm: 'bottom', slot: i, index: i + perArm });
-      assignments.push({ arm: 'left', slot: i, index: i + perArm * 2 });
-      assignments.push({ arm: 'right', slot: i, index: i + perArm * 3 });
-    }
-
-    function crossTarget(arm, slot) {
-      const offset = (slot - (perArm - 1) / 2) * slotGap;
-      switch (arm) {
-        case 'top': return { x: m.cx + offset * 0.3, y: m.cy - crossArm + slot * slotGap * 0.55, rot: 0 };
-        case 'bottom': return { x: m.cx + offset * 0.3, y: m.cy + crossArm - slot * slotGap * 0.55, rot: 180 };
-        case 'left': return { x: m.cx - crossArm + slot * slotGap * 0.55, y: m.cy + offset * 0.3, rot: -90 };
-        case 'right': return { x: m.cx + crossArm - slot * slotGap * 0.55, y: m.cy + offset * 0.3, rot: 90 };
-      }
-    }
-
-    function offscreenStart(arm, slot) {
-      const margin = 80;
-      switch (arm) {
-        case 'top': return { x: m.cx, y: -margin, rot: 0 };
-        case 'bottom': return { x: m.cx, y: m.h + margin, rot: 180 };
-        case 'left': return { x: -margin, y: m.cy, rot: -90 };
-        case 'right': return { x: m.w + margin, y: m.cy, rot: 90 };
-      }
-    }
-
-    assignments.forEach((a, i) => {
+    buildCrossAssignments().forEach((a, i) => {
       const el = createCardEl(i);
       stage.appendChild(el);
-      const start = offscreenStart(a.arm, a.slot);
-      const target = crossTarget(a.arm, a.slot);
-      cards.push({ el, start, target, arm: a.arm, slot: a.slot, stagger: a.slot * 0.06 });
+      const corner = cornerMap[a.arm](a.slot);
+      const start = cornerStart(m, corner);
+      const target = crossTarget(m, a.arm, a.slot);
+      const midX = (start.x + target.x) / 2 + (target.x - m.cx) * 0.4;
+      const midY = (start.y + target.y) / 2 + (target.y - m.cy) * 0.4;
+      cards.push({
+        el, start, target,
+        cp: { x: midX, y: midY },
+        stagger: a.slot * 0.08 + (corner === 'tl' || corner === 'br' ? 0 : 0.04),
+      });
     });
 
-    const phase1Dur = 1100;
-    const holdDur = 350;
+    const phase1Dur = 1200;
+    const holdDur = 300;
     const phase2Dur = 900;
     const totalDur = phase1Dur + holdDur + phase2Dur;
 
-    if (runners.cross) runners.cross.stop();
-    runners.cross = new AnimRunner('cross', totalDur, (t, elapsed) => {
+    if (runner) runner.stop();
+    runner = new AnimRunner(totalDur, (t, elapsed) => {
       if (elapsed < phase1Dur) {
-        phase.textContent = 'Forming cross';
+        phase.textContent = 'Corners converging';
         phase.classList.add('active');
         guide.classList.add('visible');
         const pt = elapsed / phase1Dur;
         cards.forEach(c => {
           const localT = Math.max(0, Math.min(1, (pt - c.stagger) / (1 - c.stagger)));
           const e = easeOutCubic(localT);
-          const x = lerp(c.start.x, c.target.x, e);
-          const y = lerp(c.start.y, c.target.y, e);
+          const pos = bezier2(c.start.x, c.start.y, c.cp.x, c.cp.y, c.target.x, c.target.y, e);
           const rot = lerp(c.start.rot, c.target.rot, e);
-          setCardTransform(c.el, x, y, rot, 1, localT > 0 ? 1 : 0);
+          setCardTransform(c.el, pos.x, pos.y, rot, 1, localT > 0 ? 1 : 0);
         });
       } else if (elapsed < phase1Dur + holdDur) {
-        phase.textContent = 'Cross complete';
-        cards.forEach(c => {
-          setCardTransform(c.el, c.target.x, c.target.y, c.target.rot, 1, 1);
-        });
+        phase.textContent = 'Cross locked';
+        cards.forEach(c => setCardTransform(c.el, c.target.x, c.target.y, c.target.rot, 1, 1));
       } else {
         phase.textContent = 'Assembling the deck';
-        const pt = (elapsed - phase1Dur - holdDur) / phase2Dur;
         guide.classList.remove('visible');
+        const pt = (elapsed - phase1Dur - holdDur) / phase2Dur;
         cards.forEach((c, i) => {
           const stagger = i * 0.025;
           const localT = Math.max(0, Math.min(1, (pt - stagger) / (1 - stagger)));
@@ -688,209 +614,11 @@
       phase.textContent = 'Deck ready';
       phase.classList.remove('active');
     });
-    runners.cross.start();
+    runner.start();
   }
 
-  // ─────────────────────────────────────────────
-  // VARIANT B: Riffle Shuffle
-  // ─────────────────────────────────────────────
-  function playRiffle() {
-    const stage = document.getElementById('stage-riffle');
-    const phase = document.getElementById('phase-riffle');
-    stage.innerHTML = '';
-    phase.textContent = 'Ready';
-    phase.classList.remove('active');
-
-    const m = getStageMetrics(stage);
-    const cardCount = 16;
-    const half = cardCount / 2;
-    const cards = [];
-
-    for (let i = 0; i < cardCount; i++) {
-      const el = createCardEl(i);
-      stage.appendChild(el);
-      const isLeft = i < half;
-      cards.push({
-        el,
-        index: i,
-        isLeft,
-        halfIndex: isLeft ? i : i - half,
-        // Start stacked at center
-        stackX: m.cx,
-        stackY: m.cy - i * 1.5,
-      });
-    }
-
-    const splitDur = 400;
-    const riffleDur = 900;
-    const squareDur = 350;
-    const totalDur = splitDur + riffleDur + squareDur;
-
-    if (runners.riffle) runners.riffle.stop();
-    runners.riffle = new AnimRunner('riffle', totalDur, (t, elapsed) => {
-      if (elapsed < splitDur) {
-        phase.textContent = 'Splitting deck';
-        phase.classList.add('active');
-        const pt = easeOutCubic(elapsed / splitDur);
-        cards.forEach(c => {
-          const spreadX = c.isLeft ? m.cx - 70 : m.cx + 70;
-          const spreadY = m.cy - 40 - c.halfIndex * 2;
-          const x = lerp(c.stackX, spreadX, pt);
-          const y = lerp(c.stackY, spreadY, pt);
-          const rot = lerp(0, c.isLeft ? -8 : 8, pt);
-          setCardTransform(c.el, x, y, rot, 1, 1);
-        });
-      } else if (elapsed < splitDur + riffleDur) {
-        phase.textContent = 'Riffle interleave';
-        const pt = (elapsed - splitDur) / riffleDur;
-        // Interleave order: alternate left/right drops
-        const interleaveOrder = [];
-        for (let i = 0; i < half; i++) {
-          interleaveOrder.push({ side: 'left', idx: i });
-          interleaveOrder.push({ side: 'right', idx: i });
-        }
-        const dropInterval = riffleDur / interleaveOrder.length;
-
-        cards.forEach(c => {
-          const orderIdx = c.isLeft
-            ? c.halfIndex * 2
-            : c.halfIndex * 2 + 1;
-          const dropStart = orderIdx * dropInterval;
-          const dropElapsed = elapsed - splitDur - dropStart;
-          const sourceX = c.isLeft ? m.cx - 70 : m.cx + 70;
-          const sourceY = m.cy - 40 - c.halfIndex * 2;
-          const targetX = m.cx;
-          const targetY = m.cy + orderIdx * 1.8;
-
-          if (dropElapsed < 0) {
-            setCardTransform(c.el, sourceX, sourceY, c.isLeft ? -8 : 8, 1, 1);
-          } else {
-            const localT = Math.min(1, dropElapsed / (dropInterval * 1.4));
-            const e = easeOutCubic(localT);
-            const arc = Math.sin(localT * Math.PI) * 25;
-            const x = lerp(sourceX, targetX, e);
-            const y = lerp(sourceY, targetY, e) - arc;
-            const rot = lerp(c.isLeft ? -8 : 8, 0, e);
-            setCardTransform(c.el, x, y, rot, 1, 1);
-          }
-        });
-      } else {
-        phase.textContent = 'Squaring up';
-        const pt = easeOutBack((elapsed - splitDur - riffleDur) / squareDur);
-        cards.forEach((c, i) => {
-          const x = lerp(m.cx, m.deckX, pt);
-          const y = lerp(m.cy + i * 1.8, m.deckY - i * 1.2, pt);
-          const scale = lerp(1, 0.72, pt);
-          setCardTransform(c.el, x, y, 0, scale, 1);
-        });
-      }
-    }, () => {
-      phase.textContent = 'Deck ready';
-      phase.classList.remove('active');
-    });
-    runners.riffle.start();
-  }
-
-  // ─────────────────────────────────────────────
-  // VARIANT C: Cascade Peel
-  // ─────────────────────────────────────────────
-  function playCascade() {
-    const stage = document.getElementById('stage-cascade');
-    const phase = document.getElementById('phase-cascade');
-    stage.innerHTML = '';
-    phase.textContent = 'Ready';
-    phase.classList.remove('active');
-
-    const m = getStageMetrics(stage);
-    const cardCount = 14;
-    const cards = [];
-
-    for (let i = 0; i < cardCount; i++) {
-      const el = createCardEl(i);
-      stage.appendChild(el);
-      cards.push({
-        el,
-        index: i,
-        peelStart: i * 55,
-        peelDur: 280,
-        fanX: m.cx + (i - cardCount / 2) * 18,
-        fanY: m.cy - 60,
-        fanRot: (i - cardCount / 2) * 4,
-      });
-    }
-
-    const peelTotal = cardCount * 55 + 280;
-    const holdDur = 300;
-    const tuckDur = 700;
-    const totalDur = peelTotal + holdDur + tuckDur;
-
-    if (runners.cascade) runners.cascade.stop();
-    runners.cascade = new AnimRunner('cascade', totalDur, (t, elapsed) => {
-      const tuckStart = peelTotal + holdDur;
-
-      if (elapsed < peelTotal) {
-        phase.textContent = 'Peeling cards';
-        phase.classList.add('active');
-        cards.forEach(c => {
-          const localElapsed = elapsed - c.peelStart;
-          if (localElapsed < 0) {
-            setCardTransform(c.el, m.deckX, m.deckY - c.index * 1.2, 0, 0.72, 1);
-          } else {
-            const pt = Math.min(1, localElapsed / c.peelDur);
-            const e = easeOutCubic(pt);
-            // Bezier: deck -> apex -> fan position
-            const p0x = m.deckX, p0y = m.deckY;
-            const p1x = m.deckX - 60, p1y = m.cy - 100;
-            const p2x = c.fanX, p2y = c.fanY;
-            const u = 1 - e;
-            const x = u * u * p0x + 2 * u * e * p1x + e * e * p2x;
-            const y = u * u * p0y + 2 * u * e * p1y + e * e * p2y;
-            const rot = lerp(0, c.fanRot, e);
-            const scale = lerp(0.72, 0.95, e);
-            setCardTransform(c.el, x, y, rot, scale, 1);
-          }
-        });
-      } else if (elapsed < tuckStart) {
-        phase.textContent = 'Fan hold';
-        cards.forEach(c => {
-          setCardTransform(c.el, c.fanX, c.fanY, c.fanRot, 0.95, 1);
-        });
-      } else {
-        phase.textContent = 'Tucking stack';
-        const pt = easeInOutCubic((elapsed - tuckStart) / tuckDur);
-        cards.forEach(c => {
-          const stagger = c.index * 0.03;
-          const localT = Math.max(0, Math.min(1, (pt - stagger) / (1 - stagger)));
-          const e = easeInOutCubic(localT);
-          const x = lerp(c.fanX, m.deckX, e);
-          const y = lerp(c.fanY, m.deckY - c.index * 1.2, e);
-          const rot = lerp(c.fanRot, 0, e);
-          const scale = lerp(0.95, 0.72, e);
-          setCardTransform(c.el, x, y, rot, scale, 1);
-        });
-      }
-    }, () => {
-      phase.textContent = 'Deck ready';
-      phase.classList.remove('active');
-    });
-    runners.cascade.start();
-  }
-
-  // Auto-play all on load, wire replay buttons
-  document.querySelectorAll('[data-replay]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const v = btn.dataset.replay;
-      if (v === 'cross') playCross();
-      if (v === 'riffle') playRiffle();
-      if (v === 'cascade') playCascade();
-    });
-  });
-
-  setTimeout(() => {
-    playCross();
-    playRiffle();
-    playCascade();
-  }, 400);
+  document.getElementById('replay-btn').addEventListener('click', play);
+  setTimeout(play, 400);
 })();
 </script>
 </body>

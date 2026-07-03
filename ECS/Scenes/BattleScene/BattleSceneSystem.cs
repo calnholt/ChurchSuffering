@@ -38,6 +38,7 @@ namespace Crusaders30XX.ECS.Systems
 	private CardVisualEffectsSuppressionSystem _cardVisualEffectsSuppressionSystem;
 		private BattleBackgroundSystem _battleBackgroundSystem;
 		private DrawPileDisplaySystem _drawPileDisplaySystem;
+		private ShuffleDeckDisplaySystem _shuffleDeckDisplaySystem;
 		private DiscardPileDisplaySystem _discardPileDisplaySystem;
 		private PileColorCountDisplaySystem _pileColorCountDisplaySystem;
 		private PlayerDisplaySystem _playerDisplaySystem;
@@ -448,6 +449,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (showDrawPile || !guidedTutorial)
 				FrameProfiler.Measure("PileColorCountDisplaySystem.Draw",
 					() => _pileColorCountDisplaySystem.Draw(showDrawPile, !guidedTutorial));
+			FrameProfiler.Measure("ShuffleDeckDisplaySystem.Draw", _shuffleDeckDisplaySystem.Draw);
 			if (!guidedTutorial) FrameProfiler.Measure("DiscardPileDisplaySystem.Draw", _discardPileDisplaySystem.Draw);
 			FrameProfiler.Measure("MillCardSystem.Draw", _millCardSystem.Draw);
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawForeground", _payCostOverlaySystem.DrawForeground);
@@ -680,6 +682,10 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void EnqueueBattleRules(bool isFollowingDialog) 
 		{
+			if (!GuidedTutorialService.IsActive(EntityManager))
+			{
+				EventQueue.EnqueueRule(new QueuedShuffleDeckAnimationEvent("StartBattle"));
+			}
 			EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<ChangeBattlePhaseEvent>(
 				"Rule.ChangePhase.EnemyStart",
 				new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle, Previous = SubPhase.StartBattle }
@@ -716,6 +722,7 @@ namespace Crusaders30XX.ECS.Systems
 		_cardVisualEffectsSuppressionSystem = new CardVisualEffectsSuppressionSystem(_world.EntityManager);
 			_cardZoneSystem = new CardZoneSystem(_world.EntityManager);
 			_drawPileDisplaySystem = new DrawPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_shuffleDeckDisplaySystem = new ShuffleDeckDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_discardPileDisplaySystem = new DiscardPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_pileColorCountDisplaySystem = new PileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_millCardSystem = new MillCardSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -868,6 +875,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_pledgeManagementSystem);
 			_world.AddSystem(_eventQueueSystem);
 			_world.AddSystem(_drawPileDisplaySystem);
+			_world.AddSystem(_shuffleDeckDisplaySystem);
 			_world.AddSystem(_discardPileDisplaySystem);
 			_world.AddSystem(_pileColorCountDisplaySystem);
 			_world.AddSystem(_millCardSystem);

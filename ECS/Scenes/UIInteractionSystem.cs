@@ -72,7 +72,7 @@ namespace Crusaders30XX.ECS.Systems
                 EntityManager,
                 frame.PointerPosition);
             bool gameplayBlocked = contextId == InputContextIds.Gameplay
-                && StateSingleton.PreventClicking;
+                && (StateSingleton.PreventClicking || IsBattleAnimationActive());
 
             if (!targetUi.IsInteractable
                 || targetUi.IsPreventDefaultClick
@@ -131,6 +131,15 @@ namespace Crusaders30XX.ECS.Systems
         private void ResetHoverFeedbackTarget()
         {
             _previousHoverFeedbackTarget = null;
+        }
+
+        private bool IsBattleAnimationActive()
+        {
+            var phase = EntityManager
+                .GetEntitiesWithComponent<PhaseState>()
+                .FirstOrDefault()
+                ?.GetComponent<PhaseState>();
+            return phase?.BattleAnimationActive == true;
         }
     }
 }

@@ -937,6 +937,7 @@ namespace Crusaders30XX.ECS.Components
         public SubPhase Sub { get; set; } = SubPhase.StartBattle;
         public int TurnNumber { get; set; } = 1; // enemy turn counter
         public bool DefeatPresentationActive { get; set; }
+        public bool BattleAnimationActive { get; set; }
         public bool PendingBlockConfirm { get; set; }
     }
 

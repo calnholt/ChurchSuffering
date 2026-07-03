@@ -870,6 +870,18 @@
 /processorParam:TextureFormat=Color
 /build:cathedral-background.png
 
+#begin card_back.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:card_back.png
+
 #begin Battle_UI/draw_pile.png
 /importer:TextureImporter
 /processor:TextureProcessor
