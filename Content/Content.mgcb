@@ -438,7 +438,7 @@
 /processorParam:TextureFormat=Color
 /build:Earth_Demon.png
 
-#begin Gleeber.png
+#begin Horde.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -448,7 +448,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Gleeber.png
+/build:Horde.png
 
 #begin Dust_Wuurm.png
 /importer:TextureImporter

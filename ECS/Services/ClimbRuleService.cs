@@ -30,7 +30,7 @@ namespace Crusaders30XX.ECS.Services
 
 		private static readonly HashSet<string> BannedClimbEncounterEnemyIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
-			"gleeber",
+			"horde",
 			"sand_corpse",
 			"training_demon",
 		};

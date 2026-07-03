@@ -62,7 +62,7 @@ namespace Crusaders30XX.ECS.Services
 				LocationId = string.Empty,
 				QuestIndex = -1,
 			};
-			queued.Events.Add(new QueuedEvent { EventId = "gleeber" });
+			queued.Events.Add(new QueuedEvent { EventId = "horde" });
 			world.AddComponent(queuedEntity, queued);
 			world.AddComponent(queuedEntity, new PendingQuestDialog
 			{

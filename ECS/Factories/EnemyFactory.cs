@@ -13,7 +13,7 @@ namespace Crusaders30XX.ECS.Factories
             new Dictionary<EnemyId, Func<EnemyBase>>
             {
                 { EnemyId.Demon, () => new Demon() },
-                { EnemyId.Gleeber, () => new Gleeber() },
+                { EnemyId.Horde, () => new Horde() },
                 { EnemyId.Mummy, () => new Mummy() },
                 { EnemyId.Ninja, () => new Ninja() },
                 { EnemyId.Ogre, () => new Ogre() },

@@ -64,41 +64,41 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 
 		private static readonly IReadOnlyList<TutorialSectionDefinition> Sections =
 		[
-			new(1, 3,  "tutorial_gleeber_strike_3", 1, true,
+			new(1, 3,  "tutorial_horde_strike_3", 1, true,
 				["teach_win", "teach_loss", "teach_enemy_attack"],
-				[Turn([C("smite"), C("smite")], ["tutorial_gleeber_strike_3"])]),
+				[Turn([C("smite"), C("smite")], ["tutorial_horde_strike_3"])]),
 
-			new(2, 6,  "tutorial_gleeber_strike_3", 1, false,
+			new(2, 6,  "tutorial_horde_strike_3", 1, false,
 				[],
-				[Turn([C("smite"), C("litany_of_wrath"), C("smite")], ["tutorial_gleeber_strike_3"])]),
+				[Turn([C("smite"), C("litany_of_wrath"), C("smite")], ["tutorial_horde_strike_3"])]),
 
-			new(3, 8,  "tutorial_gleeber_strike_3", 1, false,
+			new(3, 8,  "tutorial_horde_strike_3", 1, false,
 				[],
-				[Turn([C("smite"), C("litany_of_wrath"), C("smite"), C("reckoning")], ["tutorial_gleeber_strike_3"])],
+				[Turn([C("smite"), C("litany_of_wrath"), C("smite"), C("reckoning")], ["tutorial_horde_strike_3"])],
 				PendingDialogKey: "catch_breath"),
 
-			new(4, 10, "tutorial_gleeber_strike_8", 9, false,
+			new(4, 10, "tutorial_horde_strike_8", 9, false,
 				[],
-				[Turn([C("absolution"), C("litany_of_wrath"), C("smite"), C("reckoning")], ["tutorial_gleeber_strike_8"])],
+				[Turn([C("absolution"), C("litany_of_wrath"), C("smite"), C("reckoning")], ["tutorial_horde_strike_8"])],
 				PendingDialogKey: "sword_retrieved"),
 
-			new(5, 5,  "tutorial_gleeber_strike_8", 1, true,
+			new(5, 5,  "tutorial_horde_strike_8", 1, true,
 				["teach_black_block", "teach_weapon"],
-				[Turn([B("smite"), B("smite"), B("smite"), B("smite")], ["tutorial_gleeber_strike_8"])]),
+				[Turn([B("smite"), B("smite"), B("smite"), B("smite")], ["tutorial_horde_strike_8"])]),
 
-			new(6, 8,  "tutorial_gleeber_strike_6", 1, true,
+			new(6, 8,  "tutorial_horde_strike_6", 1, true,
 				["teach_red_courage", "teach_courage_hud"],
-				[Turn([B("stab"), R("smite"), W("smite"), W("smite")], ["tutorial_gleeber_strike_6"])]),
+				[Turn([B("stab"), R("smite"), W("smite"), W("smite")], ["tutorial_horde_strike_6"])]),
 
-			new(7, 10, "tutorial_gleeber_strike_6", 1, true,
+			new(7, 10, "tutorial_horde_strike_6", 1, true,
 				["teach_white_temperance", "teach_temperance_hud"],
-				[Turn([W("smite"), W("smite"), B("smite"), B("smite")], ["tutorial_gleeber_strike_6"])]),
+				[Turn([W("smite"), W("smite"), B("smite"), B("smite")], ["tutorial_horde_strike_6"])]),
 
-			new(8, 12, "tutorial_gleeber_strike_8", 1, true,
+			new(8, 12, "tutorial_horde_strike_8", 1, true,
 				["teach_intent_pips", "teach_pledge"],
 				[
-					Turn([B("courageous"), B("smite"), B("smite"), B("fervor")], ["tutorial_gleeber_strike_8"]),
-					Turn([R("litany_of_wrath"), R("absolution"), B("reckoning"), R("smite")], ["tutorial_gleeber_strike_6"]),
+					Turn([B("courageous"), B("smite"), B("smite"), B("fervor")], ["tutorial_horde_strike_8"]),
+					Turn([R("litany_of_wrath"), R("absolution"), B("reckoning"), R("smite")], ["tutorial_horde_strike_6"]),
 				],
 				ShowDrawPile: true,
 				PendingDialogKey: "last_of_them"),

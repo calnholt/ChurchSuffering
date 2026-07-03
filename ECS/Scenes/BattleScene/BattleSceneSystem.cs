@@ -550,7 +550,7 @@ namespace Crusaders30XX.ECS.Systems
 				StateSingleton.IsPledgeEnabled = tutorial.Section >= 8;
 				tutorial.IsRestart = false;
 				queued.CurrentIndex = 0;
-				nextEnemy = EntityFactory.CreateEnemyFromId(_world, "gleeber", EntityManager);
+				nextEnemy = EntityFactory.CreateEnemyFromId(_world, "horde", EntityManager);
 			}
 			else
 			{

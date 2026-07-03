@@ -1324,7 +1324,7 @@ namespace Crusaders30XX.ECS.Systems
             {
                 "angel" or "remiel" => "guardian_angel",
                 "crusader" => CrusaderPortraitAssets.DialogPortraitAsset,
-                "gleeber" => "Gleeber",
+                "horde" => "Horde",
                 "skeleton" => "Skeleton",
                 "sand_corpse" => "Sand_Corpse",
                 "fallen shepherd" => "Fallen_Shepherd",

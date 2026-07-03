@@ -7,18 +7,18 @@ using Crusaders30XX.ECS.Events;
 namespace Crusaders30XX.ECS.Objects.Achievements
 {
     /// <summary>
-    /// Kill Gleeber in a single turn.
+    /// Kill Horde in a single turn.
     /// </summary>
     public class OHKO : AchievementBase
     {
-        private int StartOfBattleGleeberHp = 0;
+        private int StartOfBattleHordeHp = 0;
         private bool IsStillEligible = true;
 
         public OHKO()
         {
             Id = "ohko";
             Name = "OHKO";
-            Description = $"Defeat Gleeber in a single turn";
+            Description = $"Defeat Horde in a single turn";
             Row = 5;
             Column = 5;
             StartsVisible = false;
@@ -42,8 +42,8 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             if (!IsStillEligible) return;
             var enemy = EntityManager.GetEntity("Enemy");
             var id = enemy.GetComponent<Enemy>().EnemyBase.Id;
-            // skip if not gleeber
-            if (id != EnemyId.Gleeber)
+            // skip if not horde
+            if (id != EnemyId.Horde)
             {
                 IsStillEligible = false;
                 return;
@@ -52,11 +52,11 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             // set HP for validating
             if (evt.Current == SubPhase.StartBattle)
             {
-                StartOfBattleGleeberHp = enemyHp.Current;
+                StartOfBattleHordeHp = enemyHp.Current;
                 return;
             }
             // check if dealt damage and still alive at end of turn
-            if (evt.Current == SubPhase.PlayerEnd && enemyHp.Current < StartOfBattleGleeberHp && enemyHp.Current > 0)
+            if (evt.Current == SubPhase.PlayerEnd && enemyHp.Current < StartOfBattleHordeHp && enemyHp.Current > 0)
             {
                 IsStillEligible = false;
                 return;

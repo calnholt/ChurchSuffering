@@ -74,7 +74,7 @@ namespace Crusaders30XX.ECS.Data.Dialog
 					("Crusader", "Orders from the Holy See. Too many demonic reports out here - reeks of a new Hellrift."),
 					("Angel", "You mean that [nod]adorable[/nod] thing over there?"),
 					("Crusader", "No. That's what crawled out of one."),
-					("Gleeber", "[shake]GLEEEEEEEEEEEB[/shake]!"),
+					("Horde", "[shake]HORDE[/shake]!"),
 					("Angel", "Oh come on, that thing's way too cute to be evil!"),
 					("Crusader", "You'll learn fast - even demons can wear friendly faces. *grips sword* First test of the desert. Ready yourself."),
 					("Angel", "Death to the cute demon! Hold on, let me just [slow factor=0.01]-[/slow] [jitter]COUGH[/jitter] [slow factor=0.01]-[/slow] okay, ready!")),

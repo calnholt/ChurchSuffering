@@ -142,7 +142,7 @@ The player has **20 HP**. All enemy stats should be understood relative to this.
 
 | Tier | HP Range | Examples | Design Role |
 |------|----------|----------|-------------|
-| Fragile | 40-60 | Gleeber (50), Skeletal Archer (48) | Quick fights, tutorial enemies |
+| Fragile | 40-60 | Horde (50), Skeletal Archer (48) | Quick fights, tutorial enemies |
 | Standard | 70-90 | Spider (80), Ninja (80), Demon (90) | Core encounter length |
 | Tough | 95-120 | Sorcerer (120), Glacial Guardian (110) | Extended battles, scaling threats |
 | Boss-tier | 120+ | Shadow (150) | Marathon fights, attrition-based |

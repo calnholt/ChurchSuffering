@@ -85,11 +85,11 @@ public class GuidedTutorialDefinitionTests
 	[Fact]
 	public void Attack_ids_map_to_correct_damage_values()
 	{
-		Assert.Equal(9, EnemyAttackFactory.Create("tutorial_gleeber_strike_9").Damage);
-		Assert.Equal(8, EnemyAttackFactory.Create("tutorial_gleeber_strike_8").Damage);
-		Assert.Equal(6, EnemyAttackFactory.Create("tutorial_gleeber_strike_6").Damage);
-		Assert.Equal(5, EnemyAttackFactory.Create("tutorial_gleeber_strike_5").Damage);
-		Assert.Equal(3, EnemyAttackFactory.Create("tutorial_gleeber_strike_3").Damage);
+		Assert.Equal(9, EnemyAttackFactory.Create("tutorial_horde_strike_9").Damage);
+		Assert.Equal(8, EnemyAttackFactory.Create("tutorial_horde_strike_8").Damage);
+		Assert.Equal(6, EnemyAttackFactory.Create("tutorial_horde_strike_6").Damage);
+		Assert.Equal(5, EnemyAttackFactory.Create("tutorial_horde_strike_5").Damage);
+		Assert.Equal(3, EnemyAttackFactory.Create("tutorial_horde_strike_3").Damage);
 	}
 
 	[Fact]
@@ -320,9 +320,9 @@ public class GuidedTutorialDefinitionTests
 
 			var enemy = manager.CreateEntity("Enemy");
 			var intent = new AttackIntent { ActiveAttackSequence = 1 };
-			intent.Planned.Add(new PlannedAttack { AttackId = EnemyAttackId.TutorialGleeberStrike6 });
+			intent.Planned.Add(new PlannedAttack { AttackId = EnemyAttackId.TutorialHordeStrike6 });
 			var nextIntent = new NextTurnAttackIntent();
-			nextIntent.Planned.Add(new PlannedAttack { AttackId = EnemyAttackId.TutorialGleeberStrike8 });
+			nextIntent.Planned.Add(new PlannedAttack { AttackId = EnemyAttackId.TutorialHordeStrike8 });
 			manager.AddComponent(enemy, intent);
 			manager.AddComponent(enemy, nextIntent);
 

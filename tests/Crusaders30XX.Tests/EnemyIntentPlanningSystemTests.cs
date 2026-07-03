@@ -75,7 +75,7 @@ public class EnemyIntentPlanningSystemTests
 				world.AddComponent(player, new Player());
 				world.AddComponent(player, new AppliedPassives());
 
-				var definition = new Gleeber();
+				var definition = new Horde();
 				var enemy = world.CreateEntity("Enemy");
 				world.AddComponent(enemy, new Enemy
 				{
@@ -96,7 +96,7 @@ public class EnemyIntentPlanningSystemTests
 				EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.EnemyStart });
 
 				Assert.Single(intent.Planned);
-				Assert.Equal(EnemyAttackId.TutorialGleeberStrike6, intent.Planned[0].AttackId);
+				Assert.Equal(EnemyAttackId.TutorialHordeStrike6, intent.Planned[0].AttackId);
 			}
 			finally
 			{

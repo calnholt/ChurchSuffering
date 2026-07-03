@@ -533,7 +533,7 @@ public class ClimbRuleServiceTests
 		var pool = ClimbRuleService.GetClimbEncounterEnemyPool();
 
 		Assert.NotEmpty(pool);
-		Assert.DoesNotContain("gleeber", pool);
+		Assert.DoesNotContain("horde", pool);
 		Assert.DoesNotContain("sand_corpse", pool);
 		Assert.DoesNotContain("training_demon", pool);
 		foreach (string enemyId in pool)
