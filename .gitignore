@@ -4,6 +4,6 @@ obj/
 Content/bin/
 Content/obj/
 
-# Debug output
-debug/
+# Debug output (repo root only; do not use bare debug/ — it matches source folders named Debug on case-insensitive FS)
+/debug/
 logs/
