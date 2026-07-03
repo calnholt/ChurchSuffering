@@ -28,16 +28,16 @@ namespace Crusaders30XX.ECS.Services
 			string text = baseText;
 
 			if (entity.GetComponent<Frozen>() != null)
-				text += Sep(text) + "This card is frozen - when played, gain 1 frostbite. Lasts for the rest of the quest.";
+				text += Sep(text) + "This card is frozen - when played, gain 1 frostbite. Lasts for the rest of the climb.";
 
 			if (entity.GetComponent<Brittle>() != null)
-				text += Sep(text) + "This card is brittle - if you block an attack with only this card, mill 1. Lasts for the rest of the run.";
+				text += Sep(text) + "This card is brittle - if you block an attack with only this card, mill 1. Lasts for the rest of the climb.";
 
 			if (entity.GetComponent<Scorched>() != null)
-				text += Sep(text) + "This card is scorched - when pledged, lose 1 HP. Lasts for the rest of the run.";
+				text += Sep(text) + "This card is scorched - when pledged, lose 1 HP. Lasts for the rest of the climb.";
 
 			if (entity.GetComponent<Thorned>() != null)
-				text += Sep(text) + "This card is thorned - when discarded to pay a card cost, gain 1 scar. Lasts for the rest of the run.";
+				text += Sep(text) + "This card is thorned - when discarded to pay a card cost, gain 1 scar. Lasts for the rest of the climb.";
 
 			if (entity.GetComponent<Colorless>() != null && !ShouldSuppressColorlessStatus(entityManager))
 				text += Sep(text) + ColorlessStatus;
@@ -228,7 +228,7 @@ namespace Crusaders30XX.ECS.Services
 			i = lowerText.IndexOf("guard");
 			if (i >= 0) matches.Add((i, "X Guard - Prevents the next X damage from attacks. Any damage removes all guard. At the start of the enemy turn, converts to 1 aggression."));
 			i = lowerText.IndexOf("bleed");
-			if (i >= 0) matches.Add((i, "X Bleed - While you have bleed, lose 1 HP when you block with 2 or more cards of the same color, then remove one bleed stack. Lasts for the rest of the run."));
+			if (i >= 0) matches.Add((i, "X Bleed - While you have bleed, lose 1 HP when you block with 2 or more cards of the same color, then remove one bleed stack. Lasts for the rest of the climb."));
 			i = lowerText.IndexOf("mill");
 			if (i >= 0) matches.Add((i, "Mill X - Discard the top X cards of your deck."));
 			i = lowerText.IndexOf("resurrect");

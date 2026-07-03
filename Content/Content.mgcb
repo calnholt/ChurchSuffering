@@ -882,6 +882,39 @@
 /processorParam:TextureFormat=Color
 /build:card_back.png
 
+#begin Climb_UI/black_gem.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Climb_UI/black_gem.png
+
+#begin Climb_UI/red_gem.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Climb_UI/red_gem.png
+
+#begin Climb_UI/white_gem.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Climb_UI/white_gem.png
+
 #begin Battle_UI/draw_pile.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1455,6 +1488,17 @@
 /processorParam:TextureFormat=Color
 /build:CardArt/pouch_of_kunai.png
 
+#begin CardArt/purge.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/purge.png
+
 #begin CardArt/ravage.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1861,6 +1905,17 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:TextureFormat=Color
 /build:CardArt/steadfast_resolve.png
+
+#begin CardArt/steel_the_spirit.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/steel_the_spirit.png
 
 #begin CardArt/stoke_the_furnace.png
 /importer:TextureImporter

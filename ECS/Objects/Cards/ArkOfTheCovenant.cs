@@ -15,8 +15,8 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Target = "Player";
             Text = $"When this card is discarded to pay for a card cost, heal {HealAmount} HP.";
             VisualEffectRecipe = PlayerBuffEffect();
-            Type = CardType.Relic;
-            Block = 1;
+            Type = CardType.Block;
+            Block = 3;
 
             OnDiscardedForCost = (entityManager, card) =>
             {

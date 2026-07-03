@@ -229,10 +229,12 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (!string.Equals(cardData.Card?.CardId, Curse.CardIdValue, StringComparison.OrdinalIgnoreCase))
 			{
+				var replacedCard = cardData.Card;
 				var curse = CardFactory.Create(Curse.CardIdValue);
 				if (curse == null) return;
 				cardData.Card = curse;
 				curse.Initialize(entityManager, card);
+				DisposeReplacedCard(replacedCard, curse);
 			}
 
 			RefreshCursedCardPresentation(entityManager, card);
@@ -253,16 +255,24 @@ namespace Crusaders30XX.ECS.Systems
 				var restored = CardFactory.Create(original.CardId);
 				if (restored != null)
 				{
+					var replacedCard = cardData.Card;
 					restored.IsUpgraded = original.IsUpgraded;
 					restored.IsStarter = original.IsStarter;
 					cardData.Card = restored;
 					cardData.Color = original.Color;
 					restored.Initialize(entityManager, card);
+					DisposeReplacedCard(replacedCard, restored);
 				}
 				entityManager.RemoveComponent<CursedOriginalCard>(card);
 			}
 
 			RefreshNormalCardPresentation(entityManager, card);
+		}
+
+		private static void DisposeReplacedCard(CardBase replacedCard, CardBase replacementCard)
+		{
+			if (replacedCard == null || ReferenceEquals(replacedCard, replacementCard)) return;
+			replacedCard.Dispose();
 		}
 
 		public static void RefreshCardTooltipPresentation(

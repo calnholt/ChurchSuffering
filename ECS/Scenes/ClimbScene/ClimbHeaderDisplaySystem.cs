@@ -114,6 +114,7 @@ namespace Crusaders30XX.ECS.Systems
 			_imageAssets = imageAssets;
 			_pixel = _imageAssets.GetPixel(Color.White);
 			ClimbSceneDrawHelpers.EnsureHourglassTextures(_imageAssets);
+			ClimbSceneDrawHelpers.EnsureResourceTextures(_imageAssets);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()

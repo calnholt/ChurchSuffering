@@ -48,6 +48,11 @@ namespace Crusaders30XX.ECS.Systems
 		private static Texture2D _hourglassSand;
 		private static bool _hourglassTexturesLoaded;
 
+		private static Texture2D _redGem;
+		private static Texture2D _whiteGem;
+		private static Texture2D _blackGem;
+		private static bool _resourceTexturesLoaded;
+
 		private static readonly (int Dx, int Dy)[] GlowDirections =
 		{
 			(1, 0), (-1, 0), (0, 1), (0, -1),
@@ -60,6 +65,15 @@ namespace Crusaders30XX.ECS.Systems
 			_hourglassFrame = imageAssets.GetRequiredTexture("time_icon_hourglass_frame");
 			_hourglassSand = imageAssets.GetRequiredTexture("time_icon_hourglass_sand");
 			_hourglassTexturesLoaded = true;
+		}
+
+		public static void EnsureResourceTextures(ImageAssetService imageAssets)
+		{
+			if (_resourceTexturesLoaded) return;
+			_redGem = imageAssets.GetRequiredTexture("Climb_UI/red_gem");
+			_whiteGem = imageAssets.GetRequiredTexture("Climb_UI/white_gem");
+			_blackGem = imageAssets.GetRequiredTexture("Climb_UI/black_gem");
+			_resourceTexturesLoaded = true;
 		}
 
 		public static void DrawBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, int thickness = 1)
@@ -159,30 +173,17 @@ namespace Crusaders30XX.ECS.Systems
 				spriteBatch.Draw(glowCircle, glowRect, RedGlow * (glowAlpha * opacity));
 			}
 
-			switch (type)
+			Texture2D texture = type switch
 			{
-				case ClimbResourceType.Red:
-				{
-					var circle = PrimitiveTextureFactory.GetAntiAliasedCircle(graphicsDevice, Math.Max(2, size / 2));
-					var rect = new Rectangle((int)position.X, (int)position.Y, size, size);
-					spriteBatch.Draw(circle, rect, (compact ? Red3 : color) * opacity);
-					break;
-				}
-				case ClimbResourceType.White:
-				{
-					var triangle = PrimitiveTextureFactory.GetEquilateralTriangle(graphicsDevice, Math.Max(4, size));
-					var rect = new Rectangle((int)position.X, (int)position.Y, size, size);
-					spriteBatch.Draw(triangle, rect, color * opacity);
-					break;
-				}
-				case ClimbResourceType.Black:
-				{
-					var rect = new Rectangle((int)position.X, (int)position.Y, size, size);
-					spriteBatch.Draw(pixel, rect, Black0 * opacity);
-					DrawBorder(spriteBatch, pixel, rect, color * opacity, compact ? 1 : 2);
-					break;
-				}
-			}
+				ClimbResourceType.Red => _redGem,
+				ClimbResourceType.White => _whiteGem,
+				ClimbResourceType.Black => _blackGem,
+				_ => null,
+			};
+			if (texture == null) return;
+
+			var rect = new Rectangle((int)position.X, (int)position.Y, size, size);
+			spriteBatch.Draw(texture, rect, Color.White * opacity);
 		}
 
 		public static void DrawMetaBlock(

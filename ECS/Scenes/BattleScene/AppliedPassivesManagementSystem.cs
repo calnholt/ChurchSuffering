@@ -535,7 +535,8 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Guard,
                 AppliedPassiveType.Anathema,
                 AppliedPassiveType.Plunder,
-                AppliedPassiveType.Vigor
+                AppliedPassiveType.Vigor,
+                AppliedPassiveType.Enflamed,
             };
         }
         public static HashSet<AppliedPassiveType> GetRunLongPassives()
@@ -546,6 +547,7 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Scar,
                 AppliedPassiveType.Bleed,
                 AppliedPassiveType.Shackled,
+                AppliedPassiveType.Fear,
             };
         }
 
@@ -554,10 +556,7 @@ namespace Crusaders30XX.ECS.Systems
             return new HashSet<AppliedPassiveType>
             {
                 AppliedPassiveType.Webbing,
-                AppliedPassiveType.Fear,
-                AppliedPassiveType.Enflamed,
                 AppliedPassiveType.Sealed,
-                AppliedPassiveType.Silenced,
             };
         }
     }

@@ -25,12 +25,11 @@ Gameplay
 cards
 - if you have dealt 10 or more damage this turn...
 - gain galvanize
-- 
+- when this is in your hand, if you pledge a card, it loses all its mods
 
 medals
 - on acquire, X cards gain GOOD card modification
 - whenever you mill 2 cards, resurrect 1
-- your scorched attacks gain +1dmg
 
 equipment
 - 
@@ -43,6 +42,7 @@ weapons
 tech debt
 - researching removing isclicked and ishovered from UIElement, handle through PlayerInputEvent + enity ids
 - Fable - screen sizes
+- remove relic?
 
 
 persistent card states:

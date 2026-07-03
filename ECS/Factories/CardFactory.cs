@@ -47,6 +47,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.RallyTheFaithful, () => new RallyTheFaithful() },
                 { CardId.RelentlessStrike, () => new RelentlessStrike() },
                 { CardId.PouchOfKunai, () => new PouchOfKunai() },
+                { CardId.Purge, () => new Purge() },
                 { CardId.Ravage, () => new Ravage() },
                 { CardId.RazorStorm, () => new RazorStorm() },
                 { CardId.Reckoning, () => new Reckoning() },
