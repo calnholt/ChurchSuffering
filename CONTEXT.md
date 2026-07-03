@@ -90,7 +90,7 @@ Voluntarily ending the current run from the in-battle quit overlay (prompt: "Aba
 
 ## Meta
 
-Progress that survives run failure and new-run creation: achievements, card mastery, seen tutorials, and Guided Tutorial completion.
+Progress that survives run failure and new-run creation: achievements, seen tutorials, and Guided Tutorial completion.
 
 ## Save
 

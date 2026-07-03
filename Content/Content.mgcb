@@ -522,30 +522,6 @@
 /processorParam:TextureFormat=Color
 /build:Wyvern.png
 
-#begin Sniper.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=True
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sniper.png
-
-#begin Blood_Martyr.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=True
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Blood_Martyr.png
-
 #begin Succubus.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1286,18 +1262,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:shackles.png
-
-#begin mark.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=True
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:mark.png
 
 #begin enemy_attack_br.png
 /importer:TextureImporter

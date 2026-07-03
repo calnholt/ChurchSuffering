@@ -162,12 +162,6 @@ namespace Crusaders30XX.ECS.Systems
                     var cardData = entity.GetComponent<CardData>();
                     cardData.Card.OnBlock?.Invoke(EntityManager, entity);
                     EventManager.Publish(new CardBlockedEvent { Card = entity });
-                    // Award mastery points for Block cards when used to block
-                    if (!GuidedTutorialService.IsActive(EntityManager)
-                        && cardData != null && cardData.Card.Type == CardType.Block)
-                    {
-                        SaveCache.AddMasteryPoints(cardData.Card.CardId, 1);
-                    }
                     CardTransientStateService.ClearAssignedBlockHotKey(EntityManager, entity);
                     // Mark the block assignment as Returning so MaintainLatestHotKeyForContext
                     // does not re-add the HotKey during the synchronous CardMoveRequested/CardMoved chain

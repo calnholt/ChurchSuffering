@@ -35,8 +35,6 @@ namespace Crusaders30XX.ECS.Factories
                 { EnemyId.EarthDemon, () => new EarthDemon() },
                 { EnemyId.Medusa, () => new Medusa() },
                 { EnemyId.Wyvern, () => new Wyvern() },
-                { EnemyId.BloodMartyr, () => new BloodMartyr() },
-                { EnemyId.Sniper, () => new Sniper() },
                 { EnemyId.FallenShepherd, () => new FallenShepherd() },
                 { EnemyId.TrainingDemon, () => new TrainingDemon() },
             };

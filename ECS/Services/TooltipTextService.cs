@@ -169,8 +169,6 @@ namespace Crusaders30XX.ECS.Services
 					return "Sealed cards cost HP equal to remaining seals when played or discarded to pay for costs. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed.";
 				case AppliedPassiveType.Plunder:
 					return "At the start of the block phase, steals a card from your deck. Deal enough damage to rescue it.";
-				case AppliedPassiveType.Marksman:
-					return "Each turn a random card in your hand is marked. Playing a marked card removes the mark and applies the negative effect. Blocking with a marked card moves the mark to a different card and changes the negative effect.";
 				case AppliedPassiveType.CarpeDiem:
 					return "At the end of the turn, lose all courage.";
 				default:

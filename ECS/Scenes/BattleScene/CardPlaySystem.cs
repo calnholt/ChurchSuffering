@@ -374,12 +374,6 @@ namespace Crusaders30XX.ECS.Systems
                             {
                                 cardData.Card.OnDiscardedForCost(EntityManager, c);
                             }
-                            // Award mastery points for Relic cards discarded for cost
-                            if (!GuidedTutorialService.IsActive(EntityManager)
-                                && cardData != null && cardData.Card.Type == CardType.Relic)
-                            {
-                                SaveCache.AddMasteryPoints(cardData.Card.CardId, 1);
-                            }
                         }
                         
                         // Populate payment cache so card effects can reference what was paid
@@ -485,14 +479,6 @@ namespace Crusaders30XX.ECS.Systems
                     ["reason"] = "PledgeRemoved",
                     ["cardId"] = card.CardId
                 });
-            }
-
-            // Award mastery points for Attack and Prayer cards on play
-            if (!isCurseCard
-                && !GuidedTutorialService.IsActive(EntityManager)
-                && (card.Type == CardType.Attack || card.Type == CardType.Prayer))
-            {
-                SaveCache.AddMasteryPoints(card.CardId, 1);
             }
 
             // Move the played card to discard unless it's a weapon (weapons leave hand but do not go to discard)

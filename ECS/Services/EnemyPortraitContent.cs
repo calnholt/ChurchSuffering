@@ -34,8 +34,6 @@ namespace Crusaders30XX.ECS.Services
 			"sand_golem",
 			"fallen_shepherd",
 			// "medusa",
-			// "blood_martyr",
-			// "sniper", // marksman - disabled from run encounters
 			// "training_demon", // test-fight only
 			// "ninja",
 		};

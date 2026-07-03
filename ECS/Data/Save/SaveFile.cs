@@ -30,7 +30,6 @@ namespace Crusaders30XX.ECS.Data.Save
 		public int nextRunDeckEntryId { get; set; }
 		public List<string> seenTutorials { get; set; } = new List<string>();
 		public bool guidedTutorialCompleted { get; set; }
-		public Dictionary<string, CardMastery> cardMastery { get; set; } = new Dictionary<string, CardMastery>();
 		public Dictionary<string, AchievementProgress> achievements { get; set; } = new Dictionary<string, AchievementProgress>();
 		/// <summary>Run-long applied passive type name to stack count (e.g. Frostbite).</summary>
 		public Dictionary<string, int> runLongPassives { get; set; } = new Dictionary<string, int>();
@@ -245,10 +244,4 @@ namespace Crusaders30XX.ECS.Data.Save
 		public int amount { get; set; }
 	}
 
-	public class CardMastery
-	{
-		public string cardId { get; set; }
-		public int level { get; set; }
-		public int points { get; set; }
-	}
 }

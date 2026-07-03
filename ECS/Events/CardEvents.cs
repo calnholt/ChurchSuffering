@@ -695,15 +695,6 @@ namespace Crusaders30XX.ECS.Events
     /// </summary>
     public class ShuffleSealedIntoDrawPileEvent { }
 
-    /// <summary>
-    /// Event published when a card reaches mastery (50 points).
-    /// </summary>
-    public class CardMasteredEvent
-    {
-        public string CardId { get; set; }
-        public int Level { get; set; }
-    }
-
     public class CardPlayedEvent
     {
         public Entity Card { get; set; }

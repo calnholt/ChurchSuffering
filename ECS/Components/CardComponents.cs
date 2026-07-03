@@ -1182,7 +1182,6 @@ namespace Crusaders30XX.ECS.Components
         Silenced,
         Sealed,
         Plunder,
-        Marksman,
         Sharpen,
         Might,
         Vigor,
@@ -1335,23 +1334,5 @@ namespace Crusaders30XX.ECS.Components
         Arc,
         Settle,
         Complete
-    }
-
-    /// <summary>
-    /// Marks a card as targeted by the Sniper's Marksman passive.
-    /// Playing the card triggers the penalty effect.
-    /// </summary>
-    public class Marked : IComponent
-    {
-        public Entity Owner { get; set; }
-        public MarkEffectType EffectType { get; set; }
-    }
-
-    public enum MarkEffectType
-    {
-        Lose1HP,
-        Lose2HP,
-        Gain2Bleed,
-        Gain1Burn
     }
 }

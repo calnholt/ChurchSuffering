@@ -602,12 +602,6 @@ namespace Crusaders30XX.ECS.Systems
                             {
                                 card.OnDiscardedForCost(EntityManager, c);
                             }
-                            // Award mastery points for Relic cards discarded for cost
-                            if (!GuidedTutorialService.IsActive(EntityManager)
-                                && card != null && card.Type == CardType.Relic)
-                            {
-                                SaveCache.AddMasteryPoints(card.CardId, 1);
-                            }
                         }
                     }
                     else if (state.Type == PayCostOverlayType.SelectOneCard)

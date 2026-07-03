@@ -174,12 +174,6 @@ namespace Crusaders30XX.ECS.Systems
             cardData?.Card?.OnBlock?.Invoke(entityManager, entity);
             EventManager.Publish(new CardBlockedEvent { Card = entity });
 
-            if (!GuidedTutorialService.IsActive(entityManager)
-                && cardData != null && cardData.Card.Type == CardType.Block)
-            {
-                SaveCache.AddMasteryPoints(cardData.Card.CardId, 1);
-            }
-
             CardTransientStateService.ClearAssignedBlockHotKey(entityManager, entity);
             abc.Phase = AssignedBlockCard.PhaseState.Returning;
             EventManager.Publish(new CardMoveRequested

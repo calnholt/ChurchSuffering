@@ -586,13 +586,11 @@ namespace Crusaders30XX.ECS.Data.Save
 
 		private static SaveFile CreateFreshRunPreservingMeta(SaveFile prior)
 		{
-			var mastery = prior?.cardMastery;
 			var achievements = prior?.achievements;
 			var seenTutorials = prior?.seenTutorials;
 			int musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
 			int sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
 			var save = CreateDefaultRunSave();
-			save.cardMastery = mastery ?? new Dictionary<string, CardMastery>();
 			save.achievements = achievements ?? new Dictionary<string, AchievementProgress>();
 			save.seenTutorials = seenTutorials ?? new List<string>();
 			save.guidedTutorialCompleted = prior?.guidedTutorialCompleted == true;
@@ -623,7 +621,6 @@ namespace Crusaders30XX.ECS.Data.Save
 				runLongPassives = new Dictionary<string, int>(),
 				pendingDeckRewardOffer = null,
 				climb = new ClimbSaveState(),
-				cardMastery = prior?.cardMastery ?? new Dictionary<string, CardMastery>(),
 				achievements = prior?.achievements ?? new Dictionary<string, AchievementProgress>(),
 				seenTutorials = prior?.seenTutorials ?? new List<string>(),
 				guidedTutorialCompleted = prior?.guidedTutorialCompleted == true,
@@ -1617,58 +1614,6 @@ namespace Crusaders30XX.ECS.Data.Save
 					}
 				}
 				Persist();
-			}
-		}
-
-		private const int PointsToMaster = 50;
-
-		public static CardMastery GetMasteryData(string cardId)
-		{
-			if (TestFightRuntime.IsActive) return null;
-			if (string.IsNullOrEmpty(cardId)) return null;
-			EnsureLoaded();
-			if (_save == null || _save.cardMastery == null) return null;
-			_save.cardMastery.TryGetValue(cardId, out var mastery);
-			return mastery;
-		}
-
-		public static void AddMasteryPoints(string cardId, int points)
-		{
-			if (TestFightRuntime.IsActive) return;
-			if (string.IsNullOrEmpty(cardId) || points <= 0) return;
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) _save = new SaveFile();
-				if (_save.cardMastery == null) _save.cardMastery = new Dictionary<string, CardMastery>();
-
-				if (!_save.cardMastery.TryGetValue(cardId, out var mastery))
-				{
-					mastery = new CardMastery { cardId = cardId, level = 0, points = 0 };
-					_save.cardMastery[cardId] = mastery;
-				}
-
-				int oldLevel = mastery.level;
-				mastery.points += points;
-
-				// Check for level up
-				while (mastery.points >= PointsToMaster)
-				{
-					mastery.points -= PointsToMaster;
-					mastery.level++;
-				}
-
-				Persist();
-
-				// Publish event if leveled up
-				if (mastery.level > oldLevel)
-				{
-					Crusaders30XX.ECS.Core.EventManager.Publish(new Crusaders30XX.ECS.Events.CardMasteredEvent
-					{
-						CardId = cardId,
-						Level = mastery.level
-					});
-				}
 			}
 		}
 

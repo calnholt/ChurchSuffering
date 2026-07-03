@@ -166,10 +166,6 @@ namespace Crusaders30XX.ECS.Systems
 		private PlunderDisplaySystem _plunderDisplaySystem;
 		private PlunderSnatchDisplaySystem _plunderSnatchDisplaySystem;
 
-		// Marksman system (Sniper)
-		private MarkManagementSystem _markManagementSystem;
-		private MarkDisplaySystem _markDisplaySystem;
-
 		// Can-play card highlight
 		private CanPlayCardHighlightSystem _canPlayCardHighlightSystem;
 		private CanPlayHighlightSettingsSystem _canPlayHighlightSettingsSystem;
@@ -851,11 +847,6 @@ namespace Crusaders30XX.ECS.Systems
 			_plunderDisplaySystem = new PlunderDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_plunderSnatchDisplaySystem = new PlunderSnatchDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 
-			// Marksman system (Sniper)
-			_markManagementSystem = new MarkManagementSystem(_world.EntityManager);
-			var markTexture = _imageAssets.GetRequiredTexture("mark");
-			_markDisplaySystem = new MarkDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, markTexture);
-
 			// Can-play card highlight
 			_canPlayCardHighlightSystem = new CanPlayCardHighlightSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_canPlayHighlightSettingsSystem = new CanPlayHighlightSettingsSystem(_world.EntityManager);
@@ -989,8 +980,6 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_plunderManagementSystem);
 			_world.AddSystem(_plunderDisplaySystem);
 			_world.AddSystem(_plunderSnatchDisplaySystem);
-			_world.AddSystem(_markManagementSystem);
-			_world.AddSystem(_markDisplaySystem);
 			_world.AddSystem(_mustBeBlockedSystem);
 			_world.AddSystem(_activeCharacterIndicatorDisplaySystem);
 			_world.AddSystem(_bloodshotDisplaySystem);
