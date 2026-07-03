@@ -9,12 +9,10 @@ permissions:
   contents: write
 
 jobs:
-  build-and-publish:
-    runs-on: windows-latest
-    env:
-      ITCH_USER: "calnholt"
-      ITCH_GAME: "crusader-30xx"
-      CHANNEL: "windows"
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
 
     steps:
       - name: Checkout repository
@@ -22,15 +20,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ----------------------------
-      # READ + INCREMENT VERSION
-      # ----------------------------
       - name: Read version
         id: version
-        shell: pwsh
+        shell: bash
         run: |
-          $ver = (Get-Content VERSION).Trim()
-          "current_version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          VER=$(tr -d '[:space:]' < VERSION)
+          echo "current_version=$VER" >> $GITHUB_OUTPUT
 
       - name: Increment patch version
         id: bump
@@ -51,9 +46,25 @@ jobs:
           git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
           git push
 
-      # ----------------------------
-      # BUILD GAME
-      # ----------------------------
+  build-windows:
+    needs: bump-version
+    runs-on: windows-latest
+    env:
+      ITCH_USER: "calnholt"
+      ITCH_GAME: "crusader-30xx"
+      CHANNEL: "windows"
+      VERSION: ${{ needs.bump-version.outputs.new_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull latest version bump
+        run: git pull origin main
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -65,9 +76,6 @@ jobs:
       - name: Publish self-contained Windows build
         run: dotnet publish Crusaders30XX.csproj -c Release -r win-x64 --self-contained true -o ./artifacts/windows
 
-      # ----------------------------
-      # BUTLER UPLOAD
-      # ----------------------------
       - name: Setup butler
         uses: remarkablegames/setup-butler@v2
 
@@ -77,7 +85,7 @@ jobs:
         shell: bash
         run: |
           butler push ./artifacts/windows $ITCH_USER/$ITCH_GAME:$CHANNEL \
-            --userversion ${{ steps.bump.outputs.new_version }}
+            --userversion $VERSION
 
       - name: Verify itch.io build
         env:
@@ -85,7 +93,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          EXPECTED="${{ steps.bump.outputs.new_version }}"
+          EXPECTED="$VERSION"
           TARGET="${ITCH_USER}/${ITCH_GAME}:${CHANNEL}"
           WHARF_URL="https://api.itch.io/wharf/latest?target=${ITCH_USER}/${ITCH_GAME}&channel_name=${CHANNEL}"
 
@@ -111,3 +119,100 @@ jobs:
           echo "Build did not become live with userversion ${EXPECTED} within 30 minutes"
           butler status "$TARGET"
           exit 1
+
+  build-macos:
+    needs: bump-version
+    runs-on: macos-latest
+    env:
+      ITCH_USER: "calnholt"
+      ITCH_GAME: "crusader-30xx"
+      VERSION: ${{ needs.bump-version.outputs.new_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull latest version bump
+        run: git pull origin main
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup MGFXC Wine prefix
+        run: |
+          brew install --cask wine-stable
+          brew install p7zip
+          ./scripts/setup-mgfxc-wine.sh
+
+      - name: Restore NuGet packages
+        run: dotnet restore Crusaders30XX.csproj
+
+      - name: Publish Apple Silicon build
+        run: |
+          dotnet publish Crusaders30XX.csproj -c Release -r osx-arm64 --self-contained true -o ./artifacts/mac-apple-silicon
+          chmod +x ./artifacts/mac-apple-silicon/Crusaders30XX
+          (cd ./artifacts/mac-apple-silicon && zip -r ../Crusaders30XX-mac-apple-silicon.zip .)
+
+      - name: Publish Intel Mac build
+        run: |
+          dotnet publish Crusaders30XX.csproj -c Release -r osx-x64 --self-contained true -o ./artifacts/mac-intel
+          chmod +x ./artifacts/mac-intel/Crusaders30XX
+          (cd ./artifacts/mac-intel && zip -r ../Crusaders30XX-mac-intel.zip .)
+
+      - name: Setup butler
+        uses: remarkablegames/setup-butler@v2
+
+      - name: Upload Mac builds to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        shell: bash
+        run: |
+          butler push ./artifacts/mac-apple-silicon $ITCH_USER/$ITCH_GAME:mac-apple-silicon \
+            --userversion $VERSION
+          butler push ./artifacts/mac-intel $ITCH_USER/$ITCH_GAME:mac-intel \
+            --userversion $VERSION
+
+      - name: Verify itch.io Mac builds
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="$VERSION"
+
+          verify_channel() {
+            local CHANNEL="$1"
+            local TARGET="${ITCH_USER}/${ITCH_GAME}:${CHANNEL}"
+            local WHARF_URL="https://api.itch.io/wharf/latest?target=${ITCH_USER}/${ITCH_GAME}&channel_name=${CHANNEL}"
+
+            echo "Butler channel status for ${CHANNEL}:"
+            butler status "$TARGET"
+
+            echo "Polling wharf/latest for ${CHANNEL} userversion ${EXPECTED} (up to 30 minutes)..."
+            for i in $(seq 1 60); do
+              HTTP_CODE=$(curl -s -o /tmp/wharf.json -w "%{http_code}" "$WHARF_URL" || true)
+              if [ "$HTTP_CODE" = "200" ]; then
+                LATEST=$(grep -o '"latest"[[:space:]]*:[[:space:]]*"[^"]*"' /tmp/wharf.json | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+                echo "Attempt ${i}/60: latest=${LATEST:-<none>}"
+                if [ "${LATEST:-}" = "$EXPECTED" ]; then
+                  echo "Build is live on ${CHANNEL} with userversion ${EXPECTED}"
+                  return 0
+                fi
+              else
+                echo "Attempt ${i}/60: wharf/latest HTTP ${HTTP_CODE}"
+              fi
+              sleep 30
+            done
+
+            echo "Build did not become live on ${CHANNEL} with userversion ${EXPECTED} within 30 minutes"
+            butler status "$TARGET"
+            return 1
+          }
+
+          verify_channel mac-apple-silicon
+          verify_channel mac-intel

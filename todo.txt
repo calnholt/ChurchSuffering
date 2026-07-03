@@ -53,7 +53,7 @@ keywords
 - vigor reduction
 
 cards that need art:
-- steel the spirit
+- iron covenant
 
 bugs:
 - 
