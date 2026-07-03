@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Systems;
 
 namespace Crusaders30XX.ECS.Objects.Cards
 {
@@ -24,13 +25,21 @@ namespace Crusaders30XX.ECS.Objects.Cards
             {
                 var player = entityManager.GetEntity("Player");
                 var enemy = entityManager.GetEntity("Enemy");
-                int damage = GetDerivedDamage(entityManager, card);
+                int rawDamage = GetDerivedDamage(entityManager, card);
+                var attackPreview = new ModifyHpRequestEvent
+                {
+                    Source = player,
+                    Target = enemy,
+                    AttackCard = card,
+                    DamageType = ModifyTypeEnum.Attack
+                };
+                int damageDealt = AppliedPassivesService.GetPreviewAttackDamage(attackPreview, rawDamage, ReadOnly: true);
 
                 EventManager.Publish(new ModifyHpRequestEvent
                 {
                     Source = player,
                     Target = enemy,
-                    Delta = -damage,
+                    Delta = -rawDamage,
                     AttackCard = card,
 
                     DamageType = ModifyTypeEnum.Attack
@@ -42,7 +51,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     {
                         Target = player,
                         Type = AppliedPassiveType.Aegis,
-                        Delta = 1
+                        Delta = damageDealt
                     });
                 }
                 else
@@ -51,7 +60,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     {
                         Source = enemy,
                         Target = player,
-                        Delta = damage,
+                        Delta = damageDealt,
                         DamageType = ModifyTypeEnum.Heal
                     });
                 }

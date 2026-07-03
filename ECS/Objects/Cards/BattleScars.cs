@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
@@ -15,6 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             CardId = "battle_scars";
             Name = "Battle Scars";
             Target = "Enemy";
+            Cost = new List<string> { "Any" };
             Text = $"If you have {ScarThreshold} or more scars, gain {GetVigorGained(IsUpgraded)} vigor.";
             VisualEffectRecipe = PlayerAttackEffect();
             Damage = 7;

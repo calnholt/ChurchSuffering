@@ -20,8 +20,30 @@ namespace Crusaders30XX.ECS.Services
 			EntityManager entityManager,
 			ISet<int> confirmedAttackSequences = null)
 		{
+			return MeetsCurrentAttackConfirmRequirements(
+				entityManager,
+				confirmedAttackSequences,
+				includePendingBlockConfirm: true);
+		}
+
+		public static bool CanResolveCurrentAttackConfirm(
+			EntityManager entityManager,
+			ISet<int> confirmedAttackSequences = null)
+		{
+			return MeetsCurrentAttackConfirmRequirements(
+					entityManager,
+					confirmedAttackSequences,
+					includePendingBlockConfirm: false)
+				&& !IsAnyBlockAssignmentAnimating(entityManager);
+		}
+
+		private static bool MeetsCurrentAttackConfirmRequirements(
+			EntityManager entityManager,
+			ISet<int> confirmedAttackSequences,
+			bool includePendingBlockConfirm)
+		{
 			if (entityManager == null) return false;
-			if (BattleInputGate.IsBattleInputFrozen(entityManager)) return false;
+			if (BattleInputGate.IsBattleInputFrozen(entityManager, includePendingBlockConfirm)) return false;
 
 			var phase = entityManager.GetEntitiesWithComponent<PhaseState>()
 				.FirstOrDefault()
@@ -41,14 +63,6 @@ namespace Crusaders30XX.ECS.Services
 
 			int activeBlockCount = CountActiveAssignedBlockers(entityManager);
 			return MeetsAttackBlockRequirement(planned.AttackDefinition.ConditionType, activeBlockCount);
-		}
-
-		public static bool CanResolveCurrentAttackConfirm(
-			EntityManager entityManager,
-			ISet<int> confirmedAttackSequences = null)
-		{
-			return CanRequestCurrentAttackConfirm(entityManager, confirmedAttackSequences)
-				&& !IsAnyBlockAssignmentAnimating(entityManager);
 		}
 
 		public static int CountActiveAssignedBlockers(EntityManager entityManager)

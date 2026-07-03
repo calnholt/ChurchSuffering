@@ -161,18 +161,24 @@ namespace Crusaders30XX.ECS.Systems
 
         public void Draw()
         {
-            var modalEntity = GetRelevantEntities().FirstOrDefault();
-            var modal = modalEntity?.GetComponent<CardListModal>();
-            if (modal == null || !modal.IsOpen) return;
+            DrawBackdrop();
+            DrawForeground();
+        }
 
-            var mode = ResolveMode(modal);
-            var layout = ComputeLayout(mode, modal);
+        public void DrawBackdrop()
+        {
+            if (!TryGetOpenDrawState(out var modal, out _, out var layout)) return;
 
             _spriteBatch.Draw(
                 _pixel,
                 new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight),
                 Color.Black * MathHelper.Clamp(OverlayDimAlpha, 0f, 1f));
             DrawHeader(modal, layout);
+        }
+
+        public void DrawForeground()
+        {
+            if (!TryGetOpenDrawState(out var modal, out var mode, out var layout)) return;
 
             if (mode == CardListModalMode.Inventory)
             {
@@ -186,6 +192,21 @@ namespace Crusaders30XX.ECS.Systems
 
             DrawCloseButton(layout.CloseButton);
             DrawHoveredEquipmentTooltip();
+        }
+
+        private bool TryGetOpenDrawState(out CardListModal modal, out CardListModalMode mode, out OverlayLayout layout)
+        {
+            modal = null;
+            mode = CardListModalMode.CardList;
+            layout = default;
+
+            var modalEntity = GetRelevantEntities().FirstOrDefault();
+            modal = modalEntity?.GetComponent<CardListModal>();
+            if (modal == null || !modal.IsOpen) return false;
+
+            mode = ResolveMode(modal);
+            layout = ComputeLayout(mode, modal);
+            return true;
         }
 
         private OverlayLayout ComputeLayout(CardListModalMode mode, CardListModal modal)

@@ -102,6 +102,50 @@ public class EnemyAttackConfirmAvailabilityServiceTests
 		Assert.True(BattleInputGate.IsBattleInputFrozen(entityManager));
 	}
 
+	[Fact]
+	public void Pending_block_confirm_can_resolve_once_blockers_are_idle()
+	{
+		var entityManager = CreateCombat(ConditionType.None);
+		var phase = entityManager.GetEntitiesWithComponent<PhaseState>()
+			.Single()
+			.GetComponent<PhaseState>();
+		phase.PendingBlockConfirm = true;
+
+		var canRequest = EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(entityManager);
+		var canResolve = EnemyAttackConfirmAvailabilityService.CanResolveCurrentAttackConfirm(entityManager);
+
+		Assert.False(canRequest);
+		Assert.True(canResolve);
+	}
+
+	[Fact]
+	public void Pending_block_confirm_cannot_resolve_while_blocker_is_animating()
+	{
+		var entityManager = CreateCombat(ConditionType.None);
+		var phase = entityManager.GetEntitiesWithComponent<PhaseState>()
+			.Single()
+			.GetComponent<PhaseState>();
+		phase.PendingBlockConfirm = true;
+		AddBlocker(entityManager, AssignedBlockCard.PhaseState.Launch);
+
+		var canResolve = EnemyAttackConfirmAvailabilityService.CanResolveCurrentAttackConfirm(entityManager);
+
+		Assert.False(canResolve);
+	}
+
+	[Fact]
+	public void Pending_block_confirm_excluded_from_freeze_when_resolving_only()
+	{
+		var entityManager = CreateCombat(ConditionType.None);
+		var phase = entityManager.GetEntitiesWithComponent<PhaseState>()
+			.Single()
+			.GetComponent<PhaseState>();
+		phase.PendingBlockConfirm = true;
+
+		Assert.True(BattleInputGate.IsBattleInputFrozen(entityManager));
+		Assert.False(BattleInputGate.IsBattleInputFrozen(entityManager, includePendingBlockConfirm: false));
+	}
+
 	[Theory]
 	[InlineData(0, false)]
 	[InlineData(1, true)]

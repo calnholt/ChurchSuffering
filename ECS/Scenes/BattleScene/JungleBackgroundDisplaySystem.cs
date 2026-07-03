@@ -38,7 +38,7 @@ public class JungleBackgroundDisplaySystem : Core.System
     public int LeafCount { get; set; } = 150;
 
     [DebugEditable(DisplayName = "Field Overfill", Step = 0.01f, Min = 0.1f, Max = 3f)]
-    public float FieldOverfill { get; set; } = 1.15f;
+    public float FieldOverfill { get; set; } = 2f;
 
     [DebugEditable(DisplayName = "Fall Base", Step = 0.01f, Min = -1f, Max = 1f)]
     public float FallBase { get; set; } = 0.05f;

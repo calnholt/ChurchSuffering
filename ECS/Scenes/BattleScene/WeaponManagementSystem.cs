@@ -16,6 +16,8 @@ namespace Crusaders30XX.ECS.Systems
 	/// </summary>
 	public class WeaponManagementSystem : Core.System
 	{
+		private static readonly Rectangle OffScreenHitBounds = new(-1000, -1000, 1, 1);
+
 		public WeaponManagementSystem(EntityManager entityManager) : base(entityManager)
 		{
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged);
@@ -64,15 +66,7 @@ namespace Crusaders30XX.ECS.Systems
 						tween.Initialized = true;
 						transform.Position = spawnPos;
 					}
-					var ui = weapon.GetComponent<UIElement>();
-					if (ui != null)
-					{
-						ui.SuppressCount = 0; // clear any phase suppression carried over
-						ui.IsInteractable = true;
-						ui.IsHovered = false;
-						ui.IsClicked = false;
-						ui.EventType = UIElementEventType.CardClicked; // restore after ResetDeckExcludingWeapon wipes it
-					}
+					RestoreWeaponHitTarget(weapon);
 
 					LoggingService.Append("WeaponManagementSystem.OnPhaseChanged", new System.Text.Json.Nodes.JsonObject
 					{
@@ -88,6 +82,7 @@ namespace Crusaders30XX.ECS.Systems
 				}
 				else
 				{
+					RestoreWeaponHitTarget(weapon);
 					// Ensure weapon stays at index 0
 					int idx = deck.Hand.IndexOf(weapon);
 					if (idx > 0)
@@ -117,13 +112,7 @@ namespace Crusaders30XX.ECS.Systems
 				if (weapon != null && deck.Hand.Contains(weapon))
 				{
 					deck.Hand.Remove(weapon);
-					var ui = weapon.GetComponent<UIElement>();
-					if (ui != null)
-					{
-						ui.IsInteractable = false;
-						ui.IsHovered = false;
-						ui.IsClicked = false;
-					}
+					HideWeaponHitTarget(weapon);
 
 					LoggingService.Append("WeaponManagementSystem.OnPhaseChanged", new System.Text.Json.Nodes.JsonObject
 					{
@@ -184,14 +173,61 @@ namespace Crusaders30XX.ECS.Systems
 			return weapon;
 		}
 
+		private Vector2 GetOffScreenSpawnPosition()
+		{
+			var cvs = CardGeometryService.GetSettings(EntityManager);
+			float cardW = cvs?.CardWidth ?? CardGeometrySettings.DefaultWidth;
+			return new Vector2(-(cardW * 1.5f), Game1.VirtualHeight);
+		}
+
+		private void HideWeaponHitTarget(Entity weapon)
+		{
+			var ui = weapon.GetComponent<UIElement>();
+			if (ui != null)
+			{
+				ui.IsInteractable = false;
+				ui.IsHovered = false;
+				ui.IsClicked = false;
+				ui.IsHidden = true;
+				ui.Bounds = OffScreenHitBounds;
+			}
+
+			var spawnPos = GetOffScreenSpawnPosition();
+			var tween = weapon.GetComponent<PositionTween>();
+			var transform = weapon.GetComponent<Transform>();
+			if (tween != null && transform != null)
+			{
+				tween.Current = spawnPos;
+				tween.Target = spawnPos;
+				tween.Initialized = true;
+				transform.Position = spawnPos;
+			}
+			else if (transform != null)
+			{
+				transform.Position = spawnPos;
+			}
+		}
+
+		private void RestoreWeaponHitTarget(Entity weapon)
+		{
+			var ui = weapon.GetComponent<UIElement>();
+			if (ui != null)
+			{
+				ui.SuppressCount = 0; // clear any phase suppression carried over
+				ui.IsHidden = false;
+				ui.IsInteractable = true;
+				ui.IsHovered = false;
+				ui.IsClicked = false;
+				ui.EventType = UIElementEventType.CardClicked; // restore after ResetDeckExcludingWeapon wipes it
+			}
+		}
+
 		private Entity CreateWeaponEntity(CardBase card)
 		{
 			string name = card.Name ?? card.CardId ?? "Weapon";
 			var e = EntityManager.CreateEntity($"Weapon");
 			// Spawn off-screen left so weapon flies in from the left
-			var cvs = CardGeometryService.GetSettings(EntityManager);
-			float cardW = cvs?.CardWidth ?? CardGeometrySettings.DefaultWidth;
-			var spawnPos = new Vector2(-(cardW * 1.5f), Game1.VirtualHeight);
+			var spawnPos = GetOffScreenSpawnPosition();
 			var cd = new CardData
 			{
 					Card = card,

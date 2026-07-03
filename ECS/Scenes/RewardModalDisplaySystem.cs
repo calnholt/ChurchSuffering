@@ -1403,10 +1403,12 @@ namespace Crusaders30XX.ECS.Systems
 				if (card == null || !card.IsActive) continue;
 				float scale = GetRewardCardDisplayScale(i, st);
 				if (scale <= 0.001f) continue;
+				var t = card.GetComponent<Transform>();
+				var drawCenter = t?.Position ?? GetRewardCardCenter(i);
 				EventManager.Publish(new CardRenderScaledRotatedEvent
 				{
 					Card = card,
-					Position = render.Transform(GetRewardCardCenter(i)),
+					Position = render.Transform(drawCenter),
 					Scale = render.TransformScale(scale)
 				});
 			}
@@ -1628,10 +1630,12 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (scale <= 0.001f || alpha <= 0.001f) return;
 
+			var t = card.GetComponent<Transform>();
+			var drawCenter = t?.Position ?? position;
 			EventManager.Publish(new CardRenderScaledEvent
 			{
 				Card = card,
-				Position = render.Transform(position),
+				Position = render.Transform(drawCenter),
 				Scale = render.TransformScale(scale),
 				Alpha = alpha * render.ShellAlpha
 			});
@@ -1915,6 +1919,10 @@ namespace Crusaders30XX.ECS.Systems
 					var view = _deckRewardOptionViews[i];
 					PreparePreviewCard(view.OutgoingCard, i * 2, state);
 					PreparePreviewCard(view.IncomingCard, i * 2 + 1, state);
+					if (i < layout.OutgoingCardCenters.Length)
+						SyncCardLayoutAnchor(view.OutgoingCard?.GetComponent<Transform>(), view.OutgoingCard?.GetComponent<PositionTween>(), layout.OutgoingCardCenters[i]);
+					if (i < layout.IncomingCardCenters.Length)
+						SyncCardLayoutAnchor(view.IncomingCard?.GetComponent<Transform>(), view.IncomingCard?.GetComponent<PositionTween>(), layout.IncomingCardCenters[i]);
 					var laneUi = view.Lane?.GetComponent<UIElement>();
 					if (laneUi != null)
 					{
@@ -1968,6 +1976,10 @@ namespace Crusaders30XX.ECS.Systems
 
 				PreparePreviewCard(view.OutgoingCard, i * 2, state);
 				PreparePreviewCard(view.IncomingCard, i * 2 + 1, state);
+				if (i < layout.OutgoingCardCenters.Length)
+					SyncCardLayoutAnchor(view.OutgoingCard?.GetComponent<Transform>(), view.OutgoingCard?.GetComponent<PositionTween>(), layout.OutgoingCardCenters[i]);
+				if (i < layout.IncomingCardCenters.Length)
+					SyncCardLayoutAnchor(view.IncomingCard?.GetComponent<Transform>(), view.IncomingCard?.GetComponent<PositionTween>(), layout.IncomingCardCenters[i]);
 			}
 
 			SyncDeckRewardCardHover(layout);
@@ -2220,6 +2232,14 @@ namespace Crusaders30XX.ECS.Systems
 			_rewardEquipmentEntity = null;
 		}
 
+		private static void SyncCardLayoutAnchor(Transform transform, PositionTween tween, Vector2 layoutCenter)
+		{
+			if (tween != null)
+				tween.Target = layoutCenter;
+			else if (transform != null)
+				transform.Position = layoutCenter;
+		}
+
 		private void SyncRewardCardHitboxes(QuestRewardOverlayState state)
 		{
 			for (int i = 0; i < _rewardCardEntities.Count; i++)
@@ -2230,9 +2250,11 @@ namespace Crusaders30XX.ECS.Systems
 				var t = card.GetComponent<Transform>();
 				if (ui == null) continue;
 				if (t != null) t.ZOrder = ZOrder + 1 + i;
+				var layoutCenter = GetRewardCardCenter(i);
+				SyncCardLayoutAnchor(t, card.GetComponent<PositionTween>(), layoutCenter);
 				float scale = GetRewardCardDisplayScale(i, state);
 				ui.Bounds = scale > 0.001f
-					? GetCardVisualRectScaled(GetRewardCardCenter(i), scale)
+					? GetCardVisualRectScaled(layoutCenter, scale)
 					: Rectangle.Empty;
 				ui.IsInteractable = state != null
 					&& state.IsOpen
@@ -2474,6 +2496,8 @@ namespace Crusaders30XX.ECS.Systems
 				ui.LayerType = UILayerType.Overlay;
 			}
 			if (t != null) t.ZOrder = ZOrder + 1;
+			if (!created.HasComponent<ParallaxLayer>())
+				EntityManager.AddComponent(created, ParallaxLayer.GetUIParallaxLayer());
 			return created;
 		}
 

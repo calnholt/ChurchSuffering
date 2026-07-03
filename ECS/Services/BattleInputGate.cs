@@ -9,10 +9,15 @@ namespace Crusaders30XX.ECS.Services
 	{
 		public static bool IsBattleInputFrozen(EntityManager entityManager)
 		{
+			return IsBattleInputFrozen(entityManager, includePendingBlockConfirm: true);
+		}
+
+		public static bool IsBattleInputFrozen(EntityManager entityManager, bool includePendingBlockConfirm)
+		{
 			var phase = entityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
 			return (phase != null && phase.DefeatPresentationActive)
 				|| IsEnemyDefeated(entityManager)
-				|| phase?.PendingBlockConfirm == true
+				|| (includePendingBlockConfirm && phase?.PendingBlockConfirm == true)
 				|| StateSingleton.IsActive;
 		}
 
