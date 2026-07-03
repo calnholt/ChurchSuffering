@@ -1,3 +1,4 @@
+using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using MonoGame.Extended.Collections;
@@ -114,6 +115,8 @@ namespace Crusaders30XX.ECS.Events
 	public class EnemyPhaseLethalEvent
 	{
 		public Entity Enemy { get; set; }
+		public Guid DamagePresentationId { get; set; }
+		public ModifyTypeEnum DamageType { get; set; }
 	}
 
 	public class EnemyPhaseResetEvent

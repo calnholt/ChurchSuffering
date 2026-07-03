@@ -68,22 +68,18 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             PlayerInputFrame frame = PlayerInputService.GetFrame(EntityManager);
-            if (frame.Device != PlayerInputDevice.Gamepad || frame.LeftTrigger < LeftTriggerThreshold)
+            bool modifierHeld = frame.LeftTrigger >= LeftTriggerThreshold
+                || frame.IsDown(PlayerButton.Shift);
+            if (!modifierHeld)
             {
                 return null;
             }
 
-            var deck = EntityManager
-                .GetEntitiesWithComponent<Deck>()
-                .FirstOrDefault()
-                ?.GetComponent<Deck>();
-            if (deck?.Hand == null)
-            {
-                ClearAllSuppression();
-                return null;
-            }
-
-            return deck.Hand.FirstOrDefault(card => card.GetComponent<UIElement>()?.IsHovered == true);
+            return EntityManager
+                .GetEntitiesWithComponent<CardData>()
+                .Where(card => card.GetComponent<UIElement>()?.IsHovered == true)
+                .OrderByDescending(card => card.GetComponent<Transform>()?.ZOrder ?? 0)
+                .FirstOrDefault();
         }
 
         private bool IsBattleScene()

@@ -700,7 +700,7 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
-    /// Temporarily hides readability-blocking card overlays while inspecting a hand card.
+    /// Temporarily hides readability-blocking card overlays while inspecting a hovered card.
     /// </summary>
     public class SuppressCardVisualEffects : IComponent
     {

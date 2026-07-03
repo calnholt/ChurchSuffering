@@ -82,7 +82,15 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 			int nv = hp.Current + newDelta;
-			EventManager.Publish(new ModifyHpEvent { Source = e.Source, Target = target, Delta = newDelta, DamageType = e.DamageType });
+			var presentationId = Guid.NewGuid();
+			EventManager.Publish(new ModifyHpEvent
+			{
+				Source = e.Source,
+				Target = target,
+				Delta = newDelta,
+				DamageType = e.DamageType,
+				PresentationId = presentationId
+			});
 			hp.Current = Math.Max(0, Math.Min(hp.Max, nv));
 			// If this is the player and we crossed to zero, publish PlayerDied once
 			if (before > 0 && hp.Current == 0 && target.HasComponent<Player>())
@@ -95,7 +103,12 @@ namespace Crusaders30XX.ECS.Systems
 				var enemyBase = target.GetComponent<Enemy>()?.EnemyBase;
 				if (enemyBase != null && enemyBase.Phases > 1)
 				{
-					EventManager.Publish(new EnemyPhaseLethalEvent { Enemy = target });
+					EventManager.Publish(new EnemyPhaseLethalEvent
+					{
+						Enemy = target,
+						DamagePresentationId = presentationId,
+						DamageType = e.DamageType
+					});
 					return;
 				}
 				LoggingService.Append("HpManagementSystem.OnModifyHpRequest.EnemyDied", new System.Text.Json.Nodes.JsonObject

@@ -27,6 +27,24 @@ namespace Crusaders30XX.ECS.Systems
         private SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
         private CardGeometrySettings _settings;
 
+        internal readonly struct CardDescriptionTextLayout
+        {
+            public CardDescriptionTextLayout(float contentX, float contentWidth, float wrapScale, int wrapMaxWidth, float drawScale)
+            {
+                ContentX = contentX;
+                ContentWidth = contentWidth;
+                WrapScale = wrapScale;
+                WrapMaxWidth = wrapMaxWidth;
+                DrawScale = drawScale;
+            }
+
+            public float ContentX { get; }
+            public float ContentWidth { get; }
+            public float WrapScale { get; }
+            public int WrapMaxWidth { get; }
+            public float DrawScale { get; }
+        }
+
         // Stripe
         [DebugEditable(DisplayName = "Stripe Width", Step = 1, Min = 0, Max = 30)]
         public int StripeWidth { get; set; } = 6;
@@ -408,8 +426,8 @@ namespace Crusaders30XX.ECS.Systems
         private void DrawTextLocalScaled(Vector2 cc, float rot, Vector2 off, string txt, Color c, float sc, float os, SpriteFont font = null)
             => DrawCardTextRotatedSingleScaled(cc, rot, off, txt, c, sc, os, CW, CH, font);
 
-        private void DrawWrappedTextLocalScaled(Vector2 cc, float rot, Vector2 off, string txt, Color c, float sc, float os, SpriteFont font, float maxW)
-            => DrawCardTextWrappedRotatedScaled(cc, rot, off, txt, c, sc, os, font, maxW, CW, CH);
+        private void DrawWrappedLinesLocalScaled(Vector2 cc, float rot, Vector2 off, IReadOnlyList<string> lines, Color c, float sc, float os, SpriteFont font)
+            => DrawCardTextWrappedLinesRotatedScaled(cc, rot, off, lines, c, sc, os, font, CW, CH);
 
         private void DrawRectangleRotatedLocalScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, float width, float height, Color color, float visualScale, float cardW, float cardH)
         {
@@ -454,7 +472,7 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        private void DrawCardTextWrappedRotatedScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, string text, Color color, float scale, float overallScale, SpriteFont font, float maxWidth, float cardW, float cardH)
+        private void DrawCardTextWrappedLinesRotatedScaled(Vector2 cardCenter, float rotation, Vector2 localOffsetFromTopLeft, IReadOnlyList<string> lines, Color color, float scale, float overallScale, SpriteFont font, float cardW, float cardH)
         {
             try
             {
@@ -463,7 +481,7 @@ namespace Crusaders30XX.ECS.Systems
                 float startLocalY = -cardH * overallScale / 2f + localOffsetFromTopLeft.Y;
 
                 float currentY = startLocalY;
-                foreach (var line in TextUtils.WrapText(font, text, scale, (int)maxWidth))
+                foreach (var line in lines)
                 {
                     var local = new Vector2(startLocalX, currentY);
                     float cos = (float)Math.Cos(rotation);
@@ -478,6 +496,24 @@ namespace Crusaders30XX.ECS.Systems
             {
                 Console.WriteLine($"Font rendering error: {ex.Message}");
             }
+        }
+
+        internal static CardDescriptionTextLayout CreateDescriptionTextLayout(
+            CardGeometrySettings settings,
+            float visualScale,
+            float descFontScale,
+            int contentMarginLeft,
+            int contentPadRight)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+
+            float unscaledContentWidth = Math.Max(1f, settings.CardWidth - contentMarginLeft - contentPadRight);
+            return new CardDescriptionTextLayout(
+                contentMarginLeft * visualScale,
+                unscaledContentWidth * visualScale,
+                descFontScale,
+                Math.Max(1, (int)Math.Round(unscaledContentWidth)),
+                descFontScale * visualScale);
         }
 
         private Texture2D GetRoundedRectTexture(int width, int height, int radius)
@@ -656,8 +692,8 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             // 6. Card art, then backed card text (content area, below rule line, right of chips)
-            float contentX = ContentMarginLeft * vs;
-            float contentWidth = (settings.CardWidth - ContentMarginLeft - ContentPadRight) * vs;
+            var descLayout = CreateDescriptionTextLayout(settings, vs, DescFontScale, ContentMarginLeft, ContentPadRight);
+            float contentX = descLayout.ContentX;
             float contentTop = titleBandEndY + ContentPadTop * vs;
             float cursorY = contentTop;
 
@@ -671,12 +707,12 @@ namespace Crusaders30XX.ECS.Systems
                 string desc = card.GetDisplayText();
                 if (!string.IsNullOrWhiteSpace(desc))
                 {
-                    float descScale = DescFontScale * vs;
-                    DrawTextBackground(cardCenter, rotation, vs, cc, card, isColorless, desc, descScale, contentX, cursorY, contentWidth);
+                    var descLines = TextUtils.WrapText(_bodyFont, desc, descLayout.WrapScale, descLayout.WrapMaxWidth);
+                    DrawTextBackground(cardCenter, rotation, vs, cc, card, isColorless, descLines, descLayout.DrawScale, contentX, cursorY);
                     var descColor = isColorless
                         ? ColorlessPrimaryText
                         : GetPaletteColor(NameTextColors, cc, new Color(26, 26, 26));
-                    DrawWrappedTextLocalScaled(cardCenter, rotation, new Vector2(contentX, cursorY), desc, descColor, descScale, vs, _bodyFont, contentWidth);
+                    DrawWrappedLinesLocalScaled(cardCenter, rotation, new Vector2(contentX, cursorY), descLines, descColor, descLayout.DrawScale, vs, _bodyFont);
                 }
             }
         }
@@ -884,10 +920,9 @@ namespace Crusaders30XX.ECS.Systems
         }
 
         private void DrawTextBackground(Vector2 cardCenter, float rotation, float vs,
-            CardData.CardColor cc, CardBase card, bool isColorless, string text, float textScale,
-            float textX, float textY, float maxWidth)
+            CardData.CardColor cc, CardBase card, bool isColorless, IReadOnlyList<string> lines, float textScale,
+            float textX, float textY)
         {
-            var lines = TextUtils.WrapText(_bodyFont, text, textScale, (int)maxWidth);
             float maxLineWidth = lines.Select(line => _bodyFont.MeasureString(line).X * textScale).DefaultIfEmpty(0f).Max();
             if (maxLineWidth <= 0f) return;
 

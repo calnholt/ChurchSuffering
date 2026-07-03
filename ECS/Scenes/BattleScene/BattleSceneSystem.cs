@@ -39,7 +39,7 @@ namespace Crusaders30XX.ECS.Systems
 		private BattleBackgroundSystem _battleBackgroundSystem;
 		private DrawPileDisplaySystem _drawPileDisplaySystem;
 		private DiscardPileDisplaySystem _discardPileDisplaySystem;
-		private DrawPileColorCountDisplaySystem _drawPileColorCountDisplaySystem;
+		private PileColorCountDisplaySystem _pileColorCountDisplaySystem;
 		private PlayerDisplaySystem _playerDisplaySystem;
 		private PlayerWispParticleSystem _playerWispParticleSystem;
 		private PlayerTemperanceActivationDisplaySystem _playerTemperanceActivationDisplaySystem;
@@ -445,7 +445,9 @@ namespace Crusaders30XX.ECS.Systems
 				FrameProfiler.Measure("EquippedWeaponDisplaySystem.Draw", _equippedWeaponDisplaySystem.Draw);
 			FrameProfiler.Measure("MedalDisplaySystem.Draw", _medalDisplaySystem.Draw);
 			if (showDrawPile) FrameProfiler.Measure("DrawPileDisplaySystem.Draw", _drawPileDisplaySystem.Draw);
-			if (showDrawPile) FrameProfiler.Measure("DrawPileColorCountDisplaySystem.Draw", _drawPileColorCountDisplaySystem.Draw);
+			if (showDrawPile || !guidedTutorial)
+				FrameProfiler.Measure("PileColorCountDisplaySystem.Draw",
+					() => _pileColorCountDisplaySystem.Draw(showDrawPile, !guidedTutorial));
 			if (!guidedTutorial) FrameProfiler.Measure("DiscardPileDisplaySystem.Draw", _discardPileDisplaySystem.Draw);
 			FrameProfiler.Measure("MillCardSystem.Draw", _millCardSystem.Draw);
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawForeground", _payCostOverlaySystem.DrawForeground);
@@ -715,7 +717,7 @@ namespace Crusaders30XX.ECS.Systems
 			_cardZoneSystem = new CardZoneSystem(_world.EntityManager);
 			_drawPileDisplaySystem = new DrawPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_discardPileDisplaySystem = new DiscardPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
-			_drawPileColorCountDisplaySystem = new DrawPileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_pileColorCountDisplaySystem = new PileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_millCardSystem = new MillCardSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_playerDisplaySystem = new PlayerDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_cathedralLightingSystem = new CathedralLightingSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -867,7 +869,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_eventQueueSystem);
 			_world.AddSystem(_drawPileDisplaySystem);
 			_world.AddSystem(_discardPileDisplaySystem);
-			_world.AddSystem(_drawPileColorCountDisplaySystem);
+			_world.AddSystem(_pileColorCountDisplaySystem);
 			_world.AddSystem(_millCardSystem);
 			_world.AddSystem(_playerDisplaySystem);
 			_world.AddSystem(_guardianAngelDisplaySystem);

@@ -30,6 +30,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             public int TargetEntityId;
             public Entity Target;
+            public Guid PresentationId;
             public Texture2D Texture;
             public float AgeSeconds;
             public float FadeInDurationSeconds;
@@ -123,6 +124,7 @@ namespace Crusaders30XX.ECS.Systems
                 bool expired = anim.AgeSeconds >= anim.TotalDurationSeconds;
                 if (expired)
                 {
+                    PublishCompletion(anim);
                     _animations.RemoveAt(i);
                     continue;
                 }
@@ -133,8 +135,9 @@ namespace Crusaders30XX.ECS.Systems
 
         private void OnModifyHp(ModifyHpEvent e)
         {
-            // Only show for damage (negative delta) and attack type
-            if (e.Delta >= 0 || e.DamageType != ModifyTypeEnum.Attack)
+            // Only show for damage. Player self-damage effects still get damage text,
+            // but not an attack splash.
+            if (e.Delta >= 0)
                 return;
 
             var target = ResolveTarget(e.Target);
@@ -144,15 +147,16 @@ namespace Crusaders30XX.ECS.Systems
             Texture2D textureToUse = null;
             bool isPlayerTarget = target.HasComponent<Player>();
             bool isPlayerSource = e.Source != null && e.Source.HasComponent<Player>();
+            bool isEnemyTarget = target.HasComponent<Enemy>();
 
-            if (isPlayerTarget)
+            if (isPlayerTarget && e.DamageType == ModifyTypeEnum.Attack)
             {
                 // Player is being attacked - use enemy attack splash
                 _textures.TryGetValue("enemy-attack-splash", out textureToUse);
             }
-            else if (isPlayerSource)
+            else if (isEnemyTarget && (isPlayerSource || e.DamageType == ModifyTypeEnum.Effect))
             {
-                // Player is attacking - use player attack splash
+                // Player attacks and enemy-facing effect damage use the enemy hit splash.
                 _textures.TryGetValue("player-attack-splash", out textureToUse);
             }
             else
@@ -166,21 +170,44 @@ namespace Crusaders30XX.ECS.Systems
             if (_animations.Count >= MaxConcurrent)
             {
                 // Drop oldest
+                PublishCompletion(_animations[0]);
                 _animations.RemoveAt(0);
             }
 
             float totalDuration = FadeInDurationSeconds + HoldDurationSeconds + FadeOutDurationSeconds;
 
+            if (e.PresentationId != Guid.Empty)
+            {
+                EventManager.Publish(new BattlePresentationStarted
+                {
+                    PresentationId = e.PresentationId,
+                    Target = target,
+                    Kind = BattlePresentationKind.DamageSplash
+                });
+            }
+
             _animations.Add(new AnimationInstance
             {
                 TargetEntityId = target.Id,
                 Target = target,
+                PresentationId = e.PresentationId,
                 Texture = textureToUse,
                 AgeSeconds = 0f,
                 FadeInDurationSeconds = FadeInDurationSeconds,
                 HoldDurationSeconds = HoldDurationSeconds,
                 FadeOutDurationSeconds = FadeOutDurationSeconds,
                 TotalDurationSeconds = totalDuration
+            });
+        }
+
+        private static void PublishCompletion(AnimationInstance anim)
+        {
+            if (anim == null || anim.PresentationId == Guid.Empty) return;
+            EventManager.Publish(new BattlePresentationCompleted
+            {
+                PresentationId = anim.PresentationId,
+                Target = anim.Target,
+                Kind = BattlePresentationKind.DamageSplash
             });
         }
 

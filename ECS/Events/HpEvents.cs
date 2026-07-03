@@ -1,3 +1,4 @@
+using System;
 using Crusaders30XX.ECS.Core;
 
 namespace Crusaders30XX.ECS.Events
@@ -29,6 +30,7 @@ namespace Crusaders30XX.ECS.Events
         public Entity Source { get; set; }
         public int Delta { get; set; }
         public ModifyTypeEnum DamageType { get; set; } = ModifyTypeEnum.Attack;
+        public Guid PresentationId { get; set; }
     }
 
     /// <summary>
@@ -76,4 +78,3 @@ namespace Crusaders30XX.ECS.Events
         public int Delta { get; set; }
     }
 }
-

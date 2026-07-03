@@ -54,4 +54,24 @@ namespace Crusaders30XX.ECS.Events
 		public Guid RequestId { get; init; }
 		public bool IsPreview { get; init; }
 	}
+
+	public enum BattlePresentationKind
+	{
+		DamageNumber,
+		DamageSplash,
+	}
+
+	public sealed class BattlePresentationStarted
+	{
+		public Guid PresentationId { get; init; }
+		public Entity Target { get; init; }
+		public BattlePresentationKind Kind { get; init; }
+	}
+
+	public sealed class BattlePresentationCompleted
+	{
+		public Guid PresentationId { get; init; }
+		public Entity Target { get; init; }
+		public BattlePresentationKind Kind { get; init; }
+	}
 }

@@ -5,18 +5,7 @@ float2 ViewportSize;
 float Time;
 
 int HoleCount = 30;
-float HolePeriodMin = 10.0;
-float HolePeriodMax = 20.0;
-float HoleLifeMin = 0.45;
-float HoleLifeMax = 0.75;
-float HoleOpenFrac = 0.25;
-float HoleCloseFrac = 0.30;
-
-float HoleRadiusMin = 0.10;
-float HoleRadiusMax = 0.50;
-float RadiusFluxAmp = 0.12;
-float RadiusFluxRate = 2.20;
-float HoleMargin = 0.02;
+float4 Holes[30];
 
 float HoleFeather = 0.045;
 float FeatherVary = 0.70;
@@ -25,7 +14,6 @@ float RimWarpScale = 3.5;
 float RimWarpSpeed = 0.35;
 float RevealRefract = 0.35;
 
-float LayerSplit = 0.50;
 float RevealDarken = 0.00;
 
 texture Texture : register(t0);
@@ -82,11 +70,6 @@ VSOutput SpriteVertexShader(VSInput input)
     output.Color = input.Color;
     output.TexCoord = input.TexCoord;
     return output;
-}
-
-float Hash11(float n)
-{
-    return frac(sin(n) * 43758.5453123);
 }
 
 float Hash21(float2 p)
@@ -178,40 +161,13 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
             continue;
         }
 
-        float fid = (float)i;
-        float period = lerp(
-            max(HolePeriodMin, 0.001),
-            max(HolePeriodMax, max(HolePeriodMin, 0.001)),
-            Hash11(fid * 1.7 + 0.3));
-        float phase = Hash11(fid * 3.1 + 0.9) * period;
-        float cycle = floor((Time + phase) / period);
-        float local = fmod(Time + phase, period);
-        float openDur = period * lerp(saturate(HoleLifeMin), saturate(HoleLifeMax), Hash11(fid * 5.3 + cycle));
-
-        if (local > openDur)
-        {
-            continue;
-        }
-
-        float t = local / max(openDur, 0.001);
-        float openFrac = max(HoleOpenFrac, 0.001);
-        float closeFrac = max(HoleCloseFrac, 0.001);
-        float grow = smoothstep(0.0, openFrac, t);
-        float close = 1.0 - smoothstep(1.0 - closeFrac, 1.0, t);
-        float env = grow * close;
-
-        float maxRadius = lerp(max(HoleRadiusMin, 0.001), max(HoleRadiusMax, max(HoleRadiusMin, 0.001)), Hash11(fid * 7.7 + cycle));
-        float flux = 1.0 + RadiusFluxAmp * sin(Time * RadiusFluxRate + fid * 2.399);
-        float radius = maxRadius * env * max(flux, 0.001);
+        float4 hole = Holes[i];
+        float2 center = hole.xy;
+        float radius = hole.z;
         if (radius <= 0.0)
         {
             continue;
         }
-
-        float margin = max(HoleMargin, 0.0);
-        float cx = lerp(margin, max(aspect - margin, margin), Hash11(fid * 11.1 + cycle));
-        float cy = lerp(margin, max(1.0 - margin, margin), Hash11(fid * 13.3 + cycle));
-        float2 center = float2(cx, cy);
 
         float d = distance(auv + disp, center);
         float feather = max(HoleFeather * (1.0 + FeatherVary * (fVary - 0.5)), 0.001);
@@ -223,10 +179,9 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
 
         float rim = m * (1.0 - m) * 4.0;
         float2 revealUv = uv + dispUv * RevealRefract * rim;
-        float pick = Hash11(fid * 17.7 + cycle);
         float3 middle = SampleLayer(MiddleTextureSampler, revealUv, phMid);
         float3 bottom = SampleLayer(BottomTextureSampler, revealUv, phBot);
-        float3 revealed = lerp(bottom, middle, step(pick, saturate(LayerSplit)));
+        float3 revealed = lerp(bottom, middle, saturate(hole.w));
         revealed *= 1.0 - saturate(RevealDarken);
 
         col = lerp(col, revealed, m);
