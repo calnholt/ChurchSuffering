@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -47,7 +48,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add VERSION
-          git commit -m "Bump version to ${{ steps.bump.outputs.new_version }}"
+          git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
           git push
 
       # ----------------------------
@@ -59,15 +60,10 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore NuGet packages
-        run: dotnet restore
+        run: dotnet restore Crusaders30XX.csproj
 
       - name: Publish self-contained Windows build
-        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./artifacts/windows
-
-      - name: Zip artifact
-        run: |
-          mkdir builds
-          powershell -Command "Compress-Archive -Path './artifacts/windows/*' -DestinationPath './builds/windows-build.zip' -Force"
+        run: dotnet publish Crusaders30XX.csproj -c Release -r win-x64 --self-contained true -o ./artifacts/windows
 
       # ----------------------------
       # BUTLER UPLOAD
@@ -80,5 +76,38 @@ jobs:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         shell: bash
         run: |
-          butler push ./builds/windows-build.zip $ITCH_USER/$ITCH_GAME:$CHANNEL \
+          butler push ./artifacts/windows $ITCH_USER/$ITCH_GAME:$CHANNEL \
             --userversion ${{ steps.bump.outputs.new_version }}
+
+      - name: Verify itch.io build
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ steps.bump.outputs.new_version }}"
+          TARGET="${ITCH_USER}/${ITCH_GAME}:${CHANNEL}"
+          WHARF_URL="https://api.itch.io/wharf/latest?target=${ITCH_USER}/${ITCH_GAME}&channel_name=${CHANNEL}"
+
+          echo "Butler channel status:"
+          butler status "$TARGET"
+
+          echo "Polling wharf/latest for userversion ${EXPECTED} (up to 30 minutes)..."
+          for i in $(seq 1 60); do
+            HTTP_CODE=$(curl -s -o /tmp/wharf.json -w "%{http_code}" "$WHARF_URL" || true)
+            if [ "$HTTP_CODE" = "200" ]; then
+              LATEST=$(grep -o '"latest"[[:space:]]*:[[:space:]]*"[^"]*"' /tmp/wharf.json | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+              echo "Attempt ${i}/60: latest=${LATEST:-<none>}"
+              if [ "${LATEST:-}" = "$EXPECTED" ]; then
+                echo "Build is live with userversion ${EXPECTED}"
+                exit 0
+              fi
+            else
+              echo "Attempt ${i}/60: wharf/latest HTTP ${HTTP_CODE}"
+            fi
+            sleep 30
+          done
+
+          echo "Build did not become live with userversion ${EXPECTED} within 30 minutes"
+          butler status "$TARGET"
+          exit 1
