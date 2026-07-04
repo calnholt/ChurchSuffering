@@ -51,7 +51,7 @@ jobs:
     runs-on: windows-latest
     env:
       ITCH_USER: "calnholt"
-      ITCH_GAME: "crusader-30xx"
+      ITCH_GAME: "church-suffering"
       CHANNEL: "windows"
       VERSION: ${{ needs.bump-version.outputs.new_version }}
 
@@ -125,7 +125,7 @@ jobs:
     runs-on: macos-latest
     env:
       ITCH_USER: "calnholt"
-      ITCH_GAME: "crusader-30xx"
+      ITCH_GAME: "church-suffering"
       VERSION: ${{ needs.bump-version.outputs.new_version }}
 
     steps:
