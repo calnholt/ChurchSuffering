@@ -22,6 +22,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteBatch _spriteBatch;
 		private readonly SpriteFont _font;
 		private readonly Dictionary<(int Width, int Height, int Radius), Texture2D> _roundedCache = new();
+		private CardGeometrySettings _cardTooltipSettings;
 
 		[DebugEditable(DisplayName = "Padding", Step = 1, Min = 0, Max = 40)]
 		public int Padding { get; set; } = 8;
@@ -52,6 +53,9 @@ namespace Crusaders30XX.ECS.Systems
 
 		[DebugEditable(DisplayName = "Stack Gap", Step = 1, Min = 0, Max = 40)]
 		public int StackGap { get; set; } = 6;
+
+		[DebugEditable(DisplayName = "Card Text Gap", Step = 1, Min = 0, Max = 120)]
+		public int CardTooltipTextGap { get; set; } = 12;
 
 		private sealed class TooltipRenderBlock
 		{
@@ -165,18 +169,11 @@ namespace Crusaders30XX.ECS.Systems
 					rect.Y = System.Math.Max(0, System.Math.Min(rect.Y, Game1.VirtualHeight - rect.Height));
 					var renderBlocks = BuildRenderBlocks(measured.Blocks, rect.Location);
 
-					var id = top.E.Id;
-					if (!_fadeByEntityId.TryGetValue(id, out var fs))
-					{
-						fs = new FadeState { Alpha01 = 0f, TargetVisible = true, Rect = rect, Blocks = renderBlocks };
-						_fadeByEntityId[id] = fs;
-					}
-					fs.TargetVisible = true;
-					fs.Rect = rect;
-					fs.Blocks = renderBlocks;
-					_fadeByEntityId[id] = fs;
+					SetVisibleFadeState(top.E.Id, rect, renderBlocks);
 				}
 			}
+
+			UpdateCardTooltipTextFadeState();
 
 			// Update and draw all fade states
 			foreach (var kv in _fadeByEntityId.ToList())
@@ -206,18 +203,79 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
+		private void UpdateCardTooltipTextFadeState()
+		{
+			if (_cardTooltipSettings == null)
+			{
+				_cardTooltipSettings = CardGeometryService.GetSettings(EntityManager);
+				if (_cardTooltipSettings == null) return;
+			}
+
+			var vp = _graphicsDevice.Viewport;
+			if (!CardTooltipLayoutService.TryGetTopHoveredLayout(
+				EntityManager,
+				_cardTooltipSettings,
+				vp.Width,
+				vp.Height,
+				gapOverride: 0,
+				screenPadding: 8,
+				out var layout))
+			{
+				return;
+			}
+
+			var blocks = TooltipTextService.BuildTooltipBlocks(
+				layout.Entity,
+				string.Empty,
+				EntityManager,
+				layout.UI.TooltipKeywordSource);
+			if (blocks.Count == 0) return;
+
+			int gap = System.Math.Max(0, CardTooltipTextGap);
+			bool placeLeft = layout.TooltipRect.X < layout.AnchorBounds.X;
+			int availableWidth = placeLeft
+				? layout.TooltipRect.X - gap
+				: vp.Width - layout.TooltipRect.Right - gap;
+			var measured = MeasureBlocks(blocks, System.Math.Max(50, System.Math.Min(MaxWidth, availableWidth)));
+
+			int rx = placeLeft
+				? layout.TooltipRect.X - measured.Size.X - gap
+				: layout.TooltipRect.Right + gap;
+			int ry = layout.TooltipRect.Y;
+			var rect = new Rectangle(rx, ry, measured.Size.X, measured.Size.Y);
+			rect.X = System.Math.Max(0, System.Math.Min(rect.X, vp.Width - rect.Width));
+			rect.Y = System.Math.Max(0, System.Math.Min(rect.Y, vp.Height - rect.Height));
+			var renderBlocks = BuildRenderBlocks(measured.Blocks, rect.Location);
+			SetVisibleFadeState(layout.Entity.Id, rect, renderBlocks);
+		}
+
+		private void SetVisibleFadeState(int entityId, Rectangle rect, List<TooltipRenderBlock> renderBlocks)
+		{
+			if (!_fadeByEntityId.TryGetValue(entityId, out var fs))
+			{
+				fs = new FadeState { Alpha01 = 0f, TargetVisible = true, Rect = rect, Blocks = renderBlocks };
+				_fadeByEntityId[entityId] = fs;
+			}
+			fs.TargetVisible = true;
+			fs.Rect = rect;
+			fs.Blocks = renderBlocks;
+			_fadeByEntityId[entityId] = fs;
+		}
+
 		private (List<TooltipRenderBlock> Blocks, Point Size) MeasureBlocks(
-			IReadOnlyList<TooltipTextService.TooltipTextBlock> sourceBlocks)
+			IReadOnlyList<TooltipTextService.TooltipTextBlock> sourceBlocks,
+			int maxWidth = -1)
 		{
 			int pad = System.Math.Max(0, Padding);
 			int stackGap = System.Math.Max(0, StackGap);
+			int wrapWidth = maxWidth > 0 ? maxWidth : MaxWidth;
 			var measured = new List<TooltipRenderBlock>();
 			int stackWidth = 0;
 			int stackHeight = 0;
 
 			foreach (var block in sourceBlocks)
 			{
-				string text = string.Join("\n", TextUtils.WrapText(_font, block.Text, TextScale, MaxWidth));
+				string text = string.Join("\n", TextUtils.WrapText(_font, block.Text, TextScale, wrapWidth));
 				var size = _font.MeasureString(text) * TextScale;
 				int width = (int)System.Math.Ceiling(size.X) + pad * 2;
 				int height = (int)System.Math.Ceiling(size.Y) + pad * 2;

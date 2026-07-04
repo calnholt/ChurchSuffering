@@ -2235,8 +2235,19 @@ namespace Crusaders30XX.ECS.Systems
 		private static void SyncCardLayoutAnchor(Transform transform, PositionTween tween, Vector2 layoutCenter)
 		{
 			if (tween != null)
+			{
+				bool shouldSnap = !tween.Initialized || tween.Target == Vector2.Zero;
 				tween.Target = layoutCenter;
-			else if (transform != null)
+				if (shouldSnap)
+				{
+					tween.Current = layoutCenter;
+					tween.Initialized = true;
+					if (transform != null) transform.Position = layoutCenter;
+				}
+				return;
+			}
+
+			if (transform != null)
 				transform.Position = layoutCenter;
 		}
 

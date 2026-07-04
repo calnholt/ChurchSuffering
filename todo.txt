@@ -4,7 +4,6 @@ UX
 - enemy attack
 - improve remiel in battle text
 - make fixed buttons used throughout (just a fex styles used consistently)
-- tutorial section transitions a little rough -- take notes on what exactly needs to be fixed to clean up
 - make climb column buttons more thematic
 - recoil shader
 - intimidated shader (maybe change name)

@@ -61,80 +61,45 @@ namespace Crusaders30XX.ECS.Systems
 		public void Draw()
 		{
 			if (StateSingleton.IsTutorialActive) return;
-			// Find top-most hovered entity with CardTooltip
-			var hoverables = GetRelevantEntities()
-				.Select(e => new { E = e, UI = e.GetComponent<UIElement>(), T = e.GetComponent<Transform>(), CT = e.GetComponent<CardTooltip>(), CD = e.GetComponent<CardData>() })
-				.Where(x => x.UI != null && x.UI.IsHovered && x.UI.TooltipType == TooltipType.Card && x.CT != null && !string.IsNullOrWhiteSpace(x.CT.CardId))
-				.OrderByDescending(x => x.T?.ZOrder ?? 0)
-				.ToList();
-			var top = hoverables.FirstOrDefault();
-			if (top == null)
-			{
-				_lastPulseHoverId = null;
-				return;
-			}
-
-			if (top.CT.CrossfadeUpgradePreview && _lastPulseHoverId != top.E.Id)
-			{
-				_pulsePhase = 0f;
-				_lastPulseHoverId = top.E.Id;
-			}
-			else if (!top.CT.CrossfadeUpgradePreview)
-			{
-				_lastPulseHoverId = null;
-			}
-
-			// Ensure settings
 			if (_settings == null)
 			{
 				_settings = CardGeometryService.GetSettings(EntityManager);
 				if (_settings == null) return;
 			}
 
-			int w = (int)System.Math.Round(_settings.CardWidth * top.CT.TooltipScale);
-			int h = (int)System.Math.Round(_settings.CardHeight * top.CT.TooltipScale);
-			int gap = GapOverride > 0 ? GapOverride : System.Math.Max(0, top.UI.TooltipOffsetPx);
-			Rectangle anchorBounds = TransformResolverService.ResolveUIBounds(EntityManager, top.E, top.UI);
-
-			int rx = anchorBounds.X;
-			int ry = anchorBounds.Y;
-			switch (top.UI.TooltipPosition)
+			var vp = _graphicsDevice.Viewport;
+			if (!CardTooltipLayoutService.TryGetTopHoveredLayout(
+				EntityManager,
+				_settings,
+				vp.Width,
+				vp.Height,
+				GapOverride,
+				ScreenPadding,
+				out var layout))
 			{
-				case TooltipPosition.Above:
-					rx = anchorBounds.X + (anchorBounds.Width - w) / 2;
-					ry = anchorBounds.Y - h - gap;
-					break;
-				case TooltipPosition.Below:
-					rx = anchorBounds.X + (anchorBounds.Width - w) / 2;
-					ry = anchorBounds.Bottom + gap;
-					break;
-				case TooltipPosition.Right:
-					rx = anchorBounds.Right + gap;
-					ry = anchorBounds.Y + (anchorBounds.Height - h) / 2;
-					break;
-				case TooltipPosition.Left:
-					rx = anchorBounds.X - w - gap;
-					ry = anchorBounds.Y + (anchorBounds.Height - h) / 2;
-					break;
+				_lastPulseHoverId = null;
+				return;
 			}
 
-			// Clamp to screen
-			var vp = _graphicsDevice.Viewport;
-			int pad = System.Math.Max(0, ScreenPadding);
-			rx = System.Math.Max(pad, System.Math.Min(rx, vp.Width - w - pad));
-			ry = System.Math.Max(pad, System.Math.Min(ry, vp.Height - h - pad));
-
-			// Convert tooltip rect top-left to the card center expected by CardDisplaySystem (account for CardOffsetYExtra)
-			int offsetY = (int)System.Math.Round(_settings.CardOffsetYExtra * top.CT.TooltipScale);
-			var center = new Vector2(rx + w / 2f, ry + (h / 2f + offsetY));
-
-			var color = top.CT.CardColor ?? top.CD?.Color ?? CardData.CardColor.White;
-			var previewRestrictions = BuildPreviewRestrictions(top.CT, top.E);
-
-			if (top.CT.CrossfadeUpgradePreview)
+			var tooltip = layout.CardTooltip;
+			if (tooltip.CrossfadeUpgradePreview && _lastPulseHoverId != layout.Entity.Id)
 			{
-				var baseCard = GetOrCreateTooltipCard(top.CT.CardId, color, isUpgraded: false, previewRestrictions);
-				var upgradedCard = GetOrCreateTooltipCard(top.CT.CardId, color, isUpgraded: true, previewRestrictions);
+				_pulsePhase = 0f;
+				_lastPulseHoverId = layout.Entity.Id;
+			}
+			else if (!tooltip.CrossfadeUpgradePreview)
+			{
+				_lastPulseHoverId = null;
+			}
+
+			var center = layout.RenderCenter;
+			var color = tooltip.CardColor ?? layout.CardData?.Color ?? CardData.CardColor.White;
+			var previewRestrictions = BuildPreviewRestrictions(tooltip, layout.Entity);
+
+			if (tooltip.CrossfadeUpgradePreview)
+			{
+				var baseCard = GetOrCreateTooltipCard(tooltip.CardId, color, isUpgraded: false, previewRestrictions);
+				var upgradedCard = GetOrCreateTooltipCard(tooltip.CardId, color, isUpgraded: true, previewRestrictions);
 				if (baseCard == null || upgradedCard == null) return;
 
 				// Draw base card always at full opacity underneath
@@ -142,7 +107,7 @@ namespace Crusaders30XX.ECS.Systems
 				{
 					Card = baseCard,
 					Position = center,
-					Scale = top.CT.TooltipScale,
+					Scale = tooltip.TooltipScale,
 					Alpha = 1f,
 				});
 
@@ -156,17 +121,17 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						Card = upgradedCard,
 						Position = center,
-						Scale = top.CT.TooltipScale,
+						Scale = tooltip.TooltipScale,
 						Alpha = upgradedAlpha,
 					});
 				}
 				return;
 			}
 
-			var cardEntity = GetOrCreateTooltipCard(top.CT.CardId, color, top.CT.IsUpgraded, previewRestrictions);
+			var cardEntity = GetOrCreateTooltipCard(tooltip.CardId, color, tooltip.IsUpgraded, previewRestrictions);
 			if (cardEntity == null) return;
 
-			EventManager.Publish(new CardRenderScaledEvent { Card = cardEntity, Position = center, Scale = top.CT.TooltipScale });
+			EventManager.Publish(new CardRenderScaledEvent { Card = cardEntity, Position = center, Scale = tooltip.TooltipScale });
 		}
 
 		private Entity GetOrCreateTooltipCard(

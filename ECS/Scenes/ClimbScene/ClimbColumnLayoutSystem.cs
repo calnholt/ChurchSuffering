@@ -986,6 +986,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (ui == null) return;
 
 			ui.Tooltip = string.Empty;
+			ui.TooltipKeywordSource = string.Empty;
 			ui.TooltipType = TooltipType.Text;
 			if (slot == null || presentation.IsUnavailable || presentation.IsSold)
 			{
@@ -1020,6 +1021,15 @@ namespace Crusaders30XX.ECS.Systems
 				RemoveEquipmentTooltip(entity);
 				if (!RunDeckService.TryParseCardKey(slot.cardKey, out var cardId, out var color, out bool isUpgraded)) return;
 				bool isUpgrade = string.Equals(slot.kind, ClimbShopSlotKinds.Upgrade, StringComparison.OrdinalIgnoreCase);
+				var card = CardFactory.Create(cardId);
+				if (card != null)
+				{
+					if (isUpgraded)
+					{
+						CardUpgradeService.InvokeUpgradeConfirmedOnCard(card);
+					}
+					ui.TooltipKeywordSource = card.GetDisplayText();
+				}
 				EntityManager.AddComponent(entity, new CardTooltip
 				{
 					CardId = cardId,
@@ -1060,6 +1070,7 @@ namespace Crusaders30XX.ECS.Systems
 		private void ClearShopTooltip(Entity entity, UIElement ui)
 		{
 			ui.Tooltip = string.Empty;
+			ui.TooltipKeywordSource = string.Empty;
 			ui.TooltipType = TooltipType.Text;
 
 			RemoveCardTooltip(entity);
