@@ -1,3 +1,4 @@
+using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
@@ -124,12 +125,52 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	}
 
 	[Fact]
+	public void Scorched_and_thorned_card_tooltip_blocks_are_stacked_and_recursive()
+	{
+		var entityManager = new EntityManager();
+		var card = CreateCard(entityManager, "StatusCard");
+		entityManager.AddComponent(card, new Scorched { Owner = card });
+		entityManager.AddComponent(card, new Thorned { Owner = card });
+
+		var blocks = TooltipTextService.BuildTooltipBlocks(card, string.Empty);
+
+		Assert.Equal(
+			["scorched", "thorned", "scar"],
+			blocks.Select(block => block.Id).ToArray());
+		Assert.Contains("This card is scorched - when pledged, lose 1 HP.", blocks[0].Text);
+		Assert.Contains("This card is thorned - when discarded to pay a card cost, gain 1 scar.", blocks[1].Text);
+		Assert.Contains("X Scar - Lose X max HP.", blocks[2].Text);
+	}
+
+	[Fact]
 	public void Scorched_and_thorned_keyword_tooltips_are_discovered()
 	{
 		var tooltip = TooltipTextService.GetKeywordTooltip("Apply scorched and thorned.");
 
 		Assert.Contains("Scorched - When pledged, lose 1 HP.", tooltip);
 		Assert.Contains("Thorned - When discarded to pay a card cost, gain 1 scar.", tooltip);
+	}
+
+	[Fact]
+	public void Keyword_tooltip_blocks_are_recursive_and_deduplicated()
+	{
+		var sharpenBlocks = TooltipTextService.GetKeywordTooltipBlocks("Gain 5 sharpen.");
+		Assert.Equal(["sharpen"], sharpenBlocks.Select(block => block.Id).ToArray());
+		Assert.Contains("X Sharpen - Your next weapon attack this turn gains +X damage.", sharpenBlocks[0].Text);
+
+		var guardBlocks = TooltipTextService.GetKeywordTooltipBlocks("Gain 2 guard.");
+		Assert.Equal(["guard", "aggression"], guardBlocks.Select(block => block.Id).ToArray());
+
+		var frostbiteBlocks = TooltipTextService.GetKeywordTooltipBlocks("Gain 1 frostbite.");
+		Assert.Equal(["frostbite"], frostbiteBlocks.Select(block => block.Id).ToArray());
+	}
+
+	[Fact]
+	public void Keyword_tooltips_discover_late_registry_entries_without_other_matches()
+	{
+		Assert.Contains("X Darkness - The enemy loses X damage", TooltipTextService.GetKeywordTooltip("Gain darkness."));
+		Assert.Contains("X Silenced - You cannot play pledged cards", TooltipTextService.GetKeywordTooltip("Gain silenced."));
+		Assert.Contains("Sealed - Sealed cards cost HP", TooltipTextService.GetKeywordTooltip("Add 2 seals."));
 	}
 
 	private static Entity CreateCard(EntityManager entityManager, string name)

@@ -211,31 +211,6 @@ public class WayStationRunSetupTests
 	}
 
 	[Fact]
-	public void Enemy_factory_applies_st_clare_to_base_card_count_before_bonuses()
-	{
-		var world = PrepareWorldWithLoadout(
-			new List<string>
-			{
-				"smite|White",
-				"fervor|Red",
-				"reckoning|Black",
-				"strike|Red",
-				"smite|White",
-				"fervor|Red",
-				"reckoning|Black",
-				"strike|Red",
-			},
-			climbTime: 17);
-		WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Hard;
-		RunPlayerService.EnsureRunPlayer(world);
-		RunMedalService.AcquireAndEquip(world.EntityManager, "st_clare");
-
-		var enemyEntity = EntityFactory.CreateEnemyFromId(world, "skeleton", world.EntityManager);
-
-		Assert.Equal(10, enemyEntity.GetComponent<Enemy>().MaxHealth);
-	}
-
-	[Fact]
 	public void Diagnostic_enemy_hp_calculation_wyvern_easy_27cards_time8()
 	{
 		// Reproduce user report: Wyvern, Easy difficulty, ~27 cards, time ~8

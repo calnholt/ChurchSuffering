@@ -13,7 +13,6 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Objects.Medals;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Data.Tutorials;
 
@@ -381,12 +380,8 @@ namespace Crusaders30XX.ECS.Factories
             if (uiElement == null || card == null) return;
 
             string displayText = card.GetDisplayText();
-            if (string.IsNullOrEmpty(card.Tooltip) && !string.IsNullOrEmpty(displayText))
-            {
-                card.Tooltip = displayText;
-            }
-
-            uiElement.Tooltip = card.Tooltip ?? string.Empty;
+            uiElement.Tooltip = string.Empty;
+            uiElement.TooltipKeywordSource = displayText ?? string.Empty;
             uiElement.TooltipType = TooltipType.Text;
             uiElement.TooltipPosition = TooltipPosition.Above;
             uiElement.TooltipOffsetPx = 30;
@@ -423,11 +418,9 @@ namespace Crusaders30XX.ECS.Factories
             {
                 throw new InvalidOperationException("Cannot spawn enemy: player deck is missing or empty.");
             }
-            int baseCardCountReduction = HasEquippedMedal(entityManager, StClare.MedalId) ? 4 : 0;
             float deckHealthWeight = RunDeckService.CalculateEnemyHealthDeckWeight(
                 entityManager,
-                deck.Cards.Count,
-                baseCardCountReduction);
+                deck.Cards.Count);
 			if (isGuidedTutorial)
 			{
 				var tutorial = GuidedTutorialService.GetState(entityManager);
@@ -894,6 +887,7 @@ namespace Crusaders30XX.ECS.Factories
                 IsClicked = false,
                 IsInteractable = true,
                 Tooltip = sourceUIElement?.Tooltip ?? "",
+                TooltipKeywordSource = sourceUIElement?.TooltipKeywordSource ?? "",
                 TooltipType = sourceUIElement?.TooltipType ?? TooltipType.Text,
                 TooltipPosition = sourceUIElement?.TooltipPosition ?? TooltipPosition.Above,
                 TooltipOffsetPx = sourceUIElement?.TooltipOffsetPx ?? 30,
@@ -932,21 +926,6 @@ namespace Crusaders30XX.ECS.Factories
             // - OwnedByScene (auto-added by EntityManager)
 
             return clonedEntity;
-        }
-
-        private static bool HasEquippedMedal(EntityManager entityManager, string medalId)
-        {
-            if (entityManager == null || string.IsNullOrWhiteSpace(medalId)) return false;
-            var player = entityManager.GetEntity("Player");
-            if (player == null) return false;
-            return entityManager.GetEntitiesWithComponent<EquippedMedal>()
-                .Any(e =>
-                {
-                    var equipped = e.GetComponent<EquippedMedal>();
-                    return equipped != null
-                        && equipped.EquippedOwner == player
-                        && string.Equals(equipped.Medal?.Id, medalId, StringComparison.OrdinalIgnoreCase);
-                });
         }
     }
 } 

@@ -6,6 +6,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -316,7 +317,8 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				DrawColumn(entity);
 			}
-			foreach (var entity in EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>())
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>()
+				.OrderBy(entity => entity.GetComponent<Transform>()?.ZOrder ?? 0))
 			{
 				DrawSlot(entity, preview);
 			}
@@ -381,10 +383,24 @@ namespace Crusaders30XX.ECS.Systems
 			var ui = entity.GetComponent<UIElement>();
 			var slot = entity.GetComponent<ClimbSlotPresentation>();
 			if (ui == null || slot == null || ui.IsHidden || ui.Bounds.Width <= 0) return;
-			float opacity = MathHelper.Clamp(slot.Opacity, 0f, 1f);
+			float opacity = MathHelper.Clamp(slot.Opacity * slot.AnimationOpacityMultiplier, 0f, 1f);
 			if (opacity <= 0.001f) return;
 			var resolvedBounds = TransformResolverService.ResolveUIBounds(EntityManager, entity, ui);
+			var clip = slot.ClipToBounds
+				? CardRenderClipScope.Apply(_graphicsDevice, resolvedBounds)
+				: default;
+			using (clip)
+			{
+				if (Math.Abs(slot.AnimationOffsetX) > 0.001f)
+				{
+					resolvedBounds.X += (int)Math.Round(slot.AnimationOffsetX);
+				}
+				DrawSlotResolved(entity, preview, ui, slot, resolvedBounds, opacity);
+			}
+		}
 
+		private void DrawSlotResolved(Entity entity, ClimbPreviewState preview, UIElement ui, ClimbSlotPresentation slot, Rectangle resolvedBounds, float opacity)
+		{
 			bool source = preview?.IsActive == true && string.Equals(preview.SourceSlotId, slot.SlotId, StringComparison.OrdinalIgnoreCase);
 			bool wouldVanish = preview?.IsActive == true && preview.WouldVanishSlotIds.Contains(slot.SlotId) && !source;
 			int offsetY = source ? PreviewSourceOffsetY : 0;
@@ -412,7 +428,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (slot.Kind == ClimbSlotKind.Encounter)
 			{
-				DrawEncounterSlot(rect, slot, preview, source);
+				DrawEncounterSlot(rect, slot, preview, source, opacity);
 			}
 			else if (slot.Kind == ClimbSlotKind.Event)
 			{
@@ -420,7 +436,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			else
 			{
-				DrawShopSlot(rect, slot);
+				DrawShopSlot(rect, slot, opacity);
 			}
 
 			if (wouldVanish)
@@ -461,60 +477,60 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch.Draw(_pixel, glow, glowColor);
 		}
 
-		private void DrawShopSlot(Rectangle rect, ClimbSlotPresentation slot)
+		private void DrawShopSlot(Rectangle rect, ClimbSlotPresentation slot, float opacity)
 		{
 			var titlePos = new Vector2(rect.X + CompactPaddingX, rect.Y + CompactPaddingY);
-			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, Trim(slot.Title, ShopTitleMaxLength), titlePos, CompactTitleFontScale, ClimbSceneDrawHelpers.White1);
+			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, Trim(slot.Title, ShopTitleMaxLength), titlePos, CompactTitleFontScale, ClimbSceneDrawHelpers.White1 * opacity);
 			var badgeSize = ClimbSceneDrawHelpers.MeasureBodyText(ClimbSceneDrawHelpers.ToUpperAscii(slot.Label), CompactBadgeFontScale);
 			ClimbSceneDrawHelpers.DrawBodyText(
 				_spriteBatch,
 				ClimbSceneDrawHelpers.ToUpperAscii(slot.Label),
 				new Vector2(rect.Right - CompactPaddingX - badgeSize.X, rect.Y + CompactPaddingY + CompactBadgeYOffset),
 				CompactBadgeFontScale,
-				ClimbSceneDrawHelpers.White3);
+				ClimbSceneDrawHelpers.White3 * opacity);
 
 			int metaY = rect.Bottom - CompactPaddingY - MetaBlockMinHeight;
 			var timeRect = new Rectangle(rect.Right - CompactPaddingX - ShopTimeBlockWidth, metaY, ShopTimeBlockWidth, MetaBlockMinHeight);
 			var costRect = new Rectangle(rect.X + CompactPaddingX, metaY, timeRect.X - MetaBlockGap - rect.X - CompactPaddingX, MetaBlockMinHeight);
-			DrawCostMetaBlock(costRect, slot.Cost, slot.Kind == ClimbSlotKind.Shop && !slot.IsAffordable);
-			DrawTimeBlock(timeRect, slot.TimeCost);
+			DrawCostMetaBlock(costRect, slot.Cost, slot.Kind == ClimbSlotKind.Shop && !slot.IsAffordable, opacity);
+			DrawTimeBlock(timeRect, slot.TimeCost, opacity: opacity);
 		}
 
-		private void DrawEncounterSlot(Rectangle rect, ClimbSlotPresentation slot, ClimbPreviewState preview, bool source)
+		private void DrawEncounterSlot(Rectangle rect, ClimbSlotPresentation slot, ClimbPreviewState preview, bool source, float opacity)
 		{
 			var portrait = GetPortraitRegion(rect);
 			var background = _imageAssets.TryGetTexture(BattleLocationAssetService.GetBackgroundAsset(slot.BattleLocation));
 			if (background != null)
 			{
-				DrawCoverCropped(background, portrait, Color.White);
-				_spriteBatch.Draw(_pixel, portrait, Color.Black * EncounterBackgroundDimAlpha);
+				DrawCoverCropped(background, portrait, Color.White * opacity);
+				_spriteBatch.Draw(_pixel, portrait, Color.Black * (EncounterBackgroundDimAlpha * opacity));
 			}
 			else
 			{
-				ClimbSceneDrawHelpers.DrawRadialPortraitGradient(_spriteBatch, _pixel, portrait);
+				ClimbSceneDrawHelpers.DrawRadialPortraitGradient(_spriteBatch, _pixel, portrait, opacity);
 			}
 			var texture = GetTexture(slot.PortraitAsset);
 			if (texture != null)
 			{
-				DrawParallaxPortrait(texture, portrait);
+				DrawParallaxPortrait(texture, portrait, opacity);
 			}
 			else
 			{
-				ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, Trim(slot.Title, PortraitSlotTitleMaxLength), new Vector2(portrait.X + PortraitFallbackPaddingX, portrait.Center.Y - PortraitFallbackTextOffsetY), CompactTitleFontScale, ClimbSceneDrawHelpers.White1);
+				ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, Trim(slot.Title, PortraitSlotTitleMaxLength), new Vector2(portrait.X + PortraitFallbackPaddingX, portrait.Center.Y - PortraitFallbackTextOffsetY), CompactTitleFontScale, ClimbSceneDrawHelpers.White1 * opacity);
 			}
-			_spriteBatch.Draw(_pixel, new Rectangle(portrait.X, portrait.Bottom - PortraitBottomLineHeight, portrait.Width, PortraitBottomLineHeight), ClimbSceneDrawHelpers.Red3 * PortraitBottomLineAlpha);
+			_spriteBatch.Draw(_pixel, new Rectangle(portrait.X, portrait.Bottom - PortraitBottomLineHeight, portrait.Width, PortraitBottomLineHeight), ClimbSceneDrawHelpers.Red3 * (PortraitBottomLineAlpha * opacity));
 
 			int metaY = portrait.Bottom + CompactPaddingY;
 			var timeRect = new Rectangle(rect.Right - CompactPaddingX - PortraitSlotTimeBlockWidth, metaY, PortraitSlotTimeBlockWidth, MetaBlockMinHeight);
 			var rewardRect = new Rectangle(rect.X + CompactPaddingX, metaY, timeRect.X - MetaBlockGap - rect.X - CompactPaddingX, MetaBlockMinHeight);
-			DrawRewardMetaBlock(rewardRect, slot.Reward);
+			DrawRewardMetaBlock(rewardRect, slot.Reward, opacity);
 			int remaining = GetEncounterRemainingDuration(slot, SaveCache.GetClimbState()?.time ?? 0);
 			int activeRemaining = remaining;
 			if (preview?.IsActive == true && !source)
 			{
 				activeRemaining = GetEncounterRemainingDuration(slot, preview.ProjectedUsedTime);
 			}
-			DrawTimeBlock(timeRect, slot.TimeCost, remaining, activeRemaining);
+			DrawTimeBlock(timeRect, slot.TimeCost, remaining, activeRemaining, opacity);
 		}
 
 		private void DrawEventSlot(Rectangle rect, ClimbSlotPresentation slot, ClimbPreviewState preview, bool source, float opacity)
@@ -596,7 +612,7 @@ namespace Crusaders30XX.ECS.Systems
 				opacity);
 		}
 
-		private void DrawCostMetaBlock(Rectangle rect, ClimbResourceSave resources, bool muted)
+		private void DrawCostMetaBlock(Rectangle rect, ClimbResourceSave resources, bool muted, float opacity = 1f)
 		{
 			ClimbSceneDrawHelpers.DrawMetaBlock(
 				_spriteBatch,
@@ -606,7 +622,8 @@ namespace Crusaders30XX.ECS.Systems
 				CompactMetaLabelFontScale,
 				muted ? MutedMetaBorderAlpha : MetaBlockBorderAlpha,
 				muted ? MutedMetaFillAlpha : MetaBlockFillAlpha,
-				(sb, content) => DrawResourceLine(sb, content, resources, muted ? ClimbSceneDrawHelpers.White3 : ClimbSceneDrawHelpers.White2, compact: true));
+				(sb, content) => DrawResourceLine(sb, content, resources, muted ? ClimbSceneDrawHelpers.White3 : ClimbSceneDrawHelpers.White2, compact: true, opacity: opacity),
+				opacity);
 		}
 
 		private void DrawRewardMetaBlock(Rectangle rect, ClimbResourceSave resources, float opacity = 1f)

@@ -355,12 +355,8 @@ namespace Crusaders30XX.ECS.Systems
 			if (ui == null) return;
 
 			string displayText = definition.GetDisplayText();
-			if (string.IsNullOrEmpty(definition.Tooltip) && !string.IsNullOrEmpty(displayText))
-			{
-				definition.Tooltip = displayText;
-			}
-
-			ui.Tooltip = definition.Tooltip ?? string.Empty;
+			ui.Tooltip = string.Empty;
+			ui.TooltipKeywordSource = displayText ?? string.Empty;
 			ui.TooltipType = TooltipType.Text;
 			ui.TooltipPosition = position;
 			ui.TooltipOffsetPx = offsetPx;

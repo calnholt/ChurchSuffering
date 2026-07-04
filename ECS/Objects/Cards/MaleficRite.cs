@@ -79,7 +79,8 @@ namespace Crusaders30XX.ECS.Objects.Cards
             var ui = CardEntity?.GetComponent<UIElement>();
             if (ui != null)
             {
-                ui.Tooltip = Tooltip ?? string.Empty;
+                ui.Tooltip = string.Empty;
+                ui.TooltipKeywordSource = Text ?? string.Empty;
             }
         }
 

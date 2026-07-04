@@ -161,6 +161,92 @@ public class ClimbColumnParallaxTests : IDisposable
 	}
 
 	[Fact]
+	public void Shop_slot_visual_change_starts_slide_refresh_animation()
+	{
+		var entityManager = BuildWorld();
+		var layout = new ClimbColumnLayoutSystem(entityManager);
+		layout.Update(new GameTime());
+
+		var climb = SaveCache.GetClimbState();
+		int slotIndex = climb.shopSlots.FindIndex(s => s != null
+			&& !s.isSold
+			&& !string.Equals(s.kind, ClimbShopSlotKinds.Empty, StringComparison.OrdinalIgnoreCase));
+		Assert.True(slotIndex >= 0);
+		var slot = climb.shopSlots[slotIndex];
+		slot.generatedAtTime += 1;
+		SaveCache.SaveClimbState(climb);
+
+		layout.Update(new GameTime());
+
+		var refresh = GetSlotRefresh(entityManager);
+		Assert.True(refresh.IsAnimating);
+		Assert.Contains(refresh.Jobs, job => job.Kind == ClimbSlotKind.Shop && job.HasOutgoing && job.HasIncoming);
+		var shopSlot = entityManager.GetEntitiesWithComponent<ClimbSlotPresentation>()
+			.Select(entity => entity.GetComponent<ClimbSlotPresentation>())
+			.First(slotPresentation => slotPresentation.Kind == ClimbSlotKind.Shop && slotPresentation.SlotIndex == slotIndex && !slotPresentation.IsRefreshShadow);
+		Assert.Equal(0f, shopSlot.AnimationOpacityMultiplier, precision: 3);
+	}
+
+	[Fact]
+	public void Encounter_slot_visual_change_starts_slide_refresh_animation()
+	{
+		var entityManager = BuildWorld();
+		var layout = new ClimbColumnLayoutSystem(entityManager);
+		layout.Update(new GameTime());
+
+		var climb = SaveCache.GetClimbState();
+		var slot = climb.encounterSlots[0];
+		slot.enemyId = string.Equals(slot.enemyId, "skeleton", StringComparison.OrdinalIgnoreCase) ? "demon" : "skeleton";
+		slot.generatedAtTime += 1;
+		SaveCache.SaveClimbState(climb);
+
+		layout.Update(new GameTime());
+
+		var refresh = GetSlotRefresh(entityManager);
+		Assert.True(refresh.IsAnimating);
+		Assert.Contains(refresh.Jobs, job => job.Kind == ClimbSlotKind.Encounter && job.SlotIndex == 0 && job.HasOutgoing && job.HasIncoming);
+	}
+
+	[Fact]
+	public void Last_event_expiry_uses_column_leave_without_slot_refresh()
+	{
+		ActivateSingleEvent();
+		var entityManager = BuildWorld();
+		var layout = new ClimbColumnLayoutSystem(entityManager);
+		layout.Update(new GameTime());
+
+		ExpireAllEvents();
+		layout.Update(new GameTime());
+
+		var columnTransition = entityManager.GetEntity(ClimbHeaderLayoutSystem.RootName).GetComponent<ClimbColumnTransitionState>();
+		var refresh = GetSlotRefresh(entityManager);
+		Assert.Equal(ClimbColumnTransitionPhase.LeavingEvents, columnTransition.Phase);
+		Assert.False(refresh.IsAnimating);
+		Assert.Empty(refresh.Jobs);
+	}
+
+	[Fact]
+	public void Event_expiry_with_another_event_remaining_uses_slot_refresh()
+	{
+		ActivateTwoEvents();
+		var entityManager = BuildWorld();
+		var layout = new ClimbColumnLayoutSystem(entityManager);
+		layout.Update(new GameTime());
+
+		var climb = SaveCache.GetClimbState();
+		climb.eventSlots.First(slot => slot.status == ClimbEventStatus.Active).status = ClimbEventStatus.Expired;
+		SaveCache.SaveClimbState(climb);
+
+		layout.Update(new GameTime());
+
+		var columnTransition = entityManager.GetEntity(ClimbHeaderLayoutSystem.RootName).GetComponent<ClimbColumnTransitionState>();
+		var refresh = GetSlotRefresh(entityManager);
+		Assert.Equal(ClimbColumnTransitionPhase.Idle, columnTransition.Phase);
+		Assert.True(refresh.IsAnimating);
+		Assert.Contains(refresh.Jobs, job => job.Kind == ClimbSlotKind.Event);
+	}
+
+	[Fact]
 	public void Layout_copies_encounter_battle_location_to_slot_presentation()
 	{
 		var climb = SaveCache.GetClimbState();
@@ -294,6 +380,26 @@ public class ClimbColumnParallaxTests : IDisposable
 		SaveCache.SaveClimbState(climb);
 	}
 
+	private static void ActivateTwoEvents()
+	{
+		var climb = SaveCache.GetClimbState();
+		foreach (var eventSlot in climb.eventSlots)
+		{
+			eventSlot.status = ClimbEventStatus.Expired;
+		}
+
+		for (int i = 0; i < Math.Min(2, climb.eventSlots.Count); i++)
+		{
+			var slot = climb.eventSlots[i];
+			slot.id = $"test_event_{i}";
+			slot.status = ClimbEventStatus.Active;
+			slot.activatedAtTime = ClimbRuleService.ClampTime(climb.time);
+			slot.duration = Math.Max(2, slot.duration);
+			slot.rewardResources = new ClimbResourceSave { red = i + 1, white = 0, black = 0 };
+		}
+		SaveCache.SaveClimbState(climb);
+	}
+
 	private static void ExpireAllEvents()
 	{
 		var climb = SaveCache.GetClimbState();
@@ -314,6 +420,11 @@ public class ClimbColumnParallaxTests : IDisposable
 	{
 		var entity = GetColumn(entityManager, kind);
 		return TransformResolverService.ResolveUIBounds(entityManager, entity, entity.GetComponent<UIElement>());
+	}
+
+	private static ClimbSlotRefreshTransitionState GetSlotRefresh(EntityManager entityManager)
+	{
+		return entityManager.GetEntity(ClimbHeaderLayoutSystem.RootName).GetComponent<ClimbSlotRefreshTransitionState>();
 	}
 
 	private static void AssertParallax(ParallaxLayer expected, ParallaxLayer actual)

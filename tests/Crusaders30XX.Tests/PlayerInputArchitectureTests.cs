@@ -183,11 +183,22 @@ public class PlayerInputArchitectureTests
         cardUi.Tooltip = string.Empty;
         cardUi.TooltipType = TooltipType.Card;
 
+        Entity keywordSourceTooltip = CreateUi(
+            entityManager,
+            "KeywordSourceTooltip",
+            10,
+            new Rectangle(200, 0, 100, 100));
+        UIElement keywordSourceUi = keywordSourceTooltip.GetComponent<UIElement>();
+        keywordSourceUi.IsInteractable = false;
+        keywordSourceUi.Tooltip = string.Empty;
+        keywordSourceUi.TooltipKeywordSource = "Gain 5 sharpen.";
+
         var system = new PlayerInputSystem(
             entityManager,
             new FakeInputSource(
                 Frame(sequence: 1, pointer: new Vector2(50, 50)),
-                Frame(sequence: 2, pointer: new Vector2(150, 50))));
+                Frame(sequence: 2, pointer: new Vector2(150, 50)),
+                Frame(sequence: 3, pointer: new Vector2(250, 50))));
         var interaction = new UIInteractionSystem(entityManager);
 
         system.Update(new GameTime());
@@ -204,6 +215,12 @@ public class PlayerInputArchitectureTests
         Assert.Same(cardTooltip, state.CursorTarget.Entity);
         Assert.True(cardUi.IsHovered);
         Assert.False(textUi.IsHovered);
+
+        system.Update(new GameTime());
+        interaction.Update(new GameTime());
+        Assert.Same(keywordSourceTooltip, state.CursorTarget.Entity);
+        Assert.True(keywordSourceUi.IsHovered);
+        Assert.False(cardUi.IsHovered);
         EventManager.Clear();
     }
 

@@ -27,6 +27,12 @@ namespace Crusaders30XX.ECS.Components
 		LeavingEvents,
 	}
 
+	public enum ClimbSlotRefreshPhase
+	{
+		Idle,
+		Animating,
+	}
+
 	public enum ClimbResourceType
 	{
 		Red,
@@ -81,6 +87,58 @@ namespace Crusaders30XX.ECS.Components
 	public class ClimbColumnTransitionInputSuppression : IComponent
 	{
 		public Entity Owner { get; set; }
+	}
+
+	public class ClimbSlotRefreshTransitionState : IComponent
+	{
+		public Entity Owner { get; set; }
+		public bool IsInitialized { get; set; }
+		public ClimbSlotRefreshPhase Phase { get; set; } = ClimbSlotRefreshPhase.Idle;
+		public float ElapsedSeconds { get; set; }
+		public List<ClimbSlotRefreshJob> Jobs { get; set; } = new List<ClimbSlotRefreshJob>();
+		public List<ClimbSlotVisualSnapshot> PreviousSnapshots { get; set; } = new List<ClimbSlotVisualSnapshot>();
+
+		public bool IsAnimating => Phase == ClimbSlotRefreshPhase.Animating && Jobs.Count > 0;
+	}
+
+	public class ClimbSlotRefreshJob
+	{
+		public ClimbSlotKind Kind { get; set; }
+		public int SlotIndex { get; set; } = -1;
+		public float StaggerSeconds { get; set; }
+		public ClimbSlotVisualSnapshot Outgoing { get; set; }
+		public ClimbSlotVisualSnapshot Incoming { get; set; }
+
+		public bool HasOutgoing => Outgoing?.IsVisible == true;
+		public bool HasIncoming => Incoming?.IsVisible == true;
+	}
+
+	public class ClimbSlotVisualSnapshot
+	{
+		public ClimbSlotKind Kind { get; set; }
+		public int SlotIndex { get; set; } = -1;
+		public string SlotId { get; set; } = string.Empty;
+		public string Fingerprint { get; set; } = string.Empty;
+		public bool IsVisible { get; set; }
+		public string Title { get; set; } = string.Empty;
+		public string Label { get; set; } = string.Empty;
+		public string Meta { get; set; } = string.Empty;
+		public int GeneratedAtTime { get; set; }
+		public int Duration { get; set; }
+		public int TimeCost { get; set; }
+		public ClimbResourceSave Cost { get; set; } = new ClimbResourceSave { red = 0, white = 0, black = 0 };
+		public ClimbResourceSave Reward { get; set; } = new ClimbResourceSave { red = 0, white = 0, black = 0 };
+		public bool IsSold { get; set; }
+		public bool IsCompleted { get; set; }
+		public bool IsUnavailable { get; set; }
+		public bool IsAffordable { get; set; } = true;
+		public bool IsFinal { get; set; }
+		public BattleLocation BattleLocation { get; set; } = BattleLocation.Desert;
+		public string PortraitAsset { get; set; } = string.Empty;
+		public ClimbEventKind EventKind { get; set; }
+		public string GainLine1 { get; set; } = string.Empty;
+		public string GainLine2 { get; set; } = string.Empty;
+		public float Opacity { get; set; } = 1f;
 	}
 
 	public class ClimbHeaderElement : IComponent
@@ -139,6 +197,10 @@ namespace Crusaders30XX.ECS.Components
 		public string GainLine1 { get; set; } = string.Empty;
 		public string GainLine2 { get; set; } = string.Empty;
 		public float Opacity { get; set; } = 1f;
+		public float AnimationOffsetX { get; set; }
+		public float AnimationOpacityMultiplier { get; set; } = 1f;
+		public bool ClipToBounds { get; set; }
+		public bool IsRefreshShadow { get; set; }
 	}
 
 	public class ClimbEncounterSlotAction : IComponent

@@ -262,6 +262,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             return ui.IsInteractable
                 || !string.IsNullOrWhiteSpace(ui.Tooltip)
+                || !string.IsNullOrWhiteSpace(ui.TooltipKeywordSource)
                 || ui.TooltipType == TooltipType.Card
                 || ui.TooltipType == TooltipType.Equipment
                 || ui.TooltipType == TooltipType.Quests

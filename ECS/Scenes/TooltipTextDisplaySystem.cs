@@ -21,9 +21,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly SpriteFont _font;
-		private readonly Texture2D _pixel;
-		private Texture2D _rounded;
-		private int _cachedW, _cachedH, _cachedR;
+		private readonly Dictionary<(int Width, int Height, int Radius), Texture2D> _roundedCache = new();
 
 		[DebugEditable(DisplayName = "Padding", Step = 1, Min = 0, Max = 40)]
 		public int Padding { get; set; } = 8;
@@ -52,8 +50,23 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Max Width", Step = 10, Min = 50, Max = 1000)]
 		public int MaxWidth { get; set; } = 400;
 
+		[DebugEditable(DisplayName = "Stack Gap", Step = 1, Min = 0, Max = 40)]
+		public int StackGap { get; set; } = 6;
 
-		private class FadeState { public float Alpha01; public bool TargetVisible; public Rectangle Rect; public string Text; }
+		private sealed class TooltipRenderBlock
+		{
+			public Rectangle Rect;
+			public string Text;
+		}
+
+		private sealed class FadeState
+		{
+			public float Alpha01;
+			public bool TargetVisible;
+			public Rectangle Rect;
+			public List<TooltipRenderBlock> Blocks = new();
+		}
+
 		private readonly Dictionary<int, FadeState> _fadeByEntityId = new();
 
 		public TooltipTextDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
@@ -62,8 +75,6 @@ namespace Crusaders30XX.ECS.Systems
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_font = FontSingleton.ChakraPetchFont;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -86,14 +97,18 @@ namespace Crusaders30XX.ECS.Systems
 					&& !x.UI.IsHidden
 					&& (
 						!string.IsNullOrWhiteSpace(x.UI.Tooltip) || 
+						!string.IsNullOrWhiteSpace(x.UI.TooltipKeywordSource) ||
 						x.E.GetComponent<Frozen>() != null ||
 						x.E.GetComponent<Brittle>() != null ||
+						x.E.GetComponent<Scorched>() != null ||
+						x.E.GetComponent<Thorned>() != null ||
+						x.E.GetComponent<Colorless>() != null ||
 						x.E.GetComponent<Intimidated>() != null || 
 						x.E.GetComponent<Shackle>() != null ||
 						x.E.GetComponent<Pledge>() != null ||
 						x.E.GetComponent<PledgePreview>() != null ||
 						x.E.GetComponent<Sealed>() != null ||
-					x.E.GetComponent<Recoil>() != null
+						x.E.GetComponent<Recoil>() != null
 					))
 				.OrderByDescending(x => x.T?.ZOrder ?? 0)
 				.ToList();
@@ -107,59 +122,60 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (top != null)
 			{
-				string text = TooltipTextService.BuildCardTooltip(top.E, top.UI.Tooltip, EntityManager);
-				Rectangle anchorBounds = TransformResolverService.ResolveUIBounds(
-					EntityManager,
+				var blocks = TooltipTextService.BuildTooltipBlocks(
 					top.E,
-					top.UI);
-
-				// Wrap text based on MaxWidth
-				var wrappedLines = TextUtils.WrapText(_font, text, TextScale, MaxWidth);
-				text = string.Join("\n", wrappedLines);
-
-				int pad = System.Math.Max(0, Padding);
-				var size = _font.MeasureString(text) * TextScale;
-				int w = (int)System.Math.Ceiling(size.X) + pad * 2;
-				int h = (int)System.Math.Ceiling(size.Y) + pad * 2;
-
-				// Position based on UI.TooltipPosition
-				int rx = anchorBounds.X;
-				int ry = anchorBounds.Y;
-				int gap = System.Math.Max(0, top.UI.TooltipOffsetPx);
-				switch (top.UI.TooltipPosition)
+					top.UI.Tooltip,
+					EntityManager,
+					top.UI.TooltipKeywordSource);
+				if (blocks.Count > 0)
 				{
-					case TooltipPosition.Above:
-						rx = anchorBounds.X + (anchorBounds.Width - w) / 2;
-						ry = anchorBounds.Y - h - gap;
-						break;
-					case TooltipPosition.Below:
-						rx = anchorBounds.X + (anchorBounds.Width - w) / 2;
-						ry = anchorBounds.Bottom + gap;
-						break;
-					case TooltipPosition.Right:
-						rx = anchorBounds.Right + gap;
-						ry = anchorBounds.Y + (anchorBounds.Height - h) / 2;
-						break;
-					case TooltipPosition.Left:
-						rx = anchorBounds.X - w - gap;
-						ry = anchorBounds.Y + (anchorBounds.Height - h) / 2;
-						break;
-				}
-				var rect = new Rectangle(rx, ry, w, h);
-				// Screen clamp
-				rect.X = System.Math.Max(0, System.Math.Min(rect.X, Game1.VirtualWidth - rect.Width));
-				rect.Y = System.Math.Max(0, System.Math.Min(rect.Y, Game1.VirtualHeight - rect.Height));
+					Rectangle anchorBounds = TransformResolverService.ResolveUIBounds(
+						EntityManager,
+						top.E,
+						top.UI);
 
-				var id = top.E.Id;
-				if (!_fadeByEntityId.TryGetValue(id, out var fs))
-				{
-					fs = new FadeState { Alpha01 = 0f, TargetVisible = true, Rect = rect, Text = text };
+					var measured = MeasureBlocks(blocks);
+
+					// Position based on UI.TooltipPosition
+					int rx = anchorBounds.X;
+					int ry = anchorBounds.Y;
+					int gap = System.Math.Max(0, top.UI.TooltipOffsetPx);
+					switch (top.UI.TooltipPosition)
+					{
+						case TooltipPosition.Above:
+							rx = anchorBounds.X + (anchorBounds.Width - measured.Size.X) / 2;
+							ry = anchorBounds.Y - measured.Size.Y - gap;
+							break;
+						case TooltipPosition.Below:
+							rx = anchorBounds.X + (anchorBounds.Width - measured.Size.X) / 2;
+							ry = anchorBounds.Bottom + gap;
+							break;
+						case TooltipPosition.Right:
+							rx = anchorBounds.Right + gap;
+							ry = anchorBounds.Y + (anchorBounds.Height - measured.Size.Y) / 2;
+							break;
+						case TooltipPosition.Left:
+							rx = anchorBounds.X - measured.Size.X - gap;
+							ry = anchorBounds.Y + (anchorBounds.Height - measured.Size.Y) / 2;
+							break;
+					}
+					var rect = new Rectangle(rx, ry, measured.Size.X, measured.Size.Y);
+					// Screen clamp
+					rect.X = System.Math.Max(0, System.Math.Min(rect.X, Game1.VirtualWidth - rect.Width));
+					rect.Y = System.Math.Max(0, System.Math.Min(rect.Y, Game1.VirtualHeight - rect.Height));
+					var renderBlocks = BuildRenderBlocks(measured.Blocks, rect.Location);
+
+					var id = top.E.Id;
+					if (!_fadeByEntityId.TryGetValue(id, out var fs))
+					{
+						fs = new FadeState { Alpha01 = 0f, TargetVisible = true, Rect = rect, Blocks = renderBlocks };
+						_fadeByEntityId[id] = fs;
+					}
+					fs.TargetVisible = true;
+					fs.Rect = rect;
+					fs.Blocks = renderBlocks;
 					_fadeByEntityId[id] = fs;
 				}
-				fs.TargetVisible = true;
-				fs.Rect = rect;
-				fs.Text = text;
-				_fadeByEntityId[id] = fs;
 			}
 
 			// Update and draw all fade states
@@ -176,28 +192,79 @@ namespace Crusaders30XX.ECS.Systems
 					continue;
 				}
 
-				int w = fs.Rect.Width;
-				int h = fs.Rect.Height;
-				int r = System.Math.Max(0, System.Math.Min(CornerRadius, System.Math.Min(w, h) / 2));
-				bool rebuild = _rounded == null || _cachedW != w || _cachedH != h || _cachedR != r;
-				if (rebuild)
-				{
-					_rounded?.Dispose();
-					_rounded = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, w, h, r);
-					_cachedW = w; _cachedH = h; _cachedR = r;
-				}
-
 				int alpha = (int)System.Math.Round(MaxAlpha * fs.Alpha01);
 				var backColor = new Color(0, 0, 0, System.Math.Clamp(alpha, 0, 255));
-				_spriteBatch.Draw(_rounded, fs.Rect, null, backColor, 0f, Vector2.Zero, SpriteEffects.None, 0.999f);
-				// DrawBorder(fs.Rect, Color.White, 2);
 				int pad = System.Math.Max(0, Padding);
-				var textPos = new Vector2(fs.Rect.X + pad, fs.Rect.Y + pad);
 				var textColor = new Color(TextColorR, TextColorG, TextColorB, 255) * fs.Alpha01;
-				_spriteBatch.DrawString(_font, fs.Text, textPos, textColor, 0f, Vector2.Zero, TextScale, SpriteEffects.None, 1.0f);
+				foreach (var block in fs.Blocks)
+				{
+					var texture = GetRoundedTexture(block.Rect);
+					_spriteBatch.Draw(texture, block.Rect, null, backColor, 0f, Vector2.Zero, SpriteEffects.None, 0.999f);
+					var textPos = new Vector2(block.Rect.X + pad, block.Rect.Y + pad);
+					_spriteBatch.DrawString(_font, block.Text, textPos, textColor, 0f, Vector2.Zero, TextScale, SpriteEffects.None, 1.0f);
+				}
 			}
+		}
+
+		private (List<TooltipRenderBlock> Blocks, Point Size) MeasureBlocks(
+			IReadOnlyList<TooltipTextService.TooltipTextBlock> sourceBlocks)
+		{
+			int pad = System.Math.Max(0, Padding);
+			int stackGap = System.Math.Max(0, StackGap);
+			var measured = new List<TooltipRenderBlock>();
+			int stackWidth = 0;
+			int stackHeight = 0;
+
+			foreach (var block in sourceBlocks)
+			{
+				string text = string.Join("\n", TextUtils.WrapText(_font, block.Text, TextScale, MaxWidth));
+				var size = _font.MeasureString(text) * TextScale;
+				int width = (int)System.Math.Ceiling(size.X) + pad * 2;
+				int height = (int)System.Math.Ceiling(size.Y) + pad * 2;
+				measured.Add(new TooltipRenderBlock
+				{
+					Rect = new Rectangle(0, 0, width, height),
+					Text = text,
+				});
+				stackWidth = System.Math.Max(stackWidth, width);
+				stackHeight += height;
+			}
+
+			if (measured.Count > 1)
+				stackHeight += stackGap * (measured.Count - 1);
+
+			return (measured, new Point(stackWidth, stackHeight));
+		}
+
+		private List<TooltipRenderBlock> BuildRenderBlocks(List<TooltipRenderBlock> measuredBlocks, Point stackLocation)
+		{
+			int y = stackLocation.Y;
+			int stackGap = System.Math.Max(0, StackGap);
+			int width = measuredBlocks.Count == 0 ? 0 : measuredBlocks.Max(block => block.Rect.Width);
+			var renderBlocks = new List<TooltipRenderBlock>(measuredBlocks.Count);
+
+			foreach (var block in measuredBlocks)
+			{
+				var rect = new Rectangle(stackLocation.X, y, width, block.Rect.Height);
+				renderBlocks.Add(new TooltipRenderBlock { Rect = rect, Text = block.Text });
+				y += block.Rect.Height + stackGap;
+			}
+
+			return renderBlocks;
+		}
+
+		private Texture2D GetRoundedTexture(Rectangle rect)
+		{
+			int r = System.Math.Max(0, System.Math.Min(CornerRadius, System.Math.Min(rect.Width, rect.Height) / 2));
+			var key = (rect.Width, rect.Height, r);
+			if (!_roundedCache.TryGetValue(key, out var texture))
+			{
+				texture = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, rect.Width, rect.Height, r);
+				_roundedCache[key] = texture;
+			}
+
+			return texture;
 		}
 
 	}
 }
-

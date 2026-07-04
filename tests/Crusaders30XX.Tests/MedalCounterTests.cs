@@ -105,6 +105,39 @@ public class MedalCounterTests
 	}
 
 	[Fact]
+	public void StClare_deals_damage_on_start_battle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			var enemy = entityManager.CreateEntity("Enemy");
+			var medal = new StClare();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+			var damageRequests = new List<ModifyHpRequestEvent>();
+			EventManager.Subscribe<ModifyHpRequestEvent>(evt => damageRequests.Add(evt));
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			medal.Activate();
+
+			Assert.Equal(1, activateCount);
+			Assert.Single(damageRequests);
+			Assert.Same(player, damageRequests[0].Source);
+			Assert.Same(enemy, damageRequests[0].Target);
+			Assert.Equal(-2, damageRequests[0].Delta);
+			Assert.Equal(ModifyTypeEnum.Effect, damageRequests[0].DamageType);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
 	public void StHomobonus_grants_climb_resources_after_three_encounters()
 	{
 		EventManager.Clear();

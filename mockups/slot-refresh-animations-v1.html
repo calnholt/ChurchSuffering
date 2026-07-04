@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Slot Refresh Animations</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: shop full refresh (SHOP_REFRESH_INTERVAL) + per-slot enemy/mystery expiry
+    - Archetype: D — meta-layer climb columns (ShopColumn + EnemyColumn display)
+    - Animation: conveyor belt — exit left (-X), enter from right (+X), same for shop and encounters
+    - Block column input during refresh; stagger by slot index (~70ms)
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #c41e3a;
+    --gold: #e8c84a;
+    --shop-bg: rgba(255, 255, 255, 0.1);
+    --shop-border: rgba(255, 255, 255, 0.55);
+    --enemy-bg: rgba(196, 30, 58, 0.1);
+    --enemy-border: rgba(196, 30, 58, 0.45);
+    --panel-border: rgba(255, 255, 255, 0.85);
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --text-dim: #888;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    padding: 28px 24px 80px;
+  }
+
+  .page-header {
+    max-width: 960px;
+    margin: 0 auto 32px;
+    text-align: center;
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #e44, #f88, #e44);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .page-header p {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    line-height: 1.65;
+    max-width: 760px;
+    margin: 0 auto 18px;
+  }
+
+  .global-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 36px;
+  }
+
+  .action-btn {
+    padding: 10px 20px;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+
+  .action-btn:hover:not(:disabled) {
+    background: var(--black-3);
+    border-color: var(--red-3);
+  }
+
+  .action-btn.is-primary {
+    background: rgba(139, 0, 0, 0.35);
+    border-color: var(--red-3);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .action-btn:active:not(:disabled) { transform: scale(0.98); }
+
+  .demo-shell {
+    max-width: min(calc(100vw - 48px), 1320px);
+    margin: 0 auto 48px;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    padding: 20px 20px 24px;
+  }
+
+  .variant-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--black-4);
+  }
+
+  .variant-label {
+    font-size: 0.58rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+
+  .variant-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.35rem;
+    letter-spacing: 1px;
+    color: var(--white-1);
+    margin-bottom: 4px;
+  }
+
+  .variant-desc {
+    font-size: 0.72rem;
+    color: var(--white-3);
+    line-height: 1.5;
+    max-width: 640px;
+  }
+
+  .variant-meta {
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: right;
+  }
+
+  .variant-meta strong { color: var(--white-2); }
+
+  .viewport-scaler {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    background: #0a090d;
+    border: 1px solid #2a2830;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 200px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .scene-bg {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert_background_location.png') center top / cover no-repeat;
+  }
+
+  .scene-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  .meta-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 90px;
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    padding: 10px 32px 12px;
+    border-bottom: 1px solid var(--black-4);
+    background: rgba(10, 10, 10, 0.82);
+    z-index: 5;
+  }
+
+  .timeline-mock {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(8, 8, 8, 0.6);
+    padding: 10px;
+    min-width: 0;
+  }
+
+  .timeline-slot {
+    flex: 1;
+    min-width: 4px;
+    height: 19px;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  }
+
+  .timeline-slot.filled { background: linear-gradient(180deg, rgba(196,30,58,0.5), rgba(196,30,58,0.15)); }
+  .timeline-slot.shop { background: rgba(255,255,255,0.18); }
+
+  .resource-mock {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 0 12px;
+    border: 2px solid var(--panel-border);
+    background: rgba(8, 8, 8, 0.92);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .resource-mock span { color: var(--red-3); }
+
+  .weapon-btn {
+    width: 67px;
+    height: 67px;
+    border: 2px solid var(--panel-border);
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(8, 8, 8, 0.92);
+    flex-shrink: 0;
+  }
+
+  .weapon-btn img { width: 100%; height: 100%; object-fit: cover; }
+
+  .columns-wrap {
+    position: absolute;
+    top: 114px;
+    left: 80px;
+    right: 80px;
+    bottom: 48px;
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    z-index: 4;
+  }
+
+  .meta-column {
+    flex: 1;
+    max-width: 520px;
+    border: 2px solid;
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .meta-column--shop {
+    background: linear-gradient(180deg, var(--shop-bg), rgba(8, 8, 8, 0.92));
+    border-color: var(--shop-border);
+  }
+
+  .meta-column--enemies {
+    background: linear-gradient(180deg, var(--enemy-bg), rgba(8, 8, 8, 0.92));
+    border-color: var(--enemy-border);
+  }
+
+  .column-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+    border-bottom: 2px solid;
+  }
+
+  .meta-column--shop .column-title { border-color: var(--white-1); }
+  .meta-column--enemies .column-title { border-color: var(--red-3); }
+
+  .column-subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 12px;
+  }
+
+  .slot-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .slot-clip {
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    flex-shrink: 0;
+  }
+
+  .slot-clip--shop { min-height: 72px; }
+  .slot-clip--enemy { min-height: 220px; }
+
+  .slot-inner {
+    will-change: transform, opacity;
+  }
+
+  .shop-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 2px 10px;
+    padding: 8px 10px;
+    background: rgba(8, 8, 8, 0.92);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 3px;
+  }
+
+  .shop-card__title {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .shop-card__badge {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--white-3);
+  }
+
+  .shop-card__meta {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .shop-card__cost,
+  .shop-card__time {
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+  }
+
+  .shop-card__cost .coin {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 6px rgba(232, 200, 74, 0.4);
+  }
+
+  .shop-card__time .hourglass {
+    width: 10px;
+    height: 14px;
+    border: 1.5px solid var(--white-2);
+    border-radius: 1px;
+    position: relative;
+  }
+
+  .shop-card__time .hourglass::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 1px;
+    background: var(--white-2);
+    transform: translate(-50%, -50%);
+  }
+
+  .enemy-card {
+    border: 2px solid rgba(196, 30, 58, 0.45);
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(8, 8, 8, 0.92);
+  }
+
+  .enemy-card__portrait {
+    height: 148px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 20%, var(--black-3), var(--black-1));
+    border-bottom: 2px solid var(--enemy-border);
+  }
+
+  .enemy-card__portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  .enemy-card__details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    gap: 10px;
+  }
+
+  .enemy-card__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white-1);
+  }
+
+  .enemy-card__reward {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red-3);
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .enemy-card__reward .pip {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--red-3);
+  }
+
+  .phase-badge {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 14px;
+    background: rgba(8, 8, 8, 0.88);
+    border: 1px solid var(--black-4);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    z-index: 10;
+    border-radius: 3px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .phase-badge.is-active {
+    color: var(--gold);
+    border-color: rgba(232, 200, 74, 0.45);
+  }
+
+  .notes-section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px;
+    background: var(--black-1);
+    border: 1px solid var(--black-4);
+    border-radius: 4px;
+  }
+
+  .notes-section h2 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--white-1);
+    margin-bottom: 12px;
+  }
+
+  .notes-section ul {
+    list-style: none;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--white-3);
+  }
+
+  .notes-section li { padding-left: 14px; position: relative; margin-bottom: 6px; }
+  .notes-section li::before {
+    content: '-';
+    position: absolute;
+    left: 0;
+    color: var(--red-3);
+  }
+
+  .notes-section strong { color: var(--white-2); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Slot Refresh Animations</h1>
+  <p>
+    Conveyor belt enter/exit for timed shop refreshes and encounter rotation on the meta layer.
+    Slots exit left and replacements enter from the right — same motion for shop and encounters.
+  </p>
+</header>
+
+<div class="global-controls">
+  <button type="button" class="action-btn is-primary" id="replay-all">Replay</button>
+  <button type="button" class="action-btn" id="replay-shop-only">Shop Refresh Only</button>
+  <button type="button" class="action-btn" id="replay-enemy-only">Enemy Expiry Only</button>
+</div>
+
+<div class="demo-shell">
+  <div class="variant-header">
+    <div>
+      <div class="variant-label">Conveyor Belt</div>
+      <h2 class="variant-title">Horizontal Slot Swap</h2>
+      <p class="variant-desc">
+        Expired slots slide out to the left while replacements march in from the right.
+        Shop and encounter columns share the same axis and stagger timing.
+      </p>
+    </div>
+    <div class="variant-meta">
+      Exit: <strong>-X left</strong><br>
+      Enter: <strong>+X right</strong><br>
+      Stagger: <strong>70ms</strong>
+    </div>
+  </div>
+  <div class="viewport-scaler" id="scaler">
+    <div class="viewport" id="viewport"></div>
+  </div>
+</div>
+
+<section class="notes-section">
+  <h2>Implementation Notes</h2>
+  <ul>
+    <li><strong>Shop refresh</strong> swaps all shop slots at once when the global refresh timer fires.</li>
+    <li><strong>Enemy expiry</strong> rotates one slot independently when its leave timer hits zero.</li>
+    <li>Both use identical conveyor motion: translateX exit left, enter from right.</li>
+    <li>Block pointer input on affected columns for the full animation duration (~700ms).</li>
+    <li>Swap entity data at peak exit (opacity near 0) to avoid visible content pop.</li>
+  </ul>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  const SHOP_POOL = [
+    { title: 'Iron Pact', badge: 'Relic', cost: 30 },
+    { title: 'Blessing', badge: 'Card', cost: 15 },
+    { title: 'Whetstone', badge: 'Upgrade', cost: 20 },
+    { title: 'Holy Water', badge: 'Consumable', cost: 25 },
+    { title: 'Med Kit', badge: 'Heal', cost: 40 },
+    { title: 'Relic Shard', badge: 'Relic', cost: 50 },
+    { title: 'Scout Map', badge: 'Info', cost: 12 },
+    { title: 'Tempered Blade', badge: 'Weapon', cost: 35 },
+  ];
+
+  const ENEMY_POOL = [
+    { name: 'Fire Skeleton', img: '../Content/Fire_Skeleton.png', reward: 3 },
+    { name: 'Skeletal Archer', img: '../Content/Skeletal_Archer.png', reward: 2 },
+    { name: 'Ogre', img: '../Content/Ogre.png', reward: 4 },
+    { name: 'Demon', img: '../Content/Demon.png', reward: 5 },
+    { name: 'Mummy', img: '../Content/Mummy.png', reward: 3 },
+    { name: 'Wyvern', img: '../Content/Wyvern.png', reward: 6 },
+    { name: 'Ice Mite', img: '../Content/Ice_Mite.png', reward: 2 },
+    { name: 'Sentinel', img: '../Content/Sentinel.png', reward: 4 },
+  ];
+
+  const SHOP_COUNT = 4;
+  const ENEMY_COUNT = 2;
+  const STAGGER_MS = 70;
+  const OUT_DUR = 320;
+  const IN_DUR = 340;
+
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  const easeIn = t => t * t * t;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp01 = t => Math.max(0, Math.min(1, t));
+
+  let poolIdx = { shop: 0, enemy: 0 };
+  let runner = null;
+
+  function nextFromPool(pool, key) {
+    const item = pool[poolIdx[key] % pool.length];
+    poolIdx[key] += 1;
+    return { ...item };
+  }
+
+  function buildShopCard(data) {
+    return `
+      <div class="shop-card">
+        <div class="shop-card__title">${data.title}</div>
+        <div class="shop-card__badge">${data.badge}</div>
+        <div class="shop-card__meta">
+          <div class="shop-card__cost"><span class="coin"></span>${data.cost}g</div>
+          <div class="shop-card__time"><span class="hourglass"></span>+2</div>
+        </div>
+      </div>`;
+  }
+
+  function buildEnemyCard(data) {
+    return `
+      <div class="enemy-card">
+        <div class="enemy-card__portrait">
+          <img src="${data.img}" alt="${data.name}">
+        </div>
+        <div class="enemy-card__details">
+          <div class="enemy-card__name">${data.name}</div>
+          <div class="enemy-card__reward"><span class="pip"></span>+${data.reward}</div>
+        </div>
+      </div>`;
+  }
+
+  function buildViewport() {
+    const filled = 6;
+    const timelineSlots = Array.from({ length: 24 }, (_, i) => {
+      let cls = 'timeline-slot';
+      if (i < filled) cls += ' filled';
+      if (i === 8 || i === 16) cls += ' shop';
+      return `<div class="${cls}"></div>`;
+    }).join('');
+
+    const shopSlots = Array.from({ length: SHOP_COUNT }, (_, i) => {
+      const data = SHOP_POOL[i % SHOP_POOL.length];
+      return `
+        <div class="slot-clip slot-clip--shop" data-kind="shop" data-index="${i}">
+          <div class="slot-inner">${buildShopCard(data)}</div>
+        </div>`;
+    }).join('');
+
+    const enemySlots = Array.from({ length: ENEMY_COUNT }, (_, i) => {
+      const data = ENEMY_POOL[i % ENEMY_POOL.length];
+      return `
+        <div class="slot-clip slot-clip--enemy" data-kind="enemy" data-index="${i}">
+          <div class="slot-inner">${buildEnemyCard(data)}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="scene-bg"></div>
+      <div class="scene-dim"></div>
+      <header class="meta-header">
+        <div class="timeline-mock">${timelineSlots}</div>
+        <div class="resource-mock"><span>12</span> <span>8</span> <span>4</span></div>
+        <div class="weapon-btn"><img src="../Content/crusader_sword.png" alt=""></div>
+      </header>
+      <div class="columns-wrap">
+        <div class="meta-column meta-column--shop" data-column="shop">
+          <h3 class="column-title">Shop</h3>
+          <div class="column-subtitle">Refreshes on timeline</div>
+          <div class="slot-stack" data-stack="shop">${shopSlots}</div>
+        </div>
+        <div class="meta-column meta-column--enemies" data-column="enemy">
+          <h3 class="column-title">Encounters</h3>
+          <div class="column-subtitle">Leave when timer ends</div>
+          <div class="slot-stack" data-stack="enemy">${enemySlots}</div>
+        </div>
+      </div>
+      <div class="phase-badge" data-phase>Idle</div>
+      <button type="button" class="action-btn is-primary" id="replay-inline"
+        style="position:absolute;bottom:16px;right:24px;z-index:12;">Replay</button>
+    `;
+  }
+
+  function scaleViewport() {
+    const scaler = document.getElementById('scaler');
+    const viewport = document.getElementById('viewport');
+    const w = scaler.clientWidth;
+    const scale = w / 1920;
+    viewport.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${1080 * scale}px`;
+  }
+
+  function applyConveyorTransform(inner, t, phase, stagger) {
+    const local = clamp01((t - stagger) / (1 - stagger));
+    const e = phase === 'out' ? easeIn(local) : easeOut(local);
+    const x = phase === 'out'
+      ? lerp(0, -1.15, e)
+      : lerp(1.15, 0, easeOut(local));
+    const opacity = phase === 'out' ? 1 - e * 0.85 : easeOut(local);
+    inner.style.transform = `translateX(${x * 100}%)`;
+    inner.style.opacity = opacity;
+  }
+
+  function resetSlotStyle(inner) {
+    inner.style.transform = '';
+    inner.style.opacity = '';
+  }
+
+  class AnimRunner {
+    constructor(duration, onFrame, onComplete) {
+      this.duration = duration;
+      this.onFrame = onFrame;
+      this.onComplete = onComplete;
+      this.startTime = null;
+      this.raf = null;
+      this.running = false;
+    }
+
+    start() {
+      this.stop();
+      this.running = true;
+      this.startTime = null;
+      const tick = ts => {
+        if (!this.running) return;
+        if (this.startTime === null) this.startTime = ts;
+        const t = Math.min(1, (ts - this.startTime) / this.duration);
+        this.onFrame(t);
+        if (t >= 1) {
+          this.running = false;
+          if (this.onComplete) this.onComplete();
+          return;
+        }
+        this.raf = requestAnimationFrame(tick);
+      };
+      this.raf = requestAnimationFrame(tick);
+    }
+
+    stop() {
+      this.running = false;
+      if (this.raf) cancelAnimationFrame(this.raf);
+    }
+  }
+
+  function animateSlots(targets) {
+    const viewport = document.getElementById('viewport');
+    const phaseEl = viewport.querySelector('[data-phase]');
+    const totalDur = OUT_DUR + IN_DUR + targets.length * STAGGER_MS;
+
+    if (runner) runner.stop();
+
+    const jobs = targets.map(target => {
+      const clip = viewport.querySelector(
+        `.slot-clip[data-kind="${target.kind}"][data-index="${target.index}"]`
+      );
+      const inner = clip.querySelector('.slot-inner');
+      const stagger = (target.kind === 'shop' ? target.index : target.index + SHOP_COUNT) * (STAGGER_MS / totalDur);
+      return { inner, stagger, newData: target.newData, kind: target.kind };
+    });
+
+    phaseEl.textContent = 'Exiting';
+    phaseEl.classList.add('is-active');
+
+    runner = new AnimRunner(totalDur, t => {
+      const elapsed = t * totalDur;
+      if (elapsed < OUT_DUR + jobs.length * STAGGER_MS * 0.5) {
+        phaseEl.textContent = 'Exiting';
+        jobs.forEach(j => {
+          applyConveyorTransform(j.inner, elapsed / OUT_DUR, 'out', j.stagger);
+        });
+      } else {
+        const swapPoint = OUT_DUR * 0.72;
+        if (elapsed >= swapPoint && !jobs[0].swapped) {
+          jobs.forEach(j => {
+            j.inner.innerHTML = j.kind === 'shop'
+              ? buildShopCard(j.newData)
+              : buildEnemyCard(j.newData);
+            j.swapped = true;
+          });
+        }
+        phaseEl.textContent = 'Entering';
+        const inElapsed = elapsed - OUT_DUR;
+        jobs.forEach(j => {
+          applyConveyorTransform(j.inner, inElapsed / IN_DUR, 'in', j.stagger);
+        });
+      }
+    }, () => {
+      jobs.forEach(j => resetSlotStyle(j.inner));
+      phaseEl.textContent = 'Idle';
+      phaseEl.classList.remove('is-active');
+    });
+
+    runner.start();
+  }
+
+  function buildShopRefreshTargets() {
+    return Array.from({ length: SHOP_COUNT }, (_, i) => ({
+      kind: 'shop',
+      index: i,
+      newData: nextFromPool(SHOP_POOL, 'shop'),
+    }));
+  }
+
+  function buildEnemyExpiryTargets() {
+    return [{
+      kind: 'enemy',
+      index: 0,
+      newData: nextFromPool(ENEMY_POOL, 'enemy'),
+    }];
+  }
+
+  function play(mode) {
+    let targets = [];
+    if (mode === 'all' || mode === 'shop') targets = targets.concat(buildShopRefreshTargets());
+    if (mode === 'all' || mode === 'enemy') targets = targets.concat(buildEnemyExpiryTargets());
+    if (targets.length === 0) return;
+    animateSlots(targets);
+  }
+
+  function init() {
+    const viewport = document.getElementById('viewport');
+    viewport.innerHTML = buildViewport();
+
+    document.getElementById('replay-all').addEventListener('click', () => play('all'));
+    document.getElementById('replay-shop-only').addEventListener('click', () => play('shop'));
+    document.getElementById('replay-enemy-only').addEventListener('click', () => play('enemy'));
+    document.getElementById('replay-inline').addEventListener('click', () => play('all'));
+
+    window.addEventListener('resize', scaleViewport);
+    scaleViewport();
+    setTimeout(() => play('all'), 500);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

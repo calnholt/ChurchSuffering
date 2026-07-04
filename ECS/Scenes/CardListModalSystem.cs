@@ -931,94 +931,142 @@ namespace Crusaders30XX.ECS.Systems
 
             var liveKeys = new HashSet<string>();
             var player = GetPlayer();
-            int y = layout.BuildClip.Y - modal.BuildScrollOffset;
-            y += 92;
+            foreach (InventoryHitRegion region in MeasureInventoryHitRegions(player, modal, layout.BuildClip))
+            {
+                liveKeys.Add(region.Key);
+                if (region.Key == "weapon")
+                {
+                    Entity weapon = ResolveWeaponPreview(player);
+                    if (weapon == null) continue;
 
+                    var ui = weapon.GetComponent<UIElement>();
+                    if (ui != null)
+                    {
+                        ui.LayerType = UILayerType.Overlay;
+                        ui.TooltipPosition = TooltipPosition.Right;
+                        ui.Bounds = region.Bounds.Intersects(layout.BuildClip) ? region.Bounds : Rectangle.Empty;
+                        ui.IsInteractable = false;
+                        ui.IsHidden = ui.Bounds == Rectangle.Empty;
+                    }
+
+                    InputContextService.EnsureMember(EntityManager, weapon, ContextId);
+                    _inventoryAuxCardIds.Add(weapon.Id);
+                    EnsureCardTooltip(weapon);
+                    continue;
+                }
+
+                var entity = EnsureTooltipEntity(region.Key, region.Bounds, layout.BuildClip, region.Type, region.Tooltip, region.TooltipKeywordSource);
+                if (region.Equipment != null)
+                {
+                    _equipmentTooltipByEntityId[entity.Id] = region.Equipment;
+                }
+            }
+
+            CleanupStaleTooltipEntities(liveKeys);
+        }
+
+        private IEnumerable<InventoryHitRegion> MeasureInventoryHitRegions(Entity player, CardListModal modal, Rectangle buildClip)
+        {
+            int x = buildClip.X;
+            int y = buildClip.Y - modal.BuildScrollOffset;
+
+            // Health
+            y += 22 + 70;
+
+            // Weapon
+            y += 22;
             Entity weapon = ResolveWeaponPreview(player);
             if (weapon != null)
             {
-                int left = layout.BuildClip.X + Math.Max(0, (BuildPanelWidth - GridCellW) / 2);
-                var position = new Vector2(left + GridCellW / 2f, y + 22 + GridCellH / 2f + CardOffsetYExtra);
+                int left = x + Math.Max(0, (BuildPanelWidth - GridCellW) / 2);
+                var position = new Vector2(left + GridCellW / 2f, y + GridCellH / 2f + CardOffsetYExtra);
                 var visual = CardGeometryService.GetVisualRect(GetSettings(), position, 1f);
-                var ui = weapon.GetComponent<UIElement>();
-                if (ui != null)
-                {
-                    ui.LayerType = UILayerType.Overlay;
-                    ui.TooltipPosition = TooltipPosition.Right;
-                    ui.Bounds = visual.Intersects(layout.BuildClip) ? visual : Rectangle.Empty;
-                    ui.IsInteractable = false;
-                    ui.IsHidden = false;
-                }
-                InputContextService.EnsureMember(EntityManager, weapon, ContextId);
-                _inventoryAuxCardIds.Add(weapon.Id);
-                EnsureCardTooltip(weapon);
+                yield return new InventoryHitRegion("weapon", visual, TooltipType.Card, string.Empty, string.Empty, null);
+                y += GridCellH + 22;
+            }
+            else
+            {
+                y += 88;
             }
 
-            y += 22 + GridCellH + 22;
-            y += 156;
+            // Temperance
+            y += 22;
+            var temperanceRect = new Rectangle(x, y, BuildPanelWidth, 112);
+            yield return new InventoryHitRegion("temperance", temperanceRect, TooltipType.Text, string.Empty, BuildTemperanceTooltipKeywordSource(player), null);
+            y += 112 + 22;
 
+            // Equipment
+            y += 22;
             var equipmentBySlot = GetPlayerEquipment(player).ToDictionary(e => e.Equipment.Slot, e => e);
             int slotW = (BuildPanelWidth - 10) / 2;
             int slotH = 88;
             var slots = new[] { EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Arms, EquipmentSlot.Legs };
-            int equipmentContentY = y + 22;
             for (int i = 0; i < slots.Length; i++)
             {
                 if (!equipmentBySlot.TryGetValue(slots[i], out var equipment)) continue;
                 int col = i % 2;
                 int row = i / 2;
-                var rect = new Rectangle(layout.BuildClip.X + col * (slotW + 10), equipmentContentY + row * slotH, slotW, 78);
-                string key = "equipment_" + slots[i];
-                liveKeys.Add(key);
-                var entity = EnsureTooltipEntity(key, rect, TooltipType.Equipment, string.Empty);
-                _equipmentTooltipByEntityId[entity.Id] = equipment.Equipment;
+                var rect = new Rectangle(x + col * (slotW + 10), y + row * slotH, slotW, 78);
+                yield return new InventoryHitRegion("equipment_" + slots[i], rect, TooltipType.Equipment, string.Empty, string.Empty, equipment.Equipment);
             }
-            y += 22 + slotH * 2 + 12;
+            y += slotH * 2 + 12;
 
+            // Medals
+            y += 22;
             var medals = GetPlayerMedals(player);
-            const int medalIcon = 56;
-            const int medalGap = 10;
-            int medalCols = Math.Max(1, (BuildPanelWidth + medalGap) / (medalIcon + medalGap));
-            int medalContentY = y + 22;
-            for (int i = 0; i < medals.Count; i++)
+            if (medals.Count == 0)
             {
-                int col = i % medalCols;
-                int row = i / medalCols;
-                var rect = new Rectangle(layout.BuildClip.X + col * (medalIcon + medalGap), medalContentY + row * (medalIcon + medalGap), medalIcon, medalIcon);
-                string key = "medal_" + i;
-                liveKeys.Add(key);
-                EnsureTooltipEntity(key, rect, TooltipType.Text, BuildMedalTooltip(medals[i]));
+                y += 70;
             }
-            int medalRows = medals.Count == 0 ? 1 : (medals.Count + medalCols - 1) / medalCols;
-            y += medals.Count == 0 ? 92 : 22 + medalRows * (medalIcon + medalGap) + 14;
-
-            var passives = player?.GetComponent<AppliedPassives>()?.Passives;
-            if (passives != null && passives.Count > 0)
+            else
             {
-                int cursorX = layout.BuildClip.X;
-                int cursorY = y + 22;
-                int rowH = 0;
-                foreach (var kv in passives.OrderBy(kv => kv.Key.ToString()))
+                const int icon = 56;
+                const int gap = 10;
+                int cols = Math.Max(1, (BuildPanelWidth + gap) / (icon + gap));
+                for (int i = 0; i < medals.Count; i++)
                 {
-                    string label = $"{kv.Value} {StringUtils.ToTitleCase(StringUtils.ToSentenceCase(kv.Key.ToString()))}";
-                    Vector2 size = _bodyFont.MeasureString(label) * PassiveTextScale;
-                    int chipW = (int)Math.Ceiling(size.X) + 24;
-                    int chipH = (int)Math.Ceiling(size.Y) + 10;
-                    if (cursorX > layout.BuildClip.X && cursorX + chipW > layout.BuildClip.X + BuildPanelWidth)
-                    {
-                        cursorX = layout.BuildClip.X;
-                        cursorY += rowH + 10;
-                        rowH = 0;
-                    }
-                    string key = "passive_" + kv.Key;
-                    liveKeys.Add(key);
-                    EnsureTooltipEntity(key, new Rectangle(cursorX, cursorY, chipW, chipH), TooltipType.Text, TooltipTextService.GetPassiveText(kv.Key, isPlayer: true, kv.Value));
-                    cursorX += chipW + 10;
-                    rowH = Math.Max(rowH, chipH);
+                    int col = i % cols;
+                    int row = i / cols;
+                    var rect = new Rectangle(x + col * (icon + gap), y + row * (icon + gap), icon, icon);
+                    yield return new InventoryHitRegion("medal_" + i, rect, TooltipType.Text, BuildMedalTooltip(medals[i]), string.Empty, null);
                 }
+
+                int rows = (medals.Count + cols - 1) / cols;
+                y += rows * (icon + gap) + 14;
             }
 
-            CleanupStaleTooltipEntities(liveKeys);
+            // Passives
+            var passives = player?.GetComponent<AppliedPassives>()?.Passives;
+            if (passives == null || passives.Count == 0) yield break;
+
+            y += 22;
+            int cursorX = x;
+            int cursorY = y;
+            int rowH = 0;
+            foreach (var kv in passives.OrderBy(kv => kv.Key.ToString()))
+            {
+                string label = $"{kv.Value} {StringUtils.ToTitleCase(StringUtils.ToSentenceCase(kv.Key.ToString()))}";
+                Vector2 size = _bodyFont.MeasureString(label) * PassiveTextScale;
+                int chipW = (int)Math.Ceiling(size.X) + 24;
+                int chipH = (int)Math.Ceiling(size.Y) + 10;
+                if (cursorX > x && cursorX + chipW > x + BuildPanelWidth)
+                {
+                    cursorX = x;
+                    cursorY += rowH + 10;
+                    rowH = 0;
+                }
+
+                var rect = new Rectangle(cursorX, cursorY, chipW, chipH);
+                yield return new InventoryHitRegion(
+                    "passive_" + kv.Key,
+                    rect,
+                    TooltipType.Text,
+                    TooltipTextService.GetPassiveText(kv.Key, isPlayer: true, kv.Value),
+                    string.Empty,
+                    null);
+                cursorX += chipW + 10;
+                rowH = Math.Max(rowH, chipH);
+            }
         }
 
         private void CleanupInventoryAuxCards()
@@ -1041,28 +1089,28 @@ namespace Crusaders30XX.ECS.Systems
             _inventoryAuxCardIds.Clear();
         }
 
-        private Entity EnsureTooltipEntity(string key, Rectangle bounds, TooltipType type, string tooltip)
+        private Entity EnsureTooltipEntity(string key, Rectangle bounds, Rectangle buildClip, TooltipType type, string tooltip, string tooltipKeywordSource)
         {
             string name = TooltipEntityPrefix + key;
             var entity = EntityManager.GetEntity(name);
             if (entity == null)
             {
                 entity = EntityManager.CreateEntity(name);
-                EntityManager.AddComponent(entity, new Transform { Position = new Vector2(bounds.X, bounds.Y), ZOrder = 19000 });
+                EntityManager.AddComponent(entity, new Transform { ZOrder = 19000 });
                 EntityManager.AddComponent(entity, new UIElement());
             }
 
             InputContextService.EnsureMember(EntityManager, entity, ContextId);
             var transform = entity.GetComponent<Transform>();
-            transform.Position = new Vector2(bounds.X, bounds.Y);
             transform.ZOrder = 19000;
             var ui = entity.GetComponent<UIElement>();
-            ui.Bounds = new Rectangle(0, 0, bounds.Width, bounds.Height);
+            ui.Bounds = bounds;
             ui.IsInteractable = false;
-            ui.IsHidden = bounds.Width <= 0 || bounds.Height <= 0;
+            ui.IsHidden = bounds.Width <= 0 || bounds.Height <= 0 || !bounds.Intersects(buildClip);
             ui.LayerType = UILayerType.Overlay;
             ui.TooltipType = type;
             ui.Tooltip = tooltip ?? string.Empty;
+            ui.TooltipKeywordSource = tooltipKeywordSource ?? string.Empty;
             ui.TooltipPosition = TooltipPosition.Right;
             ui.TooltipOffsetPx = 12;
             return entity;
@@ -1318,6 +1366,13 @@ namespace Crusaders30XX.ECS.Systems
             return $"{medal.Medal.Name}\n\n{medal.Medal.Text}";
         }
 
+        private string BuildTemperanceTooltipKeywordSource(Entity player)
+        {
+            string abilityId = player?.GetComponent<EquippedTemperanceAbility>()?.AbilityId;
+            var ability = string.IsNullOrWhiteSpace(abilityId) ? null : TemperanceFactory.Create(abilityId);
+            return ability?.Text ?? string.Empty;
+        }
+
         private Texture2D GetTexture(string asset)
         {
             return _imageAssets.TryGetTexture(asset);
@@ -1341,5 +1396,13 @@ namespace Crusaders30XX.ECS.Systems
             Rectangle DeckClip,
             Rectangle BuildClip,
             int InstructionHeight);
+
+        private readonly record struct InventoryHitRegion(
+            string Key,
+            Rectangle Bounds,
+            TooltipType Type,
+            string Tooltip,
+            string TooltipKeywordSource,
+            EquipmentBase Equipment);
     }
 }

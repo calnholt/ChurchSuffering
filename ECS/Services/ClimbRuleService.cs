@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Services
 	public static class ClimbRuleService
 	{
 		public const int MaxTime = 32;
-		public const int ShopSlotCount = 4;
+		public const int ShopSlotCount = 5;
 		public const int EncounterSlotCount = 3;
 		public const int EventSlotCount = 5;
 		public const int ShopRefreshInterval = 8;

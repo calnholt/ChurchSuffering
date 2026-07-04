@@ -269,8 +269,8 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			// Create or update tooltip entity for def.Text if keywords are present
-			string keywordTooltip = TooltipTextService.GetKeywordTooltip(ctx.Def.Text);
-			if (!string.IsNullOrEmpty(keywordTooltip) && hasDefTextLines)
+			var keywordBlocks = TooltipTextService.GetKeywordTooltipBlocks(ctx.Def.Text);
+			if (keywordBlocks.Count > 0 && hasDefTextLines)
 			{
 				var defTextBounds = new Rectangle(
 					(int)Math.Floor(defTextMinX),
@@ -287,7 +287,8 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						Bounds = defTextBounds,
 						IsInteractable = false,
-						Tooltip = keywordTooltip,
+						Tooltip = string.Empty,
+						TooltipKeywordSource = ctx.Def.Text ?? string.Empty,
 						TooltipType = TooltipType.Text,
 						TooltipPosition = TooltipPosition.Below
 					});
@@ -304,7 +305,8 @@ namespace Crusaders30XX.ECS.Systems
 					if (ui != null)
 					{
 						ui.Bounds = defTextBounds;
-						ui.Tooltip = keywordTooltip;
+						ui.Tooltip = string.Empty;
+						ui.TooltipKeywordSource = ctx.Def.Text ?? string.Empty;
 						ui.TooltipType = TooltipType.Text;
 						ui.TooltipPosition = TooltipPosition.Below;
 						ui.IsInteractable = false;

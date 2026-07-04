@@ -1441,6 +1441,17 @@
 /processorParam:TextureFormat=Color
 /build:CardArt/increase_faith.png
 
+#begin CardArt/iron_covenant.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/iron_covenant.png
+
 #begin CardArt/pouch_of_kunai.png
 /importer:TextureImporter
 /processor:TextureProcessor

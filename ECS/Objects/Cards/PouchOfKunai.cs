@@ -2,8 +2,10 @@ using System;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
+using CardIds = Crusaders30XX.ECS.Data.Ids.CardId;
 
 namespace Crusaders30XX.ECS.Objects.Cards
 {
@@ -23,6 +25,8 @@ namespace Crusaders30XX.ECS.Objects.Cards
             VisualEffectRecipe = PlayerBuffEffect();
             Type = CardType.Prayer;
             Block = 3;
+            IsFreeAction = true;
+            CardTooltip = GameIdExtensions.ToKey(CardIds.Kunai);
 
             OnPlay = (entityManager, card) =>
             {
@@ -52,4 +56,3 @@ namespace Crusaders30XX.ECS.Objects.Cards
         }
     }
 }
-

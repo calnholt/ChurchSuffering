@@ -202,6 +202,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			Upgrade,
 			Replacement,
 			Medal,
+			Medal,
 			Equipment,
 		};
 

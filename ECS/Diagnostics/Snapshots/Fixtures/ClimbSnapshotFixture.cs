@@ -274,6 +274,15 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				},
 				new()
 				{
+					id = "shop_medal_2",
+					kind = ClimbShopSlotKinds.Medal,
+					itemId = "st_michael",
+					cost = new ClimbResourceSave { red = 0, white = 1, black = 0 },
+					timeCost = 2,
+					generatedAtTime = time,
+				},
+				new()
+				{
 					id = "shop_equipment",
 					kind = ClimbShopSlotKinds.Equipment,
 					itemId = "knightly_helm",

@@ -450,18 +450,44 @@ public class ClimbRuleServiceTests
 	}
 
 	[Fact]
+	public void Initial_shop_has_two_medal_slots()
+	{
+		var state = ClimbRuleService.CreateInitialState(123, TestLoadout());
+
+		Assert.Equal(2, state.shopSlots.Count(s => s.kind == ClimbShopSlotKinds.Medal));
+	}
+
+	[Fact]
+	public void Shop_refresh_rolls_two_distinct_medals()
+	{
+		var state = ClimbRuleService.CreateInitialState(123, TestLoadout());
+		var medalIds = state.shopSlots
+			.Where(s => s.kind == ClimbShopSlotKinds.Medal)
+			.Select(s => s.itemId)
+			.Where(id => !string.IsNullOrWhiteSpace(id))
+			.ToList();
+
+		Assert.Equal(2, medalIds.Count);
+		Assert.False(string.Equals(medalIds[0], medalIds[1], StringComparison.OrdinalIgnoreCase));
+	}
+
+	[Fact]
 	public void Refresh_shop_excludes_medals_and_equipment_once_shown()
 	{
 		var state = ClimbRuleService.CreateInitialState(123, TestLoadout());
-		var firstMedal = state.shopSlots.FirstOrDefault(s => s.kind == ClimbShopSlotKinds.Medal)?.itemId;
+		var initialMedalIds = state.shopSlots
+			.Where(s => s.kind == ClimbShopSlotKinds.Medal)
+			.Select(s => s.itemId)
+			.Where(id => !string.IsNullOrWhiteSpace(id))
+			.ToList();
 		var firstEquipment = state.shopSlots.FirstOrDefault(s => s.kind == ClimbShopSlotKinds.Equipment)?.itemId;
 
 		state.time = 8;
 		ClimbRuleService.RefreshShopSlots(state, 123, TestLoadout());
 
-		if (!string.IsNullOrWhiteSpace(firstMedal))
+		foreach (var medalId in initialMedalIds)
 		{
-			Assert.DoesNotContain(state.shopSlots, s => string.Equals(s.itemId, firstMedal, StringComparison.OrdinalIgnoreCase));
+			Assert.DoesNotContain(state.shopSlots, s => string.Equals(s.itemId, medalId, StringComparison.OrdinalIgnoreCase));
 		}
 		if (!string.IsNullOrWhiteSpace(firstEquipment))
 		{
