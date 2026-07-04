@@ -14,7 +14,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
         {
             Id = EnemyId.Wyvern;
             Name = "Wyvern";
-            HP = 33;
+            HP = 28;
 
             OnStartOfBattle = (entityManager) =>
             {

@@ -55,8 +55,6 @@ namespace Crusaders30XX.ECS.Systems
 		public float ResourceFadeSeconds { get; set; } = 0.12f;
 		[DebugEditable(DisplayName = "Resource Bar Border Thickness", Step = 1, Min = 1, Max = 6)]
 		public int ResourceBarBorderThickness { get; set; } = 2;
-		[DebugEditable(DisplayName = "Red Resource Glow Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
-		public float RedResourceGlowAlpha { get; set; } = 0.65f;
 		[DebugEditable(DisplayName = "Timeline Hourglass Width", Step = 1, Min = 3, Max = 24)]
 		public int TimelineHourglassWidth { get; set; } = 18;
 		[DebugEditable(DisplayName = "Timeline Hourglass Height", Step = 1, Min = 4, Max = 32)]
@@ -259,7 +257,7 @@ namespace Crusaders30XX.ECS.Systems
 			int groupW = ResourceIconSize + ResourceIconTextGap + (int)Math.Ceiling(amountSize.X);
 			int iconX = rightX - groupW;
 			var iconPos = new Vector2(iconX, iconY);
-			ClimbSceneDrawHelpers.DrawResourceIcon(_spriteBatch, _graphicsDevice, _pixel, iconPos, type, ResourceIconSize, color, glowAlpha: type == ClimbResourceType.Red ? RedResourceGlowAlpha : 0f);
+			ClimbSceneDrawHelpers.DrawResourceIcon(_spriteBatch, _graphicsDevice, _pixel, iconPos, type, ResourceIconSize, color);
 			var textPos = new Vector2(iconPos.X + ResourceIconSize + ResourceIconTextGap, iconPos.Y + ResourceAmountTextYOffset);
 			float previewAlpha = MathHelper.Clamp(_resourcePreviewAlpha, 0f, 1f);
 			if (previewAlpha <= 0.001f || amount == previewAmount)

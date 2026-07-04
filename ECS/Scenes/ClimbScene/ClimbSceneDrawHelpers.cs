@@ -160,18 +160,10 @@ namespace Crusaders30XX.ECS.Systems
 			int size,
 			Color color,
 			bool compact = false,
-			float glowAlpha = 0f,
 			float opacity = 1f)
 		{
 			size = Math.Max(4, size);
 			opacity = MathHelper.Clamp(opacity, 0f, 1f);
-			if (type == ClimbResourceType.Red && glowAlpha > 0.001f)
-			{
-				int glowSize = size + 8;
-				var glowRect = new Rectangle((int)position.X - 4, (int)position.Y - 4, glowSize, glowSize);
-				var glowCircle = PrimitiveTextureFactory.GetAntiAliasedCircle(graphicsDevice, Math.Max(2, glowSize / 2));
-				spriteBatch.Draw(glowCircle, glowRect, RedGlow * (glowAlpha * opacity));
-			}
 
 			Texture2D texture = type switch
 			{
