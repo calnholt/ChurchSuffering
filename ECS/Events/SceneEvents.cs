@@ -5,6 +5,8 @@ using System.Collections.Generic;
 namespace Crusaders30XX.ECS.Events
 {
 	public class StartBattleRequested { }
+	public class OpenWayStationClimbSettingsModalEvent { }
+
 	public class LoadSceneEvent {
 		public SceneId Scene;
 		public SceneId PreviousScene { get; set; } = SceneId.None;

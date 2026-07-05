@@ -464,7 +464,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (sceneEntity == null)
 			{
 				sceneEntity = EntityManager.CreateEntity("SceneState");
-				EntityManager.AddComponent(sceneEntity, new SceneState { Current = SceneId.Internal_QueueEventsMenu });
+				EntityManager.AddComponent(sceneEntity, new SceneState { Current = SceneId.TitleMenu });
 			}
 			EntityFactory.CreateGameState(_world);
 			bool guidedTutorial = GuidedTutorialService.IsActive(EntityManager);

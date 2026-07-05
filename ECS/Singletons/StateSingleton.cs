@@ -11,8 +11,6 @@ namespace Crusaders30XX.ECS.Systems
 		public static bool IsTutorialActive { get; set; } = false;
 		public static bool IsPledgeEnabled { get; set; } = true;
 		public static float LocationMapZoom { get; set; } = 0.75f;
-		public static string ActiveRunShopId { get; set; } = string.Empty;
 	}
 }
-
 

@@ -55,7 +55,7 @@ to the fixture.
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
-| `waystation` | WayStation run setup | Run setup scene with default Sword/Easy selections |
+| `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
 | `climb-hazard-event` | Climb scene | Active Hazard card with visible resource gain |
@@ -288,7 +288,7 @@ dotnet run -- snapshot narrative-event-modal --event icebound_tithe --options 2
 
 ## `waystation`
 
-Renders the WayStation run setup scene with default Sword/Easy selections.
+Renders the WayStation hub scene with the map background, Waystation banner, Climb POI, and Achievement POI.
 
 ### Commands
 

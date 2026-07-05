@@ -38,7 +38,7 @@ namespace Crusaders30XX.ECS.Systems
 
         // Cache invalidation triggers
         private string _systemsSignatureSnapshot = string.Empty;
-        private SceneId _lastSceneId = SceneId.Internal_QueueEventsMenu;
+        private SceneId _lastSceneId = SceneId.TitleMenu;
 
         // TODO: Caches populate on first use; if systems are added/removed at runtime or their reflected members change dynamically, we can add an explicit invalidation later.
         

@@ -4,7 +4,9 @@ using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
+using Crusaders30XX.ECS.Singletons;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 
 namespace Crusaders30XX.ECS.Components
 {
@@ -12,12 +14,8 @@ namespace Crusaders30XX.ECS.Components
 	{
 		TitleMenu,
 		WayStation,
-		Internal_QueueEventsMenu,
-		WorldMap,
 		Climb,
 		Battle,
-		Location,
-		Shop,
 		Achievement,
 		Snapshot,
 		None
@@ -26,7 +24,19 @@ namespace Crusaders30XX.ECS.Components
 	public class SceneState : IComponent
 	{
 		public Entity Owner { get; set; }
-		public SceneId Current { get; set; } = SceneId.Internal_QueueEventsMenu;
+		public SceneId Current { get; set; } = SceneId.TitleMenu;
+	}
+
+	public class WayStationMapView : IComponent
+	{
+		public Entity Owner { get; set; }
+		public Rectangle Source { get; set; } = Rectangle.Empty;
+		public int TargetWidth { get; set; }
+		public int TargetHeight { get; set; }
+		public float Zoom { get; set; } = 1f;
+		public Vector2 CenterWorldPosition { get; set; } = Vector2.Zero;
+		public int TextureWidth { get; set; }
+		public int TextureHeight { get; set; }
 	}
 
 	public class GameOverOverlayState : IComponent
@@ -70,6 +80,38 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 		public string ContextId { get; set; } = string.Empty;
+	}
+
+	public class WayStationClimbModalRoot : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public class WayStationClimbModalPanel : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public class WayStationClimbModalCloseButton : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public class WayStationClimbModalWeaponChoice : IComponent
+	{
+		public Entity Owner { get; set; }
+		public StartingWeapon Weapon { get; set; }
+	}
+
+	public class WayStationClimbModalDifficultyChoice : IComponent
+	{
+		public Entity Owner { get; set; }
+		public RunDifficulty Difficulty { get; set; }
+	}
+
+	public class WayStationClimbModalDepartButton : IComponent
+	{
+		public Entity Owner { get; set; }
 	}
 
 	/// <summary>
@@ -242,7 +284,7 @@ namespace Crusaders30XX.ECS.Components
 			public bool IsEncounterReward { get; set; } = false;
 			public ClimbResourceSave ClimbResources { get; set; }
 			public bool DismissToLocation { get; set; } = true;
-			public SceneId DismissScene { get; set; } = SceneId.Location;
+			public SceneId DismissScene { get; set; } = SceneId.Climb;
 			public bool DismissInProgress { get; set; } = false;
 			public bool CardSelectionInProgress { get; set; } = false;
 			public int SelectedRewardCardIndex { get; set; } = -1;

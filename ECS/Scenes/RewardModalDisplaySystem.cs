@@ -90,7 +90,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private int _pendingCloseExitSequence = -1;
 		private bool _pendingCloseTransition;
-		private SceneId _pendingCloseTransitionScene = SceneId.Location;
+		private SceneId _pendingCloseTransitionScene = SceneId.Climb;
 
 		[DebugEditable(DisplayName = "Z Order", Step = 10, Min = 0, Max = 100000)]
 		public int ZOrder { get; set; } = 52000;
@@ -375,7 +375,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnLoadScene(LoadSceneEvent e)
 		{
-			if (e.Scene != SceneId.Location && e.Scene != SceneId.Climb) return;
+			if (e.Scene != SceneId.Climb) return;
 
 			var state = EntityManager.GetEntity("QuestRewardOverlay")?.GetComponent<QuestRewardOverlayState>();
 			if (state != null && state.DismissInProgress)
@@ -509,7 +509,6 @@ namespace Crusaders30XX.ECS.Systems
 			_layoutSignature = CaptureLayoutSignature();
 			_drawInBattleOrSnapshot = scene != null
 				&& (scene.Current == SceneId.Battle
-					|| scene.Current == SceneId.Location
 					|| scene.Current == SceneId.Climb
 					|| scene.Current == SceneId.Snapshot);
 
@@ -666,7 +665,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			var scene = sceneEntity.GetComponent<SceneState>();
-			StateSingleton.PreventClicking = scene != null && (scene.Current == SceneId.Location || scene.Current == SceneId.Climb);
+			StateSingleton.PreventClicking = scene != null && scene.Current == SceneId.Climb;
 
 			int vw = Game1.VirtualWidth;
 			int vh = Game1.VirtualHeight;
@@ -781,8 +780,8 @@ namespace Crusaders30XX.ECS.Systems
 			st.RewardEquipmentId = string.Empty;
 			st.IsEncounterReward = e?.IsEncounterReward == true;
 			st.ClimbResources = e?.ClimbResources;
-			st.DismissScene = e?.DismissScene ?? SceneId.Location;
-			st.DismissToLocation = st.DismissScene == SceneId.Location || st.DismissScene == SceneId.Climb;
+			st.DismissScene = e?.DismissScene ?? SceneId.Climb;
+			st.DismissToLocation = st.DismissScene == SceneId.Climb;
 			st.DismissInProgress = false;
 			st.CardSelectionInProgress = false;
 			st.SelectedRewardCardIndex = -1;
@@ -833,7 +832,7 @@ namespace Crusaders30XX.ECS.Systems
 			st.RewardEquipmentId = e?.RewardEquipmentId ?? string.Empty;
 			st.IsEncounterReward = false;
 			st.ClimbResources = null;
-			st.DismissScene = SceneId.Location;
+			st.DismissScene = SceneId.Climb;
 			st.DismissToLocation = false;
 			st.DismissInProgress = false;
 			st.CardSelectionInProgress = false;
@@ -927,7 +926,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			_pendingCloseExitSequence = -1;
 			_pendingCloseTransition = false;
-			_pendingCloseTransitionScene = SceneId.Location;
+			_pendingCloseTransitionScene = SceneId.Climb;
 		}
 
 		private bool IsSnapshotScene()
@@ -983,7 +982,7 @@ namespace Crusaders30XX.ECS.Systems
 			var transitionScene = _pendingCloseTransitionScene;
 			_pendingCloseExitSequence = -1;
 			_pendingCloseTransition = false;
-			_pendingCloseTransitionScene = SceneId.Location;
+			_pendingCloseTransitionScene = SceneId.Climb;
 
 			if (transition)
 			{
@@ -1129,7 +1128,6 @@ namespace Crusaders30XX.ECS.Systems
 				var scene = EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault()?.GetComponent<SceneState>();
 				bool canDraw = scene != null
 					&& (scene.Current == SceneId.Battle
-						|| scene.Current == SceneId.Location
 						|| scene.Current == SceneId.Climb
 						|| scene.Current == SceneId.Snapshot);
 				if (canDraw)
@@ -1741,7 +1739,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			_pendingCloseExitSequence = -1;
 			_pendingCloseTransition = false;
-			_pendingCloseTransitionScene = SceneId.Location;
+			_pendingCloseTransitionScene = SceneId.Climb;
 
 			if (state.IsEncounterReward)
 			{
@@ -1761,7 +1759,7 @@ namespace Crusaders30XX.ECS.Systems
 			state.RewardEquipmentId = string.Empty;
 			state.IsEncounterReward = false;
 			state.ClimbResources = null;
-			state.DismissScene = SceneId.Location;
+			state.DismissScene = SceneId.Climb;
 			state.CardSelectionInProgress = false;
 			state.SelectedRewardCardIndex = -1;
 			state.CardSelectionElapsedSeconds = 0f;

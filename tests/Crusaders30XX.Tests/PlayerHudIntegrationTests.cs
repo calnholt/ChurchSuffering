@@ -153,7 +153,7 @@ public class PlayerHudIntegrationTests : IDisposable
 		var layout = new PlayerHudLayoutSystem(entityManager);
 		Assert.Equal(6, entityManager.GetEntitiesWithComponent<PlayerHudRegion>().Count());
 
-		SetScene(entityManager, SceneId.Location);
+		SetScene(entityManager, SceneId.Climb);
 		layout.Update(new GameTime());
 		Assert.Empty(entityManager.GetEntitiesWithComponent<PlayerHudRegion>());
 

@@ -276,20 +276,19 @@ namespace Crusaders30XX.ECS.Systems
 			var queued = queuedEntity.GetComponent<QueuedEvents>();
 			if (queued.CurrentIndex == queued.Events.Count - 1)
 			{
-				BeginWipeIn(new ShowTransition { Scene = SceneId.WorldMap });
+				BeginWipeIn(new ShowTransition { Scene = SceneId.Climb });
 			}	
 			else
 			{
 				BeginWipeIn(new ShowTransition { Scene = SceneId.Battle });
 			}
 		}
-		[DebugAction("Back to World Map")]
-		private void Debug_BackToWorldMap()
+		[DebugAction("Back to Climb")]
+		private void Debug_BackToClimb()
 		{
 			_suppressLoadScene = true;
-			BeginWipeIn(new ShowTransition { Scene = SceneId.WorldMap });
+			BeginWipeIn(new ShowTransition { Scene = SceneId.Climb });
 		}
 	}
 }
-
 

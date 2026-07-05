@@ -192,7 +192,7 @@ public class PlayerHudLayoutSystemTests : IDisposable
 
 		var courageUi = GetRegionEntity(entityManager, PlayerHudRegionType.Courage).GetComponent<UIElement>();
 		courageUi.IsHovered = true;
-		SetScene(entityManager, SceneId.Location);
+		SetScene(entityManager, SceneId.Climb);
 		system.Update(new GameTime());
 		Assert.Empty(entityManager.GetEntitiesWithComponent<PlayerHudRegion>());
 
@@ -215,7 +215,7 @@ public class PlayerHudLayoutSystemTests : IDisposable
 		EventManager.Publish(new LoadSceneEvent
 		{
 			PreviousScene = SceneId.Battle,
-			Scene = SceneId.Location,
+			Scene = SceneId.Climb,
 		});
 
 		Assert.Empty(entityManager.GetEntitiesWithComponent<PlayerHudRegion>());

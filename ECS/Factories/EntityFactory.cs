@@ -600,7 +600,7 @@ namespace Crusaders30XX.ECS.Factories
                 }
 				// Always attach UIElement for hover/click regardless of item type
 				entityManager.AddComponent(e, uiElement);
-				entityManager.AddComponent(e, new OwnedByScene { Scene = SceneId.Shop });
+				entityManager.AddComponent(e, new OwnedByScene { Scene = SceneId.Climb });
 				entityManager.AddComponent(e, new ForSaleItem
 				{
 					Id = id,
@@ -726,7 +726,7 @@ namespace Crusaders30XX.ECS.Factories
 					entityManager.AddComponent(e, uiElement);
 				}
 
-				entityManager.AddComponent(e, new OwnedByScene { Scene = SceneId.Shop });
+				entityManager.AddComponent(e, new OwnedByScene { Scene = SceneId.Climb });
 				result.Add(e);
 			}
 

@@ -182,10 +182,10 @@ namespace Crusaders30XX.ECS.Systems
         {
             EventManager.Publish(new PlayerDied { Player = EntityManager.GetEntity("Player") });
         }
-        [DebugAction("Location POC")]
-        public void Debug_LocationPOC()
+        [DebugAction("Climb POC")]
+        public void Debug_ClimbPOC()
         {
-            EventManager.Publish(new ShowTransition { Scene = SceneId.Location });
+            EventManager.Publish(new ShowTransition { Scene = SceneId.Climb });
         }
         [DebugActionInt("Apply Power", Step = 1, Min = 1, Max = 999, Default = 1)]
         public void Debug_ApplyPower(int amount)
