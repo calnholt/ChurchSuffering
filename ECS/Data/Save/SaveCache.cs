@@ -19,6 +19,7 @@ namespace Crusaders30XX.ECS.Data.Save
 {
 	public static class SaveCache
 	{
+		private const int WayStationNpcDialogueCounterThreshold = 3;
 		private static SaveFile _save;
 		private static string _filePath;
 		private static readonly object _lock = new object();
@@ -529,6 +530,155 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
+		public static void StartWayStationClimbAttempt()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var prior = _save;
+				var waystation = CloneWayStationMeta(prior?.waystation);
+				waystation.climbAttempts = Math.Max(0, waystation.climbAttempts) + 1;
+				waystation.currentVisit = new WayStationVisitSave();
+				_save = CreateFreshRunPreservingMeta(prior);
+				_save.waystation = waystation;
+				_save.isRunActive = true;
+				Persist();
+				CardUsageTelemetryRuntime.StartNewRun(_save.runMapSeed);
+			}
+		}
+
+		public static WayStationMetaSave GetWayStationMeta()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				return CloneWayStationMeta(_save.waystation);
+			}
+		}
+
+		public static WayStationVisitSave GetWayStationVisit()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				return CloneWayStationVisit(_save.waystation.currentVisit);
+			}
+		}
+
+		public static void SaveWayStationVisit(WayStationVisitSave visit)
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				_save.waystation.currentVisit = CloneWayStationVisit(visit) ?? new WayStationVisitSave();
+				Persist();
+			}
+		}
+
+		public static void ClearWayStationVisit()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				_save.waystation.currentVisit = new WayStationVisitSave();
+				Persist();
+			}
+		}
+
+		public static void RecordWayStationClimbReturn(WayStationArrivalKind arrivalKind)
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				if (arrivalKind == WayStationArrivalKind.ReturnedFromCompletedClimb)
+				{
+					_save.waystation.climbCompletions = Math.Max(0, _save.waystation.climbCompletions) + 1;
+				}
+
+				_save.waystation.currentVisit = new WayStationVisitSave();
+				if (arrivalKind == WayStationArrivalKind.ReturnedFromAbandonedClimb)
+				{
+					Persist();
+					return;
+				}
+
+				if (arrivalKind == WayStationArrivalKind.ReturnedFromCompletedClimb || DidCurrentClimbReachNpcDialogueThreshold())
+				{
+					_save.waystation.pendingNpcDialogueOffer = true;
+					Persist();
+					return;
+				}
+
+				if (arrivalKind == WayStationArrivalKind.ReturnedFromFailedClimb)
+				{
+					_save.waystation.deferredNpcDialogueCounter = Math.Min(
+						WayStationNpcDialogueCounterThreshold,
+						Math.Max(0, _save.waystation.deferredNpcDialogueCounter) + 1);
+					if (_save.waystation.deferredNpcDialogueCounter >= WayStationNpcDialogueCounterThreshold)
+					{
+						_save.waystation.pendingNpcDialogueOffer = true;
+					}
+					Persist();
+				}
+			}
+		}
+
+		public static void MarkWayStationNpcDialogueOfferQueued()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				_save.waystation.pendingNpcDialogueOffer = false;
+				_save.waystation.deferredNpcDialogueCounter = 0;
+				Persist();
+			}
+		}
+
+		public static void RecordWayStationClimbCompletion()
+		{
+			RecordWayStationClimbReturn(WayStationArrivalKind.ReturnedFromCompletedClimb);
+		}
+
+		public static bool HasSeenWayStationDialogueSegment(string characterId, string segmentId)
+		{
+			if (string.IsNullOrWhiteSpace(characterId) || string.IsNullOrWhiteSpace(segmentId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				return _save.waystation.completedDialogueSegments.TryGetValue(characterId, out var segments)
+					&& segments != null
+					&& segments.Contains(segmentId, StringComparer.OrdinalIgnoreCase);
+			}
+		}
+
+		public static void MarkWayStationDialogueSegmentSeen(string characterId, string segmentId)
+		{
+			if (string.IsNullOrWhiteSpace(characterId) || string.IsNullOrWhiteSpace(segmentId)) return;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				if (!_save.waystation.completedDialogueSegments.TryGetValue(characterId, out var segments) || segments == null)
+				{
+					segments = new List<string>();
+					_save.waystation.completedDialogueSegments[characterId] = segments;
+				}
+
+				if (!segments.Contains(segmentId, StringComparer.OrdinalIgnoreCase))
+				{
+					segments.Add(segmentId);
+					Persist();
+				}
+			}
+		}
+
 		public static bool IsRunActive()
 		{
 			EnsureLoaded();
@@ -594,6 +744,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			save.achievements = achievements ?? new Dictionary<string, AchievementProgress>();
 			save.seenTutorials = seenTutorials ?? new List<string>();
 			save.guidedTutorialCompleted = prior?.guidedTutorialCompleted == true;
+			save.waystation = CloneWayStationMeta(prior?.waystation);
 			save.musicVolumeLevel = musicVolumeLevel;
 			save.sfxVolumeLevel = sfxVolumeLevel;
 			return save;
@@ -624,6 +775,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				achievements = prior?.achievements ?? new Dictionary<string, AchievementProgress>(),
 				seenTutorials = prior?.seenTutorials ?? new List<string>(),
 				guidedTutorialCompleted = prior?.guidedTutorialCompleted == true,
+				waystation = CloneWayStationMeta(prior?.waystation),
 			};
 		}
 
@@ -1963,6 +2115,70 @@ namespace Crusaders30XX.ECS.Data.Save
 			return list == null
 				? new List<string>()
 				: list.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+		}
+
+		private static void EnsureWayStationMetaLocked()
+		{
+			if (_save == null) _save = new SaveFile();
+			_save.waystation = CloneWayStationMeta(_save.waystation);
+		}
+
+		private static bool DidCurrentClimbReachNpcDialogueThreshold()
+		{
+			int threshold = Math.Max(1, (ClimbRuleService.MaxTime + 1) / 2);
+			return ClimbRuleService.ClampTime(_save?.climb?.time ?? 0) >= threshold;
+		}
+
+		private static WayStationMetaSave CloneWayStationMeta(WayStationMetaSave meta)
+		{
+			var clone = new WayStationMetaSave
+			{
+				climbAttempts = Math.Max(0, meta?.climbAttempts ?? 0),
+				climbCompletions = Math.Max(0, meta?.climbCompletions ?? 0),
+				deferredNpcDialogueCounter = Math.Clamp(meta?.deferredNpcDialogueCounter ?? 0, 0, WayStationNpcDialogueCounterThreshold),
+				pendingNpcDialogueOffer = meta?.pendingNpcDialogueOffer == true,
+				completedDialogueSegments = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase),
+				currentVisit = CloneWayStationVisit(meta?.currentVisit) ?? new WayStationVisitSave(),
+			};
+
+			if (meta?.completedDialogueSegments != null)
+			{
+				foreach (var kvp in meta.completedDialogueSegments)
+				{
+					if (string.IsNullOrWhiteSpace(kvp.Key)) continue;
+					clone.completedDialogueSegments[kvp.Key] = CloneStringList(kvp.Value);
+				}
+			}
+
+			return clone;
+		}
+
+		private static WayStationVisitSave CloneWayStationVisit(WayStationVisitSave visit)
+		{
+			if (visit == null) return new WayStationVisitSave();
+			var clone = new WayStationVisitSave
+			{
+				initialized = visit.initialized,
+				offers = new List<WayStationDialogueOfferSave>(),
+			};
+
+			if (visit.offers == null) return clone;
+			foreach (var offer in visit.offers)
+			{
+				if (offer == null || string.IsNullOrWhiteSpace(offer.offerId)) continue;
+				clone.offers.Add(new WayStationDialogueOfferSave
+				{
+					offerId = offer.offerId ?? string.Empty,
+					characterId = offer.characterId ?? string.Empty,
+					definitionId = offer.definitionId ?? string.Empty,
+					segmentId = offer.segmentId ?? string.Empty,
+					screenX = offer.screenX,
+					screenY = offer.screenY,
+					visible = offer.visible,
+				});
+			}
+
+			return clone;
 		}
 
 		private static string AllocateRunDeckEntryIdLocked()

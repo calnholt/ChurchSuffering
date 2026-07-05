@@ -53,6 +53,150 @@ namespace Crusaders30XX.ECS.Data.Dialog
 						["victory"] = [new() { actor = "Fallen Shepherd", message = "..." }],
 					},
 				},
+				["waystation_keeper"] = new DialogDefinition
+				{
+					id = "waystation_keeper",
+					segments = new Dictionary<string, List<DialogLine>>
+					{
+						["intro"] =
+						[
+							new() { actor = "Crusader", message = "What is this place?" },
+							new() { actor = "Keeper", message = "The Waystation. Purgatory. You're dead, you've been judged, and you're bound for Heaven once your soul is cleansed. That's the simple part, thank God." },
+							new() { actor = "Crusader", message = "And the rest?" },
+							new() { actor = "Keeper", message = "Heaven's Gate and the climbs to get there are misbehaving. Souls leave for purgation, demons appear in their path. Demons in Purgatory...never thought I'd see the day." },
+							new() { actor = "Remiel", message = "Don't mind him. He's been given a disaster, a desk, and no helpful instructions." },
+							new() { actor = "Keeper", message = "That is painfully accurate." },
+							new() { actor = "Crusader", message = "How did demons enter Purgatory?" },
+							new() { actor = "Keeper", message = "I don't know. No one here knows. Something is bending the climbs, and I'm the angel currently failing to make sense of it." },
+							new() { actor = "Crusader", message = "Then I'll climb and end this." },
+							new() { actor = "Keeper", message = "You're armed. You're steady. And you're asking for a death sentence before I've finished warning you. You may be exactly what I need." },
+							new() { actor = "Remiel", message = "Don't mind him, he processes grief by finding doors with enemies behind them." },
+							new() { actor = "Keeper", message = "Fine. Fight what blocks the route. If the climb breaks, you'll return here. That's the plan, which is a generous name for what we have." },
+						],
+						["early_return"] =
+						[
+							new() { actor = "Keeper", message = "You came back. That's excellent. Terrible for my assumptions, but excellent." },
+							new() { actor = "Crusader", message = "The climb threw me out." },
+							new() { actor = "Keeper", message = "Yes, and you remember it. Most reports come back as fragments or contradictions. You came back with a route I can actually mark." },
+							new() { actor = "Remiel", message = "Looks like you've become his most reliable filing system!" },
+							new() { actor = "Keeper", message = "Don't make this anomaly sound small, this is the best lead I've received since stationed here." },
+							new() { actor = "Crusader", message = "Then mark the route and send me again." },
+							new() { actor = "Keeper", message = "I will. Fight what blocks you, remember what changes, and return before the climb breaks you beyond usefulness." },
+							new() { actor = "Remiel", message = "He means that warmly of course. Administrative angels have a gift for making concern sound like inventory." },
+							new() { actor = "Keeper", message = "I'm concerned and taking inventory, both are necessary." },
+						],
+					},
+				},
+				["waystation_elias"] = new DialogDefinition
+				{
+					id = "waystation_elias",
+					segments = new Dictionary<string, List<DialogLine>>
+					{
+						["dialogue_1"] =
+						[
+							new() { actor = "Remiel", message = "Crusader, the man in the back pew. Try not to arrive like a siege tower." },
+							new() { actor = "Elias", message = "Don't trouble yourself, knight. I'm only waiting until I can bear the sight of the gate." },
+							new() { actor = "Crusader", message = "What are you hiding under your cloak?" },
+							new() { actor = "Elias", message = "A battle standard. I carried it for my company in life. When the enemy broke through, I dropped it and ran while better men died holding the line." },
+							new() { actor = "Crusader", message = "Then stand and carry it now." },
+							new() { actor = "Elias", message = "I thought death would make me brave. It's only made me honest." },
+							new() { actor = "Remiel", message = "Honesty's a good start. Most men take years to remove that much armor." },
+							new() { actor = "Elias", message = "Is honesty enough?" },
+							new() { actor = "Crusader", message = "No. But it's where men begin." },
+							new() { actor = "Elias", message = "Then pray I don't run from the beginning too." },
+						],
+						["dialogue_2"] =
+						[
+							new() { actor = "Elias", message = "I moved three pews closer while you were gone. I wanted to call it progress, but that felt too flattering." },
+							new() { actor = "Crusader", message = "Call it obedience." },
+							new() { actor = "Remiel", message = "That's his favorite word. Be careful with it." },
+							new() { actor = "Elias", message = "I uncovered the banner. There's a bloodstain near the staff. For years I told myself it was mine." },
+							new() { actor = "Crusader", message = "It wasn't." },
+							new() { actor = "Elias", message = "No. I knew whose it was. I preferred the kinder lie." },
+							new() { actor = "Remiel", message = "Lies are rarely kind. They just speak softly at first." },
+							new() { actor = "Elias", message = "I think that's why the gate frightens me. Nothing soft can pass through it unless it's true." },
+							new() { actor = "Crusader", message = "Then keep walking toward it." },
+							new() { actor = "Elias", message = "I will. One pew at a time, if God permits it." },
+						],
+						["dialogue_3"] =
+						[
+							new() { actor = "Elias", message = "I remembered Gerard's mother today. After the war, I brought her his medal and let her thank me as if I'd been loyal to him. I told myself silence was mercy because she was already grieving." },
+							new() { actor = "Crusader", message = "You wanted her blessing." },
+							new() { actor = "Elias", message = "I did. I wanted one person connected to that day to look at me kindly." },
+							new() { actor = "Remiel", message = "That's a very human way to steal comfort. Ugly, but common." },
+							new() { actor = "Elias", message = "I've lit a candle for her. That feels small." },
+							new() { actor = "Crusader", message = "It is small." },
+							new() { actor = "Remiel", message = "Small can still be sincere." },
+							new() { actor = "Elias", message = "Then I'll keep it lit. I can't give her the truth now, but I can stop hiding from the man who needed it." },
+						],
+					},
+				},
+				["waystation_old_confessor"] = new DialogDefinition
+				{
+					id = "waystation_old_confessor",
+					segments = new Dictionary<string, List<DialogLine>>
+					{
+						["dialogue_1"] =
+						[
+							new() { actor = "Old Confessor", message = "You've found the quiet corner, knight. Men usually come here after the gate has frightened them." },
+							new() { actor = "Crusader", message = "Are you a priest?" },
+							new() { actor = "Old Confessor", message = "I was. Now I listen. I can't absolve anyone here, but I remember how mercy sounds." },
+							new() { actor = "Crusader", message = "Then why do souls come to you?" },
+							new() { actor = "Old Confessor", message = "Because telling the truth still steadies the heart." },
+							new() { actor = "Crusader", message = "My heart has had enough steadying. It needs to be made clean." },
+							new() { actor = "Old Confessor", message = "That may be why God led you to a chair instead of another battlefield." },
+							new() { actor = "Crusader", message = "You speak boldly for a man without authority." },
+							new() { actor = "Old Confessor", message = "I have patience, memory, and time enough to listen." },
+						],
+					},
+				},
+				["waystation_mara"] = new DialogDefinition
+				{
+					id = "waystation_mara",
+					segments = new Dictionary<string, List<DialogLine>>
+					{
+						["dialogue_1"] =
+						[
+							new() { actor = "Crusader", message = "I see you keep to one side." },
+							new() { actor = "Mara", message = "It leaves room for souls with louder grief." },
+							new() { actor = "Crusader", message = "Yours is quiet?" },
+							new() { actor = "Mara", message = "It learned to be." },
+							new() { actor = "Crusader", message = "What brought you here?" },
+							new() { actor = "Mara", message = "The same thing that brings anyone. Something in me still needs mercy. I try not to make a display of it." },
+						],
+						["dialogue_2"] =
+						[
+							new() { actor = "Crusader", message = "You said you try not to make a display of needing mercy. Who taught you that?" },
+							new() { actor = "Mara", message = "No one sat me down and said it. It just... worked better when I didn't make things complicated." },
+							new() { actor = "Crusader", message = "\"Worked better\"?" },
+							new() { actor = "Mara", message = "When people asked what I wanted, I learned to give them the answer that kept things smooth." },
+							new() { actor = "Crusader", message = "And your own answer?" },
+							new() { actor = "Mara", message = "It stopped feeling relevant." },
+						],
+						["dialogue_3"] =
+						[
+							new() { actor = "Crusader", message = "You looked at me before you answered, like you were checking something." },
+							new() { actor = "Mara", message = "I suppose I was." },
+							new() { actor = "Crusader", message = "What were you checking?" },
+							new() { actor = "Mara", message = "Whether my answer would make things harder." },
+							new() { actor = "Crusader", message = "For me?" },
+							new() { actor = "Mara", message = "For anyone nearby." },
+							new() { actor = "Crusader", message = "And if it would?" },
+							new() { actor = "Mara", message = "Then I change it." },
+						],
+						["dialogue_4"] =
+						[
+							new() { actor = "Crusader", message = "Would you like me to sit with you for a while?" },
+							new() { actor = "Mara", message = "I don't mind." },
+							new() { actor = "Remiel", message = "That tells him he can. It doesn't tell him if you want him to." },
+							new() { actor = "Mara", message = "I know. I'm trying not to ask too much." },
+							new() { actor = "Remiel", message = "He offered." },
+							new() { actor = "Mara", message = "People offer things to be kind. That doesn't mean I should take them." },
+							new() { actor = "Crusader", message = "This isn't complicated." },
+							new() { actor = "Mara", message = "I know. Yes, I'd like company." },
+						],
+					},
+				},
 				["nun_counsel"] = Segment("nun_counsel", "climb_event",
 					("Nun", "You carry every wound as if suffering were proof of purpose. Take two measured breaths before you draw steel."),
 					("Crusader", "Pain is easier to trust than mercy. But I will take the breaths.")),

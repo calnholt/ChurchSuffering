@@ -76,31 +76,23 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch = spriteBatch;
 
 			// Event-driven control
-			EventManager.Subscribe<UpdateLocationNameEvent>(_ =>
+			EventManager.Subscribe<UpdateLocationNameEvent>(_ => SetTitle(_?.Title ?? ""));
+			EventManager.Subscribe<LoadSceneEvent>(_ =>
 			{
-				_locationName = _?.Title ?? "";
-				if (string.IsNullOrEmpty(_locationName))
+				if (_?.Scene == SceneId.WayStation)
 				{
-					_phase = AnimationPhase.Idle;
-					_animationTime = 0f;
-					return;
+					SetTitle("Waystation");
 				}
-				_phase = EntryDelaySeconds > 0f ? AnimationPhase.EntryWaiting : AnimationPhase.TrapezoidSliding;
-				_animationTime = 0f;
 			});
 
 			EventManager.Subscribe<HideLocationNameEvent>(_ =>
 			{
-				_locationName = "";
-				_phase = AnimationPhase.Idle;
-				_animationTime = 0f;
+				ClearTitle();
 			});
 			EventManager.Subscribe<DeleteCachesEvent>(_ =>
 			{
 				Console.WriteLine("[LocationNameDisplaySystem] DeleteCachesEvent");
-				_locationName = "";
-				_phase = AnimationPhase.Idle;
-				_animationTime = 0f;
+				ClearTitle();
 			});
 		}
 
@@ -112,6 +104,12 @@ namespace Crusaders30XX.ECS.Systems
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
+			var scene = entity.GetComponent<SceneState>();
+			if (scene?.Current == SceneId.WayStation && string.IsNullOrEmpty(_locationName))
+			{
+				SetTitle("Waystation");
+			}
+
 			float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 			_viewportWidth = Game1.VirtualWidth;
 			_targetTrapezoidX = 0f;
@@ -199,6 +197,26 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
+		private void SetTitle(string title)
+		{
+			_locationName = title ?? "";
+			if (string.IsNullOrEmpty(_locationName))
+			{
+				ClearTitle();
+				return;
+			}
+
+			_phase = EntryDelaySeconds > 0f ? AnimationPhase.EntryWaiting : AnimationPhase.TrapezoidSliding;
+			_animationTime = 0f;
+		}
+
+		private void ClearTitle()
+		{
+			_locationName = "";
+			_phase = AnimationPhase.Idle;
+			_animationTime = 0f;
+		}
+
 		private float EaseOutCubic(float t)
 		{
 			float f = t - 1f;
@@ -251,6 +269,5 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-
 
 

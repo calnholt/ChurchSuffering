@@ -1,6 +1,7 @@
 using System.Linq;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.Diagnostics;
@@ -22,6 +23,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteBatch _spriteBatch;
 		private readonly SpriteFont _font = FontSingleton.TitleFont;
 		private readonly Texture2D _pixel;
+		private RunEndCause _pendingRunEndCause = RunEndCause.Death;
 
 		// Configurable timings
 		[DebugEditable(DisplayName = "Overlay Fade In (s)", Step = 0.05f, Min = 0.01f, Max = 5f)]
@@ -47,8 +49,8 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch = sb;
 			_pixel = new Texture2D(gd, 1, 1);
 			_pixel.SetData(new[] { Color.White });
-			EventManager.Subscribe<PlayerDied>(_ => BeginRunEndOverlay());
-			EventManager.Subscribe<RunEndSequenceRequested>(_ => BeginRunEndOverlay());
+			EventManager.Subscribe<PlayerDied>(_ => BeginRunEndOverlay(RunEndCause.Death));
+			EventManager.Subscribe<RunEndSequenceRequested>(evt => BeginRunEndOverlay(evt?.Cause ?? RunEndCause.Abandon));
 			EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCachesEvent);
 		}
 
@@ -59,12 +61,13 @@ namespace Crusaders30XX.ECS.Systems
 			StateSingleton.PreventClicking = false;
 		}
 
-		private void BeginRunEndOverlay()
+		private void BeginRunEndOverlay(RunEndCause cause)
 		{
 			if (TestFightRuntime.IsActive) return;
 			var state = EnsureOverlayState();
 			if (state.IsActive) return;
 			LoggingService.Append("GameOverOverlayDisplaySystem.BeginRunEndOverlay", new System.Text.Json.Nodes.JsonObject());
+			_pendingRunEndCause = cause;
 			state.IsActive = true;
 			state.Elapsed = 0f;
 			state.SceneSwitched = false;
@@ -100,6 +103,7 @@ namespace Crusaders30XX.ECS.Systems
 			state.IsActive = false;
 			state.Elapsed = 0f;
 			state.SceneSwitched = false;
+			_pendingRunEndCause = RunEndCause.Death;
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -122,12 +126,18 @@ namespace Crusaders30XX.ECS.Systems
 				}
 				else
 				{
+					var arrivalKind = _pendingRunEndCause == RunEndCause.Abandon
+						? WayStationArrivalKind.ReturnedFromAbandonedClimb
+						: WayStationArrivalKind.ReturnedFromFailedClimb;
+					SaveCache.RecordWayStationClimbReturn(arrivalKind);
+					WayStationArrivalContextService.Set(EntityManager, arrivalKind);
 					RunLifecycleService.EndCurrentRun(EntityManager);
 					EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Menu });
 					EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation, SkipWipe = true });
 				}
 				state.SceneSwitched = true;
 				state.IsActive = false;
+				_pendingRunEndCause = RunEndCause.Death;
 			}
 		}
 

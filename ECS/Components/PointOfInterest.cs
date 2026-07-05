@@ -27,6 +27,12 @@ namespace Crusaders30XX.ECS.Components
 		public bool IsMapVisibleFromStart { get; set; }
 	}
 
+	public class POITitleTooltipSource : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string Title { get; set; } = string.Empty;
+	}
+
 
 	public enum PointOfInterestType
 	{
@@ -37,5 +43,4 @@ namespace Crusaders30XX.ECS.Components
 		Hellrift
 	}
 }
-
 

@@ -400,12 +400,12 @@ namespace Crusaders30XX.ECS.Components
         SkipTutorial,
         PayCostCancel,
         PledgeCard,
-        LeaveShop,
         OpenLoadout,
         CardClicked,
         ClimbShopSlotSelect,
         ClimbEncounterSlotSelect,
         ClimbEventSlotSelect,
+        WayStationDialoguePoiSelect,
     }
 
     /// <summary>
@@ -821,18 +821,6 @@ namespace Crusaders30XX.ECS.Components
         public Entity Owner { get; set; }
     }
 
-    /// <summary>
-    /// State for a simple "How To Play" overlay.
-    /// </summary>
-    public class HowToPlayOverlay : IComponent
-    {
-        public Entity Owner { get; set; }
-        public bool IsOpen { get; set; } = false;
-        public float ScrollOffset { get; set; }
-        public long OpenedInputSequence { get; set; }
-        public string Text { get; set; } = "Each battle starts with the block phase. During this phase you can prevent damage and effects by assigning cards from you hand or equipment from your hero to the attack. When you block with white cards, you gain Temperance. When you block with red cards, you gain Courage. When you block with black cards, you gain no resource (higher block value instead). Above the enemy are little circles which represent the number of attacks they will make, and the ones below are for the enemy's next turn.\n\nAfter the enemy turn is your action phase. You have one Action Point (AP) per action phase that can be spent to play cards. Some cards require no AP. Some cards have a cost, denoted by the circles underneath their name. You must discard that many cards of the matching color from you hand to play these cards.\n\nYou have an equipped Sword, which you always have access to on your turn.\n\nAt the end of your turn, you will draw 4 cards, up to your maximum hand size of 5.";
-    }
-    
     /// <summary>
     /// Component for a generic dropdown UI control used by the debug menu
     /// </summary>

@@ -1,3 +1,5 @@
+using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Systems;
 
@@ -9,24 +11,63 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		public int WarmupFrames => 2;
 		public string OutputFileName => "default";
 
-		private WayStationDisplaySystem _wayStation;
+		private WayStationCameraSystem _wayStationCamera;
+		private WayStationBackgroundDisplaySystem _wayStationBackground;
+		private WayStationPoiDisplaySystem _wayStationPoi;
+		private WayStationDialogueSystem _wayStationDialogue;
+		private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModal;
+		private LocationNameDisplaySystem _locationName;
 
 		public void Setup(DisplaySnapshotContext ctx, string[] args)
 		{
 			WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
 			WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
 
-			_wayStation = new WayStationDisplaySystem(
-				ctx.World,
+			_locationName = new LocationNameDisplaySystem(
+				ctx.World.EntityManager,
 				ctx.GraphicsDevice,
+				ctx.SpriteBatch);
+			ctx.World.AddSystem(_locationName);
+
+			_wayStationCamera = new WayStationCameraSystem(
+				ctx.World.EntityManager,
+				ctx.ImageAssets);
+			ctx.World.AddSystem(_wayStationCamera);
+
+			_wayStationBackground = new WayStationBackgroundDisplaySystem(
+				ctx.World.EntityManager,
 				ctx.SpriteBatch,
 				ctx.ImageAssets);
-			ctx.World.AddSystem(_wayStation);
+			ctx.World.AddSystem(_wayStationBackground);
+
+			_wayStationPoi = new WayStationPoiDisplaySystem(
+				ctx.World.EntityManager,
+				ctx.SpriteBatch,
+				ctx.ImageAssets);
+			ctx.World.AddSystem(_wayStationPoi);
+
+			_wayStationDialogue = new WayStationDialogueSystem(
+				ctx.World.EntityManager,
+				ctx.SpriteBatch,
+				ctx.ImageAssets);
+			ctx.World.AddSystem(_wayStationDialogue);
+
+			_wayStationClimbSettingsModal = new WayStationClimbSettingsModalSystem(
+				ctx.World,
+				ctx.SpriteBatch,
+				ctx.ImageAssets);
+			ctx.World.AddSystem(_wayStationClimbSettingsModal);
+
+			EventManager.Publish(new UpdateLocationNameEvent { Title = "Waystation" });
 		}
 
 		public void Draw(DisplaySnapshotContext ctx)
 		{
-			_wayStation.Draw();
+			_wayStationBackground.Draw();
+			_wayStationPoi.Draw();
+			_wayStationDialogue.Draw();
+			_wayStationClimbSettingsModal.Draw();
+			_locationName.Draw();
 		}
 	}
 }

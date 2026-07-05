@@ -85,6 +85,15 @@ namespace Crusaders30XX.ECS.Systems
                     EventManager.Publish(new QuestSelectRequested { Entity = entity });
                     break;
                 }
+                case UIElementEventType.WayStationDialoguePoiSelect:
+                {
+                    var action = entity.GetComponent<WayStationDialoguePoiAction>();
+                    if (action != null)
+                    {
+                        EventManager.Publish(new WayStationDialoguePoiSelectedEvent { OfferId = action.OfferId });
+                    }
+                    break;
+                }
                 case UIElementEventType.PayCostCancel:
                 {
                     EventManager.Publish(new PayCostCancelRequested());
@@ -92,18 +101,13 @@ namespace Crusaders30XX.ECS.Systems
                 }
                 case UIElementEventType.AbandonQuest:
                 {
-                    EventManager.Publish(new RunEndSequenceRequested());
+                    EventManager.Publish(new RunEndSequenceRequested { Cause = RunEndCause.Abandon });
                     break;
                 }
                 case UIElementEventType.SkipTutorial:
                 {
                     if (GuidedTutorialService.IsActive(entityManager))
                         EventManager.Publish(new GuidedTutorialSkipRequested());
-                    break;
-                }
-                case UIElementEventType.LeaveShop:
-                {
-                    EventManager.Publish(new ShowTransition { Scene = SceneId.Climb, SkipHold = true });
                     break;
                 }
                 case UIElementEventType.OpenLoadout:

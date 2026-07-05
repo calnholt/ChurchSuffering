@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Services
 
 			RunDeckService.DestroyRunDeck(world.EntityManager);
 			RunPlayerService.DestroyRunPlayer(world.EntityManager);
-			SaveCache.StartNewRun();
+			SaveCache.StartWayStationClimbAttempt();
 			SaveCache.ConfigurePrimaryRunSetup(
 				WayStationRunSetupSingleton.WeaponId,
 				GetSelectedTemperanceId());

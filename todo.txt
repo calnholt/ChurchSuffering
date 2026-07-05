@@ -64,3 +64,11 @@ bugs:
 
 
 git checkout main && git pull origin main && git merge development && git push origin main
+
+MUST FOLLOW - Style: Anime. Solid flat color fills, 2-tone cel-shading at most (base + one shadow). Bold clean outlines. Low detail, strong silhouette. Read him at a glance, not up close. No glow effects, no rendering, no texture noise. White background color for easy cropping. 
+
+Create a physical description for the following characer so we can create an art brief
+
+New scene for medals that te player has purchased during entire play, each shows lore of the different saints.
+
+loot chest // booster pack animation for acruing points from level up

@@ -32,4 +32,4 @@ Deck building normally enforces copy limits (one per identity+color, two per ide
 
 - **Negative**: Saves created before this feature have no shops until a new run. Enterability requires a runtime distance check against completed nodes (or cached refresh on quest complete). Allowing shop dupes can produce decks that break assumptions in UI that expect copy limits.
 
-- **Follow-up**: Implement `RunMapShopService.IsEnterable`, spawn shop POIs alongside quest POIs, and wire hold-X entry to `SceneId.Shop` with save-backed `ForSaleDisplaySystem` inventory.
+- **Superseded**: The standalone run-map shop scene was removed when Climb became the active run progression scene. Climb shop slots now own the current shop flow.

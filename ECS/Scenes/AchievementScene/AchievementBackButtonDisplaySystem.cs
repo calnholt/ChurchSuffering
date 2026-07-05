@@ -106,7 +106,7 @@ namespace Crusaders30XX.ECS.Systems
             // Check for click
             if (ui != null && ui.IsClicked)
             {
-                EventManager.Publish(new ShowTransition { Scene = SceneId.Location, SkipHold = true });
+                EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation, SkipHold = true });
                 ui.IsClicked = false;
             }
         }
