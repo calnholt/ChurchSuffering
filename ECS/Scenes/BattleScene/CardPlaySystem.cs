@@ -191,13 +191,14 @@ namespace Crusaders30XX.ECS.Systems
             var card = data.Card;
             if (card == null || string.IsNullOrEmpty(card.CardId)) return;
 
+            var alternateProfile = AlternateCardPlayService.GetProfile(EntityManager, evt.Card, phase.Sub);
 
             if (card.Type == CardType.Relic)
             {
                 EventManager.Publish(new CantPlayCardMessage { Message = "Relics can only be discarded to pay for costs!" });
                 return;
             }
-            if (card.Type == CardType.Block)
+            if (card.Type == CardType.Block && alternateProfile?.AllowsPlay != true)
             {
                 EventManager.Publish(new CantPlayCardMessage { Message = "Block cards can only be used to block!" });
                 return;
@@ -232,7 +233,7 @@ namespace Crusaders30XX.ECS.Systems
             // Gate by Action Points unless the card is a free action
             var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
             var ap = player?.GetComponent<ActionPoints>();
-            bool isFree = card.IsFreeAction;
+            bool isFree = card.IsFreeAction || alternateProfile?.IsFreeAction == true;
             if (!isFree)
             {
                 int currentAp = ap?.Current ?? 0;
@@ -252,7 +253,8 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             // Evaluate any additional costs/requirements tied to the card id
-            if (card.CanPlay(EntityManager, evt.Card) == false)
+            bool skipBlockCanPlay = card.Type == CardType.Block && alternateProfile?.AllowsPlay == true;
+            if (!skipBlockCanPlay && card.CanPlay(EntityManager, evt.Card) == false)
             {
                 card.OnCantPlay?.Invoke(EntityManager, evt.Card);
                 LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
@@ -418,14 +420,15 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            ResolveAcceptedCardPlay(evt.Card, evt.PaymentCards, sealCount, VigorService.GetPlayerVigorStacks(EntityManager));
+            ResolveAcceptedCardPlay(evt.Card, evt.PaymentCards, sealCount, VigorService.GetPlayerVigorStacks(EntityManager), alternateProfile);
         }
 
         private void ResolveAcceptedCardPlay(
             Entity cardEntity,
             List<Entity> paymentCards,
             int sealCount,
-            int vigorStacksAtPlay)
+            int vigorStacksAtPlay,
+            AlternateCardPlayProfile alternateProfile)
         {
             if (cardEntity == null) return;
             var data = cardEntity.GetComponent<CardData>();
@@ -436,7 +439,32 @@ namespace Crusaders30XX.ECS.Systems
             AttachPlayStatContext(cardEntity, paymentCards);
             try
             {
-                card.OnPlay?.Invoke(EntityManager, cardEntity);
+                if (alternateProfile?.TreatsAsAttack == true)
+                {
+                    var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+                    var enemy = EntityManager.GetEntitiesWithComponent<Enemy>().FirstOrDefault();
+                    if (alternateProfile.SourceType == "Medal" && alternateProfile.SourceEntity != null)
+                    {
+                        EventManager.Publish(new MedalTriggered
+                        {
+                            MedalEntity = alternateProfile.SourceEntity,
+                            MedalId = alternateProfile.SourceId,
+                        });
+                    }
+
+                    EventManager.Publish(new ModifyHpRequestEvent
+                    {
+                        Source = player,
+                        Target = enemy,
+                        Delta = -alternateProfile.AttackDamage,
+                        DamageType = ModifyTypeEnum.Attack,
+                        AttackCard = cardEntity,
+                    });
+                }
+                else
+                {
+                    card.OnPlay?.Invoke(EntityManager, cardEntity);
+                }
             }
             finally
             {
@@ -486,7 +514,7 @@ namespace Crusaders30XX.ECS.Systems
             var destination = CardZoneType.DiscardPile;
 
             // Consume 1 AP if not a free action
-            bool isFree = card.IsFreeAction;
+            bool isFree = card.IsFreeAction || alternateProfile?.IsFreeAction == true;
             if (!isFree)
             {
                 EventManager.Publish(new ModifyActionPointsEvent { Delta = -1 });

@@ -1,6 +1,9 @@
 using System;
+using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Loadouts;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Medals;
 using Microsoft.Xna.Framework;
@@ -9,6 +12,34 @@ namespace Crusaders30XX.ECS.Services
 {
 	public static class RunMedalService
 	{
+		public static bool IsEquippedOnPlayer(EntityManager entityManager, string medalId)
+		{
+			if (entityManager == null || string.IsNullOrWhiteSpace(medalId)) return false;
+
+			return entityManager.GetEntitiesWithComponent<EquippedMedal>()
+				.Any(entity => string.Equals(
+					entity.GetComponent<EquippedMedal>()?.Medal?.Id,
+					medalId,
+					StringComparison.OrdinalIgnoreCase));
+		}
+
+		public static Entity AcquireAndEquipPersisted(EntityManager entityManager, string medalId)
+		{
+			if (entityManager == null || string.IsNullOrWhiteSpace(medalId)) return null;
+			if (MedalFactory.Create(medalId) == null) return null;
+
+			var loadout = SaveCache.GetLoadout("loadout_1") ?? new LoadoutDefinition { id = "loadout_1" };
+			loadout.medalIds ??= new System.Collections.Generic.List<string>();
+			if (!loadout.medalIds.Any(id => string.Equals(id, medalId, StringComparison.OrdinalIgnoreCase)))
+			{
+				loadout.medalIds.Add(medalId);
+				SaveCache.SaveLoadout(loadout);
+			}
+
+			if (IsEquippedOnPlayer(entityManager, medalId)) return null;
+			return AcquireAndEquip(entityManager, medalId);
+		}
+
 		public static Entity AcquireAndEquip(EntityManager entityManager, string medalId)
 		{
 			if (entityManager == null || string.IsNullOrWhiteSpace(medalId)) return null;

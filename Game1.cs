@@ -65,6 +65,7 @@ public class Game1 : Game
     private UIElementBorderDebugSystem _uiElementBorderDebugSystem;
     private DialogDisplaySystem _dialogDisplaySystem;
     private DebugCommandSystem _debugCommandSystem;
+    private MedalEquipDebugSystem _medalEquipDebugSystem;
     private LocationNameDisplaySystem _locationNameDisplaySystem;
     private QuestStartSystem _questStartSystem;
     private ShopStartSystem _shopStartSystem;
@@ -232,6 +233,7 @@ public class Game1 : Game
         _uiElementBorderDebugSystem = new UIElementBorderDebugSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _uiElementHighlightSystem = new UIElementHighlightSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _debugCommandSystem = new DebugCommandSystem(_world.EntityManager);
+        _medalEquipDebugSystem = new MedalEquipDebugSystem(_world.EntityManager);
         _world.AddSystem(_drippingBloodDisplaySystem);
         _world.AddSystem(_titleMenuDisplaySystem);
         _world.AddSystem(_wayStationDisplaySystem);
@@ -281,6 +283,7 @@ public class Game1 : Game
         _world.AddLateSystem(_parallaxLayerSystem);
         _world.AddSystem(_uiElementBorderDebugSystem);
         _world.AddSystem(_debugCommandSystem);
+        _world.AddSystem(_medalEquipDebugSystem);
         _questStartSystem = new QuestStartSystem(_world.EntityManager);
         _world.AddSystem(_questStartSystem);
         _shopStartSystem = new ShopStartSystem(_world.EntityManager);

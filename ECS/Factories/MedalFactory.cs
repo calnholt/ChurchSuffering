@@ -19,6 +19,7 @@ namespace Crusaders30XX.ECS.Factories
                 { MedalId.StLouieIX, () => new StLouieIX() },
                 { MedalId.StSebastian, () => new StSebastian() },
                 { MedalId.StFrancisDeSales, () => new StFrancisDeSales() },
+                { MedalId.StGeorge, () => new StGeorge() },
                 { MedalId.StHomobonus, () => new StHomobonus() },
                 { MedalId.StClare, () => new StClare() },
                 { MedalId.StElijah, () => new StElijah() },

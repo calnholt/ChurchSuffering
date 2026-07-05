@@ -147,19 +147,25 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
         private bool IsPlayableInAction(Entity cardEntity, CardData data, ActionPoints ap, AppliedPassives appliedPassives, List<Entity> costEligibleCards)
         {
             var card = data.Card;
+            var alternateProfile = AlternateCardPlayService.GetProfile(EntityManager, cardEntity, SubPhase.Action);
 
             // Relics can't be played
             if (card.Type == CardType.Relic) return false;
 
+            // Block cards need an alternate play profile during Action phase
+            if (card.Type == CardType.Block && alternateProfile?.AllowsPlay != true) return false;
+
             // Need AP unless free action
-            if (!card.IsFreeAction)
+            bool isFree = card.IsFreeAction || alternateProfile?.IsFreeAction == true;
+            if (!isFree)
             {
                 int currentAp = ap?.Current ?? 0;
                 if (currentAp <= 0) return false;
             }
 
             // Card-specific CanPlay check (now pure bool, safe per-frame)
-            if (card.CanPlay != null && !card.CanPlay(EntityManager, cardEntity)) return false;
+            bool skipBlockCanPlay = card.Type == CardType.Block && alternateProfile?.AllowsPlay == true;
+            if (!skipBlockCanPlay && card.CanPlay != null && !card.CanPlay(EntityManager, cardEntity)) return false;
 
             var pledge = cardEntity.GetComponent<Pledge>();
             if (pledge != null && !pledge.CanPlay) return false;

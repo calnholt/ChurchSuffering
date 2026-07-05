@@ -1130,8 +1130,15 @@ namespace Crusaders30XX.ECS.Systems
                 : BlockValueService.GetTotalBlockValue(entity);
             int blockDelta = suppressDelta ? blackCardBlockBonus : blockValue - printedBlock;
             bool showBlock = blockValue > 0 && !card.IsWeapon && !card.IsToken;
-            bool showAttack = card.Type == CardType.Attack;
-            bool showAp = card.Type != CardType.Block && card.Type != CardType.Relic;
+
+            var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
+            var alternateProfile = phase?.Sub == SubPhase.Action
+                ? AlternateCardPlayService.GetProfile(EntityManager, entity, SubPhase.Action)
+                : null;
+            bool alternateAttack = alternateProfile?.TreatsAsAttack == true;
+            bool showAttack = card.Type == CardType.Attack || alternateAttack;
+            bool showAp = (card.Type != CardType.Block && card.Type != CardType.Relic)
+                || alternateProfile?.IsFreeAction == true;
 
             float effectiveChipSlotHeight = ChipSlotHeight;
             float effectiveChipSize = ChipSize;
@@ -1174,8 +1181,22 @@ namespace Crusaders30XX.ECS.Systems
             // ATK chip (slot 1)
             if (showAttack)
             {
-                int damage = suppressDelta ? card.Damage : GetEffectiveDamage(entity, card);
-                int damageDelta = suppressDelta ? 0 : damage - card.Damage;
+                int damage;
+                int printedDamage;
+                if (alternateAttack)
+                {
+                    printedDamage = alternateProfile.AttackDamage;
+                    damage = suppressDelta
+                        ? printedDamage
+                        : GetAlternateAttackDamage(entity, printedDamage);
+                }
+                else
+                {
+                    printedDamage = card.Damage;
+                    damage = suppressDelta ? card.Damage : GetEffectiveDamage(entity, card);
+                }
+
+                int damageDelta = suppressDelta ? 0 : damage - printedDamage;
                 float chipY = (ChipColumnTopY + effectiveChipSlotHeight) * vs;
                 bool hasDelta = damageDelta != 0;
 
@@ -1202,7 +1223,7 @@ namespace Crusaders30XX.ECS.Systems
                     ? lastChipBottomY + ChipGap * vs
                     : ChipColumnTopY * vs;
 
-                if (card.IsFreeAction)
+                if (card.IsFreeAction || alternateProfile?.IsFreeAction == true)
                 {
                     DrawChipLabelSlab(cardCenter, rotation, vs, cc, chipX, apLabelY, "FREE", ChipVariant.FREE, isColorless);
                     float chipBodyY = apLabelY + LabelSlabHeight * vs;
@@ -1477,6 +1498,30 @@ namespace Crusaders30XX.ECS.Systems
             CardType.Relic => "RELIC",
             _ => "CARD"
         };
+
+        private int GetAlternateAttackDamage(Entity entity, int baseDamage)
+        {
+            try
+            {
+                var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+                var enemy = EntityManager.GetEntitiesWithComponent<Enemy>().FirstOrDefault();
+                if (player == null || enemy == null)
+                    return Math.Max(0, baseDamage);
+
+                var preview = new ModifyHpRequestEvent
+                {
+                    Source = player,
+                    Target = enemy,
+                    AttackCard = entity,
+                    DamageType = ModifyTypeEnum.Attack,
+                };
+                return Math.Max(0, AppliedPassivesService.GetPreviewAttackDamage(preview, baseDamage, ReadOnly: true));
+            }
+            catch
+            {
+                return Math.Max(0, baseDamage);
+            }
+        }
 
         private int GetEffectiveDamage(Entity entity, CardBase card)
         {
