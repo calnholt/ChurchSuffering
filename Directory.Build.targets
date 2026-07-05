@@ -1,6 +1,7 @@
 <Project>
   <!-- MonoGame MGFXC needs Wine on macOS/Linux to compile .fx shaders. -->
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) Or $([MSBuild]::IsOSPlatform('Linux'))">
+    <SkipMonoGameContentPipeline Condition="'$(SkipMonoGameContentPipeline)' == ''">true</SkipMonoGameContentPipeline>
     <MonoGameMgfxcWinePath Condition="'$(MonoGameMgfxcWinePath)' == ''">$(HOME)/.winemonogame</MonoGameMgfxcWinePath>
     <_MgfxcWineDotNet>$(MonoGameMgfxcWinePath)/drive_c/windows/system32/dotnet.exe</_MgfxcWineDotNet>
     <_MgfxcExecEnvironmentVariables>PATH=$(MSBuildProjectDirectory)/scripts/tools:$(PATH);MGFXC_WINE_PATH=$(MonoGameMgfxcWinePath)</_MgfxcExecEnvironmentVariables>
@@ -27,7 +28,9 @@
   <!-- Override package target so MGFXC_WINE_PATH is set for content builds. -->
   <Target Name="RunContentBuilder" DependsOnTargets="PrepareContentBuilder">
 
-    <Exec Command="$(DotnetCommand) tool restore" />
+    <Exec
+      Condition="'$(SkipMonoGameContentPipeline)' != 'true'"
+      Command="$(DotnetCommand) tool restore" />
 
     <Exec
       Condition="'$(SkipMonoGameContentPipeline)' != 'true' And '%(ContentReference.FullPath)' != ''"
