@@ -46,8 +46,39 @@ jobs:
           git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
           git push
 
-  build-windows:
+  build-content:
     needs: bump-version
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull latest version bump
+        run: git pull origin main
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet packages
+        run: dotnet restore Crusaders30XX.csproj
+
+      - name: Build MonoGame content (native MGFXC)
+        run: dotnet build Crusaders30XX.csproj -c Release --no-restore
+
+      - name: Upload content artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: monogame-content
+          path: Content/bin/DesktopGL
+          retention-days: 1
+
+  build-windows:
+    needs: [bump-version, build-content]
     runs-on: windows-latest
     env:
       ITCH_USER: "calnholt"
@@ -73,8 +104,14 @@ jobs:
       - name: Restore NuGet packages
         run: dotnet restore Crusaders30XX.csproj
 
+      - name: Download prebuilt MonoGame content
+        uses: actions/download-artifact@v4
+        with:
+          name: monogame-content
+          path: Content/bin/DesktopGL
+
       - name: Publish self-contained Windows build
-        run: dotnet publish Crusaders30XX.csproj -c Release -r win-x64 --self-contained true -o ./artifacts/windows
+        run: dotnet publish Crusaders30XX.csproj -c Release -r win-x64 --self-contained true -o ./artifacts/windows -p:SkipMonoGameContentPipeline=true
 
       - name: Setup butler
         uses: remarkablegames/setup-butler@v2
@@ -121,7 +158,7 @@ jobs:
           exit 1
 
   build-macos:
-    needs: bump-version
+    needs: [bump-version, build-content]
     runs-on: macos-latest
     env:
       ITCH_USER: "calnholt"
@@ -143,24 +180,24 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Setup MGFXC Wine prefix
-        run: |
-          brew install --cask wine-stable
-          brew install p7zip
-          ./scripts/setup-mgfxc-wine.sh
-
       - name: Restore NuGet packages
         run: dotnet restore Crusaders30XX.csproj
 
+      - name: Download prebuilt MonoGame content
+        uses: actions/download-artifact@v4
+        with:
+          name: monogame-content
+          path: Content/bin/DesktopGL
+
       - name: Publish Apple Silicon build
         run: |
-          dotnet publish Crusaders30XX.csproj -c Release -r osx-arm64 --self-contained true -o ./artifacts/mac-apple-silicon
+          dotnet publish Crusaders30XX.csproj -c Release -r osx-arm64 --self-contained true -o ./artifacts/mac-apple-silicon -p:SkipMonoGameContentPipeline=true
           chmod +x ./artifacts/mac-apple-silicon/Crusaders30XX
           (cd ./artifacts/mac-apple-silicon && zip -r ../Crusaders30XX-mac-apple-silicon.zip .)
 
       - name: Publish Intel Mac build
         run: |
-          dotnet publish Crusaders30XX.csproj -c Release -r osx-x64 --self-contained true -o ./artifacts/mac-intel
+          dotnet publish Crusaders30XX.csproj -c Release -r osx-x64 --self-contained true -o ./artifacts/mac-intel -p:SkipMonoGameContentPipeline=true
           chmod +x ./artifacts/mac-intel/Crusaders30XX
           (cd ./artifacts/mac-intel && zip -r ../Crusaders30XX-mac-intel.zip .)
 

@@ -7,9 +7,18 @@
   </PropertyGroup>
 
   <Target
+    Name="ValidatePrebuiltMonoGameContent"
+    BeforeTargets="RunContentBuilder"
+    Condition="'$(SkipMonoGameContentPipeline)' == 'true' And '@(MonoGameContentReference)' != ''">
+    <Error
+      Condition="!Exists('$(MSBuildProjectDirectory)/Content/bin/DesktopGL/Content')"
+      Text="SkipMonoGameContentPipeline is set but Content/bin/DesktopGL/Content is missing. Download the monogame-content CI artifact or run dotnet build on Windows first." />
+  </Target>
+
+  <Target
     Name="ValidateMgfxcWine"
     BeforeTargets="RunContentBuilder"
-    Condition="($([MSBuild]::IsOSPlatform('OSX')) Or $([MSBuild]::IsOSPlatform('Linux'))) And '@(MonoGameContentReference)' != ''">
+    Condition="'$(SkipMonoGameContentPipeline)' != 'true' And ($([MSBuild]::IsOSPlatform('OSX')) Or $([MSBuild]::IsOSPlatform('Linux'))) And '@(MonoGameContentReference)' != ''">
     <Error
       Condition="!Exists('$(_MgfxcWineDotNet)')"
       Text="MonoGame shader compilation requires a Wine prefix at $(MonoGameMgfxcWinePath). Run: ./scripts/setup-mgfxc-wine.sh" />
@@ -21,7 +30,7 @@
     <Exec Command="$(DotnetCommand) tool restore" />
 
     <Exec
-      Condition="'%(ContentReference.FullPath)' != ''"
+      Condition="'$(SkipMonoGameContentPipeline)' != 'true' And '%(ContentReference.FullPath)' != ''"
       Command="$(DotnetCommand) $(MGCBCommand) $(MonoGameMGCBAdditionalArguments) /@:&quot;%(ContentReference.FullPath)&quot; /platform:$(MonoGamePlatform) /outputDir:&quot;%(ContentReference.ContentOutputDir)&quot; /intermediateDir:&quot;%(ContentReference.ContentIntermediateOutputDir)&quot; /workingDir:&quot;%(ContentReference.FullDir)&quot;"
       WorkingDirectory="$(MSBuildProjectDirectory)"
       EnvironmentVariables="$(_MgfxcExecEnvironmentVariables)" />
