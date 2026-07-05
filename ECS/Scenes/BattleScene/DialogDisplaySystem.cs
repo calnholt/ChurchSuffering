@@ -1332,6 +1332,10 @@ namespace Crusaders30XX.ECS.Systems
                 "reverent crusader" => "character/reverent_crusader",
                 "revered crusader" => "character/revered_crusader",
                 "smith" => "character/smith",
+                "keeper" => "waystation/the-keeper",
+                "elias" => "waystation/elias",
+                "old confessor" => "waystation/old-confessor",
+                "mara" => "waystation/mara",
                 _ => string.Empty,
             };
         }

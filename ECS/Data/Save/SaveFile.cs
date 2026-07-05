@@ -9,7 +9,7 @@ namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 15;
+		public const int CURRENT_VERSION = 17;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -33,9 +33,37 @@ namespace Crusaders30XX.ECS.Data.Save
 		public Dictionary<string, AchievementProgress> achievements { get; set; } = new Dictionary<string, AchievementProgress>();
 		/// <summary>Run-long applied passive type name to stack count (e.g. Frostbite).</summary>
 		public Dictionary<string, int> runLongPassives { get; set; } = new Dictionary<string, int>();
+		public WayStationMetaSave waystation { get; set; } = new WayStationMetaSave();
 		/// <summary>Exact unresolved deck reward offer shown after a quest reward.</summary>
 		public DeckRewardOfferSave pendingDeckRewardOffer { get; set; }
 		public ClimbSaveState climb { get; set; } = new ClimbSaveState();
+	}
+
+	public class WayStationMetaSave
+	{
+		public int climbAttempts { get; set; }
+		public int climbCompletions { get; set; }
+		public int deferredNpcDialogueCounter { get; set; }
+		public bool pendingNpcDialogueOffer { get; set; }
+		public Dictionary<string, List<string>> completedDialogueSegments { get; set; } = new Dictionary<string, List<string>>();
+		public WayStationVisitSave currentVisit { get; set; } = new WayStationVisitSave();
+	}
+
+	public class WayStationVisitSave
+	{
+		public bool initialized { get; set; }
+		public List<WayStationDialogueOfferSave> offers { get; set; } = new List<WayStationDialogueOfferSave>();
+	}
+
+	public class WayStationDialogueOfferSave
+	{
+		public string offerId { get; set; } = string.Empty;
+		public string characterId { get; set; } = string.Empty;
+		public string definitionId { get; set; } = string.Empty;
+		public string segmentId { get; set; } = string.Empty;
+		public float screenX { get; set; }
+		public float screenY { get; set; }
+		public bool visible { get; set; }
 	}
 
 	public class ClimbSaveState

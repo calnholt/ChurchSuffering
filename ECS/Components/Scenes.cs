@@ -114,6 +114,28 @@ namespace Crusaders30XX.ECS.Components
 		public Entity Owner { get; set; }
 	}
 
+	public enum WayStationArrivalKind
+	{
+		Initial,
+		SameVisit,
+		ReturnedFromFailedClimb,
+		ReturnedFromAbandonedClimb,
+		ReturnedFromCompletedClimb,
+	}
+
+	public class WayStationArrivalContextState : IComponent
+	{
+		public Entity Owner { get; set; }
+		public WayStationArrivalKind Kind { get; set; } = WayStationArrivalKind.Initial;
+		public bool HasPendingContext { get; set; }
+	}
+
+	public class WayStationDialoguePoiAction : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string OfferId { get; set; } = string.Empty;
+	}
+
 	/// <summary>
 	/// Marks which scene owns an entity for automatic cleanup on scene transitions.
 	/// </summary>

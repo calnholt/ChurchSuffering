@@ -45,6 +45,7 @@ public class Game1 : Game
     private WayStationCameraSystem _wayStationCameraSystem;
     private WayStationBackgroundDisplaySystem _wayStationBackgroundDisplaySystem;
     private WayStationPoiDisplaySystem _wayStationPoiDisplaySystem;
+    private WayStationDialogueSystem _wayStationDialogueSystem;
     private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModalSystem;
     private BattleSceneSystem _battleSceneSystem;
     private ClimbSceneSystem _climbSceneSystem;
@@ -181,6 +182,7 @@ public class Game1 : Game
         _wayStationCameraSystem = new WayStationCameraSystem(_world.EntityManager, _imageAssets);
         _wayStationBackgroundDisplaySystem = new WayStationBackgroundDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationPoiDisplaySystem = new WayStationPoiDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
+        _wayStationDialogueSystem = new WayStationDialogueSystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationClimbSettingsModalSystem = new WayStationClimbSettingsModalSystem(_world, _spriteBatch, _imageAssets);
         _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
@@ -230,6 +232,7 @@ public class Game1 : Game
         _world.AddSystem(_wayStationCameraSystem);
         _world.AddSystem(_wayStationBackgroundDisplaySystem);
         _world.AddSystem(_wayStationPoiDisplaySystem);
+        _world.AddSystem(_wayStationDialogueSystem);
         _world.AddSystem(_wayStationClimbSettingsModalSystem);
         _world.AddSystem(_battleSceneSystem);
         _world.AddSystem(_climbSceneSystem);
@@ -546,6 +549,7 @@ public class Game1 : Game
             {
                 FrameProfiler.Measure("WayStationBackgroundDisplaySystem.Draw", _wayStationBackgroundDisplaySystem.Draw);
                 FrameProfiler.Measure("WayStationPoiDisplaySystem.Draw", _wayStationPoiDisplaySystem.Draw);
+                FrameProfiler.Measure("WayStationDialogueSystem.Draw", _wayStationDialogueSystem.Draw);
                 FrameProfiler.Measure("WayStationClimbSettingsModalSystem.Draw", _wayStationClimbSettingsModalSystem.Draw);
                 break;
             }

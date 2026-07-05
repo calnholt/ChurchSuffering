@@ -68,10 +68,19 @@ namespace Crusaders30XX.ECS.Events
         public Entity Player { get; set; }
     }
 
+    public enum RunEndCause
+    {
+        Death,
+        Abandon,
+    }
+
     /// <summary>
     /// Starts the same game-over overlay sequence as PlayerDied (e.g. run abandon).
     /// </summary>
-    public class RunEndSequenceRequested { }
+    public class RunEndSequenceRequested
+    {
+        public RunEndCause Cause { get; set; } = RunEndCause.Abandon;
+    }
     public class HealEvent
     {
         public Entity Target { get; set; }

@@ -179,6 +179,8 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (enemyId == EnemyId.FallenShepherd)
 			{
+				SaveCache.RecordWayStationClimbCompletion();
+				WayStationArrivalContextService.Set(EntityManager, WayStationArrivalKind.ReturnedFromCompletedClimb);
 				return new PostVictoryAction
 				{
 					Kind = PostVictoryKind.ShowWayStationTransition,
