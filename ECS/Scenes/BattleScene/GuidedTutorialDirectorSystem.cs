@@ -18,6 +18,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged);
 			EventManager.Subscribe<GuidedTutorialRestartRequested>(OnRestartRequested);
+			EventManager.Subscribe<GuidedTutorialSkipRequested>(OnSkipRequested);
 			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
 		}
 
@@ -50,6 +51,12 @@ namespace Crusaders30XX.ECS.Systems
 				}
 				state.ConfirmedAttackCountThisTurn++;
 			}
+		}
+
+		private void OnSkipRequested(GuidedTutorialSkipRequested evt)
+		{
+			if (GuidedTutorialService.IsActive(EntityManager))
+				GuidedTutorialService.Complete(EntityManager);
 		}
 
 		private void OnRestartRequested(GuidedTutorialRestartRequested evt)

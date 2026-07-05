@@ -95,6 +95,12 @@ namespace Crusaders30XX.ECS.Systems
                     EventManager.Publish(new RunEndSequenceRequested());
                     break;
                 }
+                case UIElementEventType.SkipTutorial:
+                {
+                    if (GuidedTutorialService.IsActive(entityManager))
+                        EventManager.Publish(new GuidedTutorialSkipRequested());
+                    break;
+                }
                 case UIElementEventType.LeaveShop:
                 {
                     EventManager.Publish(new ShowTransition { Scene = SceneId.Climb, SkipHold = true });

@@ -32,4 +32,9 @@ namespace Crusaders30XX.ECS.Events
     /// Request to restart the current guided tutorial section.
     /// </summary>
     public class GuidedTutorialRestartRequested { }
+
+    /// <summary>
+    /// Request to skip and complete the guided tutorial from the pause menu.
+    /// </summary>
+    public class GuidedTutorialSkipRequested { }
 }

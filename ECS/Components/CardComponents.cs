@@ -397,6 +397,7 @@ namespace Crusaders30XX.ECS.Components
         ViewDiscard,
         ViewDeck,
 			AbandonQuest,
+        SkipTutorial,
         PayCostCancel,
         PledgeCard,
         LeaveShop,

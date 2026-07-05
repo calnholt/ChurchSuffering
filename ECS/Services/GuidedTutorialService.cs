@@ -197,13 +197,19 @@ namespace Crusaders30XX.ECS.Services
 			foreach (var key in GuidedTutorialDefinitions.CoveredTutorialKeys)
 				SaveCache.MarkTutorialSeen(key);
 			SaveCache.CompleteGuidedTutorial();
-			Cleanup(entityManager);
-			EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation });
+			CleanupTutorialState(entityManager);
+			EventManager.Publish(new ShowTransition { Scene = SceneId.WayStation, EndRunOnLoad = true });
 		}
 
 		public static void Cleanup(EntityManager entityManager)
 		{
 			if (entityManager == null) return;
+			CleanupTutorialState(entityManager);
+			CleanupRunTeardown(entityManager);
+		}
+
+		private static void CleanupTutorialState(EntityManager entityManager)
+		{
 			foreach (var entity in entityManager.GetEntitiesWithComponent<GuidedTutorial>().ToList())
 				entityManager.DestroyEntity(entity.Id);
 			foreach (var entity in entityManager.GetEntitiesWithComponent<StockHand>().ToList())
@@ -213,6 +219,10 @@ namespace Crusaders30XX.ECS.Services
 					entityManager.DestroyEntity(card.Id);
 				entityManager.DestroyEntity(entity.Id);
 			}
+		}
+
+		private static void CleanupRunTeardown(EntityManager entityManager)
+		{
 			if (!SaveCache.IsRunActive())
 			{
 				RunPlayerService.DestroyRunPlayer(entityManager);

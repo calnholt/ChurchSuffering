@@ -32,6 +32,7 @@ namespace Crusaders30XX.ECS.Factories
                 { MedalId.StRita, () => new StRita() },
                 { MedalId.StChristopher, () => new StChristopher() },
                 { MedalId.StLawrence, () => new StLawrence() },
+                { MedalId.StLazarus, () => new StLazarus() },
             };
 
         public static MedalBase Create(MedalId medalId)

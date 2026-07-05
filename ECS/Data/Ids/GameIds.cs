@@ -93,6 +93,7 @@ public enum MedalId
     StRita,
     StChristopher,
     StLawrence,
+    StLazarus,
 }
 
 public enum EquipmentId
@@ -340,6 +341,7 @@ public static class GameIdExtensions
         MedalId.StRita => "st_rita",
         MedalId.StChristopher => "st_christopher",
         MedalId.StLawrence => "st_lawrence",
+        MedalId.StLazarus => "st_lazarus",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 

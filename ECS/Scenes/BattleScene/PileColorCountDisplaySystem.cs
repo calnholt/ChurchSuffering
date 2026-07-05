@@ -193,7 +193,7 @@ namespace Crusaders30XX.ECS.Systems
             int blackCount,
             int colorlessCount)
         {
-            DrawPill(redEntityName, new Color(78, 12, 12), Color.White, redCount.ToString());
+            DrawPill(redEntityName, new Color(204, 34, 34), Color.White, redCount.ToString());
             DrawPill(whiteEntityName, Color.White, Color.Black, whiteCount.ToString());
             DrawPill(blackEntityName, new Color(20, 20, 20), Color.White, blackCount.ToString());
             if (colorlessCount > 0)

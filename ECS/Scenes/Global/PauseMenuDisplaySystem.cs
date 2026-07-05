@@ -21,6 +21,7 @@ namespace Crusaders30XX.ECS.Systems
 		private const string RootName = "PauseMenu_Overlay";
 		private const string BlockerName = "PauseMenu_Blocker";
 		private const string AbandonName = "PauseMenu_AbandonButton";
+		private const string SkipTutorialName = "PauseMenu_SkipTutorialButton";
 		private const string MusicSliderName = "PauseMenu_MusicSlider";
 		private const string SfxSliderName = "PauseMenu_SfxSlider";
 
@@ -32,6 +33,7 @@ namespace Crusaders30XX.ECS.Systems
 		private Entity _rootEntity;
 		private Entity _blockerEntity;
 		private Entity _abandonButtonEntity;
+		private Entity _skipTutorialButtonEntity;
 		private Entity _musicSliderEntity;
 		private Entity _sfxSliderEntity;
 
@@ -139,6 +141,7 @@ namespace Crusaders30XX.ECS.Systems
 			_pixel.SetData(new[] { Color.White });
 			EventManager.Subscribe<DeleteCachesEvent>(_ => DismissOverlay());
 			EventManager.Subscribe<RunEndSequenceRequested>(_ => DismissOverlay());
+			EventManager.Subscribe<GuidedTutorialSkipRequested>(_ => DismissOverlay());
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -319,6 +322,23 @@ namespace Crusaders30XX.ECS.Systems
 				InputContextService.EnsureMember(EntityManager, _abandonButtonEntity, ContextId);
 				EnsureDontDestroy(_abandonButtonEntity);
 			}
+
+			if (_skipTutorialButtonEntity == null || EntityManager.GetEntity(SkipTutorialName) == null)
+			{
+				_skipTutorialButtonEntity = EntityManager.GetEntity(SkipTutorialName) ?? EntityManager.CreateEntity(SkipTutorialName);
+				EnsureComponent(_skipTutorialButtonEntity, new Transform { Position = Vector2.Zero, ZOrder = ZOrder + 2 });
+				EnsureComponent(_skipTutorialButtonEntity, new UIElement
+				{
+					Bounds = Rectangle.Empty,
+					IsInteractable = false,
+					LayerType = UILayerType.Overlay,
+					EventType = UIElementEventType.SkipTutorial,
+					ShowHoverHighlight = false,
+					IsHidden = true,
+				});
+				InputContextService.EnsureMember(EntityManager, _skipTutorialButtonEntity, ContextId);
+				EnsureDontDestroy(_skipTutorialButtonEntity);
+			}
 		}
 
 		private Entity EnsureSliderEntity(Entity current, string name, string label, PauseMenuSliderSetting setting, int value)
@@ -383,8 +403,11 @@ namespace Crusaders30XX.ECS.Systems
 			bool showAbandon = !hidden
 				&& SaveCache.IsRunActive()
 				&& !GuidedTutorialService.IsActive(EntityManager);
+			bool showSkipTutorial = !hidden
+				&& GuidedTutorialService.IsActive(EntityManager);
 			var layout = ComputeLayout();
 			SetUiActive(_abandonButtonEntity, showAbandon, layout.AbandonButton);
+			SetUiActive(_skipTutorialButtonEntity, showSkipTutorial, layout.AbandonButton);
 		}
 
 		private static void SetUiActive(Entity entity, bool active, Rectangle bounds)
@@ -412,12 +435,16 @@ namespace Crusaders30XX.ECS.Systems
 			UpdateTransform(_musicSliderEntity, ZOrder + 2, new Vector2(layout.MusicRow.X, layout.MusicRow.Y));
 			UpdateTransform(_sfxSliderEntity, ZOrder + 2, new Vector2(layout.SfxRow.X, layout.SfxRow.Y));
 			UpdateTransform(_abandonButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
+			UpdateTransform(_skipTutorialButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
 
 			UpdateSliderLayout(_musicSliderEntity, layout.MusicRow, layout.MusicTrack);
 			UpdateSliderLayout(_sfxSliderEntity, layout.SfxRow, layout.SfxTrack);
 
 			var abandonUi = _abandonButtonEntity?.GetComponent<UIElement>();
 			if (abandonUi?.IsInteractable == true) abandonUi.Bounds = layout.AbandonButton;
+
+			var skipTutorialUi = _skipTutorialButtonEntity?.GetComponent<UIElement>();
+			if (skipTutorialUi?.IsInteractable == true) skipTutorialUi.Bounds = layout.AbandonButton;
 		}
 
 		private void UpdateSliderLayout(Entity entity, Rectangle row, Rectangle track)
@@ -453,7 +480,7 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch.Draw(_pixel, drawLayout.Rail, RailFill * alpha);
 			DrawAccent(drawLayout.Accent, alpha);
 			DrawHeader(drawLayout, alpha);
-			DrawAbandonButton(drawLayout, alpha);
+			DrawFooterButtons(drawLayout, alpha);
 			DrawResumeHint(alpha);
 		}
 
@@ -488,21 +515,31 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch.DrawString(_bodyFont, "Audio settings", new Vector2(layout.ContentX, layout.SubtitleY), MutedWhite * alpha, 0f, Vector2.Zero, SubtitleScale, SpriteEffects.None, 0f);
 		}
 
-		private void DrawAbandonButton(PauseMenuLayout layout, float alpha)
+		private void DrawFooterButtons(PauseMenuLayout layout, float alpha)
 		{
-			var ui = _abandonButtonEntity?.GetComponent<UIElement>();
-			if (ui == null || ui.IsHidden) return;
+			var abandonUi = _abandonButtonEntity?.GetComponent<UIElement>();
+			if (abandonUi != null && !abandonUi.IsHidden)
+			{
+				DrawFooterButton(abandonUi, layout.AbandonButton, "Abandon Climb", alpha);
+				return;
+			}
 
+			var skipTutorialUi = _skipTutorialButtonEntity?.GetComponent<UIElement>();
+			if (skipTutorialUi != null && !skipTutorialUi.IsHidden)
+				DrawFooterButton(skipTutorialUi, layout.AbandonButton, "Skip Tutorial", alpha);
+		}
+
+		private void DrawFooterButton(UIElement ui, Rectangle bounds, string text, float alpha)
+		{
 			Color fill = ui.IsHovered ? ButtonFillHover : ButtonFill;
 			Color border = ui.IsHovered ? ButtonBorderHover : ButtonBorder;
-			_spriteBatch.Draw(_pixel, layout.AbandonButton, fill * alpha);
-			DrawBorder(layout.AbandonButton, border * alpha, ButtonBorderThickness);
+			_spriteBatch.Draw(_pixel, bounds, fill * alpha);
+			DrawBorder(bounds, border * alpha, ButtonBorderThickness);
 
-			string text = "Abandon Climb";
 			Vector2 size = _bodyFont.MeasureString(text) * ButtonTextScale;
 			var pos = new Vector2(
-				layout.AbandonButton.X + (layout.AbandonButton.Width - size.X) / 2f,
-				layout.AbandonButton.Y + (layout.AbandonButton.Height - size.Y) / 2f);
+				bounds.X + (bounds.Width - size.X) / 2f,
+				bounds.Y + (bounds.Height - size.Y) / 2f);
 			_spriteBatch.DrawString(_bodyFont, text, pos, WarmWhite * alpha, 0f, Vector2.Zero, ButtonTextScale, SpriteEffects.None, 0f);
 		}
 

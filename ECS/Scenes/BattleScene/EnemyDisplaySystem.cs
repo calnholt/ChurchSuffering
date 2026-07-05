@@ -124,7 +124,10 @@ namespace Crusaders30XX.ECS.Systems
 		private Texture2D GetTextureFor()
 		{
 			var queuedEntity = EntityManager.GetEntity("QueuedEvents");
-			var queued = queuedEntity.GetComponent<QueuedEvents>();
+			var queued = queuedEntity?.GetComponent<QueuedEvents>();
+			if (queued?.Events == null || queued.CurrentIndex < 0 || queued.CurrentIndex >= queued.Events.Count)
+				return null;
+
 			string enemyId = queued.Events[queued.CurrentIndex].EventId;
 			string assetName = EnemyPortraitContent.ToAssetName(enemyId);
 			if (_enemyTexture != null && _loadedAssetName == assetName) return _enemyTexture;

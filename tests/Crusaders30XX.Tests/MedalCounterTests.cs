@@ -339,9 +339,145 @@ public class MedalCounterTests
 		Assert.IsType<StRita>(MedalFactory.Create("st_rita"));
 		Assert.IsType<StLonginus>(MedalFactory.Create("st_longinus"));
 		Assert.IsType<StElijah>(MedalFactory.Create("st_elijah"));
+		Assert.IsType<StLazarus>(MedalFactory.Create("st_lazarus"));
 		Assert.Contains(MedalId.StRita, MedalFactory.GetAllMedals().Keys);
 		Assert.Contains(MedalId.StLonginus, MedalFactory.GetAllMedals().Keys);
 		Assert.Contains(MedalId.StElijah, MedalFactory.GetAllMedals().Keys);
+		Assert.Contains(MedalId.StLazarus, MedalFactory.GetAllMedals().Keys);
+	}
+
+	[Fact]
+	public void StLazarus_increments_on_mill_and_triggers_at_two()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StLazarus();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new TopCardRemovedForMillEvent
+			{
+				Card = entityManager.CreateEntity("MilledCard_1")
+			});
+
+			Assert.Equal(1, medal.CurrentCount);
+			Assert.Equal(0, activateCount);
+
+			EventManager.Publish(new TopCardRemovedForMillEvent
+			{
+				Card = entityManager.CreateEntity("MilledCard_2")
+			});
+
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StLazarus_third_mill_starts_new_cycle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StLazarus();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			for (int i = 0; i < 2; i++)
+			{
+				EventManager.Publish(new TopCardRemovedForMillEvent
+				{
+					Card = entityManager.CreateEntity($"MilledCard_{i}")
+				});
+			}
+
+			Assert.Equal(0, medal.CurrentCount);
+
+			EventManager.Publish(new TopCardRemovedForMillEvent
+			{
+				Card = entityManager.CreateEntity("MilledCard_3")
+			});
+
+			Assert.Equal(1, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StLazarus_activate_publishes_resurrect_1()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StLazarus();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			DrawRandomCardFromDiscardEvent resurrectEvent = null;
+			EventManager.Subscribe<DrawRandomCardFromDiscardEvent>(evt => resurrectEvent = evt);
+
+			medal.Activate();
+
+			Assert.NotNull(resurrectEvent);
+			Assert.Equal(1, resurrectEvent.Amount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StLazarus_unsubscribes_on_dispose()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medalEntity = entityManager.CreateEntity("Medal");
+			var medal = new StLazarus();
+			medal.Initialize(entityManager, medalEntity);
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new TopCardRemovedForMillEvent
+			{
+				Card = entityManager.CreateEntity("MilledCard_1")
+			});
+			EventManager.Publish(new TopCardRemovedForMillEvent
+			{
+				Card = entityManager.CreateEntity("MilledCard_2")
+			});
+			Assert.Equal(1, activateCount);
+
+			medal.Dispose();
+
+			EventManager.Publish(new TopCardRemovedForMillEvent
+			{
+				Card = entityManager.CreateEntity("MilledCard_3")
+			});
+			EventManager.Publish(new TopCardRemovedForMillEvent
+			{
+				Card = entityManager.CreateEntity("MilledCard_4")
+			});
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
 	}
 
 	[Fact]

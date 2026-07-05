@@ -22,6 +22,9 @@ namespace Crusaders30XX.ECS.Services
 			if (entityManager != null)
 			{
 				RunPlayerService.DestroyRunPlayer(entityManager);
+				var queuedEvents = entityManager.GetEntity("QueuedEvents");
+				if (queuedEvents != null)
+					entityManager.DestroyEntity(queuedEvents.Id);
 			}
 			SaveCache.ClearPendingBattle();
 			SaveCache.MarkRunInactive();
