@@ -53,10 +53,10 @@ namespace Crusaders30XX.ECS.Systems
 		public float HoleLifeMax { get; set; } = 0.75f;
 
 		[DebugEditable(DisplayName = "Open Frac", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float HoleOpenFrac { get; set; } = 0.25f;
+		public float HoleOpenFrac { get; set; } = 0.45f;
 
 		[DebugEditable(DisplayName = "Close Frac", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float HoleCloseFrac { get; set; } = 0.30f;
+		public float HoleCloseFrac { get; set; } = 0.45f;
 
 		[DebugEditable(DisplayName = "Radius Min", Step = 0.01f, Min = 0.01f, Max = 1f)]
 		public float HoleRadiusMin { get; set; } = 0.10f;
@@ -65,25 +65,25 @@ namespace Crusaders30XX.ECS.Systems
 		public float HoleRadiusMax { get; set; } = 0.50f;
 
 		[DebugEditable(DisplayName = "Radius Flux Amp", Step = 0.01f, Min = 0f, Max = 1f)]
-		public float RadiusFluxAmp { get; set; } = 0.12f;
+		public float RadiusFluxAmp { get; set; } = 0.13f;
 
 		[DebugEditable(DisplayName = "Radius Flux Rate", Step = 0.01f, Min = 0f, Max = 10f)]
-		public float RadiusFluxRate { get; set; } = 2.20f;
+		public float RadiusFluxRate { get; set; } = 2.3f;
 
 		[DebugEditable(DisplayName = "Hole Margin", Step = 0.01f, Min = 0f, Max = 0.50f)]
 		public float HoleMargin { get; set; } = 0.02f;
 
 		[DebugEditable(DisplayName = "Hole Feather", Step = 0.01f, Min = 0.001f, Max = 0.20f)]
-		public float HoleFeather { get; set; } = 0.2f;
+		public float HoleFeather { get; set; } = 0.071f;
 
 		[DebugEditable(DisplayName = "Feather Vary", Step = 0.01f, Min = 0f, Max = 1f)]
 		public float FeatherVary { get; set; } = 0.70f;
 
 		[DebugEditable(DisplayName = "Rim Warp Amp", Step = 0.01f, Min = 0f, Max = 1f)]
-		public float RimWarpAmp { get; set; } = 0.07f;
+		public float RimWarpAmp { get; set; } = 0f;
 
 		[DebugEditable(DisplayName = "Rim Warp Scale", Step = 0.01f, Min = 0.01f, Max = 20f)]
-		public float RimWarpScale { get; set; } = 2.91f;
+		public float RimWarpScale { get; set; } = 2.13f;
 
 		[DebugEditable(DisplayName = "Rim Warp Speed", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float RimWarpSpeed { get; set; } = 0.35f;
