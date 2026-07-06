@@ -672,6 +672,67 @@ public class PlayerInputArchitectureTests
     }
 
     [Fact]
+    public void Gamepad_back_resolves_to_view_hotkey_before_cancel()
+    {
+        PlayerButtonMask back = PlayerInputFrame.Mask(PlayerButton.Back);
+        PlayerButtonMask cancel = PlayerInputFrame.Mask(PlayerButton.Cancel);
+
+        FaceButton? button = HotKeySystem.GetPressedButton(Frame(
+            device: PlayerInputDevice.Gamepad,
+            gamepadConnected: true,
+            pressed: back | cancel));
+
+        Assert.Equal(FaceButton.View, button);
+    }
+
+    [Fact]
+    public void Gamepad_start_and_cancel_resolve_to_menu_and_b_hotkeys()
+    {
+        FaceButton? start = HotKeySystem.GetPressedButton(Frame(
+            device: PlayerInputDevice.Gamepad,
+            gamepadConnected: true,
+            pressed: PlayerInputFrame.Mask(PlayerButton.Start)));
+        FaceButton? cancel = HotKeySystem.GetPressedButton(Frame(
+            device: PlayerInputDevice.Gamepad,
+            gamepadConnected: true,
+            pressed: PlayerInputFrame.Mask(PlayerButton.Cancel)));
+
+        Assert.Equal(FaceButton.Start, start);
+        Assert.Equal(FaceButton.B, cancel);
+    }
+
+    [Fact]
+    public void Gamepad_back_triggers_view_hotkey_target()
+    {
+        EventManager.Clear();
+        var entityManager = CreateSceneEntityManager();
+        Entity viewTarget = CreateUi(
+            entityManager,
+            "ViewHotKeyTarget",
+            10,
+            new Rectangle(0, 0, 100, 100));
+        entityManager.AddComponent(viewTarget, new HotKey { Button = FaceButton.View });
+        PlayerButtonMask back = PlayerInputFrame.Mask(PlayerButton.Back);
+        PlayerButtonMask cancel = PlayerInputFrame.Mask(PlayerButton.Cancel);
+        var input = new PlayerInputSystem(
+            entityManager,
+            new FakeInputSource(Frame(
+                device: PlayerInputDevice.Gamepad,
+                gamepadConnected: true,
+                pressed: back | cancel)));
+        var hotKeys = new HotKeySystem(entityManager, null, null);
+        var selected = new List<Entity>();
+        EventManager.Subscribe<HotKeySelectEvent>(e => selected.Add(e.Entity));
+
+        input.Update(new GameTime());
+        hotKeys.Update(new GameTime());
+
+        Assert.True(viewTarget.GetComponent<UIElement>().IsClicked);
+        Assert.Same(viewTarget, Assert.Single(selected));
+        EventManager.Clear();
+    }
+
+    [Fact]
     public void Gamepad_rumbles_on_new_interactable_hover()
     {
         EventManager.Clear();

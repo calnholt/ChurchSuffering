@@ -159,7 +159,7 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 		Assert.Contains("X Sharpen - Your next weapon attack this turn gains +X damage.", sharpenBlocks[0].Text);
 
 		var guardBlocks = TooltipTextService.GetKeywordTooltipBlocks("Gain 2 guard.");
-		Assert.Equal(["guard", "aggression"], guardBlocks.Select(block => block.Id).ToArray());
+		Assert.Equal(["guard"], guardBlocks.Select(block => block.Id).ToArray());
 
 		var frostbiteBlocks = TooltipTextService.GetKeywordTooltipBlocks("Gain 1 frostbite.");
 		Assert.Equal(["frostbite"], frostbiteBlocks.Select(block => block.Id).ToArray());

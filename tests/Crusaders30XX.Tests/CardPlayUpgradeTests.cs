@@ -65,7 +65,7 @@ public sealed class CardPlayUpgradeTests : IDisposable
 		EventManager.Publish(new PlayCardRequested { Card = fervor });
 
 		Assert.Null(openedOverlay);
-		Assert.Equal("Can't pay card's cost!", message);
+		Assert.Equal("You need a red card in your hand to pay for the discard cost", message);
 	}
 
 	[Theory]

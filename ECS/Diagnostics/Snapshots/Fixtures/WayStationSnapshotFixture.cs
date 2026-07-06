@@ -11,7 +11,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		public int WarmupFrames => 2;
 		public string OutputFileName => "default";
 
-		private WayStationCameraSystem _wayStationCamera;
 		private WayStationBackgroundDisplaySystem _wayStationBackground;
 		private IncenseDisplaySystem _incense;
 		private WayStationPoiDisplaySystem _wayStationPoi;
@@ -29,11 +28,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ctx.GraphicsDevice,
 				ctx.SpriteBatch);
 			ctx.World.AddSystem(_locationName);
-
-			_wayStationCamera = new WayStationCameraSystem(
-				ctx.World.EntityManager,
-				ctx.ImageAssets);
-			ctx.World.AddSystem(_wayStationCamera);
 
 			_wayStationBackground = new WayStationBackgroundDisplaySystem(
 				ctx.World.EntityManager,

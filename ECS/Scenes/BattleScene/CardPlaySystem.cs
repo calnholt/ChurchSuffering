@@ -342,7 +342,10 @@ namespace Crusaders30XX.ECS.Systems
                         {
                             ["reason"] = "CannotSatisfyCost"
                         });
-                        EventManager.Publish(new CantPlayCardMessage { Message = "Can't pay card's cost!" });
+                        EventManager.Publish(new CantPlayCardMessage
+                        {
+                            Message = DiscardCostMessageService.GetUnsatisfiableCostMessage(requiredCosts),
+                        });
                         return;
                     }
 
@@ -355,7 +358,10 @@ namespace Crusaders30XX.ECS.Systems
                         {
                             ["reason"] = "NoSolutionForCost"
                         });
-                        EventManager.Publish(new CantPlayCardMessage { Message = "Can't pay card's cost!" });
+                        EventManager.Publish(new CantPlayCardMessage
+                        {
+                            Message = DiscardCostMessageService.GetUnsatisfiableCostMessage(requiredCosts),
+                        });
                         return;
                     }
                     else if (solutionCount == 1)

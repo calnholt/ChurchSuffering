@@ -42,12 +42,12 @@ public class Game1 : Game
 
     private DrippingBloodDisplaySystem _drippingBloodDisplaySystem;
     private TitleMenuDisplaySystem _titleMenuDisplaySystem;
-    private WayStationCameraSystem _wayStationCameraSystem;
     private WayStationBackgroundDisplaySystem _wayStationBackgroundDisplaySystem;
     private IncenseDisplaySystem _incenseDisplaySystem;
     private WayStationPoiDisplaySystem _wayStationPoiDisplaySystem;
     private WayStationDialogueSystem _wayStationDialogueSystem;
     private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModalSystem;
+    private WayStationSaintsMedalsModalSystem _wayStationSaintsMedalsModalSystem;
     private BattleSceneSystem _battleSceneSystem;
     private ClimbSceneSystem _climbSceneSystem;
     private AchievementSceneSystem _achievementSceneSystem;
@@ -181,12 +181,12 @@ public class Game1 : Game
         // Add parent scene systems only
         _drippingBloodDisplaySystem = new DrippingBloodDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _titleMenuDisplaySystem = new TitleMenuDisplaySystem(_world, _spriteBatch);
-        _wayStationCameraSystem = new WayStationCameraSystem(_world.EntityManager, _imageAssets);
         _wayStationBackgroundDisplaySystem = new WayStationBackgroundDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _incenseDisplaySystem = new IncenseDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _wayStationPoiDisplaySystem = new WayStationPoiDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationDialogueSystem = new WayStationDialogueSystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationClimbSettingsModalSystem = new WayStationClimbSettingsModalSystem(_world, _spriteBatch, _imageAssets);
+        _wayStationSaintsMedalsModalSystem = new WayStationSaintsMedalsModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _achievementSceneSystem = new AchievementSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
@@ -233,12 +233,12 @@ public class Game1 : Game
         _medalEquipDebugSystem = new MedalEquipDebugSystem(_world.EntityManager);
         _world.AddSystem(_drippingBloodDisplaySystem);
         _world.AddSystem(_titleMenuDisplaySystem);
-        _world.AddSystem(_wayStationCameraSystem);
         _world.AddSystem(_wayStationBackgroundDisplaySystem);
         _world.AddSystem(_incenseDisplaySystem);
         _world.AddSystem(_wayStationPoiDisplaySystem);
         _world.AddSystem(_wayStationDialogueSystem);
         _world.AddSystem(_wayStationClimbSettingsModalSystem);
+        _world.AddSystem(_wayStationSaintsMedalsModalSystem);
         _world.AddSystem(_battleSceneSystem);
         _world.AddSystem(_climbSceneSystem);
         _world.AddSystem(_achievementSceneSystem);
@@ -558,6 +558,7 @@ public class Game1 : Game
                 FrameProfiler.Measure("WayStationPoiDisplaySystem.Draw", _wayStationPoiDisplaySystem.Draw);
                 FrameProfiler.Measure("WayStationDialogueSystem.Draw", _wayStationDialogueSystem.Draw);
                 FrameProfiler.Measure("WayStationClimbSettingsModalSystem.Draw", _wayStationClimbSettingsModalSystem.Draw);
+                FrameProfiler.Measure("WayStationSaintsMedalsModalSystem.Draw", _wayStationSaintsMedalsModalSystem.Draw);
                 break;
             }
             case SceneId.Battle:

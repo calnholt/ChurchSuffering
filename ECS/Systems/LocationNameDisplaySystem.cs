@@ -20,14 +20,17 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteFont _font = FontSingleton.TitleFont;
 		private string _locationName = "";
 		
-		private enum AnimationPhase { Idle, EntryWaiting, TrapezoidSliding, TextSliding, Complete }
+		private enum AnimationPhase { Idle, EntryWaiting, Entering, Exiting, Complete }
 		private AnimationPhase _phase = AnimationPhase.Idle;
 		private float _animationTime = 0f;
 		private float _trapezoidX = 0f;
 		private float _textX = 0f;
+		private float _startTrapezoidX = 0f;
+		private float _startTextX = 0f;
 		private float _targetTrapezoidX = 0f;
 		private float _targetTextX = 0f;
 		private int _viewportWidth = 0;
+		private bool _modalSuppressed = false;
 
 		// Trapezoid parameters
 		[DebugEditable(DisplayName = "Trapezoid Width", Step = 10f, Min = 100f, Max = 1000f)]
@@ -105,10 +108,6 @@ namespace Crusaders30XX.ECS.Systems
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
 			var scene = entity.GetComponent<SceneState>();
-			if (scene?.Current == SceneId.WayStation && string.IsNullOrEmpty(_locationName))
-			{
-				SetTitle("Waystation");
-			}
 
 			float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 			_viewportWidth = Game1.VirtualWidth;
@@ -116,6 +115,11 @@ namespace Crusaders30XX.ECS.Systems
 			_targetTextX = TextPaddingX;
 
 			float offScreenX = _viewportWidth + TrapezoidWidth;
+			SyncModalSuppression(scene);
+			if (scene?.Current == SceneId.WayStation && string.IsNullOrEmpty(_locationName))
+			{
+				SetTitle("Waystation");
+			}
 
 			_animationTime += dt;
 
@@ -129,14 +133,16 @@ namespace Crusaders30XX.ECS.Systems
 				case AnimationPhase.EntryWaiting:
 					if (_animationTime >= EntryDelaySeconds)
 					{
-						_phase = AnimationPhase.TrapezoidSliding;
+						_phase = AnimationPhase.Entering;
 						_animationTime = 0f;
+						_startTrapezoidX = offScreenX;
+						_startTextX = offScreenX;
 					}
 					_trapezoidX = offScreenX;
 					_textX = offScreenX;
 					break;
 
-				case AnimationPhase.TrapezoidSliding:
+				case AnimationPhase.Entering:
 					// Update trapezoid position
 					if (_animationTime >= AnimationDurationSeconds)
 					{
@@ -146,14 +152,14 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						float progress = _animationTime / AnimationDurationSeconds;
 						float eased = EaseOutCubic(progress);
-						_trapezoidX = MathHelper.Lerp(offScreenX, _targetTrapezoidX, eased);
+						_trapezoidX = MathHelper.Lerp(_startTrapezoidX, _targetTrapezoidX, eased);
 					}
 
 					// Update text position - starts after TextDelaySeconds from when trapezoid starts
 					float textTime = _animationTime - TextDelaySeconds;
 					if (textTime <= 0f)
 					{
-						_textX = offScreenX;
+						_textX = _startTextX;
 					}
 					else if (textTime >= AnimationDurationSeconds)
 					{
@@ -163,7 +169,7 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						float textProgress = textTime / AnimationDurationSeconds;
 						float textEased = EaseOutCubic(textProgress);
-						_textX = MathHelper.Lerp(offScreenX, _targetTextX, textEased);
+						_textX = MathHelper.Lerp(_startTextX, _targetTextX, textEased);
 					}
 
 					// Transition to Complete when both animations are done
@@ -176,23 +182,27 @@ namespace Crusaders30XX.ECS.Systems
 					}
 					break;
 
-				case AnimationPhase.TextSliding:
+				case AnimationPhase.Complete:
+					_trapezoidX = _targetTrapezoidX;
+					_textX = _targetTextX;
+					break;
+
+				case AnimationPhase.Exiting:
+					float exitTrapezoidX = -TrapezoidWidth;
+					float exitTextX = GetTextOffScreenLeftX();
 					if (_animationTime >= AnimationDurationSeconds)
 					{
-						_textX = _targetTextX;
-						_phase = AnimationPhase.Complete;
+						_trapezoidX = exitTrapezoidX;
+						_textX = exitTextX;
+						_phase = AnimationPhase.Idle;
 					}
 					else
 					{
 						float progress = _animationTime / AnimationDurationSeconds;
 						float eased = EaseOutCubic(progress);
-						_textX = MathHelper.Lerp(offScreenX, _targetTextX, eased);
+						_trapezoidX = MathHelper.Lerp(_startTrapezoidX, exitTrapezoidX, eased);
+						_textX = MathHelper.Lerp(_startTextX, exitTextX, eased);
 					}
-					break;
-
-				case AnimationPhase.Complete:
-					_trapezoidX = _targetTrapezoidX;
-					_textX = _targetTextX;
 					break;
 			}
 		}
@@ -206,15 +216,78 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
-			_phase = EntryDelaySeconds > 0f ? AnimationPhase.EntryWaiting : AnimationPhase.TrapezoidSliding;
-			_animationTime = 0f;
+			if (!_modalSuppressed)
+			{
+				StartEntryAnimation();
+			}
 		}
 
 		private void ClearTitle()
 		{
 			_locationName = "";
+			_modalSuppressed = false;
 			_phase = AnimationPhase.Idle;
 			_animationTime = 0f;
+		}
+
+		private void SyncModalSuppression(SceneState scene)
+		{
+			bool shouldSuppress = scene?.Current == SceneId.WayStation && IsAnyWayStationModalOpen();
+			if (shouldSuppress == _modalSuppressed) return;
+
+			_modalSuppressed = shouldSuppress;
+			if (_modalSuppressed)
+			{
+				StartExitAnimation();
+				return;
+			}
+
+			if (!string.IsNullOrEmpty(_locationName))
+			{
+				StartEntryAnimation();
+			}
+		}
+
+		private bool IsAnyWayStationModalOpen()
+		{
+			return IsModalOpen(WayStationSceneConstants.ModalRootName)
+				|| IsModalOpen(WayStationSceneConstants.SaintsMedalsModalRootName);
+		}
+
+		private bool IsModalOpen(string entityName)
+		{
+			var animation = EntityManager.GetEntity(entityName)?.GetComponent<ModalAnimation>();
+			return animation != null && (animation.RequestedVisible || animation.Phase != ModalAnimationPhase.Hidden);
+		}
+
+		private void StartEntryAnimation()
+		{
+			float offScreenX = Game1.VirtualWidth + TrapezoidWidth;
+			_startTrapezoidX = offScreenX;
+			_startTextX = offScreenX;
+			_phase = EntryDelaySeconds > 0f ? AnimationPhase.EntryWaiting : AnimationPhase.Entering;
+			_animationTime = 0f;
+		}
+
+		private void StartExitAnimation()
+		{
+			if (_phase == AnimationPhase.Idle || string.IsNullOrEmpty(_locationName))
+			{
+				_phase = AnimationPhase.Idle;
+				_animationTime = 0f;
+				return;
+			}
+
+			_startTrapezoidX = _trapezoidX;
+			_startTextX = _textX;
+			_phase = AnimationPhase.Exiting;
+			_animationTime = 0f;
+		}
+
+		private float GetTextOffScreenLeftX()
+		{
+			if (_font == null || string.IsNullOrEmpty(_locationName)) return -TrapezoidWidth;
+			return -_font.MeasureString(_locationName).X * TextScale;
 		}
 
 		private float EaseOutCubic(float t)
@@ -226,10 +299,9 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugAction("Retrigger Animation")]
 		public void Debug_RetriggerAnimation()
 		{
-			if (!string.IsNullOrEmpty(_locationName))
+			if (!string.IsNullOrEmpty(_locationName) && !_modalSuppressed)
 			{
-				_phase = EntryDelaySeconds > 0f ? AnimationPhase.EntryWaiting : AnimationPhase.TrapezoidSliding;
-				_animationTime = 0f;
+				StartEntryAnimation();
 			}
 		}
 
@@ -269,5 +341,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-
-

@@ -6,6 +6,7 @@ namespace Crusaders30XX.ECS.Events
 {
 	public class StartBattleRequested { }
 	public class OpenWayStationClimbSettingsModalEvent { }
+	public class OpenWayStationSaintsMedalsModalEvent { }
 
 	public class WayStationDialoguePoiSelectedEvent
 	{

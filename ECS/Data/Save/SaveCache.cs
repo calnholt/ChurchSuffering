@@ -567,6 +567,30 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
+		public static List<string> GetPurchasedWayStationMedalIds()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				return CloneStringList(_save.waystation.purchasedMedalIds);
+			}
+		}
+
+		public static void MarkWayStationMedalPurchased(string medalId)
+		{
+			if (string.IsNullOrWhiteSpace(medalId)) return;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				_save.waystation.purchasedMedalIds ??= new List<string>();
+				if (_save.waystation.purchasedMedalIds.Contains(medalId, StringComparer.OrdinalIgnoreCase)) return;
+				_save.waystation.purchasedMedalIds.Add(medalId);
+				Persist();
+			}
+		}
+
 		public static void SaveWayStationVisit(WayStationVisitSave visit)
 		{
 			EnsureLoaded();
@@ -2137,6 +2161,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				climbCompletions = Math.Max(0, meta?.climbCompletions ?? 0),
 				deferredNpcDialogueCounter = Math.Clamp(meta?.deferredNpcDialogueCounter ?? 0, 0, WayStationNpcDialogueCounterThreshold),
 				pendingNpcDialogueOffer = meta?.pendingNpcDialogueOffer == true,
+				purchasedMedalIds = CloneStringList(meta?.purchasedMedalIds),
 				completedDialogueSegments = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase),
 				currentVisit = CloneWayStationVisit(meta?.currentVisit) ?? new WayStationVisitSave(),
 			};

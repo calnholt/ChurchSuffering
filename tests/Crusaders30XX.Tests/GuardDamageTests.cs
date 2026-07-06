@@ -116,7 +116,7 @@ public class GuardDamageTests : IDisposable
     }
 
     [Fact]
-    public void EnemyStart_converts_any_guard_to_one_aggression()
+    public void EnemyStart_removes_guard_when_not_consumed()
     {
         var (entityManager, _, enemy) = BuildCombatWorld();
         ApplyGuard(entityManager, enemy, 10);
@@ -125,7 +125,7 @@ public class GuardDamageTests : IDisposable
         PumpEventQueue();
 
         Assert.Equal(0, GetGuard(enemy));
-        Assert.Equal(1, GetPassive(enemy, AppliedPassiveType.Aggression));
+        Assert.Equal(0, GetPassive(enemy, AppliedPassiveType.Aggression));
     }
 
     [Fact]

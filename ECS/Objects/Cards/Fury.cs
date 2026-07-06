@@ -9,7 +9,6 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class Fury : CardBase
     {
-        private List<string> CostUpgrade = ["Red", "Any"];
         public Fury()
         {
             CardId = "fury";
@@ -43,7 +42,6 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
             OnUpgrade = (entityManager, card) =>
             {
-                Cost = CostUpgrade;
                 Text = "Lose all courage. Gain X aggression, where X is the number of courage you lost, then double your aggression.";
             };
         }

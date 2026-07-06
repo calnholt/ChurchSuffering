@@ -9,7 +9,7 @@ namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 17;
+		public const int CURRENT_VERSION = 18;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -45,6 +45,7 @@ namespace Crusaders30XX.ECS.Data.Save
 		public int climbCompletions { get; set; }
 		public int deferredNpcDialogueCounter { get; set; }
 		public bool pendingNpcDialogueOffer { get; set; }
+		public List<string> purchasedMedalIds { get; set; } = new List<string>();
 		public Dictionary<string, List<string>> completedDialogueSegments { get; set; } = new Dictionary<string, List<string>>();
 		public WayStationVisitSave currentVisit { get; set; } = new WayStationVisitSave();
 	}

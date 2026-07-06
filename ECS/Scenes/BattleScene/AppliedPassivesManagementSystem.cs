@@ -87,7 +87,7 @@ namespace Crusaders30XX.ECS.Systems
             else if (evt.Current == SubPhase.EnemyStart)
             {
                 EnemyShieldsMaintenance(enemy);
-                ConvertGuardToAggression(enemy);
+                ExpireGuardAtEnemyStart(enemy);
                 ApplyStartOfTurnPassives(enemy);
             }
             else if (evt.Current == SubPhase.EnemyEnd)
@@ -157,15 +157,14 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        private void ConvertGuardToAggression(Entity enemy)
+        private void ExpireGuardAtEnemyStart(Entity enemy)
         {
             var ap = enemy?.GetComponent<AppliedPassives>();
             if (ap == null || ap.Passives == null) return;
             if (!ap.Passives.TryGetValue(AppliedPassiveType.Guard, out int guardStacks) || guardStacks <= 0) return;
 
-            EventQueueBridge.EnqueueTriggerAction("AppliedPassivesManagementSystem.ConvertGuardToAggression", () =>
+            EventQueueBridge.EnqueueTriggerAction("AppliedPassivesManagementSystem.ExpireGuardAtEnemyStart", () =>
             {
-                EventManager.Publish(new ApplyPassiveEvent { Target = enemy, Type = AppliedPassiveType.Aggression, Delta = 1 });
                 EventManager.Publish(new RemovePassive { Owner = enemy, Type = AppliedPassiveType.Guard });
                 EventManager.Publish(new PassiveTriggered { Owner = enemy, Type = AppliedPassiveType.Guard });
             }, Duration);

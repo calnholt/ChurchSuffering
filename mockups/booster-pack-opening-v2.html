@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX - Booster Pack Opening V2</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: BoosterPackOpenedEvent.
+    - Pack states: booster_1 idle, booster_2 pressure, booster_3 cracked, booster_4_left/right split.
+    - Sequence: summon, charge, crack buildup, rupture, contents launch, staggered loot reveal.
+    - V2 emphasis: stronger anticipation, premium stage lighting, layered particles, readable loot end state.
+  */
+  :root {
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --pack-w: 370px;
+    --pack-h: 620px;
+    --pack-left-w: calc(var(--pack-w) * 379 / 786);
+    --pack-right-w: calc(var(--pack-w) * 376 / 786);
+    --card-w: 292px;
+    --card-h: 416px;
+    --ink: #050506;
+    --charcoal: #121216;
+    --charcoal-2: #1c1a20;
+    --line: #363039;
+    --bone: #f2ede2;
+    --muted: #b7aa9a;
+    --blood: #c51f33;
+    --blood-hot: #ff4056;
+    --gold: #e9c755;
+    --gold-hot: #fff0a4;
+    --blue: #65d1ff;
+    --violet: #9868ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    overflow-x: auto;
+    background:
+      radial-gradient(circle at 22% 16%, rgba(197, 31, 51, 0.14), transparent 28%),
+      radial-gradient(circle at 76% 0%, rgba(101, 209, 255, 0.08), transparent 24%),
+      #07070a;
+    color: var(--bone);
+    font-family: 'Chakra Petch', sans-serif;
+  }
+
+  .page-header {
+    display: grid;
+    grid-template-columns: minmax(390px, max-content) minmax(360px, 1fr) 168px;
+    align-items: center;
+    gap: 28px;
+    padding: 26px 40px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: rgba(10, 9, 12, 0.92);
+  }
+
+  h1 {
+    color: #fff;
+    font-family: 'New Rocker', cursive;
+    font-size: 2rem;
+    font-weight: 400;
+    letter-spacing: 2px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .subtitle {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .flow-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(86px, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .flow-step {
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.025);
+    color: rgba(242, 237, 226, 0.42);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-align: center;
+    text-transform: uppercase;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .flow-step.is-active {
+    border-color: rgba(233, 199, 85, 0.75);
+    background: rgba(233, 199, 85, 0.08);
+    color: var(--gold-hot);
+    box-shadow: 0 0 26px rgba(233, 199, 85, 0.12);
+  }
+
+  .flow-step.is-done {
+    color: rgba(242, 237, 226, 0.72);
+    border-color: rgba(255,255,255,0.16);
+  }
+
+  .open-btn {
+    width: 168px;
+    height: 46px;
+    border: 1px solid rgba(255, 240, 164, 0.78);
+    background:
+      linear-gradient(180deg, rgba(255,240,164,0.24), rgba(197,31,51,0.26)),
+      linear-gradient(180deg, #2d1518, #140b0e);
+    color: #fff7d0;
+    cursor: pointer;
+    font-family: 'New Rocker', cursive;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+    transition: transform 0.14s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  }
+
+  .open-btn:hover {
+    filter: brightness(1.14);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 34px rgba(197,31,51,0.26), 0 0 30px rgba(233,199,85,0.16);
+  }
+
+  .open-btn:active { transform: translateY(0); }
+
+  .page-main {
+    padding: 30px 40px 56px;
+  }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1440px);
+    min-height: 320px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.11);
+    background: var(--ink);
+    box-shadow: 0 26px 86px rgba(0,0,0,0.72);
+  }
+
+  .viewport {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--game-w);
+    height: var(--game-h);
+    overflow: hidden;
+    transform-origin: top center;
+    background: var(--ink);
+  }
+
+  .scene {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .bg {
+    position: absolute;
+    inset: -26px;
+    background: url('../Content/desert-background-hellrift.png') center / cover no-repeat;
+    filter: saturate(0.82) contrast(1.08) brightness(0.72);
+    transform: scale(1.04);
+  }
+
+  .scene.phase-rupture .bg,
+  .scene.phase-showcase .bg {
+    animation: bg-bloom 1.1s ease-out forwards;
+  }
+
+  @keyframes bg-bloom {
+    0% { filter: saturate(0.82) contrast(1.08) brightness(0.72); }
+    18% { filter: saturate(1.2) contrast(1.18) brightness(1.35); }
+    100% { filter: saturate(0.94) contrast(1.08) brightness(0.82); }
+  }
+
+  .blackout {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 46% 42% at 50% 45%, rgba(20,12,10,0.05), rgba(0,0,0,0.82) 70%),
+      linear-gradient(180deg, rgba(0,0,0,0.42), rgba(0,0,0,0.74));
+    transition: background 0.45s ease, opacity 0.45s ease;
+  }
+
+  .scene.phase-showcase .blackout {
+    background:
+      radial-gradient(ellipse 56% 52% at 50% 45%, rgba(78,40,22,0.34), rgba(0,0,0,0.82) 72%),
+      linear-gradient(180deg, rgba(0,0,0,0.46), rgba(0,0,0,0.78));
+  }
+
+  .floor-glow {
+    position: absolute;
+    left: 50%;
+    bottom: 100px;
+    width: 760px;
+    height: 150px;
+    margin-left: -380px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(197,31,51,0.32), rgba(233,199,85,0.12) 48%, transparent 72%);
+    filter: blur(18px);
+    opacity: 0.45;
+    transform: scaleX(0.8);
+    animation: floor-breathe 2.8s ease-in-out infinite;
+  }
+
+  @keyframes floor-breathe {
+    0%, 100% { opacity: 0.34; transform: scaleX(0.74); }
+    50% { opacity: 0.62; transform: scaleX(0.96); }
+  }
+
+  .altar-ring {
+    position: absolute;
+    left: 50%;
+    top: 54%;
+    width: 640px;
+    height: 640px;
+    margin: -320px 0 0 -320px;
+    border-radius: 50%;
+    opacity: 0.42;
+    background:
+      repeating-conic-gradient(from 4deg, rgba(233,199,85,0.18) 0deg 4deg, transparent 4deg 17deg),
+      radial-gradient(circle, transparent 0 54%, rgba(233,199,85,0.12) 55% 56%, transparent 58% 100%);
+    filter: blur(0.3px);
+    transform: rotateX(70deg) rotateZ(0deg);
+    animation: ring-turn 10s linear infinite;
+  }
+
+  .altar-ring.ring-back {
+    width: 860px;
+    height: 860px;
+    margin: -430px 0 0 -430px;
+    opacity: 0.18;
+    animation-duration: 18s;
+    animation-direction: reverse;
+  }
+
+  @keyframes ring-turn {
+    to { transform: rotateX(70deg) rotateZ(360deg); }
+  }
+
+  .beams {
+    position: absolute;
+    left: 50%;
+    top: 43%;
+    width: 980px;
+    height: 980px;
+    margin: -490px 0 0 -490px;
+    opacity: 0;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 8deg,
+        transparent 0deg,
+        rgba(255,240,164,0.2) 7deg,
+        transparent 15deg,
+        transparent 40deg,
+        rgba(101,209,255,0.12) 48deg,
+        transparent 57deg,
+        transparent 84deg,
+        rgba(255,240,164,0.16) 92deg,
+        transparent 104deg,
+        transparent 138deg,
+        rgba(197,31,51,0.16) 146deg,
+        transparent 156deg,
+        transparent 190deg,
+        rgba(255,240,164,0.18) 198deg,
+        transparent 210deg,
+        transparent 252deg,
+        rgba(101,209,255,0.12) 260deg,
+        transparent 270deg,
+        transparent 316deg,
+        rgba(255,240,164,0.18) 326deg,
+        transparent 338deg);
+    filter: blur(3px);
+    transform: scale(0.24) rotate(0deg);
+    pointer-events: none;
+  }
+
+  .beams.is-on {
+    animation: beam-burst 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes beam-burst {
+    0% { opacity: 0; transform: scale(0.2) rotate(-10deg); }
+    18% { opacity: 0.88; }
+    100% { opacity: 0.34; transform: scale(1.08) rotate(18deg); }
+  }
+
+  .vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    background: radial-gradient(ellipse 52% 47% at 50% 46%, transparent 45%, rgba(0,0,0,0.72) 100%);
+  }
+
+  .stage {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    perspective: 1500px;
+  }
+
+  .stage-shaker {
+    position: absolute;
+    inset: 0;
+    transform-origin: center;
+  }
+
+  .stage-shaker.is-shaking { animation: heavy-shake 0.58s ease-out; }
+
+  @keyframes heavy-shake {
+    0%, 100% { transform: translate(0,0) rotate(0deg); }
+    8% { transform: translate(-10px, 8px) rotate(-0.25deg); }
+    16% { transform: translate(12px, -7px) rotate(0.25deg); }
+    24% { transform: translate(-9px, -12px) rotate(-0.18deg); }
+    32% { transform: translate(13px, 10px) rotate(0.18deg); }
+    44% { transform: translate(-8px, 5px) rotate(-0.12deg); }
+    56% { transform: translate(7px, -6px) rotate(0.12deg); }
+    72% { transform: translate(-4px, 3px); }
+    88% { transform: translate(2px, -2px); }
+  }
+
+  .pack-zone {
+    position: absolute;
+    left: 50%;
+    top: 51%;
+    z-index: 18;
+    width: 620px;
+    height: 760px;
+    margin: -390px 0 0 -310px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+  }
+
+  .pack-aura {
+    position: absolute;
+    width: 590px;
+    height: 590px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, rgba(255,240,164,0.2), rgba(197,31,51,0.18) 35%, transparent 68%);
+    filter: blur(18px);
+    opacity: 0.45;
+    transform: scale(0.76);
+  }
+
+  .scene.phase-charge .pack-aura,
+  .scene.phase-crack .pack-aura {
+    animation: aura-charge 0.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes aura-charge {
+    from { opacity: 0.4; transform: scale(0.72); }
+    to { opacity: 0.9; transform: scale(1.04); }
+  }
+
+  .pack-holder {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--pack-w);
+    height: var(--pack-h);
+    transform-style: preserve-3d;
+    filter: drop-shadow(0 34px 54px rgba(0,0,0,0.76));
+    will-change: transform, filter, opacity;
+  }
+
+  .scene.phase-summon .pack-holder {
+    animation: pack-summon 0.74s cubic-bezier(0.18, 0.9, 0.2, 1.18) forwards;
+  }
+
+  .scene.phase-idle .pack-holder {
+    animation: pack-idle 2s ease-in-out infinite;
+  }
+
+  .scene.phase-charge .pack-holder {
+    animation: pack-charge 0.13s ease-in-out infinite;
+  }
+
+  .scene.phase-crack .pack-holder {
+    animation: pack-crack 0.08s ease-in-out infinite;
+  }
+
+  @keyframes pack-summon {
+    0% { opacity: 0; transform: translateY(-560px) rotateX(30deg) scale(0.54); filter: blur(9px) drop-shadow(0 34px 54px rgba(0,0,0,0.76)); }
+    64% { opacity: 1; transform: translateY(34px) rotateX(-5deg) scale(1.08); filter: blur(0) drop-shadow(0 42px 58px rgba(0,0,0,0.8)); }
+    100% { opacity: 1; transform: translateY(0) rotateX(0deg) scale(1); filter: blur(0) drop-shadow(0 34px 54px rgba(0,0,0,0.76)); }
+  }
+
+  @keyframes pack-idle {
+    0%, 100% { transform: translateY(0) rotateZ(-0.5deg); }
+    50% { transform: translateY(-14px) rotateZ(0.7deg); }
+  }
+
+  @keyframes pack-charge {
+    0%, 100% { transform: translateX(0) translateY(-6px) rotateZ(-1deg) scale(1.035); }
+    50% { transform: translateX(5px) translateY(-2px) rotateZ(1.2deg) scale(1.055); }
+  }
+
+  @keyframes pack-crack {
+    0% { transform: translate(-5px, -2px) rotateZ(-1.3deg) scale(1.06); }
+    100% { transform: translate(5px, 2px) rotateZ(1.3deg) scale(1.08); }
+  }
+
+  .pack-img,
+  .pack-half {
+    display: block;
+    width: var(--pack-w);
+    height: auto;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .pack-intact {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pack-intact.is-hidden { display: none; }
+
+  .pack-split {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pack-split.is-visible { display: flex; }
+
+  .pack-half {
+    width: auto;
+    height: var(--pack-h);
+    will-change: transform, opacity, filter;
+  }
+
+  .pack-half-left {
+    width: var(--pack-left-w);
+    transform-origin: right center;
+  }
+
+  .pack-half-right {
+    width: var(--pack-right-w);
+    transform-origin: left center;
+  }
+
+  .pack-split.is-peeling .pack-half-left {
+    animation: peel-left 0.62s cubic-bezier(0.18, 0.62, 0.42, 0.98) forwards;
+  }
+
+  .pack-split.is-peeling .pack-half-right {
+    animation: peel-right 0.62s cubic-bezier(0.18, 0.62, 0.42, 0.98) forwards;
+  }
+
+  @keyframes peel-left {
+    0% { transform: translateX(0) rotateY(0deg) rotateZ(0deg); opacity: 1; filter: brightness(1.3); }
+    44% { transform: translateX(-210px) translateY(-34px) rotateY(-30deg) rotateZ(-16deg); opacity: 1; filter: brightness(1.55); }
+    78% { transform: translateX(-500px) translateY(58px) rotateY(-43deg) rotateZ(-29deg); opacity: 0.42; filter: brightness(0.92); }
+    100% { transform: translateX(-680px) translateY(128px) rotateY(-50deg) rotateZ(-38deg); opacity: 0; filter: brightness(0.55); }
+  }
+
+  @keyframes peel-right {
+    0% { transform: translateX(0) rotateY(0deg) rotateZ(0deg); opacity: 1; filter: brightness(1.3); }
+    44% { transform: translateX(210px) translateY(-34px) rotateY(30deg) rotateZ(16deg); opacity: 1; filter: brightness(1.55); }
+    78% { transform: translateX(500px) translateY(58px) rotateY(43deg) rotateZ(29deg); opacity: 0.42; filter: brightness(0.92); }
+    100% { transform: translateX(680px) translateY(128px) rotateY(50deg) rotateZ(38deg); opacity: 0; filter: brightness(0.55); }
+  }
+
+  .crack-overlay {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 5;
+    width: 180px;
+    height: 450px;
+    margin: -230px 0 0 -90px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .scene.phase-crack .crack-overlay {
+    opacity: 1;
+    animation: crack-flare 0.55s ease-in-out infinite alternate;
+  }
+
+  .crack-line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4px;
+    height: 250px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, transparent, #fff8c8 14%, #ff4056 52%, #fff8c8 82%, transparent);
+    box-shadow: 0 0 20px rgba(255,240,164,0.9), 0 0 42px rgba(197,31,51,0.76);
+    transform-origin: top center;
+  }
+
+  .crack-line.main { height: 370px; transform: translate(-50%, -50%) rotate(1deg); }
+  .crack-line.a { height: 118px; transform: translate(-34px, -95px) rotate(-42deg); }
+  .crack-line.b { height: 134px; transform: translate(30px, -70px) rotate(41deg); }
+  .crack-line.c { height: 110px; transform: translate(-22px, 56px) rotate(52deg); }
+  .crack-line.d { height: 126px; transform: translate(28px, 78px) rotate(-38deg); }
+
+  @keyframes crack-flare {
+    from { filter: brightness(0.85); transform: scaleY(0.72); }
+    to { filter: brightness(1.45); transform: scaleY(1.04); }
+  }
+
+  .inner-light {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 1;
+    width: 220px;
+    height: 520px;
+    margin: -265px 0 0 -110px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(255,240,164,0.86), rgba(197,31,51,0.4) 42%, transparent 70%);
+    filter: blur(16px);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pack-split.is-peeling .inner-light {
+    animation: core-open 0.6s ease-out forwards;
+  }
+
+  @keyframes core-open {
+    0% { opacity: 0; transform: scaleX(0.2) scaleY(0.6); }
+    28% { opacity: 1; transform: scaleX(0.85) scaleY(1.1); }
+    100% { opacity: 0.18; transform: scaleX(1.25) scaleY(1.15); }
+  }
+
+  .fx-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+  }
+
+  .flash {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background: radial-gradient(circle at 50% 48%, #fffef0 0%, rgba(255,240,164,0.85) 18%, rgba(197,31,51,0.26) 39%, transparent 70%);
+  }
+
+  .flash.is-on { animation: flash-pop 0.82s ease-out forwards; }
+
+  @keyframes flash-pop {
+    0% { opacity: 0; transform: scale(0.5); }
+    11% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.35); }
+  }
+
+  .shockwave,
+  .shockwave.second {
+    position: absolute;
+    left: 50%;
+    top: 49%;
+    width: 120px;
+    height: 120px;
+    margin: -60px 0 0 -60px;
+    border: 5px solid rgba(255,240,164,0.72);
+    border-radius: 50%;
+    opacity: 0;
+    box-shadow: 0 0 36px rgba(255,240,164,0.44);
+  }
+
+  .shockwave.is-on { animation: wave 0.9s cubic-bezier(0.12, 0.72, 0.16, 1) forwards; }
+  .shockwave.second.is-on { animation: wave 1.05s cubic-bezier(0.12, 0.72, 0.16, 1) 0.08s forwards; }
+
+  @keyframes wave {
+    0% { opacity: 0.95; transform: scale(0.15); }
+    100% { opacity: 0; transform: scale(13.5); }
+  }
+
+  .vertical-flare {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 24px;
+    height: 760px;
+    margin: -390px 0 0 -12px;
+    opacity: 0;
+    border-radius: 50%;
+    background: linear-gradient(180deg, transparent, rgba(255,240,164,0.98), rgba(255,64,86,0.58), rgba(255,240,164,0.98), transparent);
+    filter: blur(10px);
+  }
+
+  .vertical-flare.is-on { animation: vertical-slice 0.56s ease-out forwards; }
+
+  @keyframes vertical-slice {
+    0% { opacity: 0; transform: scaleX(0.4) scaleY(0.2); }
+    16% { opacity: 1; transform: scaleX(2.5) scaleY(1); }
+    100% { opacity: 0; transform: scaleX(8) scaleY(1.08); }
+  }
+
+  .particle-layer,
+  .shard-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .particle,
+  .shard {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .particle {
+    border-radius: 50%;
+    animation: particle-out var(--dur) cubic-bezier(0.12, 0.72, 0.16, 1) forwards;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes particle-out {
+    0% { opacity: 0; transform: translate3d(0,0,0) scale(0.35); }
+    8% { opacity: 1; }
+    100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) scale(0.05); }
+  }
+
+  .shard {
+    width: var(--w);
+    height: var(--h);
+    background: linear-gradient(135deg, rgba(255,240,164,0.96), rgba(197,31,51,0.86));
+    clip-path: polygon(50% 0, 100% 100%, 0 76%);
+    filter: drop-shadow(0 0 8px rgba(255,240,164,0.55));
+    animation: shard-out var(--dur) cubic-bezier(0.12, 0.72, 0.16, 1) forwards;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes shard-out {
+    0% { opacity: 0; transform: translate3d(0,0,0) rotate(0deg) scale(0.5); }
+    10% { opacity: 1; }
+    100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--rot)) scale(0.15); }
+  }
+
+  .loot-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 24;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 86px;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.92);
+  }
+
+  .loot-layer.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+    transition: opacity 0.28s ease, transform 0.45s cubic-bezier(0.2, 1.35, 0.24, 1);
+  }
+
+  .loot-slot {
+    position: relative;
+    width: 340px;
+    min-height: 540px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    opacity: 0;
+    transform: translateY(100px) scale(0.62) rotateZ(var(--start-rot));
+    filter: blur(8px) brightness(1.7);
+  }
+
+  .loot-slot.is-revealed {
+    opacity: 1;
+    filter: blur(0) brightness(1);
+    transform: translateY(0) scale(1) rotateZ(0deg);
+    transition: opacity 0.3s ease, filter 0.42s ease, transform 0.72s cubic-bezier(0.16, 1.35, 0.24, 1);
+  }
+
+  .loot-slot.card-slot { --start-rot: -12deg; width: 360px; }
+  .loot-slot.medal-slot { --start-rot: 14deg; }
+  .loot-slot.equip-slot { --start-rot: 11deg; }
+
+  .loot-slot.medal-slot.is-revealed { transition-delay: 0.08s; }
+  .loot-slot.card-slot.is-revealed { transition-delay: 0.2s; }
+  .loot-slot.equip-slot.is-revealed { transition-delay: 0.32s; }
+
+  .loot-label {
+    position: relative;
+    z-index: 3;
+    min-width: 150px;
+    padding: 7px 14px 8px;
+    border: 1px solid rgba(255,240,164,0.26);
+    background: rgba(5,5,6,0.58);
+    color: var(--gold-hot);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 0 0 14px rgba(233,199,85,0.42);
+  }
+
+  .loot-plate {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: 320px;
+    height: 320px;
+    margin: -160px 0 0 -160px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, rgba(255,240,164,0.22), rgba(197,31,51,0.08) 48%, transparent 70%),
+      repeating-conic-gradient(from 10deg, rgba(233,199,85,0.22) 0deg 4deg, transparent 4deg 18deg);
+    opacity: 0;
+    transform: scale(0.52) rotate(0deg);
+    filter: blur(0.2px);
+  }
+
+  .loot-slot.is-revealed .loot-plate {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    transition: opacity 0.4s ease 0.12s, transform 0.72s cubic-bezier(0.2, 1.4, 0.25, 1) 0.06s;
+    animation: loot-plate-spin 12s linear 0.72s infinite;
+  }
+
+  @keyframes loot-plate-spin {
+    to { transform: scale(1) rotate(360deg); }
+  }
+
+  .item-wrap {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -38px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,240,164,0.24), transparent 68%);
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  .loot-slot.is-revealed .item-wrap::before {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.4s ease 0.22s, transform 0.52s ease 0.22s;
+    animation: item-pulse 2.6s ease-in-out 0.8s infinite;
+  }
+
+  @keyframes item-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(0.96); }
+    50% { opacity: 0.9; transform: scale(1.08); }
+  }
+
+  .card-frame {
+    width: var(--card-w);
+    height: var(--card-h);
+    position: relative;
+    border-radius: 11px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.66), 0 0 54px rgba(197,31,51,0.28);
+  }
+
+  .card-frame::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 12px;
+    background: linear-gradient(120deg, rgba(255,240,164,0.8), rgba(197,31,51,0.42), rgba(101,209,255,0.34), rgba(255,240,164,0.8));
+    z-index: -1;
+    filter: blur(6px);
+    opacity: 0.58;
+  }
+
+  .card {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 11px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.07), transparent 24%),
+      radial-gradient(circle at 74% 70%, rgba(197,31,51,0.38), transparent 44%),
+      #1b0b0c;
+  }
+
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url('../Content/CardArt/forge_strike.png') 55% 47% / 116% auto no-repeat;
+    opacity: 0.86;
+    filter: saturate(1.16) contrast(1.08);
+  }
+
+  .card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 0 38%, rgba(255,255,255,0.42) 48%, transparent 58% 100%);
+    transform: translateX(-130%);
+  }
+
+  .loot-slot.is-revealed .card::after {
+    animation: card-shine 1.15s ease-out 0.66s forwards;
+  }
+
+  @keyframes card-shine {
+    to { transform: translateX(130%); }
+  }
+
+  .card-top {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 18px 18px 0 20px;
+  }
+
+  .card-name {
+    color: #fff5e4;
+    font-family: 'New Rocker', cursive;
+    font-size: 1.85rem;
+    letter-spacing: 1px;
+    line-height: 0.95;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.8);
+  }
+
+  .card-cost {
+    width: 42px;
+    height: 42px;
+    border: 2px solid rgba(255,235,190,0.9);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, #ff6f76, #b51220 64%, #3d070a);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    box-shadow: 0 0 20px rgba(197,31,51,0.5);
+  }
+
+  .card-type {
+    position: absolute;
+    left: 20px;
+    bottom: 116px;
+    z-index: 3;
+    padding: 5px 10px 6px;
+    border: 1px solid rgba(255,240,164,0.38);
+    background: rgba(20,8,8,0.8);
+    color: var(--gold-hot);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .card-text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    min-height: 100px;
+    padding: 16px 20px 18px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    background: linear-gradient(180deg, rgba(23,8,9,0.86), rgba(8,4,5,0.96));
+    color: #efe3d2;
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+
+  .card-text strong {
+    color: var(--gold-hot);
+    font-weight: 700;
+  }
+
+  .medal-disc,
+  .equip-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .medal-disc {
+    width: 156px;
+    height: 156px;
+    filter: drop-shadow(0 16px 28px rgba(0,0,0,0.6)) drop-shadow(0 0 32px rgba(233,199,85,0.44));
+  }
+
+  .medal-disc img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .medal-disc::after,
+  .equip-icon::after {
+    content: "";
+    position: absolute;
+    inset: -26px;
+    border: 2px solid rgba(255,240,164,0.55);
+    border-radius: 50%;
+    opacity: 0;
+    transform: scale(0.64);
+  }
+
+  .loot-slot.is-revealed .medal-disc::after,
+  .loot-slot.is-revealed .equip-icon::after {
+    animation: item-ring 1.08s ease-out 0.48s forwards;
+  }
+
+  @keyframes item-ring {
+    0% { opacity: 0.9; transform: scale(0.55); }
+    100% { opacity: 0; transform: scale(1.55); }
+  }
+
+  .equip-icon {
+    width: 148px;
+    height: 148px;
+    filter: drop-shadow(0 16px 28px rgba(0,0,0,0.62)) drop-shadow(0 0 26px rgba(101,209,255,0.22));
+  }
+
+  .equip-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scale(1.55);
+    transform-origin: center;
+  }
+
+  .reward-title {
+    position: absolute;
+    left: 50%;
+    top: 62px;
+    z-index: 35;
+    width: 760px;
+    margin-left: -380px;
+    opacity: 0;
+    text-align: center;
+    pointer-events: none;
+    transform: translateY(-18px) scale(0.9);
+  }
+
+  .reward-title.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.32s ease, transform 0.68s cubic-bezier(0.18, 1.4, 0.24, 1);
+  }
+
+  .reward-kicker {
+    color: rgba(255,240,164,0.72);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 7px;
+    text-transform: uppercase;
+  }
+
+  .reward-headline {
+    margin-top: 8px;
+    color: #fff7cc;
+    font-family: 'New Rocker', cursive;
+    font-size: 4.6rem;
+    font-weight: 400;
+    letter-spacing: 6px;
+    text-shadow: 0 0 34px rgba(233,199,85,0.48), 0 9px 26px rgba(0,0,0,0.9);
+  }
+
+  .skip-cover {
+    position: absolute;
+    left: 50%;
+    bottom: 34px;
+    z-index: 42;
+    width: 360px;
+    margin-left: -180px;
+    color: rgba(242,237,226,0.38);
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 920px) {
+    .page-header {
+      align-items: flex-start;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 22px;
+    }
+
+    .flow-strip {
+      width: 100%;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .open-btn {
+      width: 100%;
+    }
+
+    .page-main {
+      padding: 22px;
+    }
+
+    .viewport-scaler {
+      max-width: calc(100vw - 44px);
+    }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <div class="page-title">
+    <h1>Booster Pack Opening V2</h1>
+    <div class="subtitle">Crack, rupture, reward</div>
+  </div>
+  <div class="flow-strip" id="flow-strip" aria-hidden="true">
+    <div class="flow-step" data-flow="summon">Summon</div>
+    <div class="flow-step" data-flow="charge">Charge</div>
+    <div class="flow-step" data-flow="crack">Crack</div>
+    <div class="flow-step" data-flow="rupture">Rupture</div>
+    <div class="flow-step" data-flow="showcase">Showcase</div>
+  </div>
+  <button class="open-btn" type="button" id="open-btn">Open Pack</button>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler" id="viewport-scaler">
+    <div class="viewport" id="viewport">
+      <div class="scene phase-idle" id="scene">
+        <div class="bg"></div>
+        <div class="blackout"></div>
+        <div class="floor-glow"></div>
+        <div class="altar-ring ring-back"></div>
+        <div class="altar-ring"></div>
+        <div class="beams" id="beams"></div>
+
+        <div class="stage" id="stage">
+          <div class="stage-shaker" id="stage-shaker">
+            <div class="pack-zone" id="pack-zone">
+              <div class="pack-aura"></div>
+              <div class="pack-holder" id="pack-holder">
+                <div class="inner-light"></div>
+                <div class="pack-intact" id="pack-intact">
+                  <img class="pack-img" id="pack-img" src="../Content/Booster_Pack/booster_1.png" alt="Booster pack">
+                  <div class="crack-overlay" id="crack-overlay" aria-hidden="true">
+                    <div class="crack-line main"></div>
+                    <div class="crack-line a"></div>
+                    <div class="crack-line b"></div>
+                    <div class="crack-line c"></div>
+                    <div class="crack-line d"></div>
+                  </div>
+                </div>
+                <div class="pack-split" id="pack-split">
+                  <img class="pack-half pack-half-left" src="../Content/Booster_Pack/booster_4_left.png" alt="">
+                  <img class="pack-half pack-half-right" src="../Content/Booster_Pack/booster_4_right.png" alt="">
+                </div>
+              </div>
+            </div>
+
+            <div class="loot-layer" id="loot-layer">
+              <div class="loot-slot medal-slot" id="loot-medal">
+                <div class="loot-plate"></div>
+                <div class="item-wrap">
+                  <div class="medal-disc"><img src="../Content/st_michael.png" alt="St. Michael medal"></div>
+                </div>
+                <div class="loot-label">Medal</div>
+              </div>
+
+              <div class="loot-slot card-slot" id="loot-card">
+                <div class="loot-plate"></div>
+                <div class="item-wrap">
+                  <div class="card-frame">
+                    <div class="card">
+                      <div class="card-top">
+                        <div class="card-name">Forge<br>Strike</div>
+                        <div class="card-cost">2</div>
+                      </div>
+                      <div class="card-type">Attack</div>
+                      <div class="card-text"><strong>Upgrade.</strong> Deal 10 damage. Gain 1 Power if this breaks armor.</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="loot-label">Card</div>
+              </div>
+
+              <div class="loot-slot equip-slot" id="loot-equip">
+                <div class="loot-plate"></div>
+                <div class="item-wrap">
+                  <div class="equip-icon"><img src="../Content/crusader_hammer.png" alt="Crusader hammer"></div>
+                </div>
+                <div class="loot-label">Equipment</div>
+              </div>
+            </div>
+
+            <div class="reward-title" id="reward-title">
+              <div class="reward-kicker">Pack Opened</div>
+              <div class="reward-headline">HOLY SPOILS</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fx-layer">
+          <div class="vertical-flare" id="vertical-flare"></div>
+          <div class="shockwave" id="shockwave"></div>
+          <div class="shockwave second" id="shockwave-second"></div>
+          <div class="flash" id="flash"></div>
+          <div class="particle-layer" id="particle-layer"></div>
+          <div class="shard-layer" id="shard-layer"></div>
+        </div>
+
+        <div class="skip-cover">Click Open Pack to replay</div>
+        <div class="vignette"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const FRAMES = [
+    '../Content/Booster_Pack/booster_1.png',
+    '../Content/Booster_Pack/booster_2.png',
+    '../Content/Booster_Pack/booster_3.png'
+  ];
+
+  const PHASES = [
+    { name: 'summon', at: 0, duration: 760 },
+    { name: 'idle', at: 760, duration: 520, frame: 0 },
+    { name: 'charge', at: 1280, duration: 850, frame: 1, particles: 'charge' },
+    { name: 'crack', at: 2130, duration: 650, frame: 2, particles: 'sparks' },
+    { name: 'rupture', at: 2780, duration: 760, split: true, fx: true },
+    { name: 'showcase', at: 3540, duration: 1600, reveal: true }
+  ];
+
+  const TOTAL = 5140;
+  let rafId = 0;
+  let playToken = 0;
+
+  const scene = document.getElementById('scene');
+  const scaler = document.getElementById('viewport-scaler');
+  const viewport = document.getElementById('viewport');
+  const openBtn = document.getElementById('open-btn');
+  const packImg = document.getElementById('pack-img');
+  const packIntact = document.getElementById('pack-intact');
+  const packSplit = document.getElementById('pack-split');
+  const packZone = document.getElementById('pack-zone');
+  const lootLayer = document.getElementById('loot-layer');
+  const lootMedal = document.getElementById('loot-medal');
+  const lootCard = document.getElementById('loot-card');
+  const lootEquip = document.getElementById('loot-equip');
+  const rewardTitle = document.getElementById('reward-title');
+  const stageShaker = document.getElementById('stage-shaker');
+  const flash = document.getElementById('flash');
+  const shockwave = document.getElementById('shockwave');
+  const shockwaveSecond = document.getElementById('shockwave-second');
+  const beams = document.getElementById('beams');
+  const verticalFlare = document.getElementById('vertical-flare');
+  const particleLayer = document.getElementById('particle-layer');
+  const shardLayer = document.getElementById('shard-layer');
+  const flowStrip = document.getElementById('flow-strip');
+
+  function fitViewport() {
+    const scale = scaler.clientWidth / 1920;
+    viewport.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${1080 * scale}px`;
+  }
+
+  function setScenePhase(name) {
+    scene.className = `scene phase-${name}`;
+  }
+
+  function restartClassAnimation(element, className) {
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+  }
+
+  function resetFlow() {
+    flowStrip.querySelectorAll('.flow-step').forEach(step => {
+      step.classList.remove('is-active', 'is-done');
+    });
+  }
+
+  function updateFlow(name) {
+    const order = ['summon', 'charge', 'crack', 'rupture', 'showcase'];
+    const current = Math.max(0, order.indexOf(name));
+    flowStrip.querySelectorAll('.flow-step').forEach(step => {
+      const index = order.indexOf(step.dataset.flow);
+      step.classList.toggle('is-active', index === current);
+      step.classList.toggle('is-done', index >= 0 && index < current);
+    });
+  }
+
+  function resetScene() {
+    if (rafId) cancelAnimationFrame(rafId);
+    playToken++;
+    setScenePhase('summon');
+    resetFlow();
+    updateFlow('summon');
+    packImg.src = FRAMES[0];
+    packIntact.classList.remove('is-hidden');
+    packSplit.classList.remove('is-visible', 'is-peeling');
+    packZone.style.display = '';
+    lootLayer.classList.remove('is-visible');
+    rewardTitle.classList.remove('is-visible');
+    [lootMedal, lootCard, lootEquip].forEach(slot => slot.classList.remove('is-revealed'));
+    [flash, shockwave, shockwaveSecond, beams, verticalFlare].forEach(el => el.classList.remove('is-on'));
+    stageShaker.classList.remove('is-shaking');
+    particleLayer.innerHTML = '';
+    shardLayer.innerHTML = '';
+  }
+
+  function spawnParticles(mode, count) {
+    const cx = 960;
+    const cy = mode === 'charge' ? 500 : 475;
+    const container = particleLayer;
+    if (mode !== 'charge') container.innerHTML = '';
+
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const angle = Math.random() * Math.PI * 2;
+      const dist = mode === 'charge' ? 120 + Math.random() * 230 : 180 + Math.random() * 520;
+      const inward = mode === 'charge';
+      const size = inward ? 3 + Math.random() * 6 : 5 + Math.random() * 14;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      const gold = Math.random() > 0.34;
+      const blue = !gold && Math.random() > 0.45;
+      const color = gold ? '#fff0a4' : blue ? '#65d1ff' : '#ff4056';
+      const startX = inward ? cx + dx : cx;
+      const startY = inward ? cy + dy : cy;
+      const endX = inward ? -dx : dx;
+      const endY = inward ? -dy : dy;
+      p.style.left = `${startX}px`;
+      p.style.top = `${startY}px`;
+      p.style.width = `${size}px`;
+      p.style.height = `${size}px`;
+      p.style.background = color;
+      p.style.boxShadow = `0 0 ${size * 3}px ${color}`;
+      p.style.setProperty('--dx', `${endX}px`);
+      p.style.setProperty('--dy', `${endY}px`);
+      p.style.setProperty('--dur', `${inward ? 0.72 + Math.random() * 0.28 : 0.9 + Math.random() * 0.55}s`);
+      p.style.setProperty('--delay', `${Math.random() * (inward ? 0.18 : 0.1)}s`);
+      container.appendChild(p);
+    }
+
+    if (mode === 'charge') {
+      window.setTimeout(() => {
+        [...container.children].slice(0, count).forEach(node => node.remove());
+      }, 1300);
+    }
+  }
+
+  function spawnShards(count) {
+    shardLayer.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('div');
+      s.className = 'shard';
+      const angle = -Math.PI * 0.92 + (Math.PI * 1.84 * i) / Math.max(1, count - 1) + (Math.random() - 0.5) * 0.28;
+      const dist = 240 + Math.random() * 520;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist + Math.random() * 110;
+      s.style.left = '960px';
+      s.style.top = '476px';
+      s.style.setProperty('--w', `${8 + Math.random() * 14}px`);
+      s.style.setProperty('--h', `${20 + Math.random() * 42}px`);
+      s.style.setProperty('--dx', `${dx}px`);
+      s.style.setProperty('--dy', `${dy}px`);
+      s.style.setProperty('--rot', `${(Math.random() > 0.5 ? 1 : -1) * (220 + Math.random() * 520)}deg`);
+      s.style.setProperty('--dur', `${0.76 + Math.random() * 0.46}s`);
+      s.style.setProperty('--delay', `${Math.random() * 0.08}s`);
+      shardLayer.appendChild(s);
+    }
+  }
+
+  function triggerRupture() {
+    packIntact.classList.add('is-hidden');
+    packSplit.classList.add('is-visible');
+    packSplit.classList.remove('is-peeling');
+    void packSplit.offsetWidth;
+    packSplit.classList.add('is-peeling');
+    restartClassAnimation(flash, 'is-on');
+    restartClassAnimation(shockwave, 'is-on');
+    restartClassAnimation(shockwaveSecond, 'is-on');
+    restartClassAnimation(beams, 'is-on');
+    restartClassAnimation(verticalFlare, 'is-on');
+    restartClassAnimation(stageShaker, 'is-shaking');
+    spawnParticles('burst', 74);
+    spawnShards(34);
+  }
+
+  function revealLoot() {
+    packZone.style.display = 'none';
+    lootLayer.classList.add('is-visible');
+    rewardTitle.classList.add('is-visible');
+    lootMedal.classList.add('is-revealed');
+    lootCard.classList.add('is-revealed');
+    lootEquip.classList.add('is-revealed');
+    spawnParticles('burst', 42);
+  }
+
+  function play() {
+    resetScene();
+    const token = playToken;
+    const fired = new Set();
+    const start = performance.now();
+
+    function tick(now) {
+      if (token !== playToken) return;
+      const elapsed = now - start;
+
+      let active = PHASES[PHASES.length - 1];
+      for (const phase of PHASES) {
+        if (elapsed >= phase.at && elapsed < phase.at + phase.duration) {
+          active = phase;
+          break;
+        }
+      }
+
+      setScenePhase(active.name);
+      updateFlow(active.name === 'idle' ? 'summon' : active.name);
+
+      if (active.frame != null) packImg.src = FRAMES[active.frame];
+
+      const key = active.name;
+      if (!fired.has(key)) {
+        fired.add(key);
+        if (active.particles === 'charge') spawnParticles('charge', 34);
+        if (active.particles === 'sparks') spawnParticles('burst', 24);
+        if (active.split) triggerRupture();
+        if (active.reveal) revealLoot();
+      }
+
+      if (active.name === 'charge' && Math.floor(elapsed / 260) !== Math.floor((elapsed - 16) / 260)) {
+        spawnParticles('charge', 12);
+      }
+
+      if (elapsed < TOTAL + 700) {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function initialize() {
+    fitViewport();
+    window.setTimeout(play, 350);
+  }
+
+  openBtn.addEventListener('click', play);
+  window.addEventListener('resize', fitViewport);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
+  }
+  fitViewport();
+</script>
+</body>
+</html>
