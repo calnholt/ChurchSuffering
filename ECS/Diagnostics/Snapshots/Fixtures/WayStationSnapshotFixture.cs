@@ -13,6 +13,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 		private WayStationCameraSystem _wayStationCamera;
 		private WayStationBackgroundDisplaySystem _wayStationBackground;
+		private IncenseDisplaySystem _incense;
 		private WayStationPoiDisplaySystem _wayStationPoi;
 		private WayStationDialogueSystem _wayStationDialogue;
 		private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModal;
@@ -40,6 +41,13 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ctx.ImageAssets);
 			ctx.World.AddSystem(_wayStationBackground);
 
+			_incense = new IncenseDisplaySystem(
+				ctx.World.EntityManager,
+				ctx.GraphicsDevice,
+				ctx.SpriteBatch,
+				ctx.Content);
+			ctx.World.AddSystem(_incense);
+
 			_wayStationPoi = new WayStationPoiDisplaySystem(
 				ctx.World.EntityManager,
 				ctx.SpriteBatch,
@@ -64,6 +72,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		public void Draw(DisplaySnapshotContext ctx)
 		{
 			_wayStationBackground.Draw();
+			_incense.Draw();
 			_wayStationPoi.Draw();
 			_wayStationDialogue.Draw();
 			_wayStationClimbSettingsModal.Draw();

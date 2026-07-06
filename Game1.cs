@@ -44,6 +44,7 @@ public class Game1 : Game
     private TitleMenuDisplaySystem _titleMenuDisplaySystem;
     private WayStationCameraSystem _wayStationCameraSystem;
     private WayStationBackgroundDisplaySystem _wayStationBackgroundDisplaySystem;
+    private IncenseDisplaySystem _incenseDisplaySystem;
     private WayStationPoiDisplaySystem _wayStationPoiDisplaySystem;
     private WayStationDialogueSystem _wayStationDialogueSystem;
     private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModalSystem;
@@ -182,6 +183,7 @@ public class Game1 : Game
         _titleMenuDisplaySystem = new TitleMenuDisplaySystem(_world, _spriteBatch);
         _wayStationCameraSystem = new WayStationCameraSystem(_world.EntityManager, _imageAssets);
         _wayStationBackgroundDisplaySystem = new WayStationBackgroundDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
+        _incenseDisplaySystem = new IncenseDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _wayStationPoiDisplaySystem = new WayStationPoiDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationDialogueSystem = new WayStationDialogueSystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationClimbSettingsModalSystem = new WayStationClimbSettingsModalSystem(_world, _spriteBatch, _imageAssets);
@@ -233,6 +235,7 @@ public class Game1 : Game
         _world.AddSystem(_titleMenuDisplaySystem);
         _world.AddSystem(_wayStationCameraSystem);
         _world.AddSystem(_wayStationBackgroundDisplaySystem);
+        _world.AddSystem(_incenseDisplaySystem);
         _world.AddSystem(_wayStationPoiDisplaySystem);
         _world.AddSystem(_wayStationDialogueSystem);
         _world.AddSystem(_wayStationClimbSettingsModalSystem);
@@ -551,6 +554,7 @@ public class Game1 : Game
             case SceneId.WayStation:
             {
                 FrameProfiler.Measure("WayStationBackgroundDisplaySystem.Draw", _wayStationBackgroundDisplaySystem.Draw);
+                FrameProfiler.Measure("IncenseDisplaySystem.Draw", _incenseDisplaySystem.Draw);
                 FrameProfiler.Measure("WayStationPoiDisplaySystem.Draw", _wayStationPoiDisplaySystem.Draw);
                 FrameProfiler.Measure("WayStationDialogueSystem.Draw", _wayStationDialogueSystem.Draw);
                 FrameProfiler.Measure("WayStationClimbSettingsModalSystem.Draw", _wayStationClimbSettingsModalSystem.Draw);

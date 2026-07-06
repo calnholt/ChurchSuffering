@@ -2390,6 +2390,12 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/JungleBackground.fx
 
+#begin Shaders/Incense.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/Incense.fx
+
 #---------------------------------- Music ---------------------------------#
 
 #begin Music/desert_theme_battle.wav
