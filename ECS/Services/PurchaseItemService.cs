@@ -110,6 +110,7 @@ namespace Crusaders30XX.ECS.Services
 
 			if (fs.ItemType == ForSaleItemType.Medal)
 			{
+				SaveCache.MarkWayStationMedalPurchased(fs.Id);
 				RunMedalService.AcquireAndEquip(entityManager, fs.Id);
 			}
 			else if (fs.ItemType == ForSaleItemType.Equipment)
@@ -176,4 +177,3 @@ namespace Crusaders30XX.ECS.Services
 
 	}
 }
-

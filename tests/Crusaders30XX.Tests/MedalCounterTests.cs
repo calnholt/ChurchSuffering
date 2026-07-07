@@ -8,6 +8,7 @@ using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Medals;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Systems;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -496,9 +497,76 @@ public class MedalCounterTests
 			var curseCard = entityManager.CreateEntity("CurseCard");
 			entityManager.AddComponent(curseCard, new CardData { Card = new Curse() });
 
-			EventManager.Publish(new CardPlayedEvent { Card = curseCard });
+			EventManager.Publish(new CardPlayedEvent { Card = curseCard, PlayedAsCurse = true });
 
 			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StRita_emits_activate_on_cursed_runtime_card_play()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			_ = new CardApplicationManagementSystem(entityManager);
+			var medal = new StRita();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var card = EntityFactory.CreateCardFromDefinition(
+				entityManager,
+				"increase_faith",
+				CardData.CardColor.Black,
+				index: 0);
+			CardApplicationManagementSystem.ApplyCursedRuntime(entityManager, card);
+
+			Assert.Equal(Curse.CardIdValue, card.GetComponent<CardData>()?.Card?.CardId);
+
+			card.GetComponent<CardData>()?.Card?.OnPlay?.Invoke(entityManager, card);
+
+			EventManager.Publish(new CardPlayedEvent { Card = card, PlayedAsCurse = true });
+
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StRita_does_not_trigger_when_PlayedAsCurse_false()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			_ = new CardApplicationManagementSystem(entityManager);
+			var medal = new StRita();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var card = EntityFactory.CreateCardFromDefinition(
+				entityManager,
+				"increase_faith",
+				CardData.CardColor.Black,
+				index: 0);
+			CardApplicationManagementSystem.ApplyCursedRuntime(entityManager, card);
+			card.GetComponent<CardData>()?.Card?.OnPlay?.Invoke(entityManager, card);
+
+			EventManager.Publish(new CardPlayedEvent { Card = card, PlayedAsCurse = false });
+
+			Assert.Equal(0, activateCount);
 		}
 		finally
 		{

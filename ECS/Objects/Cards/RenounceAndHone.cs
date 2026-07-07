@@ -62,7 +62,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             };
             OnUpgrade = (entityManager, card) =>
             {
-                Text = $"As an additional cost, discard your pledged card that was not pledged this turn. Gain {GetCourageAmount(IsUpgraded)} vigor and {GetCourageAmount(IsUpgraded)} courage.";
+                Text = $"As an additional cost, discard your pledged card that was not pledged this turn. Gain {VigorAmount} vigor and {GetCourageAmount(IsUpgraded)} courage.";
             };
         }
         private int GetCourageAmount(bool isUpgraded)

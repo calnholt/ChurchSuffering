@@ -47,7 +47,7 @@ namespace Crusaders30XX.ECS.Services
 			new() { Id = "fear", Aliases = ["fear"], Tooltip = "X Fear - All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear." },
 			new() { Id = "wounded", Aliases = ["wounded"], Tooltip = "X Wounded - Take X more damage from all sources this battle." },
 			new() { Id = "armor", Aliases = ["armor"], Tooltip = "X Armor - Take X less damage from attacks this battle." },
-			new() { Id = "guard", Aliases = ["guard"], Tooltip = "X Guard - Prevents the next X damage from attacks. Any damage removes all guard. At the start of the enemy turn, converts to 1 aggression." },
+			new() { Id = "guard", Aliases = ["guard"], Tooltip = "X Guard - Prevents the next X damage from attacks. Any attack damage removes all guard. Removed at the start of the enemy turn if unused." },
 			new() { Id = "bleed", Aliases = ["bleed"], Tooltip = "X Bleed - While you have bleed, lose 1 HP when you block with 2 or more cards of the same color, then remove one bleed stack. Lasts for the rest of the climb." },
 			new() { Id = "mill", Aliases = ["mill"], Tooltip = "Mill X - Discard the top X cards of your deck." },
 			new() { Id = "resurrect", Aliases = ["resurrect"], Tooltip = "Resurrect X - draw X random cards from your discard pile." },
@@ -211,7 +211,7 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Shield:
 					return "Prevent all damage from the first source each turn.";
 				case AppliedPassiveType.Guard:
-					return $"Prevents the next {stacks} damage from attacks. Any damage removes all guard. At the start of the enemy turn, converts to 1 aggression.";
+					return $"Prevents the next {stacks} damage from attacks. Any attack damage removes all guard. Removed at the start of the enemy turn if unused.";
 				case AppliedPassiveType.Fear:
 					return "All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear.";
 				case AppliedPassiveType.Siphon:

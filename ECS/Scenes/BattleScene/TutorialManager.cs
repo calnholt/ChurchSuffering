@@ -175,6 +175,8 @@ namespace Crusaders30XX.ECS.Systems
                     return HasCostCardInHand();
                 case "has_non_free_card":
                     return HasNonFreeCardInHand();
+                case "has_reckoning_in_hand":
+                    return HasCardInHand("reckoning");
                 case "has_equipment":
                     return HasEquipment();
                 case "has_medal":
@@ -218,6 +220,17 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             return false;
+        }
+
+        private bool HasCardInHand(string cardId)
+        {
+            var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
+            var deck = deckEntity?.GetComponent<Deck>();
+            if (deck == null || deck.Hand == null)
+                return false;
+
+            return deck.Hand.Any(card =>
+                string.Equals(card.GetComponent<CardData>()?.Card?.CardId, cardId, StringComparison.OrdinalIgnoreCase));
         }
 
         private bool HasCostCardInHand()
@@ -524,6 +537,8 @@ namespace Crusaders30XX.ECS.Systems
                     return GetFirstCardBoundsByColor(CardData.CardColor.Red);
                 case "first_white_card":
                     return GetFirstCardBoundsByColor(CardData.CardColor.White);
+                case "reckoning":
+                    return CardBounds("reckoning");
                 case "ap_and_smite_ap":
                     return Union(GetEntityBounds("UI_APTooltip"), CardBounds("smite"));
                 case "smite_damage":

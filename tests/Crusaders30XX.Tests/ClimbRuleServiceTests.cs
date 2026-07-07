@@ -26,7 +26,7 @@ public class ClimbRuleServiceTests
 		Assert.Equal(ClimbRuleService.EventSlotCount, state.eventSlots.Count);
 		Assert.Equal(3, state.eventSlots.Count(slot => slot.kind == ClimbEventKind.Hazard));
 		Assert.Equal(2, state.eventSlots.Count(slot => slot.kind == ClimbEventKind.Character));
-		Assert.All(state.shopSlots.Where(s => s.kind != ClimbShopSlotKinds.Empty), slot => Assert.InRange(slot.timeCost, 1, 3));
+		Assert.All(state.shopSlots.Where(s => s.kind != ClimbShopSlotKinds.Empty), slot => Assert.InRange(slot.timeCost, 0, 2));
 		AssertShopSlotDisplayOrder(state);
 		Assert.All(state.encounterSlots, slot =>
 		{
@@ -511,21 +511,21 @@ public class ClimbRuleServiceTests
 	[Fact]
 	public void Shop_costs_use_time_adjusted_item_specific_resource_weights()
 	{
-		AssertShopCost(ClimbShopSlotKinds.Upgrade, 1, expectedTotal: 3, expectedDominant: "red");
-		AssertShopCost(ClimbShopSlotKinds.Upgrade, 2, expectedTotal: 2, expectedDominant: "red");
-		AssertShopCost(ClimbShopSlotKinds.Upgrade, 3, expectedTotal: 1, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Upgrade, 0, expectedTotal: 3, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Upgrade, 1, expectedTotal: 2, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Upgrade, 2, expectedTotal: 1, expectedDominant: "red");
 
-		AssertShopCost(ClimbShopSlotKinds.Replacement, 1, expectedTotal: 3, expectedDominant: "red");
-		AssertShopCost(ClimbShopSlotKinds.Replacement, 2, expectedTotal: 2, expectedDominant: "red");
-		AssertShopCost(ClimbShopSlotKinds.Replacement, 3, expectedTotal: 1, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Replacement, 0, expectedTotal: 3, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Replacement, 1, expectedTotal: 2, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Replacement, 2, expectedTotal: 1, expectedDominant: "red");
 
-		AssertShopCost(ClimbShopSlotKinds.Medal, 1, expectedTotal: 5, expectedDominant: "white");
-		AssertShopCost(ClimbShopSlotKinds.Medal, 2, expectedTotal: 3, expectedDominant: "white");
-		AssertShopCost(ClimbShopSlotKinds.Medal, 3, expectedTotal: 1, expectedDominant: "white");
+		AssertShopCost(ClimbShopSlotKinds.Medal, 0, expectedTotal: 6, expectedDominant: "white");
+		AssertShopCost(ClimbShopSlotKinds.Medal, 1, expectedTotal: 4, expectedDominant: "white");
+		AssertShopCost(ClimbShopSlotKinds.Medal, 2, expectedTotal: 2, expectedDominant: "white");
 
-		AssertShopCost(ClimbShopSlotKinds.Equipment, 1, expectedTotal: 6, expectedDominant: "black");
-		AssertShopCost(ClimbShopSlotKinds.Equipment, 2, expectedTotal: 4, expectedDominant: "black");
-		AssertShopCost(ClimbShopSlotKinds.Equipment, 3, expectedTotal: 2, expectedDominant: "black");
+		AssertShopCost(ClimbShopSlotKinds.Equipment, 0, expectedTotal: 7, expectedDominant: "black");
+		AssertShopCost(ClimbShopSlotKinds.Equipment, 1, expectedTotal: 5, expectedDominant: "black");
+		AssertShopCost(ClimbShopSlotKinds.Equipment, 2, expectedTotal: 3, expectedDominant: "black");
 	}
 
 	[Fact]

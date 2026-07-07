@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Achievements Grid Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Title: AchievementTitleDisplaySystem trapezoid (700x110, New Rocker ~0.47 scale)
+    - Grid: 15x10, cell 54px, gap 16px, offset (170, 150)
+    - Detail: AchievementDescriptionDisplaySystem slide panel (530x400 @ 1280,300)
+    - Meter: AchievementMeterDisplaySystem bar (1600x50 @ 150,950)
+    - Background: AchievementBackground shader (sepia turbulent noise)
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-dark: #8b0000;
+    --red-brick: #b43232;
+    --gold: #ffd700;
+    --gold-dim: #a08030;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --grid-cols: 15;
+    --grid-rows: 10;
+    --cell-size: 54px;
+    --cell-gap: 16px;
+    --grid-x: 170px;
+    --grid-y: 150px;
+    --panel-w: 530px;
+    --panel-h: 400px;
+    --panel-x: 1280px;
+    --panel-y: 300px;
+    --bar-x: 150px;
+    --bar-y: 950px;
+    --bar-w: 1600px;
+    --bar-h: 50px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 4px;
+  }
+
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    max-width: 900px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .page-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .page-controls label {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    margin-right: 4px;
+  }
+
+  .chip-btn {
+    padding: 6px 14px;
+    background: var(--black-3);
+    border: 1px solid var(--black-4);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .chip-btn.is-active {
+    border-color: var(--red-brick);
+    color: var(--white-1);
+  }
+
+  .variant-note {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: var(--black-2);
+    border-left: 3px solid var(--red-brick);
+    max-width: 900px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--white-3);
+  }
+
+  .page-main { padding: 32px 40px 60px; }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  /* ── Shared title trapezoid (identical across variants) ── */
+  .achievements-title-wrap {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    z-index: 30;
+    pointer-events: none;
+  }
+
+  .achievements-trapezoid {
+    width: 700px;
+    height: 110px;
+    background: #000;
+    clip-path: polygon(
+      20px 4px,
+      680px 0px,
+      700px 108px,
+      0px 106px
+    );
+  }
+
+  .achievements-title-text {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'New Rocker', cursive;
+    font-size: 52px;
+    color: var(--white-1);
+    letter-spacing: 1px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .back-btn {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    z-index: 30;
+    padding: 10px 22px;
+    background: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'New Rocker', cursive;
+    font-size: 22px;
+    color: var(--white-1);
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+
+  .back-btn:hover { background: #1a1a1a; }
+
+  /* ── Variant panels ── */
+  .variant-panel {
+    display: none;
+    position: absolute;
+    inset: 0;
+  }
+
+  .variant-panel.is-active { display: block; }
+
+  /* ── Backgrounds ── */
+  .bg-mist {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 55% 45% at 42% 38%, rgba(255, 252, 245, 0.92) 0%, rgba(220, 205, 185, 0.55) 35%, rgba(120, 100, 85, 0.35) 70%, rgba(40, 32, 28, 0.75) 100%),
+      repeating-radial-gradient(circle at 30% 40%, rgba(255,255,255,0.03) 0 2px, transparent 2px 8px);
+    animation: mist-drift 18s ease-in-out infinite alternate;
+  }
+
+  @keyframes mist-drift {
+    0% { filter: brightness(0.95) contrast(1.05); }
+    100% { filter: brightness(1.05) contrast(0.98); }
+  }
+
+  .bg-manuscript {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 50% 42% at 45% 40%, #f4e8d0 0%, #d4c4a8 40%, #8a7a62 75%, #2a2218 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  }
+
+  .bg-crusader {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 48% 40% at 50% 42%, rgba(180, 170, 155, 0.35) 0%, rgba(60, 50, 45, 0.6) 55%, rgba(12, 10, 12, 0.95) 100%),
+      linear-gradient(180deg, rgba(139, 0, 0, 0.08) 0%, transparent 40%, rgba(139, 0, 0, 0.12) 100%);
+  }
+
+  .vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 80% 75% at 50% 50%, transparent 40%, rgba(0,0,0,0.45) 100%);
+  }
+
+  /* ── Grid shell variants ── */
+  .grid-area {
+    position: absolute;
+    left: var(--grid-x);
+    top: var(--grid-y);
+    width: calc(var(--grid-cols) * var(--cell-size) + (var(--grid-cols) - 1) * var(--cell-gap));
+    height: calc(var(--grid-rows) * var(--cell-size) + (var(--grid-rows) - 1) * var(--cell-gap));
+    z-index: 10;
+  }
+
+  .grid-shell-a { /* open — no frame */ }
+
+  .grid-shell-b {
+    padding: 28px 32px;
+    margin: -28px -32px;
+    background: linear-gradient(145deg, rgba(30, 24, 18, 0.55), rgba(18, 14, 10, 0.72));
+    border: 2px solid rgba(180, 150, 100, 0.35);
+    border-radius: 4px;
+    box-shadow:
+      inset 0 0 40px rgba(0,0,0,0.35),
+      0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .grid-shell-b::before,
+  .grid-shell-b::after {
+    content: '';
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border: 2px solid rgba(200, 170, 110, 0.5);
+    pointer-events: none;
+  }
+
+  .grid-shell-b::before {
+    top: 10px; left: 10px;
+    border-right: none; border-bottom: none;
+  }
+
+  .grid-shell-b::after {
+    bottom: 10px; right: 10px;
+    border-left: none; border-top: none;
+  }
+
+  .grid-shell-c {
+    padding: 20px 24px;
+    margin: -20px -24px;
+    background: rgba(8, 6, 8, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.06),
+      inset 0 -4px 12px rgba(0,0,0,0.6),
+      0 0 0 3px rgba(139, 0, 0, 0.25);
+  }
+
+  .achievement-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-cols), var(--cell-size));
+    grid-template-rows: repeat(var(--grid-rows), var(--cell-size));
+    gap: var(--cell-gap);
+  }
+
+  .grid-cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    border-radius: 6px;
+    border: none;
+    padding: 0;
+    cursor: default;
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .grid-cell.is-hidden {
+    background: #000;
+    cursor: default;
+  }
+
+  .grid-cell.is-visible {
+    background: var(--red-dark);
+    cursor: pointer;
+  }
+
+  .grid-cell.is-complete {
+    background: var(--white-1);
+    cursor: pointer;
+  }
+
+  .grid-cell.is-unseen::after {
+    content: '!';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'New Rocker', cursive;
+    font-size: 28px;
+    color: var(--red-dark);
+    animation: pulse-exclaim 1.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-exclaim {
+    0%, 100% { opacity: 0.75; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+
+  .grid-cell.is-interactive:hover {
+    transform: scale(1.15);
+    z-index: 5;
+  }
+
+  /* Variant B cell styling */
+  .variant-b .grid-cell.is-visible {
+    background: linear-gradient(145deg, #6b1010, #8b0000);
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+  }
+
+  .variant-b .grid-cell.is-complete {
+    background: linear-gradient(145deg, #f8f4ec, #e8e0d0);
+    box-shadow: inset 0 0 6px rgba(160, 120, 60, 0.25);
+  }
+
+  /* Variant C cell styling */
+  .variant-c .grid-cell.is-hidden {
+    background: #0a0a0a;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .variant-c .grid-cell.is-visible {
+    background: #1a0808;
+    border: 1px solid rgba(180, 40, 40, 0.6);
+    box-shadow: 0 0 10px rgba(139, 0, 0, 0.35);
+  }
+
+  .variant-c .grid-cell.is-complete {
+    background: linear-gradient(160deg, #2a2420, #f0ece6);
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.15);
+  }
+
+  /* ── Slide-out detail panel ── */
+  .detail-panel {
+    position: absolute;
+    left: var(--panel-x);
+    top: var(--panel-y);
+    width: var(--panel-w);
+    height: var(--panel-h);
+    z-index: 20;
+    transform: translateX(50px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+  }
+
+  .detail-panel.is-open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .panel-a {
+    background: rgba(0, 0, 0, 0.86);
+    border-radius: 12px;
+    border: 1px solid rgba(139, 0, 0, 0.4);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-b {
+    background: linear-gradient(160deg, #f0e6d0 0%, #d8c8a8 100%);
+    border-radius: 2px 16px 16px 2px;
+    border: 2px solid rgba(120, 90, 50, 0.5);
+    padding: 28px 26px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -12px 0 28px rgba(0,0,0,0.35);
+    color: #2a2018;
+  }
+
+  .panel-b::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(100, 70, 40, 0.3) 0 6px,
+      transparent 6px 12px
+    );
+    border-radius: 2px 0 0 2px;
+  }
+
+  .panel-c {
+    background: rgba(6, 4, 6, 0.94);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(139, 0, 0, 0.2);
+  }
+
+  .panel-c .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 24px;
+    background: linear-gradient(90deg, rgba(139, 0, 0, 0.45), transparent);
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+  }
+
+  .panel-c .cross-emblem {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 30%, #e8e0d0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px rgba(255, 80, 60, 0.5);
+    flex-shrink: 0;
+  }
+
+  .panel-c .cross-emblem svg { width: 22px; height: 22px; }
+
+  .panel-body {
+    flex: 1;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-c .panel-body { padding-top: 18px; }
+
+  .panel-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 30px;
+    line-height: 1.15;
+    margin-bottom: 16px;
+  }
+
+  .panel-a .panel-title { color: var(--white-1); }
+  .panel-b .panel-title { color: #1a1008; }
+  .panel-c .panel-title { color: var(--white-1); font-size: 26px; margin: 0; }
+
+  .panel-desc {
+    font-size: 17px;
+    line-height: 1.55;
+    flex: 1;
+    margin-bottom: 20px;
+  }
+
+  .panel-a .panel-desc { color: #b4b4b4; }
+  .panel-b .panel-desc { color: #4a3c30; }
+  .panel-c .panel-desc { color: #b8b0a8; }
+
+  .progress-wrap { margin-bottom: 8px; }
+
+  .progress-bar {
+    height: 20px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .panel-a .progress-bar { background: #282828; }
+  .panel-b .progress-bar { background: rgba(60, 45, 30, 0.25); }
+  .panel-c .progress-bar { background: #1a1a1a; }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  .panel-a .progress-fill { background: var(--white-1); }
+  .panel-b .progress-fill { background: var(--red-dark); }
+  .panel-c .progress-fill { background: linear-gradient(90deg, var(--red-dark), var(--gold-dim)); }
+
+  .progress-text {
+    font-size: 16px;
+  }
+
+  .panel-a .progress-text { color: #b4b4b4; }
+  .panel-b .progress-text { color: #5a4a38; }
+  .panel-c .progress-text { color: #989088; }
+
+  .panel-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: auto;
+    padding-top: 12px;
+  }
+
+  .status-tag {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .panel-a .status-tag.is-done { color: var(--gold); }
+  .panel-b .status-tag.is-done { color: #6b4010; }
+  .panel-c .status-tag.is-done { color: var(--gold); }
+
+  .points-tag {
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+
+  .panel-a .points-tag { color: var(--gold); }
+  .panel-b .points-tag { color: #7a5018; }
+  .panel-c .points-tag { color: var(--gold); }
+
+  /* ── Meter bar ── */
+  .meter-wrap {
+    position: absolute;
+    left: var(--bar-x);
+    top: var(--bar-y);
+    width: var(--bar-w);
+    z-index: 15;
+  }
+
+  .meter-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-family: 'New Rocker', cursive;
+    font-size: 20px;
+  }
+
+  .meter-bar {
+    height: var(--bar-h);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .meter-a .meter-bar { background: #1e1e1e; }
+  .meter-b .meter-bar {
+    background: rgba(40, 32, 24, 0.7);
+    border: 2px solid rgba(160, 130, 80, 0.4);
+  }
+  .meter-c .meter-bar {
+    background: #141014;
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 8px;
+  }
+
+  .meter-a .meter-fill { background: var(--red-brick); width: 35%; }
+  .meter-b .meter-fill { background: linear-gradient(90deg, #6b1010, #a05030); width: 35%; }
+  .meter-c .meter-fill { background: linear-gradient(90deg, #8b0000, #c8a030); width: 35%; }
+
+  .meter-total {
+    text-align: center;
+    margin-top: 6px;
+    font-family: 'New Rocker', cursive;
+    font-size: 18px;
+  }
+
+  .meter-a .meter-labels,
+  .meter-a .meter-total { color: #000; text-shadow: 0 0 12px rgba(255,255,255,0.6); }
+  .meter-b .meter-labels,
+  .meter-b .meter-total { color: #2a2018; }
+  .meter-c .meter-labels,
+  .meter-c .meter-total { color: #d8d0c8; }
+
+  /* Decorative crusader emblem (variant C ambient) */
+  .ambient-emblem {
+    position: absolute;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 35%, #e0d8c8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 24px rgba(255, 60, 40, 0.45);
+    opacity: 0.55;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .ambient-emblem svg { width: 28px; height: 28px; }
+
+  .hint-bar {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    z-index: 40;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Achievements Grid — Layout Variants</h1>
+  <p>
+    Three visual treatments for the achievement fog-of-war grid and right-side slide-out detail panel.
+    The <strong>Achievements</strong> title trapezoid is identical in all variants. Hover a revealed cell (red or white) to preview the slide-out menu.
+    Virtual resolution: 1920x1080.
+  </p>
+  <div class="page-controls">
+    <label>Variant</label>
+    <button type="button" class="chip-btn is-active" data-variant="a">A — Mist Veil</button>
+    <button type="button" class="chip-btn" data-variant="b">B — Manuscript</button>
+    <button type="button" class="chip-btn" data-variant="c">C — Crusader</button>
+  </div>
+  <p class="variant-note" id="variant-note">
+    <strong>A — Mist Veil:</strong> Matches the current in-game look — open sepia fog, bare black grid cells, minimal dark slide panel. Closest to the shipped scene.
+  </p>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler">
+    <div class="viewport" id="viewport">
+
+      <!-- Shared chrome (title + back) -->
+      <div class="achievements-title-wrap">
+        <div class="achievements-trapezoid"></div>
+        <span class="achievements-title-text">Achievements</span>
+      </div>
+      <button type="button" class="back-btn">Back</button>
+
+      <!-- Variant A -->
+      <section class="variant-panel is-active variant-a" id="variant-a" data-variant="a">
+        <div class="bg-mist"></div>
+        <div class="vignette"></div>
+        <div class="grid-area grid-shell-a">
+          <div class="achievement-grid" data-grid="a"></div>
+        </div>
+        <div class="detail-panel panel-a" id="panel-a">
+          <div class="panel-body"></div>
+        </div>
+        <div class="meter-wrap meter-a">
+          <div class="meter-labels"><span>Level 0</span><span>35 / 100</span></div>
+          <div class="meter-bar"><div class="meter-fill"></div></div>
+          <div class="meter-total">Total: 35 points</div>
+        </div>
+      </section>
+
+      <!-- Variant B -->
+      <section class="variant-panel variant-b" id="variant-b" data-variant="b">
+        <div class="bg-manuscript"></div>
+        <div class="vignette" style="opacity: 0.6;"></div>
+        <div class="grid-area grid-shell-b">
+          <div class="achievement-grid" data-grid="b"></div>
+        </div>
+        <div class="detail-panel panel-b" id="panel-b">
+          <div class="panel-body"></div>
+        </div>
+        <div class="meter-wrap meter-b">
+          <div class="meter-labels"><span>Level 0</span><span>35 / 100</span></div>
+          <div class="meter-bar"><div class="meter-fill"></div></div>
+          <div class="meter-total">Total: 35 points</div>
+        </div>
+      </section>
+
+      <!-- Variant C -->
+      <section class="variant-panel variant-c" id="variant-c" data-variant="c">
+        <div class="bg-crusader"></div>
+        <div class="vignette"></div>
+        <div class="ambient-emblem" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M7 7h10M7 12h10M7 17h10" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="grid-area grid-shell-c">
+          <div class="achievement-grid" data-grid="c"></div>
+        </div>
+        <div class="detail-panel panel-c" id="panel-c">
+          <div class="panel-header">
+            <div class="cross-emblem">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M8 8h8M8 13h8M8 18h8" stroke="#8b0000" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </div>
+            <h3 class="panel-title panel-title-header">—</h3>
+          </div>
+          <div class="panel-body"></div>
+        </div>
+        <div class="meter-wrap meter-c">
+          <div class="meter-labels"><span>Level 0</span><span>35 / 100</span></div>
+          <div class="meter-bar"><div class="meter-fill"></div></div>
+          <div class="meter-total">Total: 35 points</div>
+        </div>
+      </section>
+
+      <div class="hint-bar">Hover revealed cells to preview slide-out panel</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+  const COLS = 15;
+  const ROWS = 10;
+
+  const VARIANT_NOTES = {
+    a: '<strong>A — Mist Veil:</strong> Matches the current in-game look — open sepia fog, bare black grid cells, minimal dark slide panel. Closest to the shipped scene.',
+    b: '<strong>B — Manuscript:</strong> Parchment atmosphere with an illuminated scroll frame around the grid. Detail panel unfurls as a warm margin note with torn-edge accent. Warmer, archival tone.',
+    c: '<strong>C — Crusader:</strong> Dark cathedral mood — recessed obsidian grid frame, crimson/gold cell accents, slide panel with crusader emblem header and richer border glow.'
+  };
+
+  const SAMPLE_ACHIEVEMENTS = {
+    '2_3': {
+      name: 'First Blood',
+      desc: 'Defeat your first enemy in combat. The crusade begins with a single strike.',
+      progress: 1, target: 1, points: 10, complete: true
+    },
+    '2_4': {
+      name: 'Shield Bearer',
+      desc: 'Block 50 total damage across all battles during a single run.',
+      progress: 32, target: 50, points: 15, complete: false
+    },
+    '3_3': {
+      name: 'Deck Architect',
+      desc: 'Own 20 or more cards in your deck at the end of a quest.',
+      progress: 14, target: 20, points: 20, complete: false
+    },
+    '4_5': {
+      name: 'Relentless',
+      desc: 'Win a fight without taking any damage.',
+      progress: 0, target: 1, points: 25, complete: false
+    },
+    '5_2': {
+      name: 'Penitent',
+      desc: 'Complete 3 quests in a single run without resting at the waystation.',
+      progress: 1, target: 3, points: 30, complete: false
+    },
+    '6_7': {
+      name: 'Martyr\'s Crown',
+      desc: 'Reach 0 HP and still win the battle through passive effects.',
+      progress: 1, target: 1, points: 50, complete: true, unseen: true
+    }
+  };
+
+  let activeVariant = 'a';
+  let hoveredKey = null;
+
+  function cellState(row, col) {
+    const key = `${row}_${col}`;
+    if (SAMPLE_ACHIEVEMENTS[key]) {
+      const a = SAMPLE_ACHIEVEMENTS[key];
+      if (a.complete) return a.unseen ? 'complete unseen' : 'complete';
+      return 'visible';
+    }
+    if (row >= 2 && row <= 6 && col >= 2 && col <= 8) return 'visible';
+    if (row === 1 && col >= 3 && col <= 6) return 'complete';
+    return 'hidden';
+  }
+
+  function achievementFor(row, col) {
+    const key = `${row}_${col}`;
+    if (SAMPLE_ACHIEVEMENTS[key]) return { key, ...SAMPLE_ACHIEVEMENTS[key] };
+    const state = cellState(row, col);
+    if (state === 'hidden') return null;
+    const names = ['Wayfarer', 'Pilgrim', 'Sentinel', 'Crusader', 'Champion'];
+    const idx = (row * COLS + col) % names.length;
+    return {
+      key,
+      name: names[idx],
+      desc: 'A hidden challenge waiting to be discovered on the achievement grid.',
+      progress: state.startsWith('complete') ? 1 : Math.floor(Math.random() * 8),
+      target: state.startsWith('complete') ? 1 : 10,
+      points: 5 + (row + col) % 20,
+      complete: state.startsWith('complete')
+    };
+  }
+
+  function buildGrid(container) {
+    container.innerHTML = '';
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const state = cellState(row, col);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'grid-cell';
+        btn.dataset.row = row;
+        btn.dataset.col = col;
+
+        if (state === 'hidden') {
+          btn.classList.add('is-hidden');
+        } else {
+          btn.classList.add('is-interactive');
+          if (state === 'visible') btn.classList.add('is-visible');
+          else if (state === 'complete unseen') {
+            btn.classList.add('is-complete', 'is-unseen');
+          } else {
+            btn.classList.add('is-complete');
+          }
+
+          btn.addEventListener('mouseenter', () => showPanel(row, col));
+          btn.addEventListener('mouseleave', () => hidePanel());
+        }
+        container.appendChild(btn);
+      }
+    }
+  }
+
+  function panelContentHtml(achievement, variant) {
+    const pct = achievement.target > 0
+      ? Math.min(100, (achievement.progress / achievement.target) * 100)
+      : 0;
+    const status = achievement.complete ? 'Completed!' : '';
+    return `
+      ${variant !== 'c' ? `<h3 class="panel-title">${achievement.name}</h3>` : ''}
+      <p class="panel-desc">${achievement.desc}</p>
+      <div class="progress-wrap">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${pct}%"></div>
+        </div>
+        <div class="progress-text">Progress: ${achievement.progress} / ${achievement.target}</div>
+      </div>
+      <div class="panel-footer">
+        <span class="status-tag${achievement.complete ? ' is-done' : ''}">${status}</span>
+        <span class="points-tag">+${achievement.points} Achievement Points</span>
+      </div>`;
+  }
+
+  function showPanel(row, col) {
+    const achievement = achievementFor(row, col);
+    if (!achievement) return;
+    hoveredKey = achievement.key;
+
+    ['a', 'b', 'c'].forEach(v => {
+      const panel = document.getElementById(`panel-${v}`);
+      const body = panel.querySelector('.panel-body');
+      body.innerHTML = panelContentHtml(achievement, v);
+      if (v === 'c') {
+        const headerTitle = panel.querySelector('.panel-title-header');
+        if (headerTitle) headerTitle.textContent = achievement.name;
+      }
+      panel.classList.add('is-open');
+    });
+  }
+
+  function hidePanel() {
+    hoveredKey = null;
+    document.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('is-open'));
+  }
+
+  function setVariant(id) {
+    activeVariant = id;
+    hidePanel();
+    document.querySelectorAll('[data-variant]').forEach(el => {
+      if (el.classList.contains('chip-btn')) {
+        el.classList.toggle('is-active', el.dataset.variant === id);
+      } else if (el.classList.contains('variant-panel')) {
+        el.classList.toggle('is-active', el.dataset.variant === id);
+      }
+    });
+    document.getElementById('variant-note').innerHTML = VARIANT_NOTES[id];
+  }
+
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const vp = document.querySelector('.viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / GAME_W;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  document.querySelectorAll('.chip-btn[data-variant]').forEach(btn => {
+    btn.addEventListener('click', () => setVariant(btn.dataset.variant));
+  });
+
+  document.querySelectorAll('.achievement-grid').forEach(buildGrid);
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', fitViewport);
+  fitViewport();
+</script>
+</body>
+</html>

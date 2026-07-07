@@ -42,7 +42,9 @@ namespace Crusaders30XX.ECS.Systems
             _graphicsDevice = gd;
             _spriteBatch = sb;
             _font = FontSingleton.ChakraPetchFont;
-            _circleTexSmall = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, HintRadius);
+            _circleTexSmall = _graphicsDevice == null
+                ? null
+                : PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, HintRadius);
             EventManager.Subscribe<HotKeyHoldCompletedEvent>(OnHotKeyHoldCompleted);
         }
 
@@ -185,7 +187,7 @@ namespace Crusaders30XX.ECS.Systems
             return !gameplayBlocked || entity.HasComponent<TutorialInteractionPermitted>();
         }
 
-        private static FaceButton? GetPressedButton(PlayerInputFrame frame)
+        internal static FaceButton? GetPressedButton(PlayerInputFrame frame)
         {
             if (frame.Device == PlayerInputDevice.KeyboardMouse
                 && frame.WasPressed(PlayerButton.Space))
@@ -193,12 +195,13 @@ namespace Crusaders30XX.ECS.Systems
                 return FaceButton.X;
             }
             if (frame.WasPressed(PlayerButton.FaceY)) return FaceButton.Y;
+            if (frame.WasPressed(PlayerButton.Back)) return FaceButton.View;
             if (frame.WasPressed(PlayerButton.Cancel)) return FaceButton.B;
             if (frame.WasPressed(PlayerButton.FaceX)) return FaceButton.X;
             if (frame.WasPressed(PlayerButton.Start)) return FaceButton.Start;
             if (frame.WasPressed(PlayerButton.LeftShoulder)) return FaceButton.LB;
             if (frame.WasPressed(PlayerButton.RightShoulder)) return FaceButton.RB;
-            if (frame.WasPressed(PlayerButton.Escape) || frame.WasPressed(PlayerButton.Back)) return FaceButton.View;
+            if (frame.WasPressed(PlayerButton.Escape)) return FaceButton.View;
             return null;
         }
 

@@ -1,8 +1,5 @@
-using System;
-using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Cards;
 
 namespace Crusaders30XX.ECS.Objects.Medals
 {
@@ -27,8 +24,7 @@ namespace Crusaders30XX.ECS.Objects.Medals
         private void OnCardPlayed(CardPlayedEvent evt)
         {
             if (evt?.Card == null) return;
-            var cardData = evt.Card.GetComponent<CardData>();
-            if (!string.Equals(cardData?.Card?.CardId, Curse.CardIdValue, StringComparison.OrdinalIgnoreCase)) return;
+            if (!evt.PlayedAsCurse) return;
             EmitActivateEvent();
         }
 

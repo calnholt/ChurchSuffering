@@ -186,6 +186,7 @@ namespace Crusaders30XX.ECS.Services
 			if (string.IsNullOrWhiteSpace(medalId) || MedalFactory.Create(medalId) == null) return false;
 			if (loadout.medalIds.Any(id => string.Equals(id, medalId, StringComparison.OrdinalIgnoreCase))) return false;
 			loadout.medalIds.Add(medalId);
+			SaveCache.MarkWayStationMedalPurchased(medalId);
 			RunMedalService.AcquireAndEquip(entityManager, medalId);
 			return true;
 		}

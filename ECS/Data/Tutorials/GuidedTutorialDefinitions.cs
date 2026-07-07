@@ -39,6 +39,7 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 			"teach_intent_pips",
 			"teach_pledge",
 			"teach_action_points",
+			"teach_reckoning_discard",
 		];
 
 		public static readonly IReadOnlyList<TutorialDefinition> GuidedMessages =
@@ -55,6 +56,7 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 			new() { key = "teach_intent_pips", text = "Intent pips show the number of incoming enemy attacks for this turn, and the next turn.", targetType = "entity_name", targetId = "EnemyIntentPips", bubbleOrientation = "bottom" },
 			new() { key = "teach_pledge", text = "Pledge one card to keep it for a later turn. Pledged cards cannot block or pay costs.", targetType = "entity_name", targetId = "UI_PlayerHudPledge", bubbleOrientation = "right" },
 			new() { key = "teach_action_points", text = "You get one Action Point to spend during your Action phase. Cards that cost AP show their cost.", targetType = "entity_name", targetId = "UI_PlayerHudActionPoint", bubbleOrientation = "right", condition = "has_non_free_card" },
+			new() { key = "teach_reckoning_discard", text = "This card requires you to DISCARD two other cards from your hand to play.", targetType = "ui_region", targetId = "reckoning", bubbleOrientation = "top", condition = "has_reckoning_in_hand" },
 		];
 
 		private static TutorialCardDefinition C(string id, bool colorless = true) => new(id, CardData.CardColor.Black, colorless);
@@ -72,8 +74,8 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 				[],
 				[Turn([C("smite"), C("litany_of_wrath"), C("smite")], ["tutorial_horde_strike_3"])]),
 
-			new(3, 8,  "tutorial_horde_strike_3", 1, false,
-				[],
+			new(3, 8,  "tutorial_horde_strike_3", 1, true,
+				["teach_reckoning_discard"],
 				[Turn([C("smite"), C("litany_of_wrath"), C("smite"), C("reckoning")], ["tutorial_horde_strike_3"])],
 				PendingDialogKey: "catch_breath"),
 
@@ -135,6 +137,13 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 					return ["teach_win", "teach_loss", "teach_enemy_attack"];
 				if (phase == SubPhase.Action)
 					return ["teach_action_points"];
+				return Array.Empty<string>();
+			}
+
+			if (section == 3)
+			{
+				if (phase == SubPhase.Action)
+					return ["teach_reckoning_discard"];
 				return Array.Empty<string>();
 			}
 

@@ -9,8 +9,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
   public class HelmOfSeeing : EquipmentBase
   {
     private readonly int Cost = 1;
-    private readonly int Cards = 1;
-    private readonly int Courage = 4;
+    private readonly int ResurrectAmount = 1;
+    private readonly int Courage = 2;
     public HelmOfSeeing()
     {
       Id = "helm_of_seeing";
@@ -19,7 +19,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Block = 2;
       Uses = 1;
       Color = CardData.CardColor.Red;
-      Text = $"Draw {Cards} card. Lose {Cost} use and {Courage} courage.";
+      Text = $"Resurrect {ResurrectAmount}. Lose {Cost} use and {Courage} courage.";
       ActivationEffectRecipe = DefensiveGuardEffect();
       CanActivateDuringActionPhase = true;
       CanActivate = () => {
@@ -27,7 +27,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       };
       OnActivate = (entityManager, entity) =>
       {
-        EventManager.Publish(new RequestDrawCardsEvent { Count = Cards });
+        EventManager.Publish(new DrawRandomCardFromDiscardEvent { Amount = ResurrectAmount });
         EventManager.Publish(new ModifyCourageRequestEvent { Delta = -Courage, Type = ModifyCourageType.Spent });
         for (int i = 0; i < Cost; i++)
         {

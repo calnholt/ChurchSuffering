@@ -27,18 +27,6 @@ namespace Crusaders30XX.ECS.Components
 		public SceneId Current { get; set; } = SceneId.TitleMenu;
 	}
 
-	public class WayStationMapView : IComponent
-	{
-		public Entity Owner { get; set; }
-		public Rectangle Source { get; set; } = Rectangle.Empty;
-		public int TargetWidth { get; set; }
-		public int TargetHeight { get; set; }
-		public float Zoom { get; set; } = 1f;
-		public Vector2 CenterWorldPosition { get; set; } = Vector2.Zero;
-		public int TextureWidth { get; set; }
-		public int TextureHeight { get; set; }
-	}
-
 	public class GameOverOverlayState : IComponent
 	{
 		public Entity Owner { get; set; }
@@ -112,6 +100,30 @@ namespace Crusaders30XX.ECS.Components
 	public class WayStationClimbModalDepartButton : IComponent
 	{
 		public Entity Owner { get; set; }
+	}
+
+	public class WayStationSaintsMedalsModalRoot : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string SelectedMedalId { get; set; } = string.Empty;
+		public int ListScrollOffset { get; set; }
+		public int DetailScrollOffset { get; set; }
+	}
+
+	public class WayStationSaintsMedalsModalPanel : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public class WayStationSaintsMedalsModalCloseButton : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public class WayStationSaintsMedalsModalTile : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string MedalId { get; set; } = string.Empty;
 	}
 
 	public enum WayStationArrivalKind

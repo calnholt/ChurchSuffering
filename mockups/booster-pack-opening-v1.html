@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Booster Pack Opening (Siege Break)</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: BoosterPackOpenedEvent (shop / reward flow)
+    - Archetype: B — Screen overlay (fullscreen dim + centered pack + reveal)
+    - Pack frames: booster_1..2.png intact; booster_4_left/right.png peel apart (never booster_4.png)
+    - Sequence: frame 1 -> 2, impact, halves rip outward, loot reveal
+    - Reveal: card (268x377), medal disc (~88px), equipment icon (~60px)
+    - Animation profile: Siege Break
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #c41e3a;
+    --red-glow: rgba(196, 30, 58, 0.55);
+    --gold: #e8c84a;
+    --gold-bright: #ffe566;
+    --gold-dim: #a08030;
+    --holy: #fff4d0;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --pack-w: 340px;
+    --pack-h: 570px;
+    --pack-half-left-w: calc(var(--pack-w) * 379 / 786);
+    --pack-half-right-w: calc(var(--pack-w) * 376 / 786);
+    --card-w: 268px;
+    --card-h: 377px;
+    --card-base-w: 118px;
+    --card-base-h: 168px;
+    --card-scale-x: calc(var(--card-w) / var(--card-base-w));
+    --card-scale-y: calc(var(--card-h) / var(--card-base-h));
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 4px;
+  }
+
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    max-width: 900px;
+    line-height: 1.55;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 40px;
+    background: var(--black-2);
+    border-bottom: 1px solid var(--black-4);
+  }
+
+  .demo-label {
+    font-size: 0.62rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red-3);
+  }
+
+  .demo-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--white-1);
+  }
+
+  .replay-btn {
+    margin-left: auto;
+    padding: 10px 28px;
+    background: linear-gradient(180deg, #2a1a1e, #1a1014);
+    border: 2px solid var(--red-3);
+    color: var(--white-1);
+    font-family: 'New Rocker', cursive;
+    font-size: 0.95rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+
+  .replay-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 24px var(--red-glow);
+  }
+
+  .replay-btn:active { transform: translateY(0); }
+
+  .demo-desc {
+    width: 100%;
+    font-size: 0.76rem;
+    color: var(--white-3);
+    line-height: 1.5;
+    padding-top: 4px;
+  }
+
+  .page-main { padding: 32px 40px 60px; }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert-background-city.png') center / cover no-repeat;
+  }
+
+  .bg-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    transition: background 0.6s ease;
+  }
+
+  .viewport.is-reveal .bg-dim {
+    background: radial-gradient(ellipse 80% 70% at 50% 45%, rgba(40, 20, 10, 0.5), rgba(0, 0, 0, 0.88));
+  }
+
+  /* --- Stage layers --- */
+  .stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 1400px;
+    overflow: hidden;
+  }
+
+  .vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 55% 50% at 50% 48%, transparent 30%, rgba(0,0,0,0.65) 100%);
+    z-index: 20;
+    opacity: 0.7;
+    transition: opacity 0.8s;
+  }
+
+  .stage.is-reveal .vignette { opacity: 0.9; }
+
+  .pack-layer.is-hidden {
+    display: none !important;
+  }
+
+  .stage.is-reveal .pack-layer {
+    display: none !important;
+  }
+
+  .phase-banner {
+    position: absolute;
+    top: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+
+  .phase-banner.is-visible { opacity: 1; }
+
+  .phase-banner .label {
+    font-size: 14px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 6px;
+  }
+
+  .phase-banner .title {
+    font-family: 'New Rocker', cursive;
+    font-size: 52px;
+    letter-spacing: 4px;
+    color: var(--white-1);
+    text-shadow: 0 0 40px var(--red-glow), 0 4px 20px rgba(0,0,0,0.9);
+  }
+
+  .phase-banner .title.gold {
+    color: var(--gold-bright);
+    text-shadow: 0 0 30px rgba(232, 200, 74, 0.6), 0 0 80px rgba(255, 229, 102, 0.25);
+  }
+
+  .timeline {
+    position: absolute;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 480px;
+    z-index: 30;
+  }
+
+  .timeline-track {
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .timeline-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--red-3), var(--gold));
+    transition: width 0.08s linear;
+  }
+
+  .timeline-phases {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+  }
+
+  .timeline-phases span.is-active { color: var(--gold); }
+  .timeline-phases span.is-done { color: rgba(255,255,255,0.45); }
+
+  /* --- Pack --- */
+  .pack-layer {
+    position: absolute;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    will-change: transform, opacity, filter;
+  }
+
+  .pack-glow {
+    position: absolute;
+    width: calc(var(--pack-w) * 1.4);
+    height: calc(var(--pack-h) * 0.6);
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(232, 200, 74, 0.35), transparent 70%);
+    filter: blur(20px);
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .pack-intact {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pack-img {
+    width: var(--pack-w);
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 12px 40px rgba(0,0,0,0.7));
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .pack-split {
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    position: relative;
+    filter: drop-shadow(0 12px 40px rgba(0,0,0,0.7));
+  }
+
+  .pack-split.is-visible { display: flex; }
+
+  .pack-half {
+    height: auto;
+    display: block;
+    user-select: none;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  .pack-half--left {
+    width: var(--pack-half-left-w);
+    transform-origin: right center;
+  }
+
+  .pack-half--right {
+    width: var(--pack-half-right-w);
+    transform-origin: left center;
+  }
+
+  .pack-peek-glow {
+    position: absolute;
+    left: 50%;
+    top: 38%;
+    width: 120px;
+    height: 280px;
+    margin-left: -60px;
+    background: radial-gradient(ellipse, rgba(255, 230, 150, 0.55), transparent 70%);
+    opacity: 0;
+    z-index: -1;
+    pointer-events: none;
+    filter: blur(8px);
+  }
+
+  .pack-split.is-peeling .pack-peek-glow {
+    animation: peek-glow 0.5s ease-out forwards;
+  }
+
+  @keyframes peek-glow {
+    0% { opacity: 0; transform: scaleY(0.4); }
+    40% { opacity: 0.9; transform: scaleY(1); }
+    100% { opacity: 0.35; transform: scaleY(1.1); }
+  }
+
+  /* --- FX layers --- */
+  .fx-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 8;
+    overflow: hidden;
+  }
+
+  .flash {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, var(--holy), rgba(255,255,255,0.4) 30%, transparent 70%);
+    opacity: 0;
+    z-index: 15;
+  }
+
+  .flash.is-on { animation: flash-burst 0.55s ease-out forwards; }
+
+  @keyframes flash-burst {
+    0% { opacity: 0; transform: scale(0.6); }
+    15% { opacity: 0.95; }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+
+  .shockwave {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 80px;
+    height: 80px;
+    margin: -40px 0 0 -40px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 220, 150, 0.8);
+    opacity: 0;
+    z-index: 12;
+  }
+
+  .shockwave.is-on { animation: shockwave-expand 0.7s ease-out forwards; }
+
+  @keyframes shockwave-expand {
+    0% { opacity: 0.9; transform: scale(0.2); }
+    100% { opacity: 0; transform: scale(12); }
+  }
+
+  .light-beams {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 600px;
+    height: 600px;
+    margin: -300px 0 0 -300px;
+    opacity: 0;
+    z-index: 9;
+  }
+
+  .light-beams.is-on { animation: beams-fade 1.2s ease-out forwards; }
+
+  @keyframes beams-fade {
+    0% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+    20% { opacity: 0.85; }
+    100% { opacity: 0.35; transform: scale(1.1) rotate(18deg); }
+  }
+
+  .light-beams::before,
+  .light-beams::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(255, 230, 150, 0.15) 8deg,
+      transparent 16deg,
+      transparent 30deg,
+      rgba(255, 200, 100, 0.12) 38deg,
+      transparent 46deg,
+      transparent 60deg,
+      rgba(255, 240, 180, 0.18) 68deg,
+      transparent 76deg,
+      transparent 90deg,
+      rgba(255, 210, 120, 0.14) 98deg,
+      transparent 106deg,
+      transparent 120deg,
+      rgba(255, 235, 160, 0.16) 128deg,
+      transparent 136deg,
+      transparent 150deg,
+      rgba(255, 200, 90, 0.13) 158deg,
+      transparent 166deg,
+      transparent 180deg,
+      rgba(255, 230, 150, 0.15) 188deg,
+      transparent 196deg,
+      transparent 210deg,
+      rgba(255, 200, 100, 0.12) 218deg,
+      transparent 226deg,
+      transparent 240deg,
+      rgba(255, 240, 180, 0.18) 248deg,
+      transparent 256deg,
+      transparent 270deg,
+      rgba(255, 210, 120, 0.14) 278deg,
+      transparent 286deg,
+      transparent 300deg,
+      rgba(255, 235, 160, 0.16) 308deg,
+      transparent 316deg,
+      transparent 330deg,
+      rgba(255, 200, 90, 0.13) 338deg,
+      transparent 346deg
+    );
+    border-radius: 50%;
+    filter: blur(2px);
+  }
+
+  .light-beams::after {
+    transform: rotate(22deg);
+    opacity: 0.6;
+  }
+
+  .particles {
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+  }
+
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .screen-shake {
+    animation: none;
+  }
+
+  .screen-shake.is-shaking {
+    animation: screen-shake 0.45s ease-out;
+  }
+
+  @keyframes screen-shake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-6px, 4px); }
+    20% { transform: translate(8px, -3px); }
+    30% { transform: translate(-5px, -6px); }
+    40% { transform: translate(7px, 5px); }
+    50% { transform: translate(-8px, 2px); }
+    60% { transform: translate(5px, -5px); }
+    70% { transform: translate(-4px, 6px); }
+    80% { transform: translate(6px, -2px); }
+    90% { transform: translate(-3px, 3px); }
+  }
+
+  /* --- Loot reveal --- */
+  .loot-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 18;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 80px;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.92);
+    transition: opacity 0.5s, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .loot-layer.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+  }
+
+  .loot-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    opacity: 0;
+    transform: translateY(40px) scale(0.85);
+  }
+
+  .loot-slot.is-revealed {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .loot-slot--card { transform: translateY(60px) scale(0.7); }
+  .loot-slot--card.is-revealed { transform: translateY(0) scale(1); }
+
+  .loot-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    text-shadow: 0 0 12px rgba(232, 200, 74, 0.3);
+  }
+
+  .loot-item-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .loot-spotlight {
+    position: absolute;
+    width: 140%;
+    height: 140%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 220, 140, 0.25), transparent 65%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .loot-slot.is-revealed .loot-spotlight {
+    animation: spotlight-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes spotlight-pulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.08); }
+  }
+
+  /* Card */
+  .card-frame {
+    width: var(--card-w);
+    height: var(--card-h);
+    position: relative;
+  }
+
+  .card-frame .card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: scale(var(--card-scale-x), var(--card-scale-y));
+    transform-origin: top left;
+  }
+
+  .card {
+    width: 118px;
+    height: 168px;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 40px rgba(196, 30, 58, 0.2);
+  }
+
+  .card .bg { position: absolute; inset: 0; background: #1c0c0c; border-radius: 8px; }
+  .card .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 6; background: #cc2222; }
+  .card .header {
+    position: relative; z-index: 5; padding: 6px 8px 4px 12px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .card .name {
+    font-family: 'New Rocker', cursive; font-size: 11px; color: #f0e0d8;
+    line-height: 1.1; letter-spacing: 0.5px;
+  }
+  .card .cost {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff6666, #aa1111);
+    border: 1.5px solid #ffaaaa; font-size: 10px; font-weight: 700;
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card .art {
+    position: absolute; bottom: -8px; right: -12px; width: 100px; height: 88px; z-index: 2;
+  }
+  .card .art img { width: 100%; height: 100%; object-fit: contain; }
+  .card .text-box {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 4;
+    background: rgba(12, 6, 6, 0.88); border-top: 1px solid rgba(255,255,255,0.12);
+    padding: 5px 8px 6px 12px; font-size: 7px; line-height: 1.35; color: #d8ccc4;
+  }
+  .card .text-box .kw { color: var(--gold); font-weight: 600; }
+
+  .card-shine {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%);
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+
+  .loot-slot--card.is-revealed .card-shine {
+    animation: card-shine 0.9s ease-out 0.3s forwards;
+  }
+
+  @keyframes card-shine {
+    to { transform: translateX(120%); }
+  }
+
+  /* Medal */
+  .medal-disc {
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 4px 20px rgba(232, 200, 74, 0.35));
+  }
+
+  .medal-disc img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .medal-ring {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 2px solid rgba(232, 200, 74, 0.5);
+    opacity: 0;
+  }
+
+  .loot-slot--medal.is-revealed .medal-ring {
+    animation: medal-ring 0.8s ease-out forwards;
+  }
+
+  @keyframes medal-ring {
+    0% { opacity: 0.9; transform: scale(0.7); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+
+  /* Equipment */
+  .equip-icon {
+    width: 88px;
+    height: 88px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5));
+  }
+
+  .equip-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* ===== Siege Break ===== */
+  .stage .pack-layer { transition: transform 0.08s, opacity 0.3s, filter 0.2s; }
+
+  .stage.phase-intro .pack-layer {
+    animation: siege-drop-in 0.45s cubic-bezier(0.55, 0.06, 0.68, 0.9) forwards;
+  }
+
+  @keyframes siege-drop-in {
+    0% { transform: translateY(-600px) scale(0.5); opacity: 0; }
+    75% { transform: translateY(30px) scale(1.08); }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .stage.phase-anticipate .pack-layer {
+    animation: siege-tension 0.09s ease-in-out infinite;
+  }
+
+  @keyframes siege-tension {
+    0%, 100% { transform: translateX(0) scale(1.04); }
+    50% { transform: translateX(-5px) scale(1.06) rotate(-1deg); }
+  }
+
+  .stage.phase-anticipate .pack-glow {
+    opacity: 0.95;
+    background: radial-gradient(ellipse, rgba(196, 30, 58, 0.55), transparent 65%);
+    animation: siege-red-pulse 0.09s ease-in-out infinite alternate;
+  }
+
+  @keyframes siege-red-pulse {
+    from { transform: scale(0.9); opacity: 0.5; }
+    to { transform: scale(1.15); opacity: 0.9; }
+  }
+
+  .stage.phase-impact .pack-layer {
+    animation: siege-impact 0.18s ease-out forwards;
+  }
+
+  @keyframes siege-impact {
+    0% { transform: scale(1.06); }
+    40% { transform: scale(0.88); }
+    100% { transform: scale(1.1); }
+  }
+
+  .stage .pack-split.is-peeling .pack-half--left {
+    animation: siege-peel-left 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .stage .pack-split.is-peeling .pack-half--right {
+    animation: siege-peel-right 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes siege-peel-left {
+    to { transform: translateX(-420px) rotate(-32deg) translateY(80px); opacity: 0; }
+  }
+
+  @keyframes siege-peel-right {
+    to { transform: translateX(420px) rotate(32deg) translateY(80px); opacity: 0; }
+  }
+
+  .stage.phase-peel .pack-layer {
+    animation: siege-pack-lift 0.55s ease-out forwards;
+  }
+
+  @keyframes siege-pack-lift {
+    to { transform: translateY(-20px); }
+  }
+
+  .loot-layer.is-visible {
+    transition: opacity 0.25s, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .loot-slot.is-revealed {
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .loot-slot--card.is-revealed,
+  .loot-slot--medal.is-revealed,
+  .loot-slot--equip.is-revealed {
+    transition-delay: 0.08s;
+    transform: translateY(0) scale(1.05);
+  }
+
+  .shockwave.is-on { border-color: rgba(196, 30, 58, 0.85); border-width: 4px; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Booster Pack Opening — Siege Break</h1>
+  <p>
+    Pack cycles through <code>booster_1..2.png</code>, rips
+    <code>booster_4_left/right.png</code> apart, then reveals card, medal, and equipment.
+    Replay to preview the full sequence.
+  </p>
+</header>
+
+<div class="controls">
+  <div>
+    <div class="demo-label">Animation</div>
+    <div class="demo-title">Siege Break</div>
+  </div>
+  <button type="button" class="replay-btn" id="replay-btn">Open Pack</button>
+  <p class="demo-desc">
+    Violent slam from above, frantic tension, fast cracks. Impact detonates the pack;
+    halves catapult off-screen. Loot erupts from the center in one explosive reveal.
+  </p>
+</div>
+
+<main class="page-main">
+  <div class="viewport-scaler" id="viewport-scaler">
+    <div class="viewport" id="viewport">
+      <div class="bg-scene"></div>
+      <div class="bg-dim" id="bg-dim"></div>
+
+      <div class="stage screen-shake" id="stage">
+        <div class="vignette"></div>
+
+        <div class="fx-layer" id="fx-layer">
+          <div class="light-beams" id="light-beams"></div>
+          <div class="shockwave" id="shockwave"></div>
+          <div class="flash" id="flash"></div>
+          <div class="particles" id="particles"></div>
+        </div>
+
+        <div class="phase-banner" id="phase-banner">
+          <div class="label" id="banner-label">Rewards Unveiled</div>
+          <div class="title gold" id="banner-title">NEW LOOT</div>
+        </div>
+
+        <div class="pack-layer" id="pack-layer">
+          <div class="pack-glow"></div>
+          <div class="pack-intact" id="pack-intact">
+            <img class="pack-img" id="pack-img" src="../Content/Booster_Pack/booster_1.png" alt="Booster pack" width="340" height="570">
+          </div>
+          <div class="pack-split" id="pack-split">
+            <div class="pack-peek-glow"></div>
+            <img class="pack-half pack-half--left" id="pack-left" src="../Content/Booster_Pack/booster_4_left.png" alt="" width="164" height="570">
+            <img class="pack-half pack-half--right" id="pack-right" src="../Content/Booster_Pack/booster_4_right.png" alt="" width="163" height="570">
+          </div>
+        </div>
+
+        <div class="loot-layer" id="loot-layer">
+          <div class="loot-slot loot-slot--medal" id="loot-medal">
+            <span class="loot-label">Medal</span>
+            <div class="loot-item-wrap">
+              <div class="loot-spotlight"></div>
+              <div class="medal-ring"></div>
+              <div class="medal-disc">
+                <img src="../Content/st_michael.png" alt="St. Michael medal">
+              </div>
+            </div>
+          </div>
+
+          <div class="loot-slot loot-slot--card" id="loot-card">
+            <span class="loot-label">Card</span>
+            <div class="loot-item-wrap">
+              <div class="loot-spotlight"></div>
+              <div class="card-frame">
+                <div class="card">
+                  <div class="bg"></div>
+                  <div class="stripe"></div>
+                  <div class="header">
+                    <span class="name">Fury</span>
+                    <span class="cost">2</span>
+                  </div>
+                  <div class="art"><img src="../Content/CardArt/fury.png" alt="Fury"></div>
+                  <div class="text-box"><span class="kw">Attack.</span> Deal 8 damage.</div>
+                  <div class="card-shine"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="loot-slot loot-slot--equip" id="loot-equip">
+            <span class="loot-label">Equipment</span>
+            <div class="loot-item-wrap">
+              <div class="loot-spotlight"></div>
+              <div class="equip-icon">
+                <img src="../Content/crusader_hammer.png" alt="Crusader Hammer">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline">
+          <div class="timeline-track"><div class="timeline-fill" id="timeline-fill"></div></div>
+          <div class="timeline-phases" id="timeline-phases">
+            <span data-phase="intro">Intro</span>
+            <span data-phase="anticipate">Anticipation</span>
+            <span data-phase="rip">Rip Open</span>
+            <span data-phase="reveal">Reveal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const PACK_FRAMES = [
+    '../Content/Booster_Pack/booster_1.png',
+    '../Content/Booster_Pack/booster_2.png',
+  ];
+
+  const ANIMATION = {
+    timeline: [
+      { phase: 'intro',      at: 0,    duration: 450,  banner: null },
+      { phase: 'anticipate', at: 450,  duration: 750,  banner: null },
+      { phase: 'frame',      at: 1200, duration: 140,  frame: 1, banner: null },
+      { phase: 'frame',      at: 1340, duration: 120,  frame: 2, banner: null },
+      { phase: 'impact',     at: 1460, duration: 180,  split: true, fx: ['shake', 'flash', 'shockwave', 'particles'], banner: null },
+      { phase: 'peel',       at: 1640, duration: 580,  peel: true, fx: ['beams'], banner: null },
+      { phase: 'reveal',     at: 2270, duration: 850,  banner: { label: 'Siege Spoils', title: 'CLAIMED' }, revealAll: true },
+    ],
+    total: 3120,
+  };
+
+  let animToken = 0;
+  let rafId = null;
+  let startTime = 0;
+
+  const viewport = document.getElementById('viewport');
+  const scaler = document.getElementById('viewport-scaler');
+  const stage = document.getElementById('stage');
+  const packLayer = document.getElementById('pack-layer');
+  const packIntact = document.getElementById('pack-intact');
+  const packSplit = document.getElementById('pack-split');
+  const packImg = document.getElementById('pack-img');
+  const packLeft = document.getElementById('pack-left');
+  const packRight = document.getElementById('pack-right');
+  const lootLayer = document.getElementById('loot-layer');
+  const lootCard = document.getElementById('loot-card');
+  const lootMedal = document.getElementById('loot-medal');
+  const lootEquip = document.getElementById('loot-equip');
+  const flash = document.getElementById('flash');
+  const shockwave = document.getElementById('shockwave');
+  const lightBeams = document.getElementById('light-beams');
+  const particles = document.getElementById('particles');
+  const phaseBanner = document.getElementById('phase-banner');
+  const bannerLabel = document.getElementById('banner-label');
+  const bannerTitle = document.getElementById('banner-title');
+  const timelineFill = document.getElementById('timeline-fill');
+  const timelinePhases = document.getElementById('timeline-phases');
+
+  function fitViewport() {
+    const w = scaler.clientWidth;
+    const scale = w / 1920;
+    viewport.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${1080 * scale}px`;
+  }
+
+  function setStageClass() {
+    stage.className = 'stage screen-shake';
+  }
+
+  function hidePack() {
+    packLayer.classList.add('is-hidden');
+    packIntact.style.display = 'none';
+    packSplit.classList.remove('is-visible', 'is-peeling');
+  }
+
+  function resetHalfAnimations() {
+    packLeft.style.animation = '';
+    packRight.style.animation = '';
+    packLeft.style.transform = '';
+    packLeft.style.opacity = '';
+    packRight.style.transform = '';
+    packRight.style.opacity = '';
+  }
+
+  function showIntactPack() {
+    packIntact.style.display = 'flex';
+    packSplit.classList.remove('is-visible', 'is-peeling');
+    resetHalfAnimations();
+  }
+
+  function showSplitHalves() {
+    packIntact.style.display = 'none';
+    packLayer.classList.remove('is-hidden');
+    packSplit.classList.add('is-visible');
+    packSplit.classList.remove('is-peeling');
+    resetHalfAnimations();
+  }
+
+  function beginPeel() {
+    showSplitHalves();
+    packSplit.classList.remove('is-peeling');
+    resetHalfAnimations();
+    void packSplit.offsetWidth;
+    packSplit.classList.add('is-peeling');
+  }
+
+  function resetScene() {
+    if (rafId) cancelAnimationFrame(rafId);
+    animToken++;
+
+    setStageClass();
+    viewport.classList.remove('is-reveal');
+    stage.classList.remove('is-reveal');
+    packLayer.classList.remove('is-hidden');
+    packLayer.style.opacity = '';
+    packLayer.style.visibility = '';
+    packLayer.style.transform = '';
+    packLayer.style.filter = '';
+    showIntactPack();
+    packImg.src = PACK_FRAMES[0];
+
+    lootLayer.classList.remove('is-visible');
+    [lootCard, lootMedal, lootEquip].forEach(el => el.classList.remove('is-revealed'));
+
+    flash.classList.remove('is-on');
+    shockwave.classList.remove('is-on');
+    lightBeams.classList.remove('is-on');
+    stage.classList.remove('is-shaking');
+    particles.innerHTML = '';
+
+    phaseBanner.classList.remove('is-visible');
+    timelineFill.style.width = '0%';
+    timelinePhases.querySelectorAll('span').forEach(s => {
+      s.classList.remove('is-active', 'is-done');
+    });
+  }
+
+  function spawnParticles(count) {
+    particles.innerHTML = '';
+    const cx = 960;
+    const cy = 480;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = 4 + Math.random() * 10;
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+      const dist = 120 + Math.random() * 280;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      const isGold = Math.random() > 0.35;
+      p.style.cssText = `
+        left:${cx}px; top:${cy}px; width:${size}px; height:${size}px;
+        background:${isGold ? '#ffe566' : '#c41e3a'};
+        box-shadow:0 0 ${size * 2}px ${isGold ? 'rgba(255,229,102,0.8)' : 'rgba(196,30,58,0.6)'};
+        --dx:${dx}px; --dy:${dy}px;
+        animation: particle-burst 0.7s ease-out forwards;
+        animation-delay:${Math.random() * 0.08}s;
+      `;
+      particles.appendChild(p);
+    }
+    if (!document.getElementById('particle-style')) {
+      const style = document.createElement('style');
+      style.id = 'particle-style';
+      style.textContent = `
+        @keyframes particle-burst {
+          0% { opacity:1; transform:translate(0,0) scale(1); }
+          100% { opacity:0; transform:translate(var(--dx),var(--dy)) scale(0.2); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  function triggerFx(names) {
+    if (!names) return;
+    if (names.includes('flash')) {
+      flash.classList.remove('is-on');
+      void flash.offsetWidth;
+      flash.classList.add('is-on');
+    }
+    if (names.includes('shockwave')) {
+      shockwave.classList.remove('is-on');
+      void shockwave.offsetWidth;
+      shockwave.classList.add('is-on');
+    }
+    if (names.includes('beams')) {
+      lightBeams.classList.remove('is-on');
+      void lightBeams.offsetWidth;
+      lightBeams.classList.add('is-on');
+    }
+    if (names.includes('shake')) {
+      stage.classList.remove('is-shaking');
+      void stage.offsetWidth;
+      stage.classList.add('is-shaking');
+    }
+    if (names.includes('particles')) spawnParticles(36);
+  }
+
+  function updateTimelinePhase(elapsed, config) {
+    const pct = Math.min(100, (elapsed / config.total) * 100);
+    timelineFill.style.width = `${pct}%`;
+
+    let phaseKey = 'intro';
+    const revealAt = config.timeline.find(s => s.phase === 'reveal').at;
+    const ripAt = config.timeline.find(s => s.phase === 'frame').at;
+    const anticipateAt = config.timeline.find(s => s.phase === 'anticipate').at;
+
+    if (elapsed >= revealAt) phaseKey = 'reveal';
+    else if (elapsed >= ripAt) phaseKey = 'rip';
+    else if (elapsed >= anticipateAt) phaseKey = 'anticipate';
+
+    timelinePhases.querySelectorAll('span').forEach(span => {
+      const key = span.dataset.phase;
+      span.classList.remove('is-active', 'is-done');
+      const order = ['intro', 'anticipate', 'rip', 'reveal'];
+      const ci = order.indexOf(phaseKey);
+      const si = order.indexOf(key);
+      if (si < ci) span.classList.add('is-done');
+      if (si === ci) span.classList.add('is-active');
+    });
+  }
+
+  function setPhaseClass(phase) {
+    const shaking = stage.classList.contains('is-shaking');
+    const revealing = stage.classList.contains('is-reveal');
+    const phases = ['intro', 'anticipate', 'frame', 'impact', 'peel', 'reveal'];
+    const cls = phases.filter(p => phase === p || phase.startsWith(p)).pop();
+    stage.className = cls ? `stage screen-shake phase-${cls}` : 'stage screen-shake';
+    if (shaking) stage.classList.add('is-shaking');
+    if (revealing) stage.classList.add('is-reveal');
+  }
+
+  function revealLoot(step) {
+    hidePack();
+    lootLayer.classList.add('is-visible');
+    viewport.classList.add('is-reveal');
+    stage.classList.add('is-reveal');
+    [lootCard, lootMedal, lootEquip].forEach(el => el.classList.add('is-revealed'));
+  }
+
+  function playAnimation() {
+    resetScene();
+    const token = animToken;
+    const config = ANIMATION;
+    startTime = performance.now();
+
+    const fired = new Set();
+
+    function tick(now) {
+      if (token !== animToken) return;
+      const elapsed = now - startTime;
+      updateTimelinePhase(elapsed, config);
+
+      let activePhase = 'idle';
+      for (const step of config.timeline) {
+        if (elapsed >= step.at && elapsed < step.at + step.duration) {
+          activePhase = step.phase;
+          setPhaseClass(step.phase);
+
+          if (step.frame != null) {
+            showIntactPack();
+            packImg.src = PACK_FRAMES[step.frame - 1];
+          }
+
+          const key = `${step.at}-${step.phase}`;
+          if (!fired.has(key)) {
+            fired.add(key);
+            if (step.split) showSplitHalves();
+            if (step.peel) beginPeel();
+            if (step.fx) triggerFx(step.fx);
+            if (step.banner) {
+              bannerLabel.textContent = step.banner.label;
+              bannerTitle.textContent = step.banner.title;
+              phaseBanner.classList.add('is-visible');
+            }
+          }
+        }
+      }
+
+      // Enter reveal phase
+      const revealStep = config.timeline.find(s => s.phase === 'reveal');
+      if (elapsed >= revealStep.at && !fired.has('reveal-start')) {
+        fired.add('reveal-start');
+        revealLoot(revealStep);
+        if (revealStep.banner) {
+          bannerLabel.textContent = revealStep.banner.label;
+          bannerTitle.textContent = revealStep.banner.title;
+          phaseBanner.classList.add('is-visible');
+        }
+      }
+
+      if (elapsed < config.total + 500) {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  document.getElementById('replay-btn').addEventListener('click', playAnimation);
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', () => {
+    fitViewport();
+    setTimeout(playAnimation, 400);
+  });
+  fitViewport();
+</script>
+</body>
+</html>

@@ -342,7 +342,10 @@ namespace Crusaders30XX.ECS.Systems
                         {
                             ["reason"] = "CannotSatisfyCost"
                         });
-                        EventManager.Publish(new CantPlayCardMessage { Message = "Can't pay card's cost!" });
+                        EventManager.Publish(new CantPlayCardMessage
+                        {
+                            Message = DiscardCostMessageService.GetUnsatisfiableCostMessage(requiredCosts),
+                        });
                         return;
                     }
 
@@ -355,7 +358,10 @@ namespace Crusaders30XX.ECS.Systems
                         {
                             ["reason"] = "NoSolutionForCost"
                         });
-                        EventManager.Publish(new CantPlayCardMessage { Message = "Can't pay card's cost!" });
+                        EventManager.Publish(new CantPlayCardMessage
+                        {
+                            Message = DiscardCostMessageService.GetUnsatisfiableCostMessage(requiredCosts),
+                        });
                         return;
                     }
                     else if (solutionCount == 1)
@@ -436,6 +442,8 @@ namespace Crusaders30XX.ECS.Systems
             if (card == null || string.IsNullOrEmpty(card.CardId)) return;
 
             ComponentLoggerService.LogEntity(cardEntity, "Executing card OnPlay effect");
+            bool playedAsCurse = cardEntity.HasComponent<Cursed>()
+                || string.Equals(card.CardId, Curse.CardIdValue, StringComparison.OrdinalIgnoreCase);
             AttachPlayStatContext(cardEntity, paymentCards);
             try
             {
@@ -470,9 +478,13 @@ namespace Crusaders30XX.ECS.Systems
             {
                 RemovePlayStatContext(cardEntity);
             }
-            EventManager.Publish(new CardPlayedEvent { Card = cardEntity, VigorStacksAtPlay = vigorStacksAtPlay });
-            bool isCurseCard = string.Equals(card.CardId, Curse.CardIdValue, StringComparison.OrdinalIgnoreCase);
-            if (!isCurseCard && !GuidedTutorialService.IsActive(EntityManager))
+            EventManager.Publish(new CardPlayedEvent
+            {
+                Card = cardEntity,
+                VigorStacksAtPlay = vigorStacksAtPlay,
+                PlayedAsCurse = playedAsCurse,
+            });
+            if (!playedAsCurse && !GuidedTutorialService.IsActive(EntityManager))
                 EventManager.Publish(new TrackingEvent { Type = card.CardId, Delta = 1 });
 
             // If the card was sealed, apply HP cost and remove the seal

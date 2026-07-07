@@ -614,7 +614,7 @@ namespace Crusaders30XX.ECS.Services
 			{
 				id = $"shop_{slotIndex}",
 				kind = kind,
-				timeCost = rng.Next(1, 4),
+				timeCost = rng.Next(0, 3),
 				generatedAtTime = state.time,
 			};
 			slot.cost = GenerateShopCost(rng, kind, slot.timeCost);
@@ -843,17 +843,17 @@ namespace Crusaders30XX.ECS.Services
 			if (string.Equals(kind, ClimbShopSlotKinds.Medal, StringComparison.OrdinalIgnoreCase))
 			{
 				dominant = CardData.CardColor.White;
-				baseline = 5;
+				baseline = 6;
 				reductionPerExtraTime = 2;
 			}
 			else if (string.Equals(kind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase))
 			{
 				dominant = CardData.CardColor.Black;
-				baseline = 6;
+				baseline = 7;
 				reductionPerExtraTime = 2;
 			}
 
-			int total = Math.Max(0, baseline - Math.Max(0, timeCost - 1) * reductionPerExtraTime);
+			int total = Math.Max(0, baseline - Math.Max(0, timeCost) * reductionPerExtraTime);
 			return GenerateDominantCost(rng, total, dominant);
 		}
 

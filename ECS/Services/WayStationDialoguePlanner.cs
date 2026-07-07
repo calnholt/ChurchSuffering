@@ -11,6 +11,7 @@ namespace Crusaders30XX.ECS.Services
 	{
 		public const string KeeperOfferId = "keeper";
 		public const string NpcOfferId = "npc";
+		public const string RookTutorialOfferId = "rook_tutorial";
 
 		public class DialogueOfferPlan
 		{
@@ -42,6 +43,9 @@ namespace Crusaders30XX.ECS.Services
 			var keeper = TryGetKeeperPoiDialogue(meta, arrivalKind);
 			if (keeper != null) offers.Add(keeper);
 
+			var rookTutorial = TryGetRookTutorialDialogue(meta);
+			if (rookTutorial != null) offers.Add(rookTutorial);
+
 			var npc = TryGetNpcDialogue(meta, rng ?? Random.Shared);
 			if (npc != null) offers.Add(npc);
 
@@ -72,6 +76,8 @@ namespace Crusaders30XX.ECS.Services
 		{
 			if (meta?.pendingNpcDialogueOffer != true) return null;
 			var available = WayStationDialogueCatalog.NpcCharacterIds
+				.Where(characterId => !string.Equals(characterId, WayStationDialogueCatalog.RookCharacterId, StringComparison.OrdinalIgnoreCase)
+					|| IsRookRandomNpcEligible(meta))
 				.Where(characterId => TryGetNextUnseenSegment(meta, characterId, out _))
 				.ToList();
 			if (available.Count == 0) return null;
@@ -80,6 +86,21 @@ namespace Crusaders30XX.ECS.Services
 			return TryGetNextUnseenSegment(meta, characterId, out string segmentId)
 				? CreateOffer(NpcOfferId, characterId, segmentId)
 				: null;
+		}
+
+		public static DialogueOfferPlan TryGetRookTutorialDialogue(WayStationMetaSave meta)
+		{
+			if (!IsRookTutorialWindow(meta)) return null;
+			foreach (var candidate in WayStationDialogueCatalog.RookTutorialSegmentIds)
+			{
+				if (HasSeen(meta, WayStationDialogueCatalog.RookCharacterId, candidate)) continue;
+				return CreateOffer(
+					RookTutorialOfferId,
+					WayStationDialogueCatalog.RookCharacterId,
+					candidate);
+			}
+
+			return null;
 		}
 
 		public static bool TryGetNextUnseenSegment(
@@ -117,6 +138,16 @@ namespace Crusaders30XX.ECS.Services
 				DefinitionId = definitionId,
 				SegmentId = segmentId,
 			};
+		}
+
+		private static bool IsRookTutorialWindow(WayStationMetaSave meta)
+		{
+			return Math.Max(0, meta?.climbAttempts ?? 0) < WayStationDialogueCatalog.RookTutorialSegmentIds.Count;
+		}
+
+		private static bool IsRookRandomNpcEligible(WayStationMetaSave meta)
+		{
+			return !IsRookTutorialWindow(meta);
 		}
 	}
 }

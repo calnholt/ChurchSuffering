@@ -3,6 +3,7 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
@@ -14,8 +15,10 @@ namespace Crusaders30XX.ECS.Systems
 	public class WayStationPoiDisplaySystem : Core.System
 	{
 		private readonly SpriteBatch _spriteBatch;
+		private readonly Texture2D _background;
 		private readonly Texture2D _climbPoi;
 		private readonly Texture2D _achievementPoi;
+		private readonly Texture2D _medalPoi;
 
 		[DebugEditable(DisplayName = "Climb POI World X", Step = 10, Min = 0, Max = 4096)]
 		public float ClimbPoiWorldX { get; set; } = 1350f;
@@ -35,6 +38,15 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Achievement POI Hover Scale", Step = 0.01f, Min = 1f, Max = 2f)]
 		public float AchievementPoiHoverScale { get; set; } = 1.16f;
 
+		[DebugEditable(DisplayName = "Medal POI Right Margin", Step = 2, Min = 0, Max = 600)]
+		public int MedalPoiRightMargin { get; set; } = 48;
+		[DebugEditable(DisplayName = "Medal POI Bottom Margin", Step = 2, Min = 0, Max = 600)]
+		public int MedalPoiBottomMargin { get; set; } = 48;
+		[DebugEditable(DisplayName = "Medal POI Icon Size", Step = 2, Min = 40, Max = 360)]
+		public int MedalPoiIconSize { get; set; } = 128;
+		[DebugEditable(DisplayName = "Medal POI Hover Scale", Step = 0.01f, Min = 1f, Max = 2f)]
+		public float MedalPoiHoverScale { get; set; } = 1.12f;
+
 		public WayStationPoiDisplaySystem(
 			EntityManager entityManager,
 			SpriteBatch spriteBatch,
@@ -42,8 +54,10 @@ namespace Crusaders30XX.ECS.Systems
 			: base(entityManager)
 		{
 			_spriteBatch = spriteBatch;
+			_background = imageAssets.GetRequiredTexture("waystation");
 			_climbPoi = imageAssets.GetRequiredTexture("waystation/climb-poi");
 			_achievementPoi = imageAssets.GetRequiredTexture("waystation/achievement-poi");
+			_medalPoi = imageAssets.GetRequiredTexture("waystation/medal-poi");
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -58,6 +72,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				HidePoi(WayStationSceneConstants.ClimbPoiName);
 				HidePoi(WayStationSceneConstants.AchievementPoiName);
+				HidePoi(WayStationSceneConstants.SaintsMedalsPoiName);
 				return;
 			}
 
@@ -82,6 +97,16 @@ namespace Crusaders30XX.ECS.Systems
 				AchievementPoiHoverScale,
 				visible: true);
 
+			SyncScreenPoi(
+				WayStationSceneConstants.SaintsMedalsPoiName,
+				"saints-medals",
+				"Saints Medals",
+				MedalPoiRightMargin,
+				MedalPoiBottomMargin,
+				MedalPoiIconSize,
+				MedalPoiHoverScale,
+				visible: HasPurchasedAnyMedals());
+
 			if (climbVisible && WasClicked(WayStationSceneConstants.ClimbPoiName))
 			{
 				EventManager.Publish(new OpenWayStationClimbSettingsModalEvent());
@@ -90,6 +115,11 @@ namespace Crusaders30XX.ECS.Systems
 			if (WasClicked(WayStationSceneConstants.AchievementPoiName))
 			{
 				EventManager.Publish(new ShowTransition { Scene = SceneId.Achievement, SkipHold = true });
+			}
+
+			if (HasPurchasedAnyMedals() && WasClicked(WayStationSceneConstants.SaintsMedalsPoiName))
+			{
+				EventManager.Publish(new OpenWayStationSaintsMedalsModalEvent());
 			}
 		}
 
@@ -102,6 +132,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			DrawPoi(_climbPoi, WayStationSceneConstants.ClimbPoiName);
 			DrawPoi(_achievementPoi, WayStationSceneConstants.AchievementPoiName);
+			DrawPoi(_medalPoi, WayStationSceneConstants.SaintsMedalsPoiName);
 		}
 
 		private void SyncPoi(
@@ -141,6 +172,43 @@ namespace Crusaders30XX.ECS.Systems
 			poi.DisplayRadius = rect.Width / 2f;
 		}
 
+		private void SyncScreenPoi(
+			string entityName,
+			string poiId,
+			string tooltipTitle,
+			int rightMargin,
+			int bottomMargin,
+			int iconSize,
+			float hoverScale,
+			bool visible)
+		{
+			var rect = GetScreenPoiBounds(entityName, rightMargin, bottomMargin, iconSize, hoverScale);
+			var entity = EntityManager.GetEntity(entityName);
+			if (entity == null)
+			{
+				entity = EntityManager.CreateEntity(entityName);
+				EntityManager.AddComponent(entity, new Transform());
+				EntityManager.AddComponent(entity, new UIElement { TooltipType = TooltipType.None });
+				EntityManager.AddComponent(entity, new PointOfInterest { Id = poiId, Type = PointOfInterestType.Quest });
+				EntityManager.AddComponent(entity, new POITitleTooltipSource { Title = tooltipTitle });
+			}
+
+			var transform = entity.GetComponent<Transform>();
+			transform.Position = new Vector2(rect.X, rect.Y);
+			transform.ZOrder = 1200;
+
+			var ui = entity.GetComponent<UIElement>();
+			ui.Bounds = rect;
+			ui.IsInteractable = visible;
+			ui.IsHidden = !visible;
+			ui.LayerType = UILayerType.Default;
+			ui.TooltipType = TooltipType.None;
+
+			var poi = entity.GetComponent<PointOfInterest>();
+			poi.WorldPosition = new Vector2(rect.Center.X, rect.Center.Y);
+			poi.DisplayRadius = rect.Width / 2f;
+		}
+
 		private void HidePoi(string entityName)
 		{
 			var ui = EntityManager.GetEntity(entityName)?.GetComponent<UIElement>();
@@ -160,36 +228,35 @@ namespace Crusaders30XX.ECS.Systems
 
 		private Rectangle GetPoiBounds(string entityName, float worldX, float worldY, int iconSize, float hoverScale)
 		{
-			var source = GetMapSource();
-			int targetWidth = System.Math.Max(1, source.TargetWidth);
-			int targetHeight = System.Math.Max(1, source.TargetHeight);
-			float screenX = (worldX - source.Source.X) / System.Math.Max(1f, source.Source.Width) * targetWidth;
-			float screenY = (worldY - source.Source.Y) / System.Math.Max(1f, source.Source.Height) * targetHeight;
+			var source = WayStationMapSourceService.ComputeCenteredCoverSource(
+				_background.Width,
+				_background.Height,
+				Game1.VirtualWidth,
+				Game1.VirtualHeight);
+			var screen = WayStationMapSourceService.WorldToScreen(
+				worldX,
+				worldY,
+				source,
+				Game1.VirtualWidth,
+				Game1.VirtualHeight);
 			float scale = IsHovered(entityName) ? hoverScale : 1f;
 			int size = System.Math.Max(1, (int)System.Math.Round(iconSize * scale));
 			return new Rectangle(
-				(int)System.Math.Round(screenX - size / 2f),
-				(int)System.Math.Round(screenY - size / 2f),
+				(int)System.Math.Round(screen.X - size / 2f),
+				(int)System.Math.Round(screen.Y - size / 2f),
 				size,
 				size);
 		}
 
-		private WayStationMapView GetMapSource()
+		private Rectangle GetScreenPoiBounds(string entityName, int rightMargin, int bottomMargin, int iconSize, float hoverScale)
 		{
-			var view = EntityManager.GetEntity(WayStationSceneConstants.MapViewName)
-				?.GetComponent<WayStationMapView>();
-			if (view != null && view.Source.Width > 0 && view.Source.Height > 0)
-			{
-				return view;
-			}
-
-			return new WayStationMapView
-			{
-				Source = new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight),
-				TargetWidth = Game1.VirtualWidth,
-				TargetHeight = Game1.VirtualHeight,
-				Zoom = 1f
-			};
+			float scale = IsHovered(entityName) ? hoverScale : 1f;
+			int size = System.Math.Max(1, (int)System.Math.Round(iconSize * scale));
+			return new Rectangle(
+				Game1.VirtualWidth - System.Math.Max(0, rightMargin) - size,
+				Game1.VirtualHeight - System.Math.Max(0, bottomMargin) - size,
+				size,
+				size);
 		}
 
 		private bool IsClimbModalOpen()
@@ -207,6 +274,11 @@ namespace Crusaders30XX.ECS.Systems
 		private bool IsHovered(string name)
 		{
 			return EntityManager.GetEntity(name)?.GetComponent<UIElement>()?.IsHovered == true;
+		}
+
+		private static bool HasPurchasedAnyMedals()
+		{
+			return SaveCache.GetPurchasedWayStationMedalIds().Count > 0;
 		}
 
 		private static bool IsWayStationScene(SceneState scene)
