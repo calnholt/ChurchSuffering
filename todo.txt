@@ -18,7 +18,7 @@ art
 Gameplay
 - maybe remove istoken/isweapon and make as components?
 - make hand display agnostic of carddata, probably involves refactoring some components and data objects
-- darkness X - for x turns, one card in hand becomes shrouded in darkess during the enemy turn, lifts during action phase, cards in darkness block for 3 and ignore color gains and play restrictions
+- darkness X - for x turns, one card in hand becomes shrouded in darkess during the enemy turn, lifts during action phase, cards in darkness block for 3 and ignore color gains and play restrictions, hide discard pile
 - reclaim - return X random cards from graveyard to deck, shuffle deck
 
 cards
@@ -68,7 +68,5 @@ git checkout main && git pull origin main && git merge development && git push o
 MUST FOLLOW - Style: Anime. Solid flat color fills, 2-tone cel-shading at most (base + one shadow). Bold clean outlines. Low detail, strong silhouette. Read him at a glance, not up close. No glow effects, no rendering, no texture noise. White background color for easy cropping. 
 
 Create a physical description for the following characer so we can create an art brief
-
-New scene for medals that te player has purchased during entire play, each shows lore of the different saints.
 
 loot chest // booster pack animation for acruing points from level up

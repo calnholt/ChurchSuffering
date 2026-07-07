@@ -39,6 +39,7 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 			"teach_intent_pips",
 			"teach_pledge",
 			"teach_action_points",
+			"teach_free_actions",
 			"teach_reckoning_discard",
 		];
 
@@ -56,6 +57,7 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 			new() { key = "teach_intent_pips", text = "Intent pips show the number of incoming enemy attacks for this turn, and the next turn.", targetType = "entity_name", targetId = "EnemyIntentPips", bubbleOrientation = "bottom" },
 			new() { key = "teach_pledge", text = "Pledge one card to keep it for a later turn. Pledged cards cannot block or pay costs.", targetType = "entity_name", targetId = "UI_PlayerHudPledge", bubbleOrientation = "right" },
 			new() { key = "teach_action_points", text = "You get one Action Point to spend during your Action phase. Cards that cost AP show their cost.", targetType = "entity_name", targetId = "UI_PlayerHudActionPoint", bubbleOrientation = "right", condition = "has_non_free_card" },
+			new() { key = "teach_free_actions", text = "FREE ACTIONS do not consume your action point.", targetType = "ui_region", targetId = "litany_of_wrath", bubbleOrientation = "top", condition = "has_litany_of_wrath_in_hand" },
 			new() { key = "teach_reckoning_discard", text = "This card requires you to DISCARD two other cards from your hand to play.", targetType = "ui_region", targetId = "reckoning", bubbleOrientation = "top", condition = "has_reckoning_in_hand" },
 		];
 
@@ -70,8 +72,8 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 				["teach_win", "teach_loss", "teach_enemy_attack"],
 				[Turn([C("smite"), C("smite")], ["tutorial_horde_strike_3"])]),
 
-			new(2, 6,  "tutorial_horde_strike_3", 1, false,
-				[],
+			new(2, 6,  "tutorial_horde_strike_3", 1, true,
+				["teach_free_actions"],
 				[Turn([C("smite"), C("litany_of_wrath"), C("smite")], ["tutorial_horde_strike_3"])]),
 
 			new(3, 8,  "tutorial_horde_strike_3", 1, true,
@@ -137,6 +139,13 @@ namespace Crusaders30XX.ECS.Data.Tutorials
 					return ["teach_win", "teach_loss", "teach_enemy_attack"];
 				if (phase == SubPhase.Action)
 					return ["teach_action_points"];
+				return Array.Empty<string>();
+			}
+
+			if (section == 2)
+			{
+				if (phase == SubPhase.Action)
+					return ["teach_free_actions"];
 				return Array.Empty<string>();
 			}
 

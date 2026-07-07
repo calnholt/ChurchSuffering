@@ -699,7 +699,6 @@ namespace Crusaders30XX.ECS.Systems
 				snapshot.IsSold.ToString(),
 				snapshot.IsCompleted.ToString(),
 				snapshot.IsUnavailable.ToString(),
-				snapshot.IsAffordable.ToString(),
 				snapshot.IsFinal.ToString(),
 				snapshot.BattleLocation.ToString(),
 				snapshot.PortraitAsset,

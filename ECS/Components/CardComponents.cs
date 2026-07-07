@@ -406,6 +406,7 @@ namespace Crusaders30XX.ECS.Components
         ClimbEncounterSlotSelect,
         ClimbEventSlotSelect,
         WayStationDialoguePoiSelect,
+        SkipDialog,
     }
 
     /// <summary>

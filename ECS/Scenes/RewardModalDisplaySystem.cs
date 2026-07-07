@@ -633,9 +633,8 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var overlayEntity = EntityManager.GetEntity("QuestRewardOverlay");
 			if (overlayEntity == null) return;
-			var ui = overlayEntity.GetComponent<UIElement>();
 			var state = overlayEntity.GetComponent<QuestRewardOverlayState>();
-			if (ui == null || state == null) return;
+			if (state == null) return;
 			CompletePendingCloseIfReady(overlayEntity, state);
 			var animation = overlayEntity.GetComponent<ModalAnimation>();
 			if (state.DismissInProgress && animation?.Phase == ModalAnimationPhase.Hidden)
@@ -650,12 +649,6 @@ namespace Crusaders30XX.ECS.Systems
 				720,
 				overlayBlocksInput);
 			if (!state.IsOpen) return;
-
-			ui.IsInteractable = overlayBlocksInput;
-			ui.LayerType = overlayBlocksInput ? UILayerType.Overlay : UILayerType.Default;
-			ui.Bounds = overlayBlocksInput
-				? new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight)
-				: new Rectangle(0, 0, 0, 0);
 
 			if (!overlayBlocksInput)
 			{
@@ -2624,9 +2617,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				e = EntityManager.CreateEntity("QuestRewardOverlay");
 				var t = new Transform { Position = Vector2.Zero, ZOrder = ZOrder };
-				var ui = new UIElement { Bounds = new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), IsInteractable = false, LayerType = UILayerType.Overlay };
 				EntityManager.AddComponent(e, t);
-				EntityManager.AddComponent(e, ui);
 				EntityManager.AddComponent(e, new QuestRewardOverlayState());
 				InputContextService.EnsureContext(
 					EntityManager,
@@ -2640,6 +2631,10 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			else
 			{
+				if (e.GetComponent<UIElement>() != null)
+				{
+					EntityManager.RemoveComponent<UIElement>(e);
+				}
 				var t = e.GetComponent<Transform>();
 				if (t != null) t.ZOrder = ZOrder;
 				EnsureModalAnimation();

@@ -1,4 +1,5 @@
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
 
@@ -18,6 +19,7 @@ namespace Crusaders30XX.ECS.Services
 
             UpgradeConfirmedInvokeCountForTests++;
             InvokeUpgradeConfirmedOnCard(card);
+            EventManager.Publish(new CardUpgradeConfirmedEvent { CardId = cardId });
         }
 
         internal static void InvokeUpgradeConfirmedOnCard(CardBase card)

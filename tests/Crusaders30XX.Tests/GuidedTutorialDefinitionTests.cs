@@ -50,7 +50,7 @@ public class GuidedTutorialDefinitionTests
 		Assert.True(GuidedTutorialDefinitions.GetSection(1).IsTeachSection);
 
 		Assert.Equal(6, GuidedTutorialDefinitions.GetSection(2).EnemyHp);
-		Assert.False(GuidedTutorialDefinitions.GetSection(2).IsTeachSection);
+		Assert.True(GuidedTutorialDefinitions.GetSection(2).IsTeachSection);
 
 		Assert.Equal(8, GuidedTutorialDefinitions.GetSection(3).EnemyHp);
 		Assert.True(GuidedTutorialDefinitions.GetSection(3).IsTeachSection);
@@ -101,6 +101,9 @@ public class GuidedTutorialDefinitionTests
 			GuidedTutorialDefinitions.GetMessageKeys(1, 1, SubPhase.Block, 0));
 
 		Assert.Empty(GuidedTutorialDefinitions.GetMessageKeys(2, 1, SubPhase.Block, 0));
+		Assert.Equal(
+			["teach_free_actions"],
+			GuidedTutorialDefinitions.GetMessageKeys(2, 1, SubPhase.Action, 0));
 
 		Assert.Empty(GuidedTutorialDefinitions.GetMessageKeys(3, 1, SubPhase.Block, 0));
 		Assert.Equal(
@@ -156,6 +159,11 @@ public class GuidedTutorialDefinitionTests
 		Assert.Equal("ui_region", reckoning.targetType);
 		Assert.Equal("reckoning", reckoning.targetId);
 		Assert.Equal("has_reckoning_in_hand", reckoning.condition);
+
+		var freeActions = GuidedTutorialDefinitions.GuidedMessages.Single(msg => msg.key == "teach_free_actions");
+		Assert.Equal("ui_region", freeActions.targetType);
+		Assert.Equal("litany_of_wrath", freeActions.targetId);
+		Assert.Equal("has_litany_of_wrath_in_hand", freeActions.condition);
 	}
 
 	[Theory]
@@ -206,6 +214,38 @@ public class GuidedTutorialDefinitionTests
 			Assert.Equal(
 				new Rectangle(420, 530, 300, 36),
 				tutorialManager.GetEntityBounds(PlayerHudLayoutSystem.HealthEntityName));
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Free_actions_tutorial_queues_only_when_litany_is_in_hand()
+	{
+		Assert.Equal("teach_free_actions", RunSectionTwoActionTutorial(hasLitany: true)?.key);
+		Assert.Null(RunSectionTwoActionTutorial(hasLitany: false));
+	}
+
+	[Fact]
+	public void Free_actions_tutorial_targets_litany_card_bounds()
+	{
+		EventManager.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			AddGuidedTutorialState(manager, section: 2);
+			AddPhaseState(manager);
+			AddDeckWithLitany(manager, includeLitany: true);
+
+			var tutorialManager = new TutorialManager(manager);
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+			tutorialManager.Update(new GameTime());
+
+			Assert.Equal(
+				new Rectangle(300, 400, 120, 180),
+				Assert.Single(tutorialManager.ResolveTargetBounds()));
 		}
 		finally
 		{
@@ -484,6 +524,31 @@ public class GuidedTutorialDefinitionTests
 		}
 	}
 
+	private static TutorialDefinition RunSectionTwoActionTutorial(bool hasLitany)
+	{
+		EventManager.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			AddGuidedTutorialState(manager, section: 2);
+			AddPhaseState(manager);
+			AddDeckWithLitany(manager, hasLitany);
+
+			TutorialDefinition started = null;
+			EventManager.Subscribe<TutorialStartedEvent>(evt => started = evt.Tutorial);
+
+			var tutorialManager = new TutorialManager(manager);
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+			tutorialManager.Update(new GameTime());
+
+			return started;
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
 	private static TutorialDefinition RunSectionThreeActionTutorial(bool hasReckoning)
 	{
 		EventManager.Clear();
@@ -509,12 +574,12 @@ public class GuidedTutorialDefinitionTests
 		}
 	}
 
-	private static void AddGuidedTutorialState(EntityManager manager)
+	private static void AddGuidedTutorialState(EntityManager manager, int section = 3)
 	{
 		var stateEntity = manager.CreateEntity("GuidedTutorial");
 		manager.AddComponent(stateEntity, new GuidedTutorial
 		{
-			Section = 3,
+			Section = section,
 			TurnWithinSection = 1,
 		});
 	}
@@ -528,6 +593,23 @@ public class GuidedTutorialDefinitionTests
 			Sub = SubPhase.Action,
 			TurnNumber = 1,
 		});
+	}
+
+	private static void AddDeckWithLitany(EntityManager manager, bool includeLitany)
+	{
+		var deckEntity = manager.CreateEntity("Deck");
+		var deck = new Deck();
+		manager.AddComponent(deckEntity, deck);
+
+		var smite = EntityFactory.CreateCardFromDefinition(manager, "smite", CardData.CardColor.Black);
+		smite.GetComponent<UIElement>().Bounds = new Rectangle(100, 400, 120, 180);
+		deck.Hand.Add(smite);
+
+		if (!includeLitany) return;
+
+		var litany = EntityFactory.CreateCardFromDefinition(manager, "litany_of_wrath", CardData.CardColor.Black);
+		litany.GetComponent<UIElement>().Bounds = new Rectangle(300, 400, 120, 180);
+		deck.Hand.Add(litany);
 	}
 
 	private static void AddDeckWithHand(EntityManager manager, bool includeReckoning)
@@ -558,5 +640,6 @@ public class GuidedTutorialDefinitionTests
 		Assert.Contains("teach_intent_pips", GuidedTutorialDefinitions.CoveredTutorialKeys);
 		Assert.Contains("teach_pledge", GuidedTutorialDefinitions.CoveredTutorialKeys);
 		Assert.Contains("teach_reckoning_discard", GuidedTutorialDefinitions.CoveredTutorialKeys);
+		Assert.Contains("teach_free_actions", GuidedTutorialDefinitions.CoveredTutorialKeys);
 	}
 }

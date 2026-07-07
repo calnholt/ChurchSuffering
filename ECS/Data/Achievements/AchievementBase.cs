@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
@@ -169,6 +170,25 @@ namespace Crusaders30XX.ECS.Data.Achievements
         protected int GetProgress()
         {
             return Progress?.CurrentValue ?? 0;
+        }
+
+        /// <summary>
+        /// Track a unique card id for achievements that count distinct upgrades.
+        /// Persists progress immediately so meta survives across runs.
+        /// </summary>
+        protected void TrackUniqueCardId(string cardId)
+        {
+            if (GuidedTutorialService.IsActive(EntityManager)) return;
+            if (Progress == null || IsCompleted) return;
+            if (string.IsNullOrWhiteSpace(cardId)) return;
+
+            Progress.trackedCardIds ??= new List<string>();
+            if (Progress.trackedCardIds.Contains(cardId)) return;
+
+            Progress.trackedCardIds.Add(cardId);
+            Progress.CurrentValue = Progress.trackedCardIds.Count;
+            AchievementManager.SaveProgress();
+            EvaluateCompletion();
         }
 
         #endregion

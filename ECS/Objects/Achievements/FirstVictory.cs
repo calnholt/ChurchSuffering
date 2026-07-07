@@ -5,18 +5,18 @@ using Crusaders30XX.ECS.Events;
 namespace Crusaders30XX.ECS.Objects.Achievements
 {
     /// <summary>
-    /// Win your first battle.
+    /// Complete your first quest.
     /// </summary>
     public class FirstVictory : AchievementBase
     {
         public FirstVictory()
         {
             Id = "first_victory";
-            Name = "First Victory";
-            Description = "Win your first battle";
+            Name = "First Quest";
+            Description = "Complete your first battle";
             Row = 1;
             Column = 0;
-            StartsVisible = false;
+            StartsVisible = true;
             Points = 10;
         }
 

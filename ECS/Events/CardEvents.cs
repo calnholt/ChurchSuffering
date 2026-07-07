@@ -702,6 +702,11 @@ namespace Crusaders30XX.ECS.Events
         public bool PlayedAsCurse { get; set; }
     }
 
+    public class CardUpgradeConfirmedEvent
+    {
+        public string CardId { get; set; }
+    }
+
     public class CardBlockedEvent
     {
         public Entity Card { get; set; }

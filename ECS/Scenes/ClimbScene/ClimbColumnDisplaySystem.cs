@@ -490,10 +490,19 @@ namespace Crusaders30XX.ECS.Systems
 				ClimbSceneDrawHelpers.White3 * opacity);
 
 			int metaY = rect.Bottom - CompactPaddingY - MetaBlockMinHeight;
-			var timeRect = new Rectangle(rect.Right - CompactPaddingX - ShopTimeBlockWidth, metaY, ShopTimeBlockWidth, MetaBlockMinHeight);
-			var costRect = new Rectangle(rect.X + CompactPaddingX, metaY, timeRect.X - MetaBlockGap - rect.X - CompactPaddingX, MetaBlockMinHeight);
-			DrawCostMetaBlock(costRect, slot.Cost, slot.Kind == ClimbSlotKind.Shop && !slot.IsAffordable, opacity);
-			DrawTimeBlock(timeRect, slot.TimeCost, opacity: opacity);
+			bool muted = slot.Kind == ClimbSlotKind.Shop && !slot.IsAffordable;
+			if (slot.TimeCost > 0)
+			{
+				var timeRect = new Rectangle(rect.Right - CompactPaddingX - ShopTimeBlockWidth, metaY, ShopTimeBlockWidth, MetaBlockMinHeight);
+				var costRect = new Rectangle(rect.X + CompactPaddingX, metaY, timeRect.X - MetaBlockGap - rect.X - CompactPaddingX, MetaBlockMinHeight);
+				DrawCostMetaBlock(costRect, slot.Cost, muted, opacity);
+				DrawTimeBlock(timeRect, slot.TimeCost, opacity: opacity);
+			}
+			else
+			{
+				var costRect = new Rectangle(rect.X + CompactPaddingX, metaY, rect.Width - CompactPaddingX * 2, MetaBlockMinHeight);
+				DrawCostMetaBlock(costRect, slot.Cost, muted, opacity);
+			}
 		}
 
 		private void DrawEncounterSlot(Rectangle rect, ClimbSlotPresentation slot, ClimbPreviewState preview, bool source, float opacity)

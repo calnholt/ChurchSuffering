@@ -175,7 +175,7 @@ public class VelvetFangs : EnemyAttackBase
   {
     Id = EnemyAttackId.VelvetFangs;
     Name = "Velvet Fangs";
-    Damage = 6;
+    Damage = 4;
     AttackEffectRecipe = EnemyBiteEffect();
     ConditionType = ConditionType.OnHit;
 

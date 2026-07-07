@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
         {
             Id = "quest_master";
             Name = "Quest Master";
-            Description = $"Complete {RequiredQuests} quests";
+            Description = $"Complete {RequiredQuests} battles";
             Row = 4;
             Column = 2;
             StartsVisible = false;

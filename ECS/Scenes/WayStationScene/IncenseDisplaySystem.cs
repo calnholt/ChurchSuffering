@@ -25,7 +25,7 @@ namespace Crusaders30XX.ECS.Systems
         private float _timeSeconds;
 
         [DebugEditable(DisplayName = "Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
-        public float Opacity { get; set; } = 0.42f;
+        public float Opacity { get; set; } = 0f;
 
         [DebugEditable(DisplayName = "Time Scale", Step = 0.01f, Min = 0f, Max = 5f)]
         public float TimeScale { get; set; } = 1f;

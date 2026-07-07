@@ -110,6 +110,11 @@ namespace Crusaders30XX.ECS.Systems
                         EventManager.Publish(new GuidedTutorialSkipRequested());
                     break;
                 }
+                case UIElementEventType.SkipDialog:
+                {
+                    EventManager.Publish(new DialogSkipRequested());
+                    break;
+                }
                 case UIElementEventType.OpenLoadout:
                 {
                     if (entity.GetComponent<ClimbLoadoutButton>() != null)

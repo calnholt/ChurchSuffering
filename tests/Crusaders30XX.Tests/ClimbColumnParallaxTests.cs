@@ -188,6 +188,58 @@ public class ClimbColumnParallaxTests : IDisposable
 	}
 
 	[Fact]
+	public void Shop_purchase_without_refresh_only_animates_purchased_slot()
+	{
+		var entityManager = BuildWorld();
+		var layout = new ClimbColumnLayoutSystem(entityManager);
+		layout.Update(new GameTime());
+
+		var climb = SaveCache.GetClimbState();
+		climb.time = 0;
+		climb.resources = new ClimbResourceSave { red = 3, white = 3, black = 3 };
+		climb.shopSlots = Enumerable.Range(0, ClimbRuleService.ShopSlotCount)
+			.Select(i => new ClimbShopSlotSave
+			{
+				id = $"shop_{i}",
+				kind = ClimbShopSlotKinds.Empty,
+				cost = new ClimbResourceSave { red = 0, white = 0, black = 0 },
+				timeCost = 0,
+			})
+			.ToList();
+		climb.shopSlots[0] = new ClimbShopSlotSave
+		{
+			id = "shop_0",
+			kind = ClimbShopSlotKinds.Medal,
+			itemId = "st_luke",
+			cost = new ClimbResourceSave { red = 1, white = 0, black = 0 },
+			timeCost = 0,
+		};
+		climb.shopSlots[1] = new ClimbShopSlotSave
+		{
+			id = "shop_1",
+			kind = ClimbShopSlotKinds.Medal,
+			itemId = "st_nicholas",
+			cost = new ClimbResourceSave { red = 3, white = 0, black = 0 },
+			timeCost = 0,
+		};
+		SaveCache.SaveClimbState(climb);
+
+		layout.Update(new GameTime());
+
+		Assert.True(ClimbShopService.TryPurchaseSlot(entityManager, 0));
+
+		layout.Update(new GameTime());
+
+		var refresh = GetSlotRefresh(entityManager);
+		Assert.True(refresh.IsAnimating);
+		var shopJobs = refresh.Jobs.Where(job => job.Kind == ClimbSlotKind.Shop).ToList();
+		Assert.Single(shopJobs);
+		Assert.Equal(0, shopJobs[0].SlotIndex);
+		Assert.True(shopJobs[0].HasOutgoing);
+		Assert.False(shopJobs[0].HasIncoming);
+	}
+
+	[Fact]
 	public void Encounter_slot_visual_change_starts_slide_refresh_animation()
 	{
 		var entityManager = BuildWorld();

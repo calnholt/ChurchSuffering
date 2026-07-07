@@ -33,7 +33,6 @@ namespace Crusaders30XX.ECS.Services
 				RemoveIfPresent<AnimatingHandToDrawPile>(entityManager, card);
 				RemoveIfPresent<CardToDiscardFlight>(entityManager, card);
 				RemoveIfPresent<FilteredFromHand>(entityManager, card);
-				RemoveIfPresent<Intimidated>(entityManager, card);
 				RemoveIfPresent<CannotBlockThisAttack>(entityManager, card);
 			}
 

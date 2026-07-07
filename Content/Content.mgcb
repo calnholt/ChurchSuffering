@@ -1319,6 +1319,17 @@
 /processorParam:TextureFormat=Color
 /build:CardArt/tempest.png
 
+#begin CardArt/vanguards_promise.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/vanguards_promise.png
+
 #begin CardArt/vindicate.png
 /importer:TextureImporter
 /processor:TextureProcessor

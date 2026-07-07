@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Crusaders30XX.ECS.Data.Achievements
 {
     /// <summary>
@@ -26,5 +28,10 @@ namespace Crusaders30XX.ECS.Data.Achievements
         /// Current visibility/completion state in the state machine.
         /// </summary>
         public AchievementState State { get; set; } = AchievementState.Hidden;
+
+        /// <summary>
+        /// Unique identifiers tracked for achievements that count distinct items (e.g. upgraded card ids).
+        /// </summary>
+        public List<string> trackedCardIds { get; set; } = new List<string>();
     }
 }

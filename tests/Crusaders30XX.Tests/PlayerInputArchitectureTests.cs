@@ -702,6 +702,75 @@ public class PlayerInputArchitectureTests
     }
 
     [Fact]
+    public void Skip_dialog_delegate_publishes_skip_request()
+    {
+        EventManager.Clear();
+        var entityManager = CreateSceneEntityManager();
+        Entity skipButton = CreateUi(
+            entityManager,
+            "DialogEndButton",
+            10,
+            new Rectangle(0, 0, 100, 40));
+        int skipRequests = 0;
+        EventManager.Subscribe<DialogSkipRequested>(_ => skipRequests++);
+
+        UIElementEventDelegateService.HandleEvent(
+            UIElementEventType.SkipDialog,
+            skipButton,
+            entityManager);
+
+        Assert.Equal(1, skipRequests);
+        EventManager.Clear();
+    }
+
+    [Fact]
+    public void Gamepad_start_hold_triggers_skip_dialog_delegate_without_click_fallback()
+    {
+        EventManager.Clear();
+        var entityManager = CreateSceneEntityManager();
+        Entity skipButton = CreateUi(
+            entityManager,
+            "DialogEndButton",
+            10,
+            new Rectangle(0, 0, 100, 40));
+        UIElement ui = skipButton.GetComponent<UIElement>();
+        ui.EventType = UIElementEventType.SkipDialog;
+        entityManager.AddComponent(skipButton, new HotKey
+        {
+            Button = FaceButton.Start,
+            RequiresHold = true,
+            HoldDurationSeconds = 0.75f,
+        });
+        var input = new PlayerInputSystem(
+            entityManager,
+            new FakeInputSource(
+                Frame(
+                    sequence: 1,
+                    device: PlayerInputDevice.Gamepad,
+                    gamepadConnected: true,
+                    down: PlayerInputFrame.Mask(PlayerButton.Start),
+                    pressed: PlayerInputFrame.Mask(PlayerButton.Start)),
+                Frame(
+                    sequence: 2,
+                    device: PlayerInputDevice.Gamepad,
+                    gamepadConnected: true,
+                    down: PlayerInputFrame.Mask(PlayerButton.Start))));
+        var hotKeys = new HotKeySystem(entityManager, null, null);
+        int skipRequests = 0;
+        EventManager.Subscribe<DialogSkipRequested>(_ => skipRequests++);
+        var gameTime = new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.4));
+
+        input.Update(gameTime);
+        hotKeys.Update(gameTime);
+        input.Update(gameTime);
+        hotKeys.Update(gameTime);
+
+        Assert.Equal(1, skipRequests);
+        Assert.False(ui.IsClicked);
+        EventManager.Clear();
+    }
+
+    [Fact]
     public void Gamepad_back_triggers_view_hotkey_target()
     {
         EventManager.Clear();

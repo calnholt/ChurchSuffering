@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
         {
             Id = "frozen_but_unbroken";
             Name = "Frozen But Unbroken";
-            Description = "Have frostbite damage trigger twice during the quest and still complete quest";
+            Description = "Have frostbite damage trigger twice during a battle and win the battle.";
             Row = 4;
             Column = 0;
             StartsVisible = false;

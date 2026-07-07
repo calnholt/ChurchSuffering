@@ -34,9 +34,9 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Keeper POI Screen Y", Step = 2, Min = 0, Max = 1080)]
 		public float KeeperPoiScreenY { get; set; } = 338f;
 		[DebugEditable(DisplayName = "Rook Tutorial POI Screen X", Step = 2, Min = 0, Max = 1920)]
-		public float RookTutorialPoiScreenX { get; set; } = 1088f;
+		public float RookTutorialPoiScreenX { get; set; } = 1632f;
 		[DebugEditable(DisplayName = "Rook Tutorial POI Screen Y", Step = 2, Min = 0, Max = 1080)]
-		public float RookTutorialPoiScreenY { get; set; } = 620f;
+		public float RookTutorialPoiScreenY { get; set; } = 546f;
 		[DebugEditable(DisplayName = "POI Icon Size", Step = 2, Min = 24, Max = 220)]
 		public int PoiIconSize { get; set; } = 92;
 		[DebugEditable(DisplayName = "POI Hover Scale", Step = 0.01f, Min = 1f, Max = 2f)]

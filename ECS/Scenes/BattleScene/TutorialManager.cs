@@ -177,6 +177,8 @@ namespace Crusaders30XX.ECS.Systems
                     return HasNonFreeCardInHand();
                 case "has_reckoning_in_hand":
                     return HasCardInHand("reckoning");
+                case "has_litany_of_wrath_in_hand":
+                    return HasCardInHand("litany_of_wrath");
                 case "has_equipment":
                     return HasEquipment();
                 case "has_medal":
@@ -539,6 +541,8 @@ namespace Crusaders30XX.ECS.Systems
                     return GetFirstCardBoundsByColor(CardData.CardColor.White);
                 case "reckoning":
                     return CardBounds("reckoning");
+                case "litany_of_wrath":
+                    return CardBounds("litany_of_wrath");
                 case "ap_and_smite_ap":
                     return Union(GetEntityBounds("UI_APTooltip"), CardBounds("smite"));
                 case "smite_damage":

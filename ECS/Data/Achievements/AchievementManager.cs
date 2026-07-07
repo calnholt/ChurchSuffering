@@ -75,8 +75,12 @@ namespace Crusaders30XX.ECS.Data.Achievements
             Register(new Archangel());
             Register(new QuestMaster());
             Register(new Unshackled());
-            Register(new YouChosePoorly());
             Register(new Kenosis());
+            Register(new HexedHoard());
+            Register(new MassRevival());
+            Register(new Relentless());
+            Register(new FadedSpectrum());
+            Register(new MasterArtificer());
         }
 
         /// <summary>
@@ -241,12 +245,16 @@ namespace Crusaders30XX.ECS.Data.Achievements
                 // Update save data with current progress from all achievements
                 foreach (var achievement in _achievements.Values)
                 {
+                    var achievementProgress = GetAchievementProgress(achievement);
                     var progress = new AchievementProgress
                     {
                         AchievementId = achievement.Id,
-                        CurrentValue = GetProgressValue(achievement),
+                        CurrentValue = achievementProgress?.CurrentValue ?? 0,
                         IsCompleted = achievement.IsCompleted,
-                        State = achievement.State
+                        State = achievement.State,
+                        trackedCardIds = achievementProgress?.trackedCardIds != null
+                            ? new List<string>(achievementProgress.trackedCardIds)
+                            : new List<string>(),
                     };
 
                     save.achievements[achievement.Id] = progress;
@@ -258,16 +266,14 @@ namespace Crusaders30XX.ECS.Data.Achievements
         }
 
         /// <summary>
-        /// Get the progress value from an achievement (uses reflection since Progress is protected).
+        /// Get progress data from an achievement (uses reflection since Progress is protected).
         /// </summary>
-        private static int GetProgressValue(AchievementBase achievement)
+        private static AchievementProgress GetAchievementProgress(AchievementBase achievement)
         {
-            // Access the protected Progress property via reflection
             var progressProperty = typeof(AchievementBase)
                 .GetProperty("Progress", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            var progress = progressProperty?.GetValue(achievement) as AchievementProgress;
-            return progress?.CurrentValue ?? 0;
+
+            return progressProperty?.GetValue(achievement) as AchievementProgress;
         }
 
         #endregion

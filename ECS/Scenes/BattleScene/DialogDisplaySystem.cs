@@ -336,6 +336,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<QuestSelected>(OnQuestSelected);
             EventManager.Subscribe<TransitionCompleteEvent>(OnTransitionComplete);
             EventManager.Subscribe<DialogueSequenceRequested>(OnDialogueSequenceRequested);
+            EventManager.Subscribe<DialogSkipRequested>(OnDialogSkipRequested);
             EventManager.Subscribe<DialogEnded>(_ => ClearPendingDialog());
         }
 
@@ -410,18 +411,6 @@ namespace Crusaders30XX.ECS.Systems
             _phaseElapsedSec += dt;
 
             EnsureEndButtonEntity();
-            var endEnt = EntityManager.GetEntity("DialogEndButton");
-            var endUi = endEnt?.GetComponent<UIElement>();
-            if (endUi != null)
-            {
-                endUi.IsInteractable = true;
-                if (endUi.IsClicked)
-                {
-                    endUi.IsClicked = false;
-                    PlayOutro(state);
-                    return;
-                }
-            }
 
             if (ui.IsClicked)
             {
@@ -442,18 +431,6 @@ namespace Crusaders30XX.ECS.Systems
             UpdatePortraitSwap(dt);
 
             EnsureEndButtonEntity();
-            var endEnt = EntityManager.GetEntity("DialogEndButton");
-            var endUi = endEnt?.GetComponent<UIElement>();
-            if (endUi != null)
-            {
-                endUi.IsInteractable = true;
-                if (endUi.IsClicked)
-                {
-                    endUi.IsClicked = false;
-                    PlayOutro(state);
-                    return;
-                }
-            }
 
             if (ui.IsClicked)
             {
@@ -699,6 +676,15 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             EventManager.Publish(new DialogEnded());
+        }
+
+        private void OnDialogSkipRequested(DialogSkipRequested evt)
+        {
+            var state = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
+            if (state == null || !state.IsActive) return;
+            if (state.Phase != DialogPhase.Intro && state.Phase != DialogPhase.Active) return;
+
+            PlayOutro(state);
         }
 
         public void Draw()
@@ -1390,7 +1376,7 @@ namespace Crusaders30XX.ECS.Systems
                 int x = vw - SkipBtnMargin - btnW - borderPx * 2;
                 int y = SkipBtnMargin;
                 EntityManager.AddComponent(ent, new Transform { Position = new Vector2(x, y), ZOrder = ZOrder + 1 });
-                EntityManager.AddComponent(ent, new UIElement { Bounds = new Rectangle(x, y, btnW + borderPx * 2, btnH + borderPx * 2), IsInteractable = true, LayerType = UILayerType.Overlay });
+                EntityManager.AddComponent(ent, new UIElement { Bounds = new Rectangle(x, y, btnW + borderPx * 2, btnH + borderPx * 2), IsInteractable = true, LayerType = UILayerType.Overlay, EventType = UIElementEventType.SkipDialog });
                 EntityManager.AddComponent(ent, new HotKey { Button = FaceButton.Start, RequiresHold = true });
                 InputContextService.EnsureMember(
                     EntityManager,
@@ -1414,6 +1400,7 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     ui.LayerType = UILayerType.Overlay;
                     ui.IsInteractable = true;
+                    ui.EventType = UIElementEventType.SkipDialog;
                 }
             }
         }
