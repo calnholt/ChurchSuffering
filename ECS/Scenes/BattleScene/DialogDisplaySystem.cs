@@ -1336,6 +1336,7 @@ namespace Crusaders30XX.ECS.Systems
                 "elias" => "waystation/elias",
                 "old confessor" => "waystation/old-confessor",
                 "mara" => "waystation/mara",
+                "rook" => "waystation/rook",
                 _ => string.Empty,
             };
         }

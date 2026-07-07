@@ -53,6 +53,7 @@ public class GuidedTutorialDefinitionTests
 		Assert.False(GuidedTutorialDefinitions.GetSection(2).IsTeachSection);
 
 		Assert.Equal(8, GuidedTutorialDefinitions.GetSection(3).EnemyHp);
+		Assert.True(GuidedTutorialDefinitions.GetSection(3).IsTeachSection);
 
 		Assert.Equal(10, GuidedTutorialDefinitions.GetSection(4).EnemyHp);
 		Assert.Equal(9, GuidedTutorialDefinitions.GetSection(4).PlayerHp);
@@ -101,6 +102,11 @@ public class GuidedTutorialDefinitionTests
 
 		Assert.Empty(GuidedTutorialDefinitions.GetMessageKeys(2, 1, SubPhase.Block, 0));
 
+		Assert.Empty(GuidedTutorialDefinitions.GetMessageKeys(3, 1, SubPhase.Block, 0));
+		Assert.Equal(
+			["teach_reckoning_discard"],
+			GuidedTutorialDefinitions.GetMessageKeys(3, 1, SubPhase.Action, 0));
+
 		Assert.Equal(
 			["teach_black_block"],
 			GuidedTutorialDefinitions.GetMessageKeys(5, 1, SubPhase.Block, 0));
@@ -145,6 +151,11 @@ public class GuidedTutorialDefinitionTests
 
 		var pledge = GuidedTutorialDefinitions.GuidedMessages.Single(msg => msg.key == "teach_pledge");
 		Assert.Equal("UI_PlayerHudPledge", pledge.targetId);
+
+		var reckoning = GuidedTutorialDefinitions.GuidedMessages.Single(msg => msg.key == "teach_reckoning_discard");
+		Assert.Equal("ui_region", reckoning.targetType);
+		Assert.Equal("reckoning", reckoning.targetId);
+		Assert.Equal("has_reckoning_in_hand", reckoning.condition);
 	}
 
 	[Theory]
@@ -195,6 +206,38 @@ public class GuidedTutorialDefinitionTests
 			Assert.Equal(
 				new Rectangle(420, 530, 300, 36),
 				tutorialManager.GetEntityBounds(PlayerHudLayoutSystem.HealthEntityName));
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Reckoning_discard_tutorial_queues_only_when_reckoning_is_in_hand()
+	{
+		Assert.Equal("teach_reckoning_discard", RunSectionThreeActionTutorial(hasReckoning: true)?.key);
+		Assert.Null(RunSectionThreeActionTutorial(hasReckoning: false));
+	}
+
+	[Fact]
+	public void Reckoning_discard_tutorial_targets_reckoning_card_bounds()
+	{
+		EventManager.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			AddGuidedTutorialState(manager);
+			AddPhaseState(manager);
+			AddDeckWithHand(manager, includeReckoning: true);
+
+			var tutorialManager = new TutorialManager(manager);
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+			tutorialManager.Update(new GameTime());
+
+			Assert.Equal(
+				new Rectangle(300, 400, 120, 180),
+				Assert.Single(tutorialManager.ResolveTargetBounds()));
 		}
 		finally
 		{
@@ -441,6 +484,69 @@ public class GuidedTutorialDefinitionTests
 		}
 	}
 
+	private static TutorialDefinition RunSectionThreeActionTutorial(bool hasReckoning)
+	{
+		EventManager.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			AddGuidedTutorialState(manager);
+			AddPhaseState(manager);
+			AddDeckWithHand(manager, hasReckoning);
+
+			TutorialDefinition started = null;
+			EventManager.Subscribe<TutorialStartedEvent>(evt => started = evt.Tutorial);
+
+			var tutorialManager = new TutorialManager(manager);
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+			tutorialManager.Update(new GameTime());
+
+			return started;
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	private static void AddGuidedTutorialState(EntityManager manager)
+	{
+		var stateEntity = manager.CreateEntity("GuidedTutorial");
+		manager.AddComponent(stateEntity, new GuidedTutorial
+		{
+			Section = 3,
+			TurnWithinSection = 1,
+		});
+	}
+
+	private static void AddPhaseState(EntityManager manager)
+	{
+		var phaseEntity = manager.CreateEntity("PhaseState");
+		manager.AddComponent(phaseEntity, new PhaseState
+		{
+			Main = MainPhase.PlayerTurn,
+			Sub = SubPhase.Action,
+			TurnNumber = 1,
+		});
+	}
+
+	private static void AddDeckWithHand(EntityManager manager, bool includeReckoning)
+	{
+		var deckEntity = manager.CreateEntity("Deck");
+		var deck = new Deck();
+		manager.AddComponent(deckEntity, deck);
+
+		var smite = EntityFactory.CreateCardFromDefinition(manager, "smite", CardData.CardColor.Black);
+		smite.GetComponent<UIElement>().Bounds = new Rectangle(100, 400, 120, 180);
+		deck.Hand.Add(smite);
+
+		if (!includeReckoning) return;
+
+		var reckoning = EntityFactory.CreateCardFromDefinition(manager, "reckoning", CardData.CardColor.Black);
+		reckoning.GetComponent<UIElement>().Bounds = new Rectangle(300, 400, 120, 180);
+		deck.Hand.Add(reckoning);
+	}
+
 	[Fact]
 	public void Covered_tutorial_keys_include_all_teach_keys()
 	{
@@ -451,5 +557,6 @@ public class GuidedTutorialDefinitionTests
 		Assert.Contains("teach_white_temperance", GuidedTutorialDefinitions.CoveredTutorialKeys);
 		Assert.Contains("teach_intent_pips", GuidedTutorialDefinitions.CoveredTutorialKeys);
 		Assert.Contains("teach_pledge", GuidedTutorialDefinitions.CoveredTutorialKeys);
+		Assert.Contains("teach_reckoning_discard", GuidedTutorialDefinitions.CoveredTutorialKeys);
 	}
 }

@@ -33,6 +33,10 @@ namespace Crusaders30XX.ECS.Systems
 		public float KeeperPoiScreenX { get; set; } = 832f;
 		[DebugEditable(DisplayName = "Keeper POI Screen Y", Step = 2, Min = 0, Max = 1080)]
 		public float KeeperPoiScreenY { get; set; } = 338f;
+		[DebugEditable(DisplayName = "Rook Tutorial POI Screen X", Step = 2, Min = 0, Max = 1920)]
+		public float RookTutorialPoiScreenX { get; set; } = 1088f;
+		[DebugEditable(DisplayName = "Rook Tutorial POI Screen Y", Step = 2, Min = 0, Max = 1080)]
+		public float RookTutorialPoiScreenY { get; set; } = 620f;
 		[DebugEditable(DisplayName = "POI Icon Size", Step = 2, Min = 24, Max = 220)]
 		public int PoiIconSize { get; set; } = 92;
 		[DebugEditable(DisplayName = "POI Hover Scale", Step = 0.01f, Min = 1f, Max = 2f)]
@@ -75,6 +79,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				HidePoi(WayStationSceneConstants.KeeperDialoguePoiName);
 				HidePoi(WayStationSceneConstants.NpcDialoguePoiName);
+				HidePoi(WayStationSceneConstants.RookTutorialDialoguePoiName);
 				return;
 			}
 
@@ -95,6 +100,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			DrawNpcPlacementArea();
 			DrawPoi(WayStationSceneConstants.KeeperDialoguePoiName);
+			DrawPoi(WayStationSceneConstants.RookTutorialDialoguePoiName);
 			DrawPoi(WayStationSceneConstants.NpcDialoguePoiName);
 		}
 
@@ -199,7 +205,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			else if (visit?.initialized != true)
 			{
-				visit = new WayStationVisitSave { initialized = true };
+				visit = BuildNewVisit(_arrivalKind);
 				SaveCache.SaveWayStationVisit(visit);
 			}
 
@@ -245,6 +251,11 @@ namespace Crusaders30XX.ECS.Systems
 				return new Vector2(KeeperPoiScreenX, KeeperPoiScreenY);
 			}
 
+			if (string.Equals(offerId, WayStationDialoguePlanner.RookTutorialOfferId, StringComparison.OrdinalIgnoreCase))
+			{
+				return new Vector2(RookTutorialPoiScreenX, RookTutorialPoiScreenY);
+			}
+
 			var area = GetNpcPlacementArea();
 			float minX = area.Left;
 			float maxX = area.Right;
@@ -262,6 +273,9 @@ namespace Crusaders30XX.ECS.Systems
 			SyncOfferPoi(
 				WayStationSceneConstants.KeeperDialoguePoiName,
 				offers.FirstOrDefault(offer => string.Equals(offer?.offerId, WayStationDialoguePlanner.KeeperOfferId, StringComparison.OrdinalIgnoreCase)));
+			SyncOfferPoi(
+				WayStationSceneConstants.RookTutorialDialoguePoiName,
+				offers.FirstOrDefault(offer => string.Equals(offer?.offerId, WayStationDialoguePlanner.RookTutorialOfferId, StringComparison.OrdinalIgnoreCase)));
 			SyncOfferPoi(
 				WayStationSceneConstants.NpcDialoguePoiName,
 				offers.FirstOrDefault(offer => string.Equals(offer?.offerId, WayStationDialoguePlanner.NpcOfferId, StringComparison.OrdinalIgnoreCase)));
@@ -358,6 +372,11 @@ namespace Crusaders30XX.ECS.Systems
 			if (string.Equals(offer?.offerId, WayStationDialoguePlanner.KeeperOfferId, StringComparison.OrdinalIgnoreCase))
 			{
 				return new Vector2(KeeperPoiScreenX, KeeperPoiScreenY);
+			}
+
+			if (string.Equals(offer?.offerId, WayStationDialoguePlanner.RookTutorialOfferId, StringComparison.OrdinalIgnoreCase))
+			{
+				return new Vector2(RookTutorialPoiScreenX, RookTutorialPoiScreenY);
 			}
 
 			return new Vector2(offer?.screenX ?? 0f, offer?.screenY ?? 0f);

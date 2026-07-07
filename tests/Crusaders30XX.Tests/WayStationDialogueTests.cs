@@ -69,6 +69,47 @@ public sealed class WayStationDialogueTests : IDisposable
 	}
 
 	[Fact]
+	public void Planner_rook_tutorial_appears_for_first_three_climb_windows()
+	{
+		for (int climbAttempts = 0; climbAttempts < 3; climbAttempts++)
+		{
+			var meta = new WayStationMetaSave { climbAttempts = climbAttempts };
+
+			var rook = WayStationDialoguePlanner.TryGetRookTutorialDialogue(meta);
+
+			Assert.NotNull(rook);
+			Assert.Equal(WayStationDialoguePlanner.RookTutorialOfferId, rook.OfferId);
+			Assert.Equal(WayStationDialogueCatalog.RookCharacterId, rook.CharacterId);
+			Assert.Equal(WayStationDialogueCatalog.RookDefinitionId, rook.DefinitionId);
+			Assert.Equal(WayStationDialogueCatalog.RookTutorialSegment1Id, rook.SegmentId);
+		}
+	}
+
+	[Fact]
+	public void Planner_rook_tutorial_uses_first_unseen_segment()
+	{
+		var meta = new WayStationMetaSave { climbAttempts = 2 };
+		meta.completedDialogueSegments[WayStationDialogueCatalog.RookCharacterId] =
+		[
+			WayStationDialogueCatalog.RookTutorialSegment1Id,
+			WayStationDialogueCatalog.RookTutorialSegment2Id,
+		];
+
+		var rook = WayStationDialoguePlanner.TryGetRookTutorialDialogue(meta);
+
+		Assert.NotNull(rook);
+		Assert.Equal(WayStationDialogueCatalog.RookTutorialSegment3Id, rook.SegmentId);
+	}
+
+	[Fact]
+	public void Planner_rook_tutorial_stops_after_third_climb_window()
+	{
+		var meta = new WayStationMetaSave { climbAttempts = 3 };
+
+		Assert.Null(WayStationDialoguePlanner.TryGetRookTutorialDialogue(meta));
+	}
+
+	[Fact]
 	public void Planner_npc_requires_pending_offer_and_skips_exhausted_characters()
 	{
 		var meta = new WayStationMetaSave();
@@ -89,6 +130,31 @@ public sealed class WayStationDialogueTests : IDisposable
 		meta.completedDialogueSegments[WayStationDialogueCatalog.MaraCharacterId] =
 			WayStationDialogueCatalog.GetOrderedSegments(WayStationDialogueCatalog.MaraCharacterId).ToList();
 		Assert.Null(WayStationDialoguePlanner.TryGetNpcDialogue(meta, new Random(0)));
+	}
+
+	[Fact]
+	public void Planner_rook_random_npc_dialogue_starts_after_tutorial_window()
+	{
+		var meta = new WayStationMetaSave
+		{
+			climbAttempts = 2,
+			pendingNpcDialogueOffer = true,
+		};
+		meta.completedDialogueSegments[WayStationDialogueCatalog.EliasCharacterId] =
+			WayStationDialogueCatalog.GetOrderedSegments(WayStationDialogueCatalog.EliasCharacterId).ToList();
+		meta.completedDialogueSegments[WayStationDialogueCatalog.OldConfessorCharacterId] =
+			WayStationDialogueCatalog.GetOrderedSegments(WayStationDialogueCatalog.OldConfessorCharacterId).ToList();
+		meta.completedDialogueSegments[WayStationDialogueCatalog.MaraCharacterId] =
+			WayStationDialogueCatalog.GetOrderedSegments(WayStationDialogueCatalog.MaraCharacterId).ToList();
+
+		Assert.Null(WayStationDialoguePlanner.TryGetNpcDialogue(meta, new Random(0)));
+
+		meta.climbAttempts = 3;
+		var npc = WayStationDialoguePlanner.TryGetNpcDialogue(meta, new Random(0));
+
+		Assert.NotNull(npc);
+		Assert.Equal(WayStationDialogueCatalog.RookCharacterId, npc.CharacterId);
+		Assert.Equal("dialogue_1", npc.SegmentId);
 	}
 
 	[Fact]
@@ -239,8 +305,13 @@ public sealed class WayStationDialogueTests : IDisposable
 		Assert.Equal(9, oldConfessor.ResolveSegment("dialogue_1").Count);
 		Assert.True(DialogCatalog.TryGet(WayStationDialogueCatalog.MaraDefinitionId, out var mara));
 		Assert.Equal(8, mara.ResolveSegment("dialogue_4").Count);
+		Assert.True(DialogCatalog.TryGet(WayStationDialogueCatalog.RookDefinitionId, out var rook));
+		Assert.Equal(4, rook.ResolveSegment(WayStationDialogueCatalog.RookTutorialSegment1Id).Count);
+		Assert.Equal(3, rook.ResolveSegment(WayStationDialogueCatalog.RookTutorialSegment2Id).Count);
+		Assert.Equal(4, rook.ResolveSegment(WayStationDialogueCatalog.RookTutorialSegment3Id).Count);
+		Assert.Equal(10, rook.ResolveSegment("dialogue_1").Count);
 
-		foreach (var definition in new[] { keeper, elias, oldConfessor, mara })
+		foreach (var definition in new[] { keeper, elias, oldConfessor, mara, rook })
 		{
 			foreach (var segment in definition.segments.Values)
 			{
@@ -258,6 +329,7 @@ public sealed class WayStationDialogueTests : IDisposable
 	[InlineData("Elias", "waystation/elias")]
 	[InlineData("Old Confessor", "waystation/old-confessor")]
 	[InlineData("Mara", "waystation/mara")]
+	[InlineData("Rook", "waystation/rook")]
 	public void Portraits_resolve_for_waystation_actors(string actor, string asset)
 	{
 		Assert.Equal(asset, DialogDisplaySystem.ResolvePortraitAssetName(actor));

@@ -197,6 +197,46 @@ namespace Crusaders30XX.ECS.Data.Dialog
 						],
 					},
 				},
+				["waystation_rook"] = new DialogDefinition
+				{
+					id = "waystation_rook",
+					segments = new Dictionary<string, List<DialogLine>>
+					{
+						["tutorial_1"] =
+						[
+							new() { actor = "Rook", message = "Hey there tough guy, you gotta remember one thing out there on a climb." },
+							new() { actor = "Rook", message = "After every battle you heal up, so claiming victory without taking damage is just as good as getting nearly killed." },
+							new() { actor = "Rook", message = "Sometimes you gotta take a beating to serve up an even bigger one." },
+							new() { actor = "Crusader", message = "I'll be sure to remember that." },
+						],
+						["tutorial_2"] =
+						[
+							new() { actor = "Crusader", message = "That advice you gave me - thanks for that. You got any other tips?" },
+							new() { actor = "Rook", message = "Sure do. If you run out of cards, you're as good as dead. There's no reshuffling here in Purgatory." },
+							new() { actor = "Crusader", message = "Nothing here seems to be playing by the normal rules." },
+						],
+						["tutorial_3"] =
+						[
+							new() { actor = "Rook", message = "Preparation is key to survival out there. But sometimes planning too much can get you into trouble." },
+							new() { actor = "Rook", message = "Just like pledging - you gotta make sure you can play your pledged card later because once it's pledged, the only way to get rid of it is to play it." },
+							new() { actor = "Crusader", message = "Sounds like we've both made that mistake." },
+							new() { actor = "Rook", message = "Out there on a climb a quick judgment call can turn sour fast." },
+						],
+						["dialogue_1"] =
+						[
+							new() { actor = "Crusader", message = "You keep that sword polished." },
+							new() { actor = "Rook", message = "Old steel deserves some respect." },
+							new() { actor = "Crusader", message = "You planning to use it?" },
+							new() { actor = "Rook", message = "Not unless my knees make a miraculous recovery." },
+							new() { actor = "Crusader", message = "Then why keep it so close?" },
+							new() { actor = "Rook", message = "I spent most of my life with a sword at my side. Feels strange without one." },
+							new() { actor = "Crusader", message = "You miss those days?" },
+							new() { actor = "Rook", message = "Parts of them. The men beside me. Knowing what needed doing. A hot meal after we made it back." },
+							new() { actor = "Crusader", message = "That last part sounds like the one you miss most." },
+							new() { actor = "Rook", message = "Age gives a man better priorities, tough guy." },
+						],
+					},
+				},
 				["nun_counsel"] = Segment("nun_counsel", "climb_event",
 					("Nun", "You carry every wound as if suffering were proof of purpose. Take two measured breaths before you draw steel."),
 					("Crusader", "Pain is easier to trust than mercy. But I will take the breaths.")),

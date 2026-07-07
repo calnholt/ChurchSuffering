@@ -7,6 +7,7 @@ namespace Crusaders30XX.ECS.Systems
 		public const string SaintsMedalsPoiName = "WayStation_POI_SaintsMedals";
 		public const string KeeperDialoguePoiName = "WayStation_POI_KeeperDialogue";
 		public const string NpcDialoguePoiName = "WayStation_POI_NpcDialogue";
+		public const string RookTutorialDialoguePoiName = "WayStation_POI_RookTutorialDialogue";
 		public const string ModalRootName = "WayStation_ClimbModalRoot";
 		public const string ModalPanelName = "WayStation_ClimbModalPanel";
 		public const string CloseButtonName = "WayStation_ClimbModalClose";

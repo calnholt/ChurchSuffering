@@ -793,6 +793,18 @@
 /processorParam:TextureFormat=Color
 /build:waystation/mara.png
 
+#begin waystation/rook.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:waystation/rook.png
+
 #begin time_icon_hourglass_frame.png
 /importer:TextureImporter
 /processor:TextureProcessor
