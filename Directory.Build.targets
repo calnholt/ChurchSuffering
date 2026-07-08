@@ -5,6 +5,7 @@
     <MonoGameMgfxcWinePath Condition="'$(MonoGameMgfxcWinePath)' == ''">$(HOME)/.winemonogame</MonoGameMgfxcWinePath>
     <_MgfxcWineDotNet>$(MonoGameMgfxcWinePath)/drive_c/windows/system32/dotnet.exe</_MgfxcWineDotNet>
     <_MgfxcExecEnvironmentVariables>PATH=$(MSBuildProjectDirectory)/scripts/tools:$(PATH);MGFXC_WINE_PATH=$(MonoGameMgfxcWinePath)</_MgfxcExecEnvironmentVariables>
+    <_MgcbFfmpegProbe Condition="'$(_MgcbFfmpegProbe)' == ''">$(HOME)/.nuget/packages/dotnet-mgcb/3.8.4.1/tools/net8.0/any/osx/ffprobe</_MgcbFfmpegProbe>
   </PropertyGroup>
 
   <Target
@@ -23,6 +24,22 @@
     <Error
       Condition="!Exists('$(_MgfxcWineDotNet)')"
       Text="MonoGame shader compilation requires a Wine prefix at $(MonoGameMgfxcWinePath). Run: ./scripts/setup-mgfxc-wine.sh" />
+  </Target>
+
+  <Target
+    Name="ValidateMgcbFfmpeg"
+    BeforeTargets="RunContentBuilder"
+    Condition="'$(SkipMonoGameContentPipeline)' != 'true' And $([MSBuild]::IsOSPlatform('OSX')) And Exists('$(_MgcbFfmpegProbe)') And '@(MonoGameContentReference)' != ''">
+    <Exec
+      IgnoreExitCode="true"
+      ConsoleToMSBuild="true"
+      Command="&quot;$(_MgcbFfmpegProbe)&quot; -hide_banner -version">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_MgcbFfmpegProbeVersion" />
+      <Output TaskParameter="ExitCode" PropertyName="_MgcbFfmpegProbeExitCode" />
+    </Exec>
+    <Error
+      Condition="'$(_MgcbFfmpegProbeExitCode)' != '0'"
+      Text="MonoGame audio content build requires compatible ffmpeg/ffprobe on older macOS. Run: ./scripts/setup-mgcb-ffmpeg.sh" />
   </Target>
 
   <!-- Override package target so MGFXC_WINE_PATH is set for content builds. -->

@@ -538,6 +538,7 @@ namespace Crusaders30XX.ECS.Systems
 			var animation = GetModalAnimation();
 			if (animation == null) return;
 			animation.RequestedVisible = true;
+			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.ClimbMenuEnter, Volume = 0.5f });
 		}
 
 		private void CloseModal(bool immediate = false)

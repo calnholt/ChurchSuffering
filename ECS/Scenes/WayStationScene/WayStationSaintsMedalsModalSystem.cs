@@ -209,6 +209,10 @@ namespace Crusaders30XX.ECS.Systems
 			foreach (var entry in entries)
 			{
 				if (!entry.Purchased || !WasClicked(GetTileName(entry.Id))) continue;
+				if (!string.Equals(rootState.SelectedMedalId, entry.Id, StringComparison.Ordinal))
+				{
+					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.SaintInfo, Volume = 0.5f });
+				}
 				rootState.SelectedMedalId = entry.Id;
 				rootState.DetailScrollOffset = 0;
 				break;

@@ -12,12 +12,13 @@ namespace Crusaders30XX.ECS.Services
 {
     public static class MedalIconRenderService
     {
+        private const string MedalAssetPrefix = "Medals/";
         private const float PlaceholderNameScale = 0.07f;
         private const float PlaceholderMinNameScale = 0.03f;
 
         public static Texture2D TryLoadMedalTexture(ImageAssetService imageAssets, string medalId)
         {
-            return imageAssets?.TryGetTexture(medalId);
+            return imageAssets?.TryGetTexture($"{MedalAssetPrefix}{medalId}");
         }
 
         public static Rectangle DrawMedalIcon(
@@ -34,7 +35,7 @@ namespace Crusaders30XX.ECS.Services
             var tex = TryLoadMedalTexture(imageAssets, medalId);
             if (tex != null)
             {
-                return DrawTextureMedal(spriteBatch, center, iconSize, tex, scale, rotationRad);
+                return DrawTextureMedal(spriteBatch, center, iconSize, medalId, tex, imageAssets, scale, rotationRad);
             }
             return DrawPlaceholderMedal(spriteBatch, graphicsDevice, font, center, iconSize, medalId, scale, rotationRad);
         }
@@ -43,25 +44,31 @@ namespace Crusaders30XX.ECS.Services
             SpriteBatch spriteBatch,
             Vector2 center,
             int iconSize,
+            string medalId,
             Texture2D tex,
+            ImageAssetService imageAssets,
             float scale,
             float rotationRad)
         {
-            float baseScale = 1f;
+            int drawW = iconSize;
+            int drawH = iconSize;
             if (tex.Width > 0 && tex.Height > 0)
             {
-                float sx = iconSize / (float)tex.Width;
-                float sy = iconSize / (float)tex.Height;
-                baseScale = System.Math.Min(sx, sy);
+                float fitScale = System.Math.Min(iconSize / (float)tex.Width, iconSize / (float)tex.Height);
+                drawW = System.Math.Max(1, (int)System.Math.Round(tex.Width * fitScale));
+                drawH = System.Math.Max(1, (int)System.Math.Round(tex.Height * fitScale));
             }
-            float finalScale = baseScale * System.Math.Max(0.1f, scale);
-            var origin = new Vector2(tex.Width / 2f, tex.Height / 2f);
-            int drawW = (int)System.Math.Round(tex.Width * finalScale);
-            int drawH = (int)System.Math.Round(tex.Height * finalScale);
-            int left = (int)System.Math.Round(center.X - drawW / 2f);
-            int top = (int)System.Math.Round(center.Y - drawH / 2f);
-            spriteBatch.Draw(tex, center, null, Color.White, rotationRad, origin, finalScale, SpriteEffects.None, 0f);
-            return new Rectangle(left, top, drawW, drawH);
+
+            float animationScale = System.Math.Max(0.1f, scale);
+            int scaledDrawW = (int)System.Math.Round(drawW * animationScale);
+            int scaledDrawH = (int)System.Math.Round(drawH * animationScale);
+            int left = (int)System.Math.Round(center.X - scaledDrawW / 2f);
+            int top = (int)System.Math.Round(center.Y - scaledDrawH / 2f);
+
+            var scaledTex = imageAssets?.GetScaledMipmappedTexture($"{MedalAssetPrefix}{medalId}", tex, drawW, drawH) ?? tex;
+            var origin = new Vector2(scaledTex.Width / 2f, scaledTex.Height / 2f);
+            spriteBatch.Draw(scaledTex, center, null, Color.White, rotationRad, origin, animationScale, SpriteEffects.None, 0f);
+            return new Rectangle(left, top, scaledDrawW, scaledDrawH);
         }
 
         private static Rectangle DrawPlaceholderMedal(

@@ -757,6 +757,11 @@ namespace Crusaders30XX.ECS.Systems
             modal.SelectedCardIndex = -1;
             modal.Mode = evt.Mode;
 
+            if (evt.Mode == CardListModalMode.Inventory)
+            {
+                EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.OpenInventory, Volume = 0.5f });
+            }
+
             EnsureModalRoot(entity, modal);
             foreach (Entity card in modal.Cards)
             {
@@ -798,6 +803,8 @@ namespace Crusaders30XX.ECS.Systems
                 && modal.IsSelectable
                 && string.Equals(modal.SelectionContext, CardListSelectionContexts.ClimbReplacement, StringComparison.OrdinalIgnoreCase);
 
+            bool wasInventory = modal.Mode == CardListModalMode.Inventory;
+
             modal.IsOpen = false;
             modal.SelectedCardIndex = -1;
             foreach (var card in modal.Cards ?? new List<Entity>())
@@ -830,6 +837,11 @@ namespace Crusaders30XX.ECS.Systems
             if (shouldCancelClimbReplacement)
             {
                 ClimbShopService.CancelReplacementOffer();
+            }
+
+            if (wasInventory)
+            {
+                EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.CloseInventory, Volume = 0.5f });
             }
         }
 

@@ -236,6 +236,7 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
             deck.Hand.Add(card);
+            EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.DrawCard, Volume = 0.5f });
             var ui = card.GetComponent<UIElement>();
             if (ui != null)
             {

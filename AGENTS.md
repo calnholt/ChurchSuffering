@@ -50,6 +50,25 @@ chmod +x scripts/setup-mgfxc-wine.sh
 
 Requires Wine 8+ and `7z` (`brew install --cask wine-stable p7zip`). Creates `~/.winemonogame`. `Directory.Build.targets` sets `MGFXC_WINE_PATH` for `dotnet build` on macOS and Linux.
 
+### macOS / Linux: audio content build (MGCB ffmpeg)
+
+MonoGame 3.8.4+ bundles `ffmpeg`/`ffprobe` targeting newer macOS than Monterey. On older macOS, MGCB audio builds fail with `Failed to open file` or `_AVCaptureDeviceTypeContinuityCamera`. One-time setup:
+
+```bash
+chmod +x scripts/setup-mgcb-ffmpeg.sh
+./scripts/setup-mgcb-ffmpeg.sh
+```
+
+Re-run after `dotnet tool restore` if NuGet MGCB packages are re-downloaded.
+
+On macOS/Linux, default `dotnet build` sets `SkipMonoGameContentPipeline=true` and uses pre-built `.xnb` files in `Content/bin/DesktopGL/Content`. After adding new SFX or music to `Content.mgcb`, compile them locally:
+
+```bash
+dotnet build /p:SkipMonoGameContentPipeline=false
+```
+
+Without matching `.xnb` files, audio fails silently at runtime (`SoundEffectManagerSystem` catches load errors and returns null). CI builds content on Windows and publishes the `monogame-content` artifact for release builds.
+
 ### After executing a plan
 
 When you finish implementing an attached or approved plan, **always** run `dotnet build` from the repo root before marking work complete. Fix any compile errors before handing off.

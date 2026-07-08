@@ -46,6 +46,10 @@ namespace Crusaders30XX.ECS.Systems
 			int amount = Math.Max(0, old + evt.Delta);
 			int newAmount = amount;
 			courage.Amount = newAmount;
+			if (evt.Delta > 0)
+			{
+				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.GainCourage, Volume = 0.5f });
+			}
 			EventManager.Publish(new ModifyCourageEvent { Delta = newAmount - old, Reason = evt.Reason });
 		}
 

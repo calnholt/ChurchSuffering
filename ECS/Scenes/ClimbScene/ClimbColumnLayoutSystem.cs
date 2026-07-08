@@ -497,6 +497,11 @@ namespace Crusaders30XX.ECS.Systems
 			slotRefresh.Phase = ClimbSlotRefreshPhase.Animating;
 			slotRefresh.ElapsedSeconds = 0f;
 			HideAllSlotRefreshShadows();
+
+			if (jobs.Any(job => job.HasOutgoing))
+			{
+				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.ClimbWidgetLeave, Volume = 0.5f });
+			}
 		}
 
 		private List<ClimbSlotRefreshJob> BuildSlotRefreshJobs(

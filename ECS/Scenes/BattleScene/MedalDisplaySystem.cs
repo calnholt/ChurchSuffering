@@ -88,6 +88,7 @@ namespace Crusaders30XX.ECS.Systems
                 { "MedalId", evt.MedalId }
             });
             if (evt?.MedalEntity == null) return;
+            EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.MedalActivated, Volume = 0.5f });
             var cfg = new JigglePulseConfig
             {
                 PulseDurationSeconds = PulseDurationSeconds,

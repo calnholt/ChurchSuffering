@@ -509,6 +509,25 @@ namespace Crusaders30XX.ECS.Events
         Prayer = 17,
         GainAegis = 18,
         EnemyAttackIntro = 19,
+        ActiveDialogue = 20,
+        ApplyBrittle = 21,
+        ApplyCurse = 22,
+        ApplyScorched = 23,
+        ApplyThorns = 24,
+        ApplyFrozen = 25,
+        ClimbMenuEnter = 26,
+        ClimbWidgetLeave = 27,
+        OpenInventory = 28,
+        CloseInventory = 29,
+        DrawCard = 30,
+        EnemyDeath = 31,
+        GainCourage = 32,
+        GainTemperance = 33,
+        MedalActivated = 34,
+        PledgeCard = 35,
+        Purchase = 36,
+        SaintInfo = 37,
+        Temperance = 38,
     }
 
     /// <summary>
@@ -520,6 +539,15 @@ namespace Crusaders30XX.ECS.Events
         public float Volume { get; set; } = 1.0f; // 0..1
         public float Pitch { get; set; } = 0.0f; // -1..1
         public float Pan { get; set; } = 0.0f; // -1..1
+        public bool Loop { get; set; } = false;
+    }
+
+    /// <summary>
+    /// Request to stop a looping sound effect.
+    /// </summary>
+    public class StopSfxEvent
+    {
+        public SfxTrack Track { get; set; } = SfxTrack.None;
     }
 
     /// <summary>

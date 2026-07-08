@@ -22,6 +22,7 @@ namespace Crusaders30XX.ECS.Systems
         private readonly ContentManager _content;
         private readonly Dictionary<SfxTrack, SoundEffect> _soundCache = new();
         private readonly List<SoundEffectInstance> _activeInstances = new();
+        private readonly Dictionary<SfxTrack, SoundEffectInstance> _loopingInstances = new();
         private int _sfxVolumeLevel;
         [DebugEditable(DisplayName = "Mute")]
         public bool Mute { get; set; } = false;
@@ -31,6 +32,7 @@ namespace Crusaders30XX.ECS.Systems
             _content = content;
             _sfxVolumeLevel = SaveCache.GetSfxVolumeLevel();
             EventManager.Subscribe<PlaySfxEvent>(OnPlaySfx);
+            EventManager.Subscribe<StopSfxEvent>(OnStopSfx);
             EventManager.Subscribe<AudioSettingsChangedEvent>(OnAudioSettingsChanged);
         }
 
@@ -44,7 +46,12 @@ namespace Crusaders30XX.ECS.Systems
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
-            
+
+            if (Mute)
+            {
+                StopAllLoopingInstances();
+            }
+
             // Clean up stopped instances
             for (int i = _activeInstances.Count - 1; i >= 0; i--)
             {
@@ -61,7 +68,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             if (Mute) return;
             if (evt == null) return;
-            
+
             try
             {
                 var track = evt.Track;
@@ -69,6 +76,12 @@ namespace Crusaders30XX.ECS.Systems
 
                 var soundEffect = ResolveSoundEffect(track);
                 if (soundEffect == null) return;
+
+                if (evt.Loop)
+                {
+                    PlayLooping(track, soundEffect, evt);
+                    return;
+                }
 
                 // Debug: log music volume before SFX
                 float musicVolBefore = MediaPlayer.Volume;
@@ -78,7 +91,7 @@ namespace Crusaders30XX.ECS.Systems
                 instance.Volume = ApplyUserVolume(evt.Volume);
                 instance.Pitch = MathHelper.Clamp(evt.Pitch, -1f, 1f);
                 instance.Pan = MathHelper.Clamp(evt.Pan, -1f, 1f);
-                
+
                 instance.Play();
                 _activeInstances.Add(instance);
 
@@ -90,6 +103,42 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
             catch { }
+        }
+
+        private void PlayLooping(SfxTrack track, SoundEffect soundEffect, PlaySfxEvent evt)
+        {
+            StopLoopingInstance(track);
+
+            var instance = soundEffect.CreateInstance();
+            instance.IsLooped = true;
+            instance.Volume = ApplyUserVolume(evt.Volume);
+            instance.Pitch = MathHelper.Clamp(evt.Pitch, -1f, 1f);
+            instance.Pan = MathHelper.Clamp(evt.Pan, -1f, 1f);
+            instance.Play();
+            _loopingInstances[track] = instance;
+        }
+
+        private void OnStopSfx(StopSfxEvent evt)
+        {
+            if (evt == null) return;
+            StopLoopingInstance(evt.Track);
+        }
+
+        private void StopLoopingInstance(SfxTrack track)
+        {
+            if (track == SfxTrack.None) return;
+            if (!_loopingInstances.TryGetValue(track, out var instance)) return;
+            instance.Stop();
+            instance.Dispose();
+            _loopingInstances.Remove(track);
+        }
+
+        private void StopAllLoopingInstances()
+        {
+            foreach (var track in _loopingInstances.Keys.ToList())
+            {
+                StopLoopingInstance(track);
+            }
         }
 
         private void OnAudioSettingsChanged(AudioSettingsChangedEvent evt)
@@ -108,7 +157,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             if (track == SfxTrack.None) return null;
             if (_soundCache.TryGetValue(track, out var cached) && cached != null) return cached;
-            
+
             string assetName = track switch
             {
                 SfxTrack.SwordAttack => "SFX/Sword Attack 2",
@@ -130,11 +179,30 @@ namespace Crusaders30XX.ECS.Systems
                 SfxTrack.Prayer => "SFX/Prayer",
                 SfxTrack.GainAegis => "SFX/GainAegis",
                 SfxTrack.EnemyAttackIntro => "SFX/EnemyAttackIntro",
+                SfxTrack.ActiveDialogue => "SFX/active-dialogue",
+                SfxTrack.ApplyBrittle => "SFX/apply-brittle",
+                SfxTrack.ApplyCurse => "SFX/apply-curse",
+                SfxTrack.ApplyScorched => "SFX/apply-scorched",
+                SfxTrack.ApplyThorns => "SFX/apply-thorns",
+                SfxTrack.ApplyFrozen => "SFX/apply-frozen",
+                SfxTrack.ClimbMenuEnter => "SFX/climb-menu-enter",
+                SfxTrack.ClimbWidgetLeave => "SFX/climb-widget-leave",
+                SfxTrack.OpenInventory => "SFX/open-inventory",
+                SfxTrack.CloseInventory => "SFX/close-inventory",
+                SfxTrack.DrawCard => "SFX/draw-card",
+                SfxTrack.EnemyDeath => "SFX/enemy-death",
+                SfxTrack.GainCourage => "SFX/gain-courage",
+                SfxTrack.GainTemperance => "SFX/gain-temperance",
+                SfxTrack.MedalActivated => "SFX/medal-activated",
+                SfxTrack.PledgeCard => "SFX/pledge-card",
+                SfxTrack.Purchase => "SFX/purchase",
+                SfxTrack.SaintInfo => "SFX/saint-info",
+                SfxTrack.Temperance => "SFX/temperance",
                 _ => null
             };
-            
+
             if (string.IsNullOrEmpty(assetName)) return null;
-            
+
             try
             {
                 var soundEffect = _content.Load<SoundEffect>(assetName);

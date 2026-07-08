@@ -81,6 +81,11 @@ namespace Crusaders30XX.ECS.Systems
 			SetDefeatPresentationActive(true);
 			EnsureSuppressPortrait(evt.Enemy);
 
+			if (!evt.IsPreview)
+			{
+				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.EnemyDeath, Volume = 0.5f });
+			}
+
 			if (!PortraitPixelBurstRequestBuilder.TryBuild(EntityManager, _imageAssets, evt.Enemy, evt.IsPreview, out var request))
 			{
 				FinishWithoutBurst(evt.Enemy, evt.IsPreview);

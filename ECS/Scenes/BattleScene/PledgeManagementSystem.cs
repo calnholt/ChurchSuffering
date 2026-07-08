@@ -157,6 +157,7 @@ namespace Crusaders30XX.ECS.Systems
 
             EntityManager.AddComponent(card, new Pledge { Owner = card, CanPlay = false });
             EventManager.Publish(new PledgeAddedEvent { Card = card });
+            EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.PledgeCard, Volume = 0.5f });
             var cardData = card.GetComponent<CardData>();
             cardData?.Card?.OnPledged?.Invoke(EntityManager, card);
 

@@ -234,6 +234,7 @@ namespace Crusaders30XX.ECS.Systems
         private float _revealProgressSec = 0f;
         private int _revealedChars = 0;
         private bool _lineComplete = false;
+        private bool _wasTypingLastFrame = false;
 
         // Rich text
         private FlattenedRichText _flat;
@@ -430,6 +431,24 @@ namespace Crusaders30XX.ECS.Systems
             UpdateTypewriter(state, dt);
             UpdatePortraitSwap(dt);
 
+            bool isTyping = state.Phase == DialogPhase.Active
+                && !_lineComplete
+                && !string.IsNullOrEmpty(_cachedFilteredMessage);
+            if (isTyping && !_wasTypingLastFrame)
+            {
+                EventManager.Publish(new PlaySfxEvent
+                {
+                    Track = SfxTrack.ActiveDialogue,
+                    Loop = true,
+                    Volume = 0.4f,
+                });
+            }
+            else if (!isTyping && _wasTypingLastFrame)
+            {
+                EventManager.Publish(new StopSfxEvent { Track = SfxTrack.ActiveDialogue });
+            }
+            _wasTypingLastFrame = isTyping;
+
             EnsureEndButtonEntity();
 
             if (ui.IsClicked)
@@ -615,6 +634,8 @@ namespace Crusaders30XX.ECS.Systems
             _glyphRevealTimes.Clear();
             _lineComplete = true;
             _effectsTimeSec = 0f;
+            _wasTypingLastFrame = false;
+            EventManager.Publish(new StopSfxEvent { Track = SfxTrack.ActiveDialogue });
         }
 
         public void Open(DialogDefinition def)

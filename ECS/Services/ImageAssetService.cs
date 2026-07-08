@@ -16,6 +16,7 @@ namespace Crusaders30XX.ECS.Services
 		private readonly Dictionary<(int Width, int Height, int Radius), Texture2D> _roundedRectCache = new();
 		private readonly Dictionary<(int Width, int Height, int Tl, int Tr, int Br, int Bl), Texture2D> _roundedRectPerCornerCache = new();
 		private readonly Dictionary<Texture2D, Color[]> _pixelDataCache = new();
+		private readonly Dictionary<(string CacheKey, int Width, int Height), Texture2D> _scaledMipmappedCache = new();
 		private bool _disposed;
 
 		public ImageAssetService(ContentManager content, GraphicsDevice graphicsDevice)
@@ -107,6 +108,21 @@ namespace Crusaders30XX.ECS.Services
 			return PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, radius);
 		}
 
+		public Texture2D GetScaledMipmappedTexture(string cacheKey, Texture2D source, int width, int height)
+		{
+			if (source == null) return null;
+			width = Math.Max(1, width);
+			height = Math.Max(1, height);
+			var key = (cacheKey ?? string.Empty, width, height);
+			if (_scaledMipmappedCache.TryGetValue(key, out var cached)) return cached;
+
+			var sourceData = GetPixelData(source);
+			var resampled = MipmappedTextureUtility.ResampleBilinear(sourceData, source.Width, source.Height, width, height);
+			var texture = MipmappedTextureUtility.CreateMipmappedTexture(_graphicsDevice, resampled, width, height);
+			_scaledMipmappedCache[key] = texture;
+			return texture;
+		}
+
 		public Color[] GetPixelData(Texture2D texture)
 		{
 			if (texture == null) return Array.Empty<Color>();
@@ -128,9 +144,11 @@ namespace Crusaders30XX.ECS.Services
 			DisposeGeneratedTextures(_pixelCache.Values);
 			DisposeGeneratedTextures(_roundedRectCache.Values);
 			DisposeGeneratedTextures(_roundedRectPerCornerCache.Values);
+			DisposeGeneratedTextures(_scaledMipmappedCache.Values);
 			_pixelCache.Clear();
 			_roundedRectCache.Clear();
 			_roundedRectPerCornerCache.Clear();
+			_scaledMipmappedCache.Clear();
 		}
 
 		public void ClearTransientCaches()

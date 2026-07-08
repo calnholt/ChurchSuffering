@@ -7,3 +7,7 @@ Content/obj/
 # Debug output (repo root only; do not use bare debug/ — it matches source folders named Debug on case-insensitive FS)
 /debug/
 logs/
+
+# Downloaded MGCB ffmpeg/ffprobe (see scripts/setup-mgcb-ffmpeg.sh)
+scripts/tools/ffmpeg
+scripts/tools/ffprobe

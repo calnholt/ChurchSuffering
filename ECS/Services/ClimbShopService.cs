@@ -68,6 +68,7 @@ namespace Crusaders30XX.ECS.Services
 			{
 				ClimbEncounterService.TryQueuePendingFinalEncounter(entityManager);
 			}
+			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Purchase, Volume = 0.5f });
 			return true;
 		}
 
@@ -143,6 +144,7 @@ namespace Crusaders30XX.ECS.Services
 			{
 				ClimbEncounterService.TryQueuePendingFinalEncounter(entityManager);
 			}
+			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Purchase, Volume = 0.5f });
 			return true;
 		}
 

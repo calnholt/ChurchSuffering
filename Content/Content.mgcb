@@ -913,7 +913,7 @@
 /processorParam:TextureFormat=Color
 /build:pledge.png
 
-#begin st_luke.png
+#begin Medals/st_augustine.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -923,9 +923,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:st_luke.png
+/build:Medals/st_augustine.png
 
-#begin st_michael.png
+#begin Medals/st_benedict.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -935,9 +935,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:st_michael.png
+/build:Medals/st_benedict.png
 
-#begin st_nicholas.png
+#begin Medals/st_christopher.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -947,9 +947,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:st_nicholas.png
+/build:Medals/st_christopher.png
 
-#begin st_peter.png
+#begin Medals/st_clare.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -959,9 +959,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:st_peter.png
+/build:Medals/st_clare.png
 
-#begin st_louie_ix.png
+#begin Medals/st_elijah.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -971,7 +971,223 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:st_louie_ix.png
+/build:Medals/st_elijah.png
+
+#begin Medals/st_francis_de_sales.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_francis_de_sales.png
+
+#begin Medals/st_george.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_george.png
+
+#begin Medals/st_homobonus.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_homobonus.png
+
+#begin Medals/st_jerome.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_jerome.png
+
+#begin Medals/st_joan_of_arc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_joan_of_arc.png
+
+#begin Medals/st_lawrence.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_lawrence.png
+
+#begin Medals/st_lazarus.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_lazarus.png
+
+#begin Medals/st_longinus.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_longinus.png
+
+#begin Medals/st_louie_ix.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_louie_ix.png
+
+#begin Medals/st_luke.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_luke.png
+
+#begin Medals/st_michael.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_michael.png
+
+#begin Medals/st_nicholas.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_nicholas.png
+
+#begin Medals/st_olaf.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_olaf.png
+
+#begin Medals/st_paul_miki.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_paul_miki.png
+
+#begin Medals/st_peter.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_peter.png
+
+#begin Medals/st_rita.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_rita.png
+
+#begin Medals/st_sebastian.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_sebastian.png
+
+#begin Medals/st_simon_of_cyrene.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_simon_of_cyrene.png
 
 #begin frost.png
 /importer:TextureImporter
@@ -2220,3 +2436,98 @@
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /build:SFX/apply-card.wav
+
+#begin SFX/active-dialogue.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/active-dialogue.wav
+
+#begin SFX/apply-brittle.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/apply-brittle.wav
+
+#begin SFX/apply-curse.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/apply-curse.wav
+
+#begin SFX/apply-scorched.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/apply-scorched.wav
+
+#begin SFX/apply-thorns.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/apply-thorns.wav
+
+#begin SFX/apply-frozen.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/apply-frozen.wav
+
+#begin SFX/climb-menu-enter.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/climb-menu-enter.wav
+
+#begin SFX/climb-widget-leave.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/climb-widget-leave.wav
+
+#begin SFX/open-inventory.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/open-inventory.wav
+
+#begin SFX/close-inventory.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/close-inventory.wav
+
+#begin SFX/draw-card.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/draw-card.wav
+
+#begin SFX/enemy-death.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/enemy-death.wav
+
+#begin SFX/gain-courage.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/gain-courage.wav
+
+#begin SFX/gain-temperance.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/gain-temperance.wav
+
+#begin SFX/medal-activated.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/medal-activated.wav
+
+#begin SFX/pledge-card.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/pledge-card.wav
+
+#begin SFX/purchase.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/purchase.wav
+
+#begin SFX/saint-info.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/saint-info.wav
+
+#begin SFX/temperance.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/temperance.wav

@@ -65,6 +65,10 @@ namespace Crusaders30XX.ECS.Systems
                 ["before"] = before,
                 ["after"] = t.Amount
             });
+            if (evt.Delta > 0)
+            {
+                EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.GainTemperance, Volume = 0.5f });
+            }
             TryTriggerTemperanceAbility(player, t);
         }
         private void OnSetTemperanceEvent(SetTemperanceEvent evt)
@@ -103,6 +107,7 @@ namespace Crusaders30XX.ECS.Systems
                 // Spend threshold and activate
                 t.Amount -= ability.Threshold;
                 ability.Activate(EntityManager);
+                EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Temperance, Volume = 0.5f });
             }
         }
     }

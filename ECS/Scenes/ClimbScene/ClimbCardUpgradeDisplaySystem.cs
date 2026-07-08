@@ -402,6 +402,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				anim.HasSwapped = true;
 				PersistMutationIfNeeded(anim);
+				PlayModificationSfx(anim);
 			}
 		}
 
@@ -410,6 +411,25 @@ namespace Crusaders30XX.ECS.Systems
 			if (anim == null || anim.HasSwapped) return;
 			anim.HasSwapped = true;
 			PersistMutationIfNeeded(anim);
+			PlayModificationSfx(anim);
+		}
+
+		private void PlayModificationSfx(UpgradeAnim anim)
+		{
+			if (anim == null || anim.Mode != ClimbCardAnimMode.Mutation) return;
+
+			var track = anim.RestrictionName switch
+			{
+				RunScopedStateService.RestrictionFrozen => SfxTrack.ApplyFrozen,
+				RunScopedStateService.RestrictionBrittle => SfxTrack.ApplyBrittle,
+				RunScopedStateService.RestrictionScorched => SfxTrack.ApplyScorched,
+				RunScopedStateService.RestrictionThorned => SfxTrack.ApplyThorns,
+				RunScopedStateService.RestrictionCursed => SfxTrack.ApplyCurse,
+				_ => SfxTrack.None,
+			};
+			if (track == SfxTrack.None) return;
+
+			EventManager.Publish(new PlaySfxEvent { Track = track, Volume = 0.5f });
 		}
 
 		private void PersistMutationIfNeeded(UpgradeAnim anim)
