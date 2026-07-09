@@ -338,10 +338,12 @@ public class MedalCounterTests
 	public void MedalFactory_includes_st_rita_and_st_longinus()
 	{
 		Assert.IsType<StRita>(MedalFactory.Create("st_rita"));
+		Assert.IsType<StMonica>(MedalFactory.Create("st_monica"));
 		Assert.IsType<StLonginus>(MedalFactory.Create("st_longinus"));
 		Assert.IsType<StElijah>(MedalFactory.Create("st_elijah"));
 		Assert.IsType<StLazarus>(MedalFactory.Create("st_lazarus"));
 		Assert.Contains(MedalId.StRita, MedalFactory.GetAllMedals().Keys);
+		Assert.Contains(MedalId.StMonica, MedalFactory.GetAllMedals().Keys);
 		Assert.Contains(MedalId.StLonginus, MedalFactory.GetAllMedals().Keys);
 		Assert.Contains(MedalId.StElijah, MedalFactory.GetAllMedals().Keys);
 		Assert.Contains(MedalId.StLazarus, MedalFactory.GetAllMedals().Keys);
@@ -474,6 +476,77 @@ public class MedalCounterTests
 				Card = entityManager.CreateEntity("MilledCard_4")
 			});
 			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StMonica_emits_activate_on_trigger_temperance()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			var medal = new StMonica();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new TriggerTemperance { Owner = player, AbilityId = "angelic_aura" });
+
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StMonica_does_not_trigger_when_owner_is_null()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StMonica();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new TriggerTemperance { Owner = null, AbilityId = "angelic_aura" });
+
+			Assert.Equal(0, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StMonica_activate_publishes_resurrect_1()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StMonica();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			DrawRandomCardFromDiscardEvent resurrectEvent = null;
+			EventManager.Subscribe<DrawRandomCardFromDiscardEvent>(evt => resurrectEvent = evt);
+
+			medal.Activate();
+
+			Assert.NotNull(resurrectEvent);
+			Assert.Equal(1, resurrectEvent.Amount);
 		}
 		finally
 		{
@@ -818,5 +891,525 @@ public class MedalCounterTests
 		{
 			EventManager.Clear();
 		}
+	}
+
+	[Fact]
+	public void StThomasAquinas_OnAcquire_reduces_max_hp()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			var medal = new StThomasAquinas();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			IncreaseMaxHpEvent hpEvent = null;
+			EventManager.Subscribe<IncreaseMaxHpEvent>(evt => hpEvent = evt);
+
+			medal.OnAcquire();
+
+			Assert.NotNull(hpEvent);
+			Assert.Same(player, hpEvent.Target);
+			Assert.Equal(-10, hpEvent.Delta);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StThomasAquinas_OnAcquire_increases_max_hand_size()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			entityManager.AddComponent(player, new MaxHandSize { Value = 4 });
+			var medal = new StThomasAquinas();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			medal.OnAcquire();
+
+			Assert.Equal(5, player.GetComponent<MaxHandSize>().Value);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void MedalFactory_includes_st_thomas_aquinas()
+	{
+		Assert.IsType<StThomasAquinas>(MedalFactory.Create("st_thomas_aquinas"));
+		Assert.Contains(MedalId.StThomasAquinas, MedalFactory.GetAllMedals().Keys);
+	}
+
+	[Fact]
+	public void StIgnatius_emits_activate_when_action_phase_starts_with_enough_courage()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			entityManager.AddComponent(player, new Courage { Amount = 5 });
+			var medal = new StIgnatius();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+
+			Assert.Equal(1, activateCount);
+			Assert.Equal(0, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StIgnatius_does_not_trigger_when_courage_is_below_threshold()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			entityManager.AddComponent(player, new Courage { Amount = 4 });
+			var medal = new StIgnatius();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+
+			Assert.Equal(0, activateCount);
+			Assert.Equal(1, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StIgnatius_resets_and_triggers_once_per_battle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			entityManager.AddComponent(player, new Courage { Amount = 6 });
+			var medal = new StIgnatius();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Action });
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StIgnatius_activate_applies_aggression_to_player()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var player = entityManager.CreateEntity("Player");
+			var medal = new StIgnatius();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			ApplyPassiveEvent appliedEvent = null;
+			EventManager.Subscribe<ApplyPassiveEvent>(evt => appliedEvent = evt);
+
+			medal.Activate();
+
+			Assert.NotNull(appliedEvent);
+			Assert.Same(player, appliedEvent.Target);
+			Assert.Equal(AppliedPassiveType.Aggression, appliedEvent.Type);
+			Assert.Equal(2, appliedEvent.Delta);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void MedalFactory_includes_st_ignatius()
+	{
+		Assert.IsType<StIgnatius>(MedalFactory.Create("st_ignatius"));
+		Assert.Contains(MedalId.StIgnatius, MedalFactory.GetAllMedals().Keys);
+	}
+
+	[Fact]
+	public void StBartholomew_emits_activate_on_8_damage_attack()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (player, enemy) = CreatePlayerAndEnemy(entityManager);
+			var medal = new StBartholomew();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			PublishPlayerAttackDamage(player, enemy, 8);
+
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StBartholomew_does_not_trigger_below_threshold()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (player, enemy) = CreatePlayerAndEnemy(entityManager);
+			var medal = new StBartholomew();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			PublishPlayerAttackDamage(player, enemy, 7);
+
+			Assert.Equal(0, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StBartholomew_does_not_trigger_on_effect_damage()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (player, enemy) = CreatePlayerAndEnemy(entityManager);
+			var medal = new StBartholomew();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new ModifyHpRequestEvent
+			{
+				Source = player,
+				Target = enemy,
+				Delta = -8,
+				DamageType = ModifyTypeEnum.Effect
+			});
+
+			Assert.Equal(0, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StBartholomew_resets_and_triggers_once_per_battle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (player, enemy) = CreatePlayerAndEnemy(entityManager);
+			var medal = new StBartholomew();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			PublishPlayerAttackDamage(player, enemy, 8);
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			PublishPlayerAttackDamage(player, enemy, 8);
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StBartholomew_activate_applies_wounded_to_enemy()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			entityManager.CreateEntity("Enemy");
+			var medal = new StBartholomew();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			ApplyPassiveEvent appliedEvent = null;
+			EventManager.Subscribe<ApplyPassiveEvent>(evt => appliedEvent = evt);
+
+			medal.Activate();
+
+			Assert.NotNull(appliedEvent);
+			Assert.Same(entityManager.GetEntity("Enemy"), appliedEvent.Target);
+			Assert.Equal(AppliedPassiveType.Wounded, appliedEvent.Type);
+			Assert.Equal(1, appliedEvent.Delta);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void MedalFactory_includes_st_bartholomew()
+	{
+		Assert.IsType<StBartholomew>(MedalFactory.Create("st_bartholomew"));
+		Assert.Contains(MedalId.StBartholomew, MedalFactory.GetAllMedals().Keys);
+	}
+
+	[Fact]
+	public void StAnthonyOfPadua_emits_activate_and_shuffle_on_empty_draw_with_discard()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (deckEntity, deck) = CreateDeck(entityManager);
+			deck.DiscardPile.Add(CreateCard(entityManager));
+			var medal = new StAnthonyOfPadua();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			int activateCount = 0;
+			ShuffleRandomCardsFromDiscardToDrawPileEvent shuffleEvent = null;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+			EventManager.Subscribe<ShuffleRandomCardsFromDiscardToDrawPileEvent>(evt => shuffleEvent = evt);
+
+			EventManager.Publish(new DrawPileEmptyEvent { Deck = deckEntity });
+
+			Assert.Equal(1, activateCount);
+			Assert.NotNull(shuffleEvent);
+			Assert.Same(deckEntity, shuffleEvent.Deck);
+			Assert.Equal(4, shuffleEvent.Amount);
+			Assert.Equal(0, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StAnthonyOfPadua_does_not_trigger_when_discard_is_empty()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (deckEntity, _) = CreateDeck(entityManager);
+			var medal = new StAnthonyOfPadua();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			int activateCount = 0;
+			ShuffleRandomCardsFromDiscardToDrawPileEvent shuffleEvent = null;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+			EventManager.Subscribe<ShuffleRandomCardsFromDiscardToDrawPileEvent>(evt => shuffleEvent = evt);
+
+			EventManager.Publish(new DrawPileEmptyEvent { Deck = deckEntity });
+
+			Assert.Equal(0, activateCount);
+			Assert.Null(shuffleEvent);
+			Assert.Equal(1, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StAnthonyOfPadua_triggers_once_per_battle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (deckEntity, deck) = CreateDeck(entityManager);
+			deck.DiscardPile.Add(CreateCard(entityManager));
+			var medal = new StAnthonyOfPadua();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			int activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new DrawPileEmptyEvent { Deck = deckEntity });
+			EventManager.Publish(new DrawPileEmptyEvent { Deck = deckEntity });
+
+			Assert.Equal(1, activateCount);
+			Assert.Equal(0, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StAnthonyOfPadua_resets_on_start_battle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (deckEntity, deck) = CreateDeck(entityManager);
+			deck.DiscardPile.Add(CreateCard(entityManager));
+			var medal = new StAnthonyOfPadua();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			int activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			EventManager.Publish(new DrawPileEmptyEvent { Deck = deckEntity });
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			EventManager.Publish(new DrawPileEmptyEvent { Deck = deckEntity });
+
+			Assert.Equal(2, activateCount);
+			Assert.Equal(0, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StAnthonyOfPadua_unsubscribes_on_dispose()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var (deckEntity, deck) = CreateDeck(entityManager);
+			deck.DiscardPile.Add(CreateCard(entityManager));
+			var medal = new StAnthonyOfPadua();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			int activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			medal.Dispose();
+			EventManager.Publish(new DrawPileEmptyEvent { Deck = deckEntity });
+
+			Assert.Equal(0, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void MedalFactory_includes_st_anthony_of_padua()
+	{
+		Assert.IsType<StAnthonyOfPadua>(MedalFactory.Create("st_anthony_of_padua"));
+		Assert.Contains(MedalId.StAnthonyOfPadua, MedalFactory.GetAllMedals().Keys);
+	}
+
+	private static (Entity Player, Entity Enemy) CreatePlayerAndEnemy(EntityManager entityManager)
+	{
+		var player = entityManager.CreateEntity("Player");
+		entityManager.AddComponent(player, new Player());
+		entityManager.AddComponent(player, new AppliedPassives());
+
+		var enemy = entityManager.CreateEntity("Enemy");
+		entityManager.AddComponent(enemy, new Enemy());
+		entityManager.AddComponent(enemy, new AppliedPassives());
+
+		return (player, enemy);
+	}
+
+	private static void PublishPlayerAttackDamage(Entity player, Entity enemy, int damage)
+	{
+		EventManager.Publish(new ModifyHpRequestEvent
+		{
+			Source = player,
+			Target = enemy,
+			Delta = -damage,
+			DamageType = ModifyTypeEnum.Attack
+		});
+	}
+
+	private static (Entity Entity, Deck Deck) CreateDeck(EntityManager entityManager)
+	{
+		var deckEntity = entityManager.CreateEntity("Deck");
+		var deck = new Deck();
+		entityManager.AddComponent(deckEntity, deck);
+		return (deckEntity, deck);
+	}
+
+	private static Entity CreateCard(EntityManager entityManager)
+	{
+		var card = entityManager.CreateEntity("Card");
+		entityManager.AddComponent(card, new CardData { Card = new Strike() });
+		return card;
 	}
 }

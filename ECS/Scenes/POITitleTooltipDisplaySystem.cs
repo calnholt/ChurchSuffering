@@ -20,15 +20,15 @@ namespace Crusaders30XX.ECS.Systems
 		private Entity _tooltipEntity;
 
 		[DebugEditable(DisplayName = "Padding", Step = 1, Min = 0, Max = 40)]
-		public int Padding { get; set; } = 10;
+		public int Padding { get; set; } = 20;
 		[DebugEditable(DisplayName = "Gap", Step = 1, Min = 0, Max = 120)]
-		public int Gap { get; set; } = 18;
+		public int Gap { get; set; } = 0;
 		[DebugEditable(DisplayName = "Text Scale", Step = 0.05f, Min = 0.1f, Max = 2.0f)]
 		public float TextScale { get; set; } = 0.25f;
 		[DebugEditable(DisplayName = "Trapezoid Height", Step = 2, Min = 20, Max = 300)]
 		public int TrapezoidHeight { get; set; } = 64;
 		[DebugEditable(DisplayName = "Left Side Offset", Step = 1, Min = 0, Max = 120)]
-		public int LeftSideOffset { get; set; } = 16;
+		public int LeftSideOffset { get; set; } = 0;
 		[DebugEditable(DisplayName = "Top Edge Angle", Step = 1f, Min = -45f, Max = 45f)]
 		public float TopEdgeAngleDegrees { get; set; } = 2f;
 		[DebugEditable(DisplayName = "Right Edge Angle", Step = 1f, Min = -45f, Max = 45f)]

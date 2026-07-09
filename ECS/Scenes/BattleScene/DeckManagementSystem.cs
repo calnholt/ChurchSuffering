@@ -30,6 +30,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
             EventManager.Subscribe<RemoveRandomCardEvent>(OnRemoveRandomCard);
             EventManager.Subscribe<DrawRandomCardFromDiscardEvent>(OnDrawRandomCardFromDiscard);
+            EventManager.Subscribe<ShuffleRandomCardsFromDiscardToDrawPileEvent>(OnShuffleRandomCardsFromDiscardToDrawPile);
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -139,6 +140,11 @@ namespace Crusaders30XX.ECS.Systems
                     ["drawPileCount"] = 0,
                     ["discardPileCount"] = deck.DiscardPile.Count
                 });
+                EventManager.Publish(new DrawPileEmptyEvent { Deck = deck.Owner });
+                if (deck.DrawPile.Count > 0)
+                {
+                    return DrawCard(deck);
+                }
                 return false; // No cards to draw
             }
             if (deck.DrawPile.Count > 0)
@@ -208,6 +214,44 @@ namespace Crusaders30XX.ECS.Systems
                 ["requestedAmount"] = amount,
                 ["movedCount"] = movedCount,
                 ["handCount"] = deck.Hand.Count,
+                ["discardPileCount"] = deck.DiscardPile.Count
+            });
+
+            return movedCount;
+        }
+
+        /// <summary>
+        /// Moves up to amount random non-weapon cards from discard pile to draw pile and shuffles.
+        /// Returns the number of cards actually moved.
+        /// </summary>
+        public int ShuffleRandomCardsFromDiscardToDrawPile(Deck deck, int amount)
+        {
+            if (deck == null || amount <= 0 || deck.DiscardPile.Count == 0) return 0;
+
+            var eligibleCards = deck.DiscardPile
+                .Where(card => card.GetComponent<CardData>()?.Card?.IsWeapon != true)
+                .OrderBy(_ => Guid.NewGuid())
+                .Take(amount)
+                .ToList();
+
+            int movedCount = 0;
+            foreach (var card in eligibleCards)
+            {
+                if (!deck.DiscardPile.Remove(card)) continue;
+                deck.DrawPile.Add(card);
+                movedCount++;
+            }
+
+            if (movedCount > 0)
+            {
+                ShuffleDrawPile(deck);
+            }
+
+            LoggingService.Append("DeckManagementSystem.ShuffleRandomCardsFromDiscardToDrawPile", new System.Text.Json.Nodes.JsonObject
+            {
+                ["requestedAmount"] = amount,
+                ["movedCount"] = movedCount,
+                ["drawPileCount"] = deck.DrawPile.Count,
                 ["discardPileCount"] = deck.DiscardPile.Count
             });
 
@@ -712,6 +756,18 @@ namespace Crusaders30XX.ECS.Systems
             if (deck == null) return;
 
             DrawRandomCardsFromDiscard(deck, evt.Amount);
+        }
+
+        private void OnShuffleRandomCardsFromDiscardToDrawPile(ShuffleRandomCardsFromDiscardToDrawPileEvent evt)
+        {
+            if (evt == null || evt.Amount <= 0) return;
+
+            var deckEntity = evt.Deck ?? EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
+            if (deckEntity == null) return;
+            var deck = deckEntity.GetComponent<Deck>();
+            if (deck == null) return;
+
+            ShuffleRandomCardsFromDiscardToDrawPile(deck, evt.Amount);
         }
 
         private void OnRemoveRandomCard(RemoveRandomCardEvent evt)

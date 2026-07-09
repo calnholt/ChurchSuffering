@@ -30,12 +30,13 @@ namespace Crusaders30XX.ECS.Services
             string medalId,
             ImageAssetService imageAssets,
             float scale = 1f,
-            float rotationRad = 0f)
+            float rotationRad = 0f,
+            float softenStrength = 0f)
         {
             var tex = TryLoadMedalTexture(imageAssets, medalId);
             if (tex != null)
             {
-                return DrawTextureMedal(spriteBatch, center, iconSize, medalId, tex, imageAssets, scale, rotationRad);
+                return DrawTextureMedal(spriteBatch, center, iconSize, medalId, tex, imageAssets, scale, rotationRad, softenStrength);
             }
             return DrawPlaceholderMedal(spriteBatch, graphicsDevice, font, center, iconSize, medalId, scale, rotationRad);
         }
@@ -48,7 +49,8 @@ namespace Crusaders30XX.ECS.Services
             Texture2D tex,
             ImageAssetService imageAssets,
             float scale,
-            float rotationRad)
+            float rotationRad,
+            float softenStrength)
         {
             int drawW = iconSize;
             int drawH = iconSize;
@@ -65,7 +67,7 @@ namespace Crusaders30XX.ECS.Services
             int left = (int)System.Math.Round(center.X - scaledDrawW / 2f);
             int top = (int)System.Math.Round(center.Y - scaledDrawH / 2f);
 
-            var scaledTex = imageAssets?.GetScaledMipmappedTexture($"{MedalAssetPrefix}{medalId}", tex, drawW, drawH) ?? tex;
+            var scaledTex = imageAssets?.GetScaledMipmappedTexture($"{MedalAssetPrefix}{medalId}", tex, drawW, drawH, softenStrength) ?? tex;
             var origin = new Vector2(scaledTex.Width / 2f, scaledTex.Height / 2f);
             spriteBatch.Draw(scaledTex, center, null, Color.White, rotationRad, origin, animationScale, SpriteEffects.None, 0f);
             return new Rectangle(left, top, scaledDrawW, scaledDrawH);

@@ -210,6 +210,25 @@ namespace Crusaders30XX.ECS.Events
     }
 
     /// <summary>
+    /// Event published when a draw attempt finds an empty draw pile.
+    /// Handlers may synchronously refill the deck before the draw attempt returns.
+    /// </summary>
+    public class DrawPileEmptyEvent
+    {
+        public Entity Deck { get; set; }
+    }
+
+    /// <summary>
+    /// Event to request shuffling random cards from discard back into the draw pile.
+    /// Moves up to Amount non-weapon cards; partial if discard is short.
+    /// </summary>
+    public class ShuffleRandomCardsFromDiscardToDrawPileEvent
+    {
+        public Entity Deck { get; set; }
+        public int Amount { get; set; } = 1;
+    }
+
+    /// <summary>
     /// Event to request drawing random cards from the discard pile into the hand.
     /// Moves up to Amount cards; partial if discard is short.
     /// </summary>

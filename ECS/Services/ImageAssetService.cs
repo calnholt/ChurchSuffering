@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Services
 		private readonly Dictionary<(int Width, int Height, int Radius), Texture2D> _roundedRectCache = new();
 		private readonly Dictionary<(int Width, int Height, int Tl, int Tr, int Br, int Bl), Texture2D> _roundedRectPerCornerCache = new();
 		private readonly Dictionary<Texture2D, Color[]> _pixelDataCache = new();
-		private readonly Dictionary<(string CacheKey, int Width, int Height), Texture2D> _scaledMipmappedCache = new();
+		private readonly Dictionary<(string CacheKey, int Width, int Height, float SoftenStrength), Texture2D> _scaledMipmappedCache = new();
 		private bool _disposed;
 
 		public ImageAssetService(ContentManager content, GraphicsDevice graphicsDevice)
@@ -108,17 +108,18 @@ namespace Crusaders30XX.ECS.Services
 			return PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, radius);
 		}
 
-		public Texture2D GetScaledMipmappedTexture(string cacheKey, Texture2D source, int width, int height)
+		public Texture2D GetScaledMipmappedTexture(string cacheKey, Texture2D source, int width, int height, float softenStrength = 0f)
 		{
 			if (source == null) return null;
 			width = Math.Max(1, width);
 			height = Math.Max(1, height);
-			var key = (cacheKey ?? string.Empty, width, height);
+			var key = (cacheKey ?? string.Empty, width, height, softenStrength);
 			if (_scaledMipmappedCache.TryGetValue(key, out var cached)) return cached;
 
 			var sourceData = GetPixelData(source);
 			var resampled = MipmappedTextureUtility.ResampleBilinear(sourceData, source.Width, source.Height, width, height);
-			var texture = MipmappedTextureUtility.CreateMipmappedTexture(_graphicsDevice, resampled, width, height);
+			var softened = MipmappedTextureUtility.Soften(resampled, width, height, softenStrength);
+			var texture = MipmappedTextureUtility.CreateMipmappedTexture(_graphicsDevice, softened, width, height);
 			_scaledMipmappedCache[key] = texture;
 			return texture;
 		}

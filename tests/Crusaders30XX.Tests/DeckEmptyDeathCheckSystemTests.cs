@@ -2,6 +2,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Cards;
+using Crusaders30XX.ECS.Objects.Medals;
 using Crusaders30XX.ECS.Systems;
 using Xunit;
 
@@ -101,6 +102,33 @@ public class DeckEmptyDeathCheckSystemTests
 			PublishResolved(player, deckEntity, requestedDrawCount: 4);
 
 			Assert.Equal(1, deaths);
+		});
+	}
+
+	[Fact]
+	public void StAnthonyOfPadua_rescues_empty_draw_before_deck_empty_death_check()
+	{
+		RunWithEventManagerCleanup(() =>
+		{
+			var entityManager = new EntityManager();
+			var player = CreatePlayer(entityManager);
+			var (deckEntity, deck) = CreateDeck(entityManager);
+			var card = CreateCard(entityManager);
+			deck.DiscardPile.Add(card);
+			var deckManagementSystem = new DeckManagementSystem(entityManager);
+			_ = new DeckEmptyDeathCheckSystem(entityManager);
+			var medal = new StAnthonyOfPadua();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+			int deaths = 0;
+			EventManager.Subscribe<PlayerDied>(_ => deaths++);
+
+			bool drawn = deckManagementSystem.DrawCard(deck);
+			PublishResolved(player, deckEntity, requestedDrawCount: 1);
+
+			Assert.True(drawn);
+			Assert.Contains(card, deck.Hand);
+			Assert.Equal(0, deaths);
 		});
 	}
 

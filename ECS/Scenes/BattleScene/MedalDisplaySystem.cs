@@ -27,7 +27,9 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Top Margin", Step = 2, Min = 0, Max = 2000)]
 		public int TopMargin { get; set; } = 20;
 		[DebugEditable(DisplayName = "Icon Size", Step = 1, Min = 8, Max = 512)]
-		public int IconSize { get; set; } = 100;
+		public int IconSize { get; set; } = 119;
+		[DebugEditable(DisplayName = "Icon Soften Strength", Step = 0.01f, Min = 0f, Max = 4f)]
+		public float IconSoftenStrength { get; set; } = 0.4f;
 		[DebugEditable(DisplayName = "Spacing X", Step = 1, Min = 0, Max = 256)]
 		public int SpacingX { get; set; } = 12;
 		[DebugEditable(DisplayName = "Background Corner Radius", Step = 1, Min = 0, Max = 64)]
@@ -43,7 +45,7 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Counter X Offset", Step = 1f, Min = -100f, Max = 100f)]
 		public float CounterXOffset { get; set; } = -3f;
 		[DebugEditable(DisplayName = "Counter Y Offset", Step = 1f, Min = -100f, Max = 100f)]
-		public float CounterYOffset { get; set; } = 69f;
+		public float CounterYOffset { get; set; } = 62f;
 		[DebugEditable(DisplayName = "Counter Trap Width", Step = 1f, Min = 10f, Max = 200f)]
 		public float CounterTrapezoidWidth { get; set; } = 39f;
 		[DebugEditable(DisplayName = "Counter Trap Height", Step = 1f, Min = 10f, Max = 100f)]
@@ -165,7 +167,8 @@ namespace Crusaders30XX.ECS.Systems
                     m.Medal.Id,
                     _imageAssets,
                     scalePulse,
-                    rot);
+                    rot,
+                    IconSoftenStrength);
 
 				if (m.Medal.MaxCount > 0)
 				{

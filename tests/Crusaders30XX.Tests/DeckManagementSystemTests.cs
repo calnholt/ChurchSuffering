@@ -175,12 +175,145 @@ public class DeckManagementSystemTests
         Assert.Empty(deck.DiscardPile);
     }
 
+    [Fact]
+    public void DrawCard_publishes_DrawPileEmptyEvent_when_empty_and_unrescued()
+    {
+        EventManager.Clear();
+        var entityManager = new EntityManager();
+        var deck = CreateDeckEntity(entityManager);
+        var system = new DeckManagementSystem(entityManager);
+
+        int emptyEvents = 0;
+        Entity eventDeck = null;
+        EventManager.Subscribe<DrawPileEmptyEvent>(evt =>
+        {
+            emptyEvents++;
+            eventDeck = evt.Deck;
+        });
+
+        bool drawn = system.DrawCard(deck);
+
+        Assert.False(drawn);
+        Assert.Equal(1, emptyEvents);
+        Assert.Same(deck.Owner, eventDeck);
+        Assert.Empty(deck.Hand);
+    }
+
+    [Fact]
+    public void DrawCard_retries_after_DrawPileEmptyEvent_refills_draw_pile()
+    {
+        EventManager.Clear();
+        var entityManager = new EntityManager();
+        var deck = CreateDeckEntity(entityManager);
+        var card = CreateCard(entityManager);
+        deck.DiscardPile.Add(card);
+        var system = new DeckManagementSystem(entityManager);
+        EventManager.Subscribe<DrawPileEmptyEvent>(evt =>
+        {
+            EventManager.Publish(new ShuffleRandomCardsFromDiscardToDrawPileEvent
+            {
+                Deck = evt.Deck,
+                Amount = 1
+            });
+        });
+
+        bool drawn = system.DrawCard(deck);
+
+        Assert.True(drawn);
+        Assert.Contains(card, deck.Hand);
+        Assert.DoesNotContain(card, deck.DiscardPile);
+        Assert.Empty(deck.DrawPile);
+    }
+
+    [Fact]
+    public void ShuffleRandomCardsFromDiscardToDrawPileEvent_moves_cards_to_draw_pile_for_specified_deck()
+    {
+        EventManager.Clear();
+        var entityManager = new EntityManager();
+        var (targetDeckEntity, targetDeck) = CreateDeckWithEntity(entityManager);
+        var (_, otherDeck) = CreateDeckWithEntity(entityManager);
+        targetDeck.DiscardPile.Add(CreateCard(entityManager));
+        targetDeck.DiscardPile.Add(CreateCard(entityManager));
+        otherDeck.DiscardPile.Add(CreateCard(entityManager));
+        _ = new DeckManagementSystem(entityManager);
+
+        EventManager.Publish(new ShuffleRandomCardsFromDiscardToDrawPileEvent
+        {
+            Deck = targetDeckEntity,
+            Amount = 2
+        });
+
+        Assert.Equal(2, targetDeck.DrawPile.Count);
+        Assert.Empty(targetDeck.DiscardPile);
+        Assert.Empty(otherDeck.DrawPile);
+        Assert.Single(otherDeck.DiscardPile);
+    }
+
+    [Fact]
+    public void ShuffleRandomCardsFromDiscardToDrawPileEvent_partial_when_insufficient()
+    {
+        EventManager.Clear();
+        var entityManager = new EntityManager();
+        var deck = CreateDeckEntity(entityManager);
+        deck.DiscardPile.Add(CreateCard(entityManager));
+        deck.DiscardPile.Add(CreateCard(entityManager));
+        _ = new DeckManagementSystem(entityManager);
+
+        EventManager.Publish(new ShuffleRandomCardsFromDiscardToDrawPileEvent { Deck = deck.Owner, Amount = 5 });
+
+        Assert.Equal(2, deck.DrawPile.Count);
+        Assert.Empty(deck.DiscardPile);
+    }
+
+    [Fact]
+    public void ShuffleRandomCardsFromDiscardToDrawPileEvent_skips_weapons()
+    {
+        EventManager.Clear();
+        var entityManager = new EntityManager();
+        var deck = CreateDeckEntity(entityManager);
+        var weapon = CreateWeaponCard(entityManager);
+        var cardA = CreateCard(entityManager);
+        var cardB = CreateCard(entityManager);
+        deck.DiscardPile.Add(weapon);
+        deck.DiscardPile.Add(cardA);
+        deck.DiscardPile.Add(cardB);
+        _ = new DeckManagementSystem(entityManager);
+
+        EventManager.Publish(new ShuffleRandomCardsFromDiscardToDrawPileEvent { Deck = deck.Owner, Amount = 2 });
+
+        Assert.Equal(2, deck.DrawPile.Count);
+        Assert.Contains(cardA, deck.DrawPile);
+        Assert.Contains(cardB, deck.DrawPile);
+        Assert.DoesNotContain(weapon, deck.DrawPile);
+        Assert.Single(deck.DiscardPile);
+        Assert.Contains(weapon, deck.DiscardPile);
+    }
+
+    [Fact]
+    public void ShuffleRandomCardsFromDiscardToDrawPileEvent_noop_when_discard_empty()
+    {
+        EventManager.Clear();
+        var entityManager = new EntityManager();
+        var deck = CreateDeckEntity(entityManager);
+        _ = new DeckManagementSystem(entityManager);
+
+        EventManager.Publish(new ShuffleRandomCardsFromDiscardToDrawPileEvent { Deck = deck.Owner, Amount = 3 });
+
+        Assert.Empty(deck.DrawPile);
+        Assert.Empty(deck.DiscardPile);
+    }
+
     private static Deck CreateDeckEntity(EntityManager entityManager)
+    {
+        return CreateDeckWithEntity(entityManager).Deck;
+    }
+
+    private static (Entity Entity, Deck Deck) CreateDeckWithEntity(EntityManager entityManager)
     {
         var deckEntity = entityManager.CreateEntity("Deck");
         var deck = new Deck();
         entityManager.AddComponent(deckEntity, deck);
-        return deck;
+        return (deckEntity, deck);
     }
 
     private static Entity CreateCard(EntityManager entityManager)
@@ -189,6 +322,13 @@ public class DeckManagementSystemTests
         entityManager.AddComponent(entity, new CardData { Card = new Tempest() });
         entityManager.AddComponent(entity, new Transform { Position = Vector2.Zero });
         entityManager.AddComponent(entity, new UIElement { Bounds = new Rectangle(-1000, -1000, 1, 1) });
+        return entity;
+    }
+
+    private static Entity CreateWeaponCard(EntityManager entityManager)
+    {
+        var entity = entityManager.CreateEntity("weapon");
+        entityManager.AddComponent(entity, new CardData { Card = new CardBase { IsWeapon = true } });
         return entity;
     }
 }
