@@ -38,6 +38,7 @@ namespace Crusaders30XX.ECS.Systems
 		public static readonly Color White3 = new Color(200, 192, 184);
 		public static readonly Color Red3 = new Color(196, 30, 58);
 		public static readonly Color Red2 = new Color(255, 77, 94);
+		public static readonly Color GreenPositive = new Color(80, 200, 100);
 		public static readonly Color RedDim = new Color(160, 0, 0);
 		public static readonly Color RedGlow = new Color(255, 77, 94);
 		public static readonly Color CardFill = new Color(8, 8, 8) * 0.92f;

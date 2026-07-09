@@ -48,17 +48,17 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Resource Label Font Scale", Step = 0.01f, Min = 0.03f, Max = 0.3f)]
 		public float ResourceLabelFontScale { get; set; } = 0.075f;
 		[DebugEditable(DisplayName = "Resource Amount Font Scale", Step = 0.01f, Min = 0.03f, Max = 0.4f)]
-		public float ResourceAmountFontScale { get; set; } = 0.11f;
+		public float ResourceAmountFontScale { get; set; } = 0.15f;
 		[DebugEditable(DisplayName = "Resource Icon Size", Step = 1, Min = 6, Max = 48)]
-		public int ResourceIconSize { get; set; } = 18;
+		public int ResourceIconSize { get; set; } = 24;
 		[DebugEditable(DisplayName = "Resource Fade Seconds", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float ResourceFadeSeconds { get; set; } = 0.12f;
+		public float ResourceFadeSeconds { get; set; } = 0.2f;
 		[DebugEditable(DisplayName = "Resource Bar Border Thickness", Step = 1, Min = 1, Max = 6)]
 		public int ResourceBarBorderThickness { get; set; } = 2;
 		[DebugEditable(DisplayName = "Timeline Hourglass Width", Step = 1, Min = 3, Max = 24)]
-		public int TimelineHourglassWidth { get; set; } = 18;
+		public int TimelineHourglassWidth { get; set; } = 24;
 		[DebugEditable(DisplayName = "Timeline Hourglass Height", Step = 1, Min = 4, Max = 32)]
-		public int TimelineHourglassHeight { get; set; } = 19;
+		public int TimelineHourglassHeight { get; set; } = 24;
 		[DebugEditable(DisplayName = "Empty Hourglass Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
 		public float EmptyHourglassAlpha { get; set; } = 0.2f;
 		[DebugEditable(DisplayName = "Hourglass Red Glow Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
@@ -84,15 +84,19 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Resource Label Padding Y", Step = 1, Min = 0, Max = 40)]
 		public int ResourceLabelPaddingY { get; set; } = 8;
 		[DebugEditable(DisplayName = "Resource Icon Bottom Padding", Step = 1, Min = 0, Max = 40)]
-		public int ResourceIconBottomPadding { get; set; } = 8;
+		public int ResourceIconBottomPadding { get; set; } = 13;
 		[DebugEditable(DisplayName = "Resource Row Padding Right", Step = 1, Min = 0, Max = 40)]
-		public int ResourceRowPaddingRight { get; set; } = 12;
+		public int ResourceRowPaddingRight { get; set; } = 0;
 		[DebugEditable(DisplayName = "Resource Group Spacing", Step = 1, Min = 0, Max = 40)]
-		public int ResourceGroupSpacing { get; set; } = 16;
+		public int ResourceGroupSpacing { get; set; } = 2;
 		[DebugEditable(DisplayName = "Resource Icon Text Gap", Step = 1, Min = 0, Max = 16)]
 		public int ResourceIconTextGap { get; set; } = 4;
 		[DebugEditable(DisplayName = "Resource Amount Text Y Offset", Step = 1, Min = -8, Max = 8)]
-		public int ResourceAmountTextYOffset { get; set; } = -1;
+		public int ResourceAmountTextYOffset { get; set; } = -3;
+		[DebugEditable(DisplayName = "Resource Amount Delta Gap", Step = 1, Min = 0, Max = 16)]
+		public int ResourceAmountDeltaGap { get; set; } = 2;
+		[DebugEditable(DisplayName = "Resource Bar Width", Step = 1, Min = 100, Max = 320)]
+		public int ResourceBarWidth { get; set; } = 320;
 		[DebugEditable(DisplayName = "Weapon Button Border Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
 		public float WeaponButtonBorderAlpha { get; set; } = 0.85f;
 		[DebugEditable(DisplayName = "Weapon Button Border Thickness", Step = 1, Min = 1, Max = 6)]
@@ -103,6 +107,7 @@ namespace Crusaders30XX.ECS.Systems
 		internal static int HeaderPaddingTopValue { get; private set; } = 10;
 		internal static int HeaderGapValue { get; private set; } = 16;
 		internal static int WeaponButtonSizeValue { get; private set; } = 67;
+		internal static int ResourceBarWidthValue { get; private set; } = 320;
 
 		public ClimbHeaderDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
 			: base(entityManager)
@@ -127,6 +132,7 @@ namespace Crusaders30XX.ECS.Systems
 			HeaderPaddingTopValue = HeaderPaddingTop;
 			HeaderGapValue = HeaderGap;
 			WeaponButtonSizeValue = WeaponButtonSize;
+			ResourceBarWidthValue = ResourceBarWidth;
 		}
 
 		public override void Update(GameTime gameTime)
@@ -137,6 +143,7 @@ namespace Crusaders30XX.ECS.Systems
 			HeaderPaddingTopValue = HeaderPaddingTop;
 			HeaderGapValue = HeaderGap;
 			WeaponButtonSizeValue = WeaponButtonSize;
+			ResourceBarWidthValue = ResourceBarWidth;
 			if (IsClimbScene())
 			{
 				SyncWeaponArt();
@@ -253,22 +260,47 @@ namespace Crusaders30XX.ECS.Systems
 		private int DrawResourceAmountRightAligned(int rightX, int iconY, ClimbResourceType type, int amount, int previewAmount, Color color)
 		{
 			var amountText = amount.ToString();
+			var previewText = previewAmount.ToString();
+			int delta = previewAmount - amount;
+			string deltaText = delta == 0
+				? string.Empty
+				: delta > 0
+					? $" (+{delta})"
+					: $" ({delta})";
+
+			float previewAlpha = MathHelper.Clamp(_resourcePreviewAlpha, 0f, 1f);
+			bool showPreviewDelta = previewAlpha > 0.001f && delta != 0;
+
 			var amountSize = ClimbSceneDrawHelpers.MeasureBodyText(amountText, ResourceAmountFontScale);
-			int groupW = ResourceIconSize + ResourceIconTextGap + (int)Math.Ceiling(amountSize.X);
+			var previewSize = ClimbSceneDrawHelpers.MeasureBodyText(previewText, ResourceAmountFontScale);
+			float amountWidth = Math.Max(amountSize.X, previewSize.X);
+			float reservedDeltaWidth = GetReservedDeltaSuffixWidth();
+			float textWidth = amountWidth + reservedDeltaWidth;
+			int groupW = ResourceIconSize + ResourceIconTextGap + (int)Math.Ceiling(textWidth);
 			int iconX = rightX - groupW;
 			var iconPos = new Vector2(iconX, iconY);
 			ClimbSceneDrawHelpers.DrawResourceIcon(_spriteBatch, _graphicsDevice, _pixel, iconPos, type, ResourceIconSize, color);
 			var textPos = new Vector2(iconPos.X + ResourceIconSize + ResourceIconTextGap, iconPos.Y + ResourceAmountTextYOffset);
-			float previewAlpha = MathHelper.Clamp(_resourcePreviewAlpha, 0f, 1f);
-			if (previewAlpha <= 0.001f || amount == previewAmount)
+
+			if (!showPreviewDelta)
 			{
 				ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, amountText, textPos, ResourceAmountFontScale, ClimbSceneDrawHelpers.White1);
 				return iconX;
 			}
 
 			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, amountText, textPos, ResourceAmountFontScale, ClimbSceneDrawHelpers.White1 * (1f - previewAlpha));
-			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, previewAmount.ToString(), textPos, ResourceAmountFontScale, ClimbSceneDrawHelpers.White1 * previewAlpha);
+			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, previewText, textPos, ResourceAmountFontScale, ClimbSceneDrawHelpers.White1 * previewAlpha);
+			var deltaPos = new Vector2(textPos.X + amountWidth + ResourceAmountDeltaGap, textPos.Y);
+			var deltaColor = delta > 0 ? ClimbSceneDrawHelpers.GreenPositive : ClimbSceneDrawHelpers.Red2;
+			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, deltaText, deltaPos, ResourceAmountFontScale, deltaColor * previewAlpha);
 			return iconX;
+		}
+
+		private float GetReservedDeltaSuffixWidth()
+		{
+			var positive = ClimbSceneDrawHelpers.MeasureBodyText(" (+9)", ResourceAmountFontScale);
+			var negative = ClimbSceneDrawHelpers.MeasureBodyText(" (-9)", ResourceAmountFontScale);
+			return ResourceAmountDeltaGap + Math.Max(positive.X, negative.X);
 		}
 
 		private void UpdateResourcePreviewFade(GameTime gameTime)

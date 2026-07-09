@@ -78,7 +78,7 @@ namespace Crusaders30XX.ECS.Systems
 			var loadoutRect = new Rectangle(weaponX, contentY, weaponSize, weaponSize);
 			SetTransformAndBounds(LoadoutButtonName, loadoutRect, zOrder: 2100, interactable: true, UIElementEventType.OpenLoadout);
 
-			int resourceW = 145;
+			int resourceW = ClimbHeaderDisplaySystem.ResourceBarWidthValue;
 			var resourceRect = new Rectangle(loadoutRect.X - gap - resourceW, contentY, resourceW, contentH);
 			SetTransformAndBounds(ResourceBarName, resourceRect, zOrder: 2050, interactable: false);
 
