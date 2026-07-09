@@ -1,3 +1,4 @@
+using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 
@@ -11,20 +12,35 @@ namespace Crusaders30XX.ECS.Objects.Medals
         {
             Id = "st_rita";
             Name = "St. Rita of Cascia";
-            Text = $"Whenever you play a Curse card, resurrect {ResurrectAmount}.";
+            MaxCount = 1;
+            Text = $"The first time you remove a curse in battle, resurrect {ResurrectAmount}.";
         }
 
         public override void Initialize(EntityManager entityManager, Entity medalEntity)
         {
             EntityManager = entityManager;
             MedalEntity = medalEntity;
-            EventManager.Subscribe<CardPlayedEvent>(OnCardPlayed);
+            EventManager.Subscribe<TrackingEvent>(OnTrackingEvent);
+            EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhaseEvent);
         }
 
-        private void OnCardPlayed(CardPlayedEvent evt)
+        public override void OnAcquire()
         {
-            if (evt?.Card == null) return;
-            if (!evt.PlayedAsCurse) return;
+            CurrentCount = MaxCount;
+        }
+
+        private void OnChangeBattlePhaseEvent(ChangeBattlePhaseEvent evt)
+        {
+            if (evt.Current != SubPhase.StartBattle) return;
+            CurrentCount = MaxCount;
+        }
+
+        private void OnTrackingEvent(TrackingEvent evt)
+        {
+            if (CurrentCount <= 0) return;
+            if (evt?.Type != TrackingTypeEnum.CursesRemoved.ToString()) return;
+            if (evt.Delta <= 0) return;
+            CurrentCount = 0;
             EmitActivateEvent();
         }
 
@@ -35,7 +51,8 @@ namespace Crusaders30XX.ECS.Objects.Medals
 
         public override void Dispose()
         {
-            EventManager.Unsubscribe<CardPlayedEvent>(OnCardPlayed);
+            EventManager.Unsubscribe<TrackingEvent>(OnTrackingEvent);
+            EventManager.Unsubscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhaseEvent);
         }
     }
 }

@@ -247,6 +247,17 @@ namespace Crusaders30XX.ECS.Systems
             });
         }
 
+        [DebugAction("Apply Cursed (hand)")]
+        public void Debug_ApplyCursedHand()
+        {
+            EventManager.Publish(new ApplyCardApplicationEvent
+            {
+                Amount = 1,
+                Type = CardApplicationType.Cursed,
+                Target = CardApplicationTarget.Hand,
+            });
+        }
+
         [DebugAction("Apply Colorless (hand)")]
         public void Debug_ApplyColorlessHand()
         {

@@ -102,6 +102,7 @@ public sealed class MaleficRiteTests : IDisposable
 		var (entityManager, maleficRiteEntity) = BuildWorldWithMaleficRite();
 		var original = GetMaleficRite(maleficRiteEntity);
 		_ = new CardApplicationManagementSystem(entityManager);
+		_ = new CursedManagementSystem(entityManager);
 
 		EventManager.Publish(new ApplyCardApplicationEvent
 		{

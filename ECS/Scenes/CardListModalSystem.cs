@@ -1366,7 +1366,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private void EnsureCardTooltip(Entity card)
         {
-            CardApplicationManagementSystem.RefreshCardTooltipPresentation(
+            CursedManagementSystem.RefreshCardTooltipPresentation(
                 EntityManager,
                 card,
                 TooltipPosition.Right);

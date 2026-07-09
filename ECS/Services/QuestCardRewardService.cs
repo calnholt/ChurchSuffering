@@ -385,7 +385,11 @@ namespace Crusaders30XX.ECS.Services
 
 		private static IEnumerable<string> BuildIncomingPool(string weaponId)
 		{
-			foreach (var id in SharedRewardPool)
+			var pool = CardFactory.GetAllCards()
+				.Where(c => c.Value.CanAddToLoadout && !c.Value.IsWeapon && !c.Value.IsToken && c.Value.Rarity != Rarity.Starter)
+				.Select(c => c.Key.ToString())
+				.ToList();
+			foreach (var id in pool)
 			{
 				yield return id;
 			}

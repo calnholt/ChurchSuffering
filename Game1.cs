@@ -38,6 +38,7 @@ public class Game1 : Game
     private ControllerRumbleSystem _controllerRumbleSystem;
     private UIInteractionSystem _uiInteractionSystem;
 	private CardApplicationManagementSystem _cardApplicationManagementSystem;
+	private CursedManagementSystem _cursedManagementSystem;
 	private DeckManagementSystem _deckManagementSystem;
 
     private DrippingBloodDisplaySystem _drippingBloodDisplaySystem;
@@ -219,6 +220,7 @@ public class Game1 : Game
         _cardTooltipDisplaySystem = new CardTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _locationNameDisplaySystem = new LocationNameDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
 		_cardApplicationManagementSystem = new CardApplicationManagementSystem(_world.EntityManager);
+		_cursedManagementSystem = new CursedManagementSystem(_world.EntityManager);
 		_deckManagementSystem = new DeckManagementSystem(_world.EntityManager);
         _profilerSystem = new ProfilerSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _cursorDisplaySystem = new CursorDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
@@ -250,6 +252,7 @@ public class Game1 : Game
                 CardUsageTelemetryRuntime.Store));
         }
 		_world.AddSystem(_cardApplicationManagementSystem);
+		_world.AddSystem(_cursedManagementSystem);
 		_world.AddSystem(_deckManagementSystem);
         _world.AddSystem(_debugMenuSystem);
         _world.AddSystem(_entityListOverlaySystem);

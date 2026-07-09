@@ -913,6 +913,18 @@
 /processorParam:TextureFormat=Color
 /build:pledge.png
 
+#begin Medals/st_anthony_of_padua.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_anthony_of_padua.png
+
 #begin Medals/st_augustine.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -924,6 +936,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Medals/st_augustine.png
+
+#begin Medals/st_bartholomew.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_bartholomew.png
 
 #begin Medals/st_benedict.png
 /importer:TextureImporter
@@ -1008,6 +1032,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Medals/st_homobonus.png
+
+#begin Medals/st_ignatius.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_ignatius.png
 
 #begin Medals/st_jerome.png
 /importer:TextureImporter
@@ -1105,6 +1141,18 @@
 /processorParam:TextureFormat=Color
 /build:Medals/st_michael.png
 
+#begin Medals/st_monica.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_monica.png
+
 #begin Medals/st_nicholas.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1188,6 +1236,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Medals/st_simon_of_cyrene.png
+
+#begin Medals/st_thomas_aquinas.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_thomas_aquinas.png
 
 #begin frost.png
 /importer:TextureImporter
@@ -1292,6 +1352,17 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:TextureFormat=Color
 /build:CardArt/ark_of_the_covenant.png
+
+#begin CardArt/blood_price.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/blood_price.png
 
 #begin CardArt/burn.png
 /importer:TextureImporter
@@ -1424,6 +1495,17 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:TextureFormat=Color
 /build:CardArt/purge.png
+
+#begin CardArt/pierce_through.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/pierce_through.png
 
 #begin CardArt/ravage.png
 /importer:TextureImporter
@@ -1744,6 +1826,17 @@
 /processorParam:TextureFormat=Color
 /build:CardArt/forge_strike.png
 
+#begin CardArt/graveward.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/graveward.png
+
 #begin CardArt/hidden_kunai.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1765,6 +1858,17 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:TextureFormat=Color
 /build:CardArt/kunai.png
+
+#begin CardArt/lacerate.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/lacerate.png
 
 #begin CardArt/mantlet.png
 /importer:TextureImporter

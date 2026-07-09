@@ -73,14 +73,12 @@ public class CardApplicationManagementSystemTests
 			Apply(CardApplicationType.Scorched);
 			Apply(CardApplicationType.Thorned);
 			Apply(CardApplicationType.Colorless);
-			Apply(CardApplicationType.Cursed);
 
 			Assert.True(card.HasComponent<Frozen>());
 			Assert.True(card.HasComponent<Brittle>());
 			Assert.True(card.HasComponent<Scorched>());
 			Assert.True(card.HasComponent<Thorned>());
 			Assert.True(card.HasComponent<Colorless>());
-			Assert.True(card.HasComponent<Cursed>());
 		}
 		finally
 		{
@@ -99,7 +97,6 @@ public class CardApplicationManagementSystemTests
 	[InlineData(CardApplicationType.Colorless, RunScopedStateService.RestrictionColorless)]
 	[InlineData(CardApplicationType.Scorched, RunScopedStateService.RestrictionScorched)]
 	[InlineData(CardApplicationType.Thorned, RunScopedStateService.RestrictionThorned)]
-	[InlineData(CardApplicationType.Cursed, RunScopedStateService.RestrictionCursed)]
 	public void Exact_card_apply_and_remove_synchronize_persistence(
 		CardApplicationType type,
 		string restriction)
@@ -158,7 +155,6 @@ public class CardApplicationManagementSystemTests
 	[Theory]
 	[InlineData(RunScopedStateService.RestrictionScorched)]
 	[InlineData(RunScopedStateService.RestrictionThorned)]
-	[InlineData(RunScopedStateService.RestrictionCursed)]
 	public void Saved_new_status_restrictions_hydrate_onto_run_deck_cards(string restriction)
 	{
 		EventManager.Clear();
@@ -180,13 +176,8 @@ public class CardApplicationManagementSystemTests
 
 			if (restriction == RunScopedStateService.RestrictionScorched)
 				Assert.True(card.HasComponent<Scorched>());
-			else if (restriction == RunScopedStateService.RestrictionThorned)
-				Assert.True(card.HasComponent<Thorned>());
 			else
-			{
-				Assert.True(card.HasComponent<Cursed>());
-				Assert.Equal(Curse.CardIdValue, card.GetComponent<CardData>()?.Card?.CardId);
-			}
+				Assert.True(card.HasComponent<Thorned>());
 		}
 		finally
 		{
@@ -219,61 +210,6 @@ public class CardApplicationManagementSystemTests
 
 			Assert.Equal(1, new[] { first, second }.Count(card => card.HasComponent<Colorless>()));
 			Assert.True(first.HasComponent<Brittle>());
-		}
-		finally
-		{
-			EventManager.Clear();
-		}
-	}
-
-	[Fact]
-	public void Cursed_card_plays_as_curse_and_restores_original_tooltip_on_remove()
-	{
-		EventManager.Clear();
-		try
-		{
-			var entityManager = new EntityManager();
-			var card = EntityFactory.CreateCardFromDefinition(
-				entityManager,
-				"tempest",
-				CardData.CardColor.Black,
-				index: 0,
-				isUpgraded: true);
-			entityManager.AddComponent(card, new Brittle());
-			_ = new CardApplicationManagementSystem(entityManager);
-
-			EventManager.Publish(new ApplyCardApplicationEvent
-			{
-				Card = card,
-				Amount = 1,
-				Type = CardApplicationType.Cursed,
-				Target = CardApplicationTarget.Deck,
-			});
-
-			Assert.True(card.HasComponent<Cursed>());
-			Assert.Equal(Curse.CardIdValue, card.GetComponent<CardData>()?.Card?.CardId);
-			Assert.Equal(CardData.CardColor.Black, card.GetComponent<CardData>()?.Color);
-			var tooltip = card.GetComponent<CardTooltip>();
-			Assert.NotNull(tooltip);
-			Assert.Equal("tempest", tooltip.CardId);
-			Assert.Equal(CardData.CardColor.Black, tooltip.CardColor);
-			Assert.True(tooltip.IsUpgraded);
-			Assert.Contains(RunScopedStateService.RestrictionBrittle, tooltip.PreviewRestrictionNames);
-			Assert.DoesNotContain(RunScopedStateService.RestrictionCursed, tooltip.PreviewRestrictionNames);
-			Assert.Equal(TooltipType.Card, card.GetComponent<UIElement>()?.TooltipType);
-
-			EventManager.Publish(new RemoveCardApplication
-			{
-				Card = card,
-				Type = CardApplicationType.Cursed,
-			});
-
-			Assert.False(card.HasComponent<Cursed>());
-			Assert.False(card.HasComponent<CursedOriginalCard>());
-			Assert.Equal("tempest", card.GetComponent<CardData>()?.Card?.CardId);
-			Assert.True(card.GetComponent<CardData>()?.Card?.IsUpgraded);
-			Assert.Equal(TooltipType.Text, card.GetComponent<UIElement>()?.TooltipType);
-			Assert.Null(card.GetComponent<CardTooltip>());
 		}
 		finally
 		{
@@ -315,6 +251,48 @@ public class CardApplicationManagementSystemTests
 		}
 	}
 
+	[Fact]
+	public void Generic_system_ignores_cursed_events_without_throwing()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var deck = CreateDeck(entityManager);
+			var card = AddCard(entityManager, deck, deck.Hand, new Tempest());
+			_ = new CardApplicationManagementSystem(entityManager);
+
+			var exception = Record.Exception(() =>
+			{
+				EventManager.Publish(new ApplyCardApplicationEvent
+				{
+					Card = card,
+					Amount = 1,
+					Type = CardApplicationType.Cursed,
+					Target = CardApplicationTarget.Hand,
+				});
+				EventManager.Publish(new RemoveCardApplication
+				{
+					Card = card,
+					Type = CardApplicationType.Cursed,
+				});
+				EventManager.Publish(new RemoveCardApplications
+				{
+					Amount = 1,
+					Type = CardApplicationType.Cursed,
+					Target = CardApplicationTarget.Hand,
+				});
+			});
+
+			Assert.Null(exception);
+			Assert.False(card.HasComponent<Cursed>());
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
 	private static void Apply(CardApplicationType type)
 	{
 		EventManager.Publish(new ApplyCardApplicationEvent
@@ -334,7 +312,6 @@ public class CardApplicationManagementSystemTests
 			CardApplicationType.Scorched => card.HasComponent<Scorched>(),
 			CardApplicationType.Thorned => card.HasComponent<Thorned>(),
 			CardApplicationType.Colorless => card.HasComponent<Colorless>(),
-			CardApplicationType.Cursed => card.HasComponent<Cursed>(),
 			_ => false,
 		};
 	}

@@ -151,10 +151,10 @@ namespace Crusaders30XX.ECS.Services
 					}
 					break;
 				case RestrictionCursed:
-					CardApplicationManagementSystem.ApplyCursedRuntime(entityManager, card);
+					CursedManagementSystem.ApplyCursedRuntime(entityManager, card);
 					break;
 			}
-			CardApplicationManagementSystem.RefreshCursedCardPresentation(entityManager, card);
+			CursedManagementSystem.RefreshCursedCardPresentation(entityManager, card);
 		}
 
 		private static void StripRestrictionComponents(EntityManager entityManager, Entity card)
@@ -166,7 +166,7 @@ namespace Crusaders30XX.ECS.Services
 			if (card.HasComponent<Scorched>()) entityManager.RemoveComponent<Scorched>(card);
 			if (card.HasComponent<Thorned>()) entityManager.RemoveComponent<Thorned>(card);
 			if (card.HasComponent<Colorless>()) entityManager.RemoveComponent<Colorless>(card);
-			if (card.HasComponent<Cursed>()) CardApplicationManagementSystem.RemoveCursedRuntime(entityManager, card);
+			if (card.HasComponent<Cursed>()) CursedManagementSystem.RemoveCursedRuntime(entityManager, card);
 		}
 	}
 }

@@ -555,7 +555,81 @@ public class MedalCounterTests
 	}
 
 	[Fact]
-	public void StRita_emits_activate_on_curse_play()
+	public void StRita_emits_activate_on_curse_removal()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			_ = new CursedManagementSystem(entityManager);
+			var medal = new StRita();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var card = EntityFactory.CreateCardFromDefinition(
+				entityManager,
+				"increase_faith",
+				CardData.CardColor.Black,
+				index: 0);
+			CursedManagementSystem.ApplyCursedRuntime(entityManager, card);
+
+			EventManager.Publish(new RemoveCardApplication
+			{
+				Card = card,
+				Type = CardApplicationType.Cursed,
+			});
+
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StRita_emits_activate_on_cursed_runtime_card_removal()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			_ = new CursedManagementSystem(entityManager);
+			var medal = new StRita();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var card = EntityFactory.CreateCardFromDefinition(
+				entityManager,
+				"increase_faith",
+				CardData.CardColor.Black,
+				index: 0);
+			CursedManagementSystem.ApplyCursedRuntime(entityManager, card);
+
+			Assert.Equal(Curse.CardIdValue, card.GetComponent<CardData>()?.Card?.CardId);
+
+			EventManager.Publish(new RemoveCardApplication
+			{
+				Card = card,
+				Type = CardApplicationType.Cursed,
+			});
+
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StRita_does_not_trigger_on_card_play_without_removal()
 	{
 		EventManager.Clear();
 		try
@@ -563,6 +637,7 @@ public class MedalCounterTests
 			var entityManager = new EntityManager();
 			var medal = new StRita();
 			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
 
 			var activateCount = 0;
 			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
@@ -572,74 +647,64 @@ public class MedalCounterTests
 
 			EventManager.Publish(new CardPlayedEvent { Card = curseCard, PlayedAsCurse = true });
 
-			Assert.Equal(1, activateCount);
-		}
-		finally
-		{
-			EventManager.Clear();
-		}
-	}
-
-	[Fact]
-	public void StRita_emits_activate_on_cursed_runtime_card_play()
-	{
-		EventManager.Clear();
-		try
-		{
-			var entityManager = new EntityManager();
-			_ = new CardApplicationManagementSystem(entityManager);
-			var medal = new StRita();
-			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
-
-			var activateCount = 0;
-			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
-
-			var card = EntityFactory.CreateCardFromDefinition(
-				entityManager,
-				"increase_faith",
-				CardData.CardColor.Black,
-				index: 0);
-			CardApplicationManagementSystem.ApplyCursedRuntime(entityManager, card);
-
-			Assert.Equal(Curse.CardIdValue, card.GetComponent<CardData>()?.Card?.CardId);
-
-			card.GetComponent<CardData>()?.Card?.OnPlay?.Invoke(entityManager, card);
-
-			EventManager.Publish(new CardPlayedEvent { Card = card, PlayedAsCurse = true });
-
-			Assert.Equal(1, activateCount);
-		}
-		finally
-		{
-			EventManager.Clear();
-		}
-	}
-
-	[Fact]
-	public void StRita_does_not_trigger_when_PlayedAsCurse_false()
-	{
-		EventManager.Clear();
-		try
-		{
-			var entityManager = new EntityManager();
-			_ = new CardApplicationManagementSystem(entityManager);
-			var medal = new StRita();
-			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
-
-			var activateCount = 0;
-			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
-
-			var card = EntityFactory.CreateCardFromDefinition(
-				entityManager,
-				"increase_faith",
-				CardData.CardColor.Black,
-				index: 0);
-			CardApplicationManagementSystem.ApplyCursedRuntime(entityManager, card);
-			card.GetComponent<CardData>()?.Card?.OnPlay?.Invoke(entityManager, card);
-
-			EventManager.Publish(new CardPlayedEvent { Card = card, PlayedAsCurse = false });
-
 			Assert.Equal(0, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StRita_resets_and_triggers_once_per_battle()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			_ = new CursedManagementSystem(entityManager);
+			var medal = new StRita();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+			medal.OnAcquire();
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var card = EntityFactory.CreateCardFromDefinition(
+				entityManager,
+				"increase_faith",
+				CardData.CardColor.Black,
+				index: 0);
+			CursedManagementSystem.ApplyCursedRuntime(entityManager, card);
+
+			EventManager.Publish(new RemoveCardApplication
+			{
+				Card = card,
+				Type = CardApplicationType.Cursed,
+			});
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			var card2 = EntityFactory.CreateCardFromDefinition(
+				entityManager,
+				"tempest",
+				CardData.CardColor.White,
+				index: 1);
+			CursedManagementSystem.ApplyCursedRuntime(entityManager, card2);
+
+			EventManager.Publish(new RemoveCardApplication
+			{
+				Card = card2,
+				Type = CardApplicationType.Cursed,
+			});
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(1, medal.CurrentCount);
 		}
 		finally
 		{
