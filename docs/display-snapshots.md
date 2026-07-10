@@ -380,9 +380,30 @@ dialogue variant draws only the undimmed desert background and dialogue overlay.
 
 ---
 
-## Adding a new fixture
+## Adding or changing a fixture
 
-1. Implement `IDisplaySnapshotFixture` under `ECS/Diagnostics/Snapshots/Fixtures/`
-2. Register in `DisplaySnapshotRegistry`
-3. **Add a section to this document** with id, commands, output paths, and errors
-4. Add a verification line to the implementation plan / PR test notes
+1. Implement `IDisplaySnapshotFixture` under `ECS/Diagnostics/Snapshots/Fixtures/`.
+2. Register it in `DisplaySnapshotRegistry`.
+3. **Add or update a section in this document** with fixture id, command examples, output path, valid args, and error behavior.
+4. Generate or replace the approved baseline intentionally:
+
+```bash
+dotnet build
+dotnet run --no-build -- snapshot <fixture-id> [fixture-args...] --accept
+```
+
+5. Verify the accepted baseline passes:
+
+```bash
+dotnet run --no-build -- snapshot <fixture-id> [fixture-args...] --verify
+```
+
+6. Commit the approved baseline PNG under `tests/VisualBaselines/<fixture-id>/<slug>.png`.
+7. If the fixture has multiple variants, add or update a verification script under `scripts/` so future agents can run the full set without remembering every command.
+
+Remember:
+
+- `debug/snapshots/` contains generated captures, actuals, and diffs. Do not commit it.
+- `tests/VisualBaselines/` contains approved baselines. Commit intentional baseline changes.
+- `--accept` is a mutating operation. Use it only when the visual change is intentional.
+- `--verify` is the regression check.
