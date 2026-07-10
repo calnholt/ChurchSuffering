@@ -12,6 +12,17 @@ namespace Crusaders30XX.ECS.Services
 {
 	public static class RunEquipmentService
 	{
+		public static bool IsEquippedOnPlayer(EntityManager entityManager, string equipmentId)
+		{
+			if (entityManager == null || string.IsNullOrWhiteSpace(equipmentId)) return false;
+
+			return entityManager.GetEntitiesWithComponent<EquippedEquipment>()
+				.Any(entity => string.Equals(
+					entity.GetComponent<EquippedEquipment>()?.Equipment?.Id,
+					equipmentId,
+					StringComparison.OrdinalIgnoreCase));
+		}
+
 		public static Entity EquipOnPlayer(EntityManager entityManager, string equipmentId)
 		{
 			if (entityManager == null || string.IsNullOrWhiteSpace(equipmentId)) return null;

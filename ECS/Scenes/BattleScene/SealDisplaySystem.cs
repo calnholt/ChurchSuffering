@@ -112,7 +112,8 @@ namespace Crusaders30XX.ECS.Systems
 				EntityManager,
 				evt.Card,
 				evt.Position,
-				evt.Scale);
+				evt.Scale,
+				evt.Rotation);
 			var center = geometry.Center;
 			center.X += SealOffsetX * geometry.Scale;
 			center.Y += SealOffsetY * geometry.Scale;
@@ -121,7 +122,7 @@ namespace Crusaders30XX.ECS.Systems
 			int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
 			int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
 			var sealedComp = evt.Card.GetComponent<Sealed>();
-			DrawSealOverlay(center, cardWidth, cardHeight, geometry.Scale, geometry.Rotation, sealedComp?.Seals ?? 0);
+			DrawSealOverlay(center, cardWidth, cardHeight, geometry.Scale, evt.Rotation, sealedComp?.Seals ?? 0);
 		}
 
 		private void OnCardRenderScaledRotatedEvent(CardRenderScaledRotatedEvent evt)

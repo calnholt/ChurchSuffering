@@ -49,6 +49,10 @@ namespace Crusaders30XX.ECS.Events
 		public string RewardEquipmentId;
 	}
 
+	public class ShowBoosterPackOpeningOverlayEvent { }
+
+	public class CloseBoosterPackOpeningOverlayEvent { }
+
 	public class ShowNarrativeEventOverlay
 	{
 		public string RunMapEventId;

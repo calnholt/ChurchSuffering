@@ -31,6 +31,11 @@ namespace Crusaders30XX.ECS.Systems
             LoggingService.Append("UIElementEventDelegateService.HandleEvent", handleLog);
             switch(type)
             {
+				case UIElementEventType.BoosterPackOpeningClose:
+				{
+					EventManager.Publish(new CloseBoosterPackOpeningOverlayEvent());
+					break;
+				}
                 case UIElementEventType.ConfirmBlocks:
                 {
                     EventManager.Publish(new ConfirmBlocksRequested());

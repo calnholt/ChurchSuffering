@@ -25,6 +25,7 @@ namespace Crusaders30XX.ECS.Events
         public Vector2 Position { get; set; }
         public float Scale { get; set; } = 1f;
         public float Alpha { get; set; } = 1f;
+        public float Rotation { get; set; } = 0f;
         /// <summary>
         /// Optional clip rectangle. If set, the card will be clipped to this region using scissor test.
         /// </summary>

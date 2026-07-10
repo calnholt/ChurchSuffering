@@ -4,6 +4,7 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Equipment;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
@@ -19,16 +20,12 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		private const string FreeActionTagText = "FREE ACTION";
 
-		// v1 mockup .tooltip .tag
-		private static readonly Color TagFill = new Color(255, 255, 255, 15);
-		private static readonly Color TagBorder = new Color(255, 255, 255, 46);
-		private static readonly Color TagText = new Color(200, 192, 184);
-
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ImageAssetService _imageAssets;
 		private readonly Texture2D _pixel;
 		private readonly Dictionary<(int Width, int Height, int Radius), Texture2D> _roundedRectCache = new();
+		private readonly Dictionary<(int Width, int Height, int RadiusTL, int RadiusTR, int RadiusBR, int RadiusBL), Texture2D> _perCornerRoundedRectCache = new();
 		private readonly string _tooltipEntityName;
 
 		[DebugEditable(DisplayName = "Tooltip Width", Step = 1, Min = 180, Max = 600)]
@@ -40,14 +37,8 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Tooltip Gap", Step = 1, Min = 0, Max = 100)]
 		public int TooltipGap { get; set; } = 20;
 
-		[DebugEditable(DisplayName = "Tooltip Border", Step = 1, Min = 1, Max = 12)]
-		public int BorderThickness { get; set; } = 2;
-
 		[DebugEditable(DisplayName = "Tooltip Radius", Step = 1, Min = 0, Max = 40)]
 		public int CornerRadius { get; set; } = 8;
-
-		[DebugEditable(DisplayName = "Color Stripe Width", Step = 1, Min = 1, Max = 30)]
-		public int StripeWidth { get; set; } = 6;
 
 		[DebugEditable(DisplayName = "Stat Gutter Width", Step = 1, Min = 30, Max = 120)]
 		public int GutterWidth { get; set; } = 54;
@@ -58,20 +49,71 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Chip Size", Step = 1, Min = 20, Max = 100)]
 		public int ChipSize { get; set; } = 38;
 
-		[DebugEditable(DisplayName = "Body Padding", Step = 1, Min = 0, Max = 60)]
-		public int BodyPadding { get; set; } = 12;
+		[DebugEditable(DisplayName = "Chip Label Height", Step = 1, Min = 6, Max = 30)]
+		public int ChipLabelHeight { get; set; } = 13;
+
+		[DebugEditable(DisplayName = "Chip Value Height", Step = 1, Min = 10, Max = 60)]
+		public int ChipValueHeight { get; set; } = 25;
+
+		[DebugEditable(DisplayName = "Chip Corner Radius", Step = 1, Min = 0, Max = 20)]
+		public int ChipCornerRadius { get; set; } = 3;
+
+		[DebugEditable(DisplayName = "Gutter Padding Top", Step = 1, Min = 0, Max = 40)]
+		public int GutterPaddingTop { get; set; } = 10;
+
+		[DebugEditable(DisplayName = "Gutter Padding Bottom", Step = 1, Min = 0, Max = 40)]
+		public int GutterPaddingBottom { get; set; } = 12;
+
+		[DebugEditable(DisplayName = "Gutter Gap", Step = 1, Min = 0, Max = 40)]
+		public int GutterGap { get; set; } = 8;
+
+		[DebugEditable(DisplayName = "Body Padding Top", Step = 1, Min = 0, Max = 60)]
+		public int BodyPaddingTop { get; set; } = 12;
+
+		[DebugEditable(DisplayName = "Body Padding Right", Step = 1, Min = 0, Max = 60)]
+		public int BodyPaddingRight { get; set; } = 14;
+
+		[DebugEditable(DisplayName = "Body Padding Bottom", Step = 1, Min = 0, Max = 60)]
+		public int BodyPaddingBottom { get; set; } = 12;
+
+		[DebugEditable(DisplayName = "Body Padding Left", Step = 1, Min = 0, Max = 60)]
+		public int BodyPaddingLeft { get; set; } = 10;
+
+		[DebugEditable(DisplayName = "Body Gap", Step = 1, Min = 0, Max = 30)]
+		public int BodyGap { get; set; } = 6;
+
+		[DebugEditable(DisplayName = "Rule Height", Step = 1, Min = 1, Max = 8)]
+		public int RuleHeight { get; set; } = 2;
+
+		[DebugEditable(DisplayName = "Text Block Padding X", Step = 1, Min = 0, Max = 30)]
+		public int TextBlockPaddingX { get; set; } = 6;
+
+		[DebugEditable(DisplayName = "Text Block Padding Y", Step = 1, Min = 0, Max = 30)]
+		public int TextBlockPaddingY { get; set; } = 4;
+
+		[DebugEditable(DisplayName = "Text Block Radius", Step = 1, Min = 0, Max = 20)]
+		public int TextBlockCornerRadius { get; set; } = 3;
+
+		[DebugEditable(DisplayName = "Body Line Height", Step = 0.01f, Min = 0.5f, Max = 3f)]
+		public float BodyLineHeightMultiplier { get; set; } = 1f;
+
+		[DebugEditable(DisplayName = "Shadow Offset Y", Step = 1, Min = 0, Max = 30)]
+		public int ShadowOffsetY { get; set; } = 6;
+
+		[DebugEditable(DisplayName = "Shadow Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float ShadowAlpha { get; set; } = 0.55f;
 
 		[DebugEditable(DisplayName = "Title Font Scale", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float TitleFontScale { get; set; } = 0.16f;
+		public float TitleFontScale { get; set; } = 0.14f;
 
 		[DebugEditable(DisplayName = "Body Font Scale", Step = 0.01f, Min = 0.01f, Max = 1f)]
 		public float BodyFontScale { get; set; } = 0.10f;
 
 		[DebugEditable(DisplayName = "Chip Value Font Scale", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float ChipValueFontScale { get; set; } = 0.14f;
+		public float ChipValueFontScale { get; set; } = 0.13f;
 
 		[DebugEditable(DisplayName = "Chip Label Font Scale", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float ChipLabelFontScale { get; set; } = 0.05f;
+		public float ChipLabelFontScale { get; set; } = 0.06f;
 
 		[DebugEditable(DisplayName = "Tag Font Scale", Step = 0.01f, Min = 0.01f, Max = 1f)]
 		public float TagFontScale { get; set; } = 0.070f;
@@ -106,6 +148,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				_pixel = _imageAssets.GetPixel(Color.White);
 			}
+			EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCaches);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -239,53 +282,69 @@ namespace Crusaders30XX.ECS.Systems
 			var flavorFont = FontSingleton.ChakraPetchBoldItalicFont;
 			if (titleFont == null || bodyFont == null || flavorFont == null) return TooltipMinHeight;
 
-			int bodyWidth = Math.Max(
-				1,
-				TooltipWidth - StripeWidth - GutterWidth - BodyPadding * 2);
-			float height = BodyPadding;
-			height += titleFont.MeasureString(equipment.Name ?? string.Empty).Y * TitleFontScale;
-			height += 10;
-			height += MeasureWrappedHeight(bodyFont, equipment.Text, BodyFontScale, bodyWidth);
+			int bodyWidth = Math.Max(1, TooltipWidth - GutterWidth - BodyPaddingLeft - BodyPaddingRight);
+			float bodyHeight = BodyPaddingTop;
+			bodyHeight += titleFont.MeasureString(equipment.Name ?? string.Empty).Y * TitleFontScale;
+			bodyHeight += BodyGap;
+			bodyHeight += RuleHeight;
+			bodyHeight += BodyGap;
+			bodyHeight += MeasureTextBlockHeight(bodyFont, equipment.Text, BodyFontScale, bodyWidth);
 			if (!string.IsNullOrWhiteSpace(equipment.Text)
 				&& !string.IsNullOrWhiteSpace(equipment.FlavorText))
 			{
-				height += 6;
+				bodyHeight += BodyGap;
 			}
-			height += MeasureWrappedHeight(flavorFont, equipment.FlavorText, BodyFontScale, bodyWidth);
+			bodyHeight += MeasureTextBlockHeight(flavorFont, equipment.FlavorText, BodyFontScale, bodyWidth);
 			if (equipment.CanActivateDuringActionPhase)
 			{
-				height += TagRowPaddingTop
+				bodyHeight += TagRowPaddingTop
 					+ TagPaddingY * 2
 					+ bodyFont.MeasureString(FreeActionTagText).Y * TagFontScale;
 			}
-			height += BodyPadding;
-			return Math.Max(TooltipMinHeight, (int)Math.Ceiling(height));
+			bodyHeight += BodyPaddingBottom;
+
+			float gutterHeight = GutterPaddingTop
+				+ GutterIconSize
+				+ GutterGap
+				+ ChipLabelHeight
+				+ ChipValueHeight
+				+ GutterGap
+				+ ChipLabelHeight
+				+ ChipValueHeight
+				+ GutterPaddingBottom;
+			return Math.Max(TooltipMinHeight, (int)Math.Ceiling(Math.Max(bodyHeight, gutterHeight)));
 		}
 
 		private void DrawTooltip(Rectangle bounds, EquippedEquipment equipped, float alpha)
 		{
 			var equipment = equipped.Equipment;
-			Color border = new Color(255, 255, 255, 217) * alpha;
-			DrawRoundedRect(bounds, border);
-			var inner = Inset(bounds, BorderThickness);
-			DrawRoundedRect(inner, new Color(8, 8, 8, 240) * alpha);
-
-			var stripe = new Rectangle(inner.X, inner.Y, Math.Min(StripeWidth, inner.Width), inner.Height);
-			_spriteBatch.Draw(_pixel, stripe, GetStripeColor(equipment.Color) * alpha);
+			var shadow = new Rectangle(
+				bounds.X,
+				bounds.Y + ShadowOffsetY,
+				bounds.Width,
+				Math.Max(1, bounds.Height - ShadowOffsetY));
+			DrawRoundedRect(shadow, Color.Black * ShadowAlpha * alpha);
+			DrawRoundedRect(bounds, CardPalette.Background(equipment.Color) * alpha);
 
 			var gutter = new Rectangle(
-				stripe.Right,
-				inner.Y,
-				Math.Min(GutterWidth, Math.Max(1, inner.Right - stripe.Right)),
-				inner.Height);
-			_spriteBatch.Draw(_pixel, gutter, new Color(0, 0, 0, 70) * alpha);
+				bounds.X,
+				bounds.Y,
+				Math.Min(GutterWidth, bounds.Width),
+				bounds.Height);
+			DrawRoundedRectPerCorner(
+				gutter,
+				CardPalette.Gutter(equipment.Color) * alpha,
+				CornerRadius,
+				0,
+				0,
+				CornerRadius);
 			DrawGutter(gutter, equipment, alpha);
 
 			var body = new Rectangle(
 				gutter.Right,
-				inner.Y,
-				Math.Max(1, inner.Right - gutter.Right),
-				inner.Height);
+				bounds.Y,
+				Math.Max(1, bounds.Right - gutter.Right),
+				bounds.Height);
 			DrawBody(body, equipment, alpha);
 		}
 
@@ -295,7 +354,7 @@ namespace Crusaders30XX.ECS.Systems
 			float alpha)
 		{
 			int x = gutter.Center.X;
-			int y = gutter.Y + 10;
+			int y = gutter.Y + GutterPaddingTop;
 			var icon = GetIcon(equipment.Slot);
 			if (icon != null)
 			{
@@ -306,49 +365,76 @@ namespace Crusaders30XX.ECS.Systems
 					GutterIconSize);
 				_spriteBatch.Draw(icon, iconBounds, Color.White * alpha);
 			}
-			y += GutterIconSize + 8;
+			y += GutterIconSize + GutterGap;
 
-			var blockChip = new Rectangle(x - ChipSize / 2, y, ChipSize, ChipSize);
-			DrawChip(blockChip, equipment.Block.ToString(), "BLOCK", new Color(42, 74, 94), alpha);
-			y += ChipSize + 8;
-			var usesChip = new Rectangle(x - ChipSize / 2, y, ChipSize, ChipSize);
-			DrawChip(
+			int chipHeight = Math.Max(1, ChipLabelHeight + ChipValueHeight);
+			var blockChip = new Rectangle(x - ChipSize / 2, y, ChipSize, chipHeight);
+			DrawChipStack(
+				blockChip,
+				equipment.Block.ToString(),
+				"BLOCK",
+				CardPalette.BlockLabelSlabBackground(equipment.Color),
+				CardPalette.BlockLabelSlabText(equipment.Color),
+				CardPalette.BlockChipBackground(equipment.Color),
+				CardPalette.BlockChipText(equipment.Color),
+				alpha);
+			y += chipHeight + GutterGap;
+			var usesChip = new Rectangle(x - ChipSize / 2, y, ChipSize, chipHeight);
+			DrawChipStack(
 				usesChip,
 				Math.Max(0, equipment.RemainingUses).ToString(),
 				"USES",
-				new Color(29, 29, 29),
-				alpha,
-				new Color(255, 255, 255, 50));
+				CardPalette.EquipmentUseLabelSlabBackground,
+				CardPalette.EquipmentUseLabelSlabText,
+				CardPalette.EquipmentUseChipBackground,
+				CardPalette.EquipmentUseChipText,
+				alpha);
 		}
 
-		private void DrawChip(
+		private void DrawChipStack(
 			Rectangle bounds,
 			string value,
 			string label,
-			Color fill,
-			float alpha,
-			Color? border = null)
+			Color labelFill,
+			Color labelText,
+			Color valueFill,
+			Color valueText,
+			float alpha)
 		{
-			_spriteBatch.Draw(_pixel, bounds, fill * alpha);
-			if (border.HasValue)
-			{
-				DrawBorder(bounds, border.Value * alpha, 1);
-			}
-
 			var valueFont = FontSingleton.TitleFont;
 			var labelFont = FontSingleton.ChakraPetchFont;
 			if (valueFont == null || labelFont == null) return;
+			var labelBounds = new Rectangle(bounds.X, bounds.Y, bounds.Width, Math.Min(ChipLabelHeight, bounds.Height));
+			var valueBounds = new Rectangle(
+				bounds.X,
+				labelBounds.Bottom,
+				bounds.Width,
+				Math.Max(1, bounds.Bottom - labelBounds.Bottom));
+			DrawRoundedRectPerCorner(
+				labelBounds,
+				labelFill * alpha,
+				ChipCornerRadius,
+				ChipCornerRadius,
+				0,
+				0);
+			DrawRoundedRectPerCorner(
+				valueBounds,
+				valueFill * alpha,
+				0,
+				0,
+				ChipCornerRadius,
+				ChipCornerRadius);
+
 			Vector2 valueSize = valueFont.MeasureString(value) * ChipValueFontScale;
 			Vector2 labelSize = labelFont.MeasureString(label) * ChipLabelFontScale;
-			float totalHeight = valueSize.Y + labelSize.Y - 2f;
-			var valuePos = new Vector2(
-				bounds.Center.X - valueSize.X / 2f,
-				bounds.Center.Y - totalHeight / 2f);
 			var labelPos = new Vector2(
 				bounds.Center.X - labelSize.X / 2f,
-				valuePos.Y + valueSize.Y - 2f);
-			_spriteBatch.DrawString(valueFont, value, valuePos, Color.White * alpha, 0f, Vector2.Zero, ChipValueFontScale, SpriteEffects.None, 0f);
-			_spriteBatch.DrawString(labelFont, label, labelPos, Color.White * alpha, 0f, Vector2.Zero, ChipLabelFontScale, SpriteEffects.None, 0f);
+				labelBounds.Center.Y - labelSize.Y / 2f);
+			var valuePos = new Vector2(
+				bounds.Center.X - valueSize.X / 2f,
+				valueBounds.Center.Y - valueSize.Y / 2f);
+			_spriteBatch.DrawString(labelFont, label, labelPos, labelText * alpha, 0f, Vector2.Zero, ChipLabelFontScale, SpriteEffects.None, 0f);
+			_spriteBatch.DrawString(valueFont, value, valuePos, valueText * alpha, 0f, Vector2.Zero, ChipValueFontScale, SpriteEffects.None, 0f);
 		}
 
 		private void DrawBody(
@@ -361,48 +447,52 @@ namespace Crusaders30XX.ECS.Systems
 			var flavorFont = FontSingleton.ChakraPetchBoldItalicFont;
 			if (titleFont == null || bodyFont == null || flavorFont == null) return;
 
-			int contentWidth = Math.Max(1, body.Width - BodyPadding * 2);
-			float x = body.X + BodyPadding;
-			float y = body.Y + BodyPadding;
+			int contentWidth = Math.Max(1, body.Width - BodyPaddingLeft - BodyPaddingRight);
+			float x = body.X + BodyPaddingLeft;
+			float y = body.Y + BodyPaddingTop;
 			string name = equipment.Name ?? equipment.Id ?? string.Empty;
 			_spriteBatch.DrawString(
 				titleFont,
 				name,
 				new Vector2(x, y),
-				Color.White * alpha,
+				CardPalette.NameText(equipment.Color) * alpha,
 				0f,
 				Vector2.Zero,
 				TitleFontScale,
 				SpriteEffects.None,
 				0f);
-			y += titleFont.MeasureString(name).Y * TitleFontScale + 5f;
+			y += titleFont.MeasureString(name).Y * TitleFontScale + BodyGap;
 			_spriteBatch.Draw(
 				_pixel,
-				new Rectangle((int)x, (int)y, contentWidth, 2),
-				GetStripeColor(equipment.Color) * alpha);
-			y += 8f;
+				new Rectangle((int)x, (int)y, contentWidth, RuleHeight),
+				CardPalette.RuleLine(equipment.Color) * alpha);
+			y += RuleHeight + BodyGap;
 
-			y = DrawWrappedText(
+			y = DrawTextBlock(
 				bodyFont,
 				equipment.Text,
 				new Vector2(x, y),
 				contentWidth,
-				new Color(184, 176, 168) * alpha);
+				CardPalette.NameText(equipment.Color) * alpha,
+				CardPalette.TextBackground(equipment.Color) * alpha,
+				BodyFontScale);
 			if (!string.IsNullOrWhiteSpace(equipment.Text)
 				&& !string.IsNullOrWhiteSpace(equipment.FlavorText))
 			{
-				y += 6f;
+				y += BodyGap;
 			}
-			y = DrawWrappedText(
+			y = DrawTextBlock(
 				flavorFont,
 				equipment.FlavorText,
 				new Vector2(x, y),
 				contentWidth,
-				new Color(200, 192, 184) * alpha);
+				CardPalette.NameText(equipment.Color) * alpha,
+				CardPalette.TextBackground(equipment.Color) * alpha,
+				BodyFontScale);
 
 			if (equipment.CanActivateDuringActionPhase)
 			{
-				DrawFreeActionTag(body, bodyFont, x, y, alpha);
+				DrawFreeActionTag(body, bodyFont, x, y, equipment.Color, alpha);
 			}
 		}
 
@@ -411,15 +501,22 @@ namespace Crusaders30XX.ECS.Systems
 			SpriteFont bodyFont,
 			float contentX,
 			float contentY,
+			CardData.CardColor color,
 			float alpha)
 		{
 			var tagBounds = ComputeFreeActionTagBounds(bodyFont, body, contentX, contentY);
-			DrawRoundedFilledBordered(tagBounds, TagCornerRadius, 1, TagFill, TagBorder, alpha);
+			DrawRoundedFilledBordered(
+				tagBounds,
+				TagCornerRadius,
+				1,
+				CardPalette.Background(color),
+				CardPalette.FreeChipBorder(color),
+				alpha);
 			_spriteBatch.DrawString(
 				bodyFont,
 				FreeActionTagText,
 				new Vector2(tagBounds.X + TagPaddingX, tagBounds.Y + TagPaddingY),
-				TagText * alpha,
+				CardPalette.FreeChipText(color) * alpha,
 				0f,
 				Vector2.Zero,
 				TagFontScale,
@@ -436,7 +533,7 @@ namespace Crusaders30XX.ECS.Systems
 			Vector2 textSize = font.MeasureString(FreeActionTagText) * TagFontScale;
 			int pillW = (int)Math.Ceiling(textSize.X) + TagPaddingX * 2;
 			int pillH = (int)Math.Ceiling(textSize.Y) + TagPaddingY * 2;
-			int pillY = body.Bottom - BodyPadding - pillH;
+			int pillY = body.Bottom - BodyPaddingBottom - pillH;
 			pillY = Math.Max((int)(contentY + TagRowPaddingTop), pillY);
 			return new Rectangle((int)contentX, pillY, pillW, pillH);
 		}
@@ -455,42 +552,57 @@ namespace Crusaders30XX.ECS.Systems
 			DrawRoundedRectWithRadius(inner, fill * alpha, Math.Max(0, radius - borderThickness));
 		}
 
-		private float DrawWrappedText(
+		private float DrawTextBlock(
 			SpriteFont font,
 			string text,
 			Vector2 position,
 			int maxWidth,
-			Color color)
+			Color textColor,
+			Color fillColor,
+			float scale)
 		{
 			if (string.IsNullOrWhiteSpace(text)) return position.Y;
-			var lines = TextUtils.WrapText(font, text, BodyFontScale, maxWidth);
-			float y = position.Y;
-			float lineHeight = font.LineSpacing * BodyFontScale;
+			int innerWidth = Math.Max(1, maxWidth - TextBlockPaddingX * 2);
+			var lines = TextUtils.WrapText(font, text, scale, innerWidth);
+			float lineHeight = font.LineSpacing * scale * BodyLineHeightMultiplier;
+			int blockHeight = Math.Max(
+				1,
+				(int)Math.Ceiling(lines.Count * lineHeight + TextBlockPaddingY * 2));
+			var blockBounds = new Rectangle(
+				(int)position.X,
+				(int)position.Y,
+				maxWidth,
+				blockHeight);
+			DrawRoundedRectWithRadius(blockBounds, fillColor, TextBlockCornerRadius);
+
+			float y = position.Y + TextBlockPaddingY;
 			foreach (string line in lines)
 			{
 				_spriteBatch.DrawString(
 					font,
 					line,
-					new Vector2(position.X, y),
-					color,
+					new Vector2(position.X + TextBlockPaddingX, y),
+					textColor,
 					0f,
 					Vector2.Zero,
-					BodyFontScale,
+					scale,
 					SpriteEffects.None,
 					0f);
 				y += lineHeight;
 			}
-			return y;
+			return blockBounds.Bottom;
 		}
 
-		private static float MeasureWrappedHeight(
+		private float MeasureTextBlockHeight(
 			SpriteFont font,
 			string text,
 			float scale,
 			int maxWidth)
 		{
 			if (string.IsNullOrWhiteSpace(text)) return 0f;
-			return TextUtils.WrapText(font, text, scale, maxWidth).Count * font.LineSpacing * scale;
+			int innerWidth = Math.Max(1, maxWidth - TextBlockPaddingX * 2);
+			int lineCount = TextUtils.WrapText(font, text, scale, innerWidth).Count;
+			return lineCount * font.LineSpacing * scale * BodyLineHeightMultiplier + TextBlockPaddingY * 2;
 		}
 
 		private Texture2D GetIcon(EquipmentSlot slot)
@@ -521,12 +633,36 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch.Draw(texture, bounds, color);
 		}
 
-		private void DrawBorder(Rectangle bounds, Color color, int thickness)
+		private void DrawRoundedRectPerCorner(
+			Rectangle bounds,
+			Color color,
+			int radiusTL,
+			int radiusTR,
+			int radiusBR,
+			int radiusBL)
 		{
-			_spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, bounds.Width, thickness), color);
-			_spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Bottom - thickness, bounds.Width, thickness), color);
-			_spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, thickness, bounds.Height), color);
-			_spriteBatch.Draw(_pixel, new Rectangle(bounds.Right - thickness, bounds.Y, thickness, bounds.Height), color);
+			if (bounds.Width <= 0 || bounds.Height <= 0) return;
+			int maxRadius = Math.Min(bounds.Width, bounds.Height) / 2;
+			var key = (
+				Width: bounds.Width,
+				Height: bounds.Height,
+				RadiusTL: Math.Min(Math.Max(0, radiusTL), maxRadius),
+				RadiusTR: Math.Min(Math.Max(0, radiusTR), maxRadius),
+				RadiusBR: Math.Min(Math.Max(0, radiusBR), maxRadius),
+				RadiusBL: Math.Min(Math.Max(0, radiusBL), maxRadius));
+			if (!_perCornerRoundedRectCache.TryGetValue(key, out var texture))
+			{
+				texture = RoundedRectTextureFactory.CreateRoundedRectPerCorner(
+					_graphicsDevice,
+					key.Width,
+					key.Height,
+					key.RadiusTL,
+					key.RadiusTR,
+					key.RadiusBR,
+					key.RadiusBL);
+				_perCornerRoundedRectCache[key] = texture;
+			}
+			_spriteBatch.Draw(texture, bounds, color);
 		}
 
 		private static Rectangle Inset(Rectangle bounds, int amount)
@@ -538,15 +674,10 @@ namespace Crusaders30XX.ECS.Systems
 				Math.Max(1, bounds.Height - amount * 2));
 		}
 
-		private static Color GetStripeColor(CardData.CardColor color)
+		private void OnDeleteCaches(DeleteCachesEvent evt)
 		{
-			return color switch
-			{
-				CardData.CardColor.Red => new Color(204, 34, 34),
-				CardData.CardColor.White => new Color(153, 153, 153),
-				CardData.CardColor.Black => new Color(51, 51, 51),
-				_ => new Color(128, 128, 128),
-			};
+			_roundedRectCache.Clear();
+			_perCornerRoundedRectCache.Clear();
 		}
 	}
 }

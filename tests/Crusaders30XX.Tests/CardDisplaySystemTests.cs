@@ -1,4 +1,5 @@
 using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Systems;
 using Xunit;
 
@@ -6,6 +7,12 @@ namespace Crusaders30XX.Tests;
 
 public sealed class CardDisplaySystemTests
 {
+	[Fact]
+	public void CardRenderScaledEvent_defaults_to_zero_rotation()
+	{
+		Assert.Equal(0f, new CardRenderScaledEvent().Rotation);
+	}
+
     [Fact]
     public void CreateDescriptionTextLayout_keepsWrapMetricsStableAcrossVisualScales()
     {

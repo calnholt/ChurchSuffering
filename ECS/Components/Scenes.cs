@@ -328,6 +328,70 @@ namespace Crusaders30XX.ECS.Components
 			public float DeckColumnSelectionElapsedSeconds { get; set; } = 0f;
 		}
 
+		public enum BoosterPackLootKind
+		{
+			Card,
+			Medal,
+			Equipment,
+		}
+
+		public enum BoosterPackOpeningPhase
+		{
+			Summon,
+			Idle,
+			Charge,
+			Crack,
+			Rupture,
+			Showcase,
+			Ready,
+		}
+
+		public class BoosterPackLootPreview
+		{
+			public BoosterPackLootKind Kind { get; set; }
+			public string Id { get; set; } = string.Empty;
+			public CardData.CardColor CardColor { get; set; } = CardData.CardColor.White;
+			public Entity PreviewEntity { get; set; }
+			public float RevealDelaySeconds { get; set; }
+		}
+
+		public class BoosterPackOpeningOverlayState : IComponent
+		{
+			public Entity Owner { get; set; }
+			public bool IsOpen { get; set; }
+			public bool CanDismiss { get; set; }
+			public float ElapsedSeconds { get; set; }
+			public float PreviousElapsedSeconds { get; set; }
+			public float NextChargeParticleSeconds { get; set; }
+			public BoosterPackOpeningPhase Phase { get; set; }
+			public List<BoosterPackLootPreview> Loot { get; set; } = new();
+			public List<BoosterPackParticleFx> Particles { get; set; } = new();
+			public List<BoosterPackShardFx> Shards { get; set; } = new();
+		}
+
+		public class BoosterPackParticleFx
+		{
+			public Vector2 Start { get; set; }
+			public Vector2 Delta { get; set; }
+			public float Width { get; set; }
+			public float Length { get; set; }
+			public Color Color { get; set; }
+			public float StartSeconds { get; set; }
+			public float DurationSeconds { get; set; }
+			public bool IsInward { get; set; }
+		}
+
+		public class BoosterPackShardFx
+		{
+			public Vector2 Start { get; set; }
+			public Vector2 Delta { get; set; }
+			public float Width { get; set; }
+			public float Height { get; set; }
+			public float RotationRadians { get; set; }
+			public float StartSeconds { get; set; }
+			public float DurationSeconds { get; set; }
+		}
+
 	public class PendingQuestDialog : IComponent
 	{
 		public Entity Owner { get; set; }

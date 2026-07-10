@@ -205,164 +205,6 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Colorless Surface B", Step = 1, Min = 0, Max = 255)]
         public int ColorlessSurfaceB { get; set; } = 66;
 
-        // Color Palettes
-        private static readonly Dictionary<CardData.CardColor, Color> BgColors = new()
-        {
-            { CardData.CardColor.White, new Color(220, 215, 206) },
-            { CardData.CardColor.Red,   new Color(78, 12, 12) },
-            { CardData.CardColor.Black, new Color(19, 19, 19) },
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> StripeColors = new()
-        {
-            { CardData.CardColor.White, new Color(153, 153, 153) },
-            { CardData.CardColor.Red,   new Color(204, 34, 34) },
-            { CardData.CardColor.Black, new Color(51, 51, 51) },  // #333
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> GutterColors = new()
-        {
-            { CardData.CardColor.White, Color.Black * 0.05f },
-            { CardData.CardColor.Red,   Color.Black * 0.22f },
-            { CardData.CardColor.Black, Color.White * 0.025f },
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> NameTextColors = new()
-        {
-            { CardData.CardColor.White, new Color(26, 26, 26) },
-            { CardData.CardColor.Red,   new Color(240, 224, 216) },
-            { CardData.CardColor.Black, new Color(232, 228, 224) },
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> TypeTextColors = new()
-        {
-            { CardData.CardColor.White, new Color(153, 153, 153) },
-            { CardData.CardColor.Red,   new Color(136, 68, 51) },
-            { CardData.CardColor.Black, new Color(85, 85, 85) },
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> CostLabelColors = new()
-        {
-            { CardData.CardColor.White, new Color(153, 153, 153) },
-            { CardData.CardColor.Red,   new Color(136, 68, 51) },
-            { CardData.CardColor.Black, new Color(85, 85, 85) },
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> CostPipAnyColors = new()
-        {
-            { CardData.CardColor.White, new Color(160, 152, 136) },
-            { CardData.CardColor.Red,   new Color(102, 102, 102) },
-            { CardData.CardColor.Black, new Color(85, 85, 85) },
-        };
-
-        private static readonly Color CostPipRedColor = new Color(204, 34, 34);
-        private static readonly Color CostPipWhiteColor = Color.White;
-        private static readonly Color CostPipBlackColor = new Color(19, 19, 19);
-
-        private static readonly Dictionary<CardData.CardColor, Color> CostPipOutlineColors = new()
-        {
-            { CardData.CardColor.White, Color.Black },
-            { CardData.CardColor.Red,   Color.Black },
-            { CardData.CardColor.Black, Color.White },
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> RuleLineColors = new()
-        {
-            { CardData.CardColor.White, new Color(192, 184, 170) },
-            { CardData.CardColor.Red,   new Color(68, 32, 32) },
-            { CardData.CardColor.Black, new Color(51, 51, 51) },
-        };
-
-        private static readonly Dictionary<CardData.CardColor, Color> TextBackgroundColors = new()
-        {
-            { CardData.CardColor.White, new Color(238, 233, 222) },
-            { CardData.CardColor.Red,   new Color(44, 10, 10) },
-            { CardData.CardColor.Black, new Color(8, 8, 8) },
-        };
-        private static readonly Color WeaponTextBackgroundColor = new Color(154, 112, 72);
-
-        // BLK Chip Colors (solid fill)
-        private static readonly Dictionary<CardData.CardColor, Color> BlkChipBgColors = new()
-        {
-            { CardData.CardColor.White, new Color(74, 122, 154) },
-            { CardData.CardColor.Red,   new Color(42, 74, 94) },
-            { CardData.CardColor.Black, new Color(42, 74, 94) },
-        };
-        private static readonly Dictionary<CardData.CardColor, Color> BlkChipTextColors = new()
-        {
-            { CardData.CardColor.White, Color.White },
-            { CardData.CardColor.Red,   new Color(176, 212, 232) },
-            { CardData.CardColor.Black, new Color(176, 212, 232) },
-        };
-
-        // BLK Label Slab Colors
-        private static readonly Dictionary<CardData.CardColor, Color> BlkLabelSlabBgColors = new()
-        {
-            { CardData.CardColor.White, new Color(40, 80, 120) * 0.2f },
-            { CardData.CardColor.Red,   new Color(50, 100, 140) * 0.4f },
-            { CardData.CardColor.Black, new Color(50, 100, 140) * 0.4f },
-        };
-        private static readonly Dictionary<CardData.CardColor, Color> BlkLabelSlabTextColors = new()
-        {
-            { CardData.CardColor.White, new Color(90, 138, 170) },
-            { CardData.CardColor.Red,   new Color(138, 184, 216) },
-            { CardData.CardColor.Black, new Color(138, 184, 216) },
-        };
-
-        // ATK Label Slab Colors (same for all variants)
-        private static readonly Color AtkLabelSlabBgColor = new Color(153, 26, 26);
-        private static readonly Color AtkLabelSlabTextColor = new Color(255, 204, 187);
-
-        // AP Chip Colors
-        private static readonly Dictionary<CardData.CardColor, Color> ApChipBgColors = new()
-        {
-            { CardData.CardColor.White, new Color(68, 68, 68) },
-            { CardData.CardColor.Red,   new Color(51, 14, 14) },
-            { CardData.CardColor.Black, Color.White * 0.15f },
-        };
-        private static readonly Dictionary<CardData.CardColor, Color> ApChipTextColors = new()
-        {
-            { CardData.CardColor.White, new Color(221, 221, 221) },
-            { CardData.CardColor.Red,   new Color(221, 68, 51) },
-            { CardData.CardColor.Black, new Color(224, 224, 224) },
-        };
-
-        // AP Label Slab Colors
-        private static readonly Dictionary<CardData.CardColor, Color> ApLabelSlabBgColors = new()
-        {
-            { CardData.CardColor.White, new Color(85, 85, 85) },
-            { CardData.CardColor.Red,   new Color(74, 26, 26) },
-            { CardData.CardColor.Black, Color.White * 0.06f },
-        };
-        private static readonly Dictionary<CardData.CardColor, Color> ApLabelSlabTextColors = new()
-        {
-            { CardData.CardColor.White, new Color(221, 221, 221) },
-            { CardData.CardColor.Red,   new Color(187, 102, 85) },
-            { CardData.CardColor.Black, new Color(136, 136, 136) },
-        };
-
-        // FREE Chip Colors
-        private static readonly Dictionary<CardData.CardColor, Color> FreeChipBorderColors = new()
-        {
-            { CardData.CardColor.White, new Color(170, 170, 170) },
-            { CardData.CardColor.Red,   new Color(136, 51, 34) },
-            { CardData.CardColor.Black, Color.White * 0.25f },
-        };
-        private static readonly Dictionary<CardData.CardColor, Color> FreeChipTextColors = new()
-        {
-            { CardData.CardColor.White, new Color(136, 136, 136) },
-            { CardData.CardColor.Red,   new Color(204, 85, 68) },
-            { CardData.CardColor.Black, new Color(204, 204, 204) },
-        };
-
-        // FREE Label Slab Colors
-        private static readonly Dictionary<CardData.CardColor, Color> FreeLabelSlabTextColors = new()
-        {
-            { CardData.CardColor.White, new Color(170, 170, 170) },
-            { CardData.CardColor.Red,   new Color(136, 51, 34) },
-            { CardData.CardColor.Black, new Color(136, 136, 136) },
-        };
-
         public CardDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
             : base(entityManager)
         {
@@ -549,24 +391,34 @@ namespace Crusaders30XX.ECS.Systems
             try
             {
                 var transform = evt.Card.GetComponent<Transform>();
-                Vector2 originalScale = transform?.Scale ?? Vector2.One;
                 if (transform != null)
                 {
-                    transform.Scale = new Vector2(evt.Scale, evt.Scale);
-                    float originalRotation = transform.Rotation;
                     Vector2 originalPosition = transform.Position;
-                    transform.Rotation = 0f;
-                    transform.Position = evt.Position;
+                    Vector2 originalScale = transform.Scale;
+                    float originalRotation = transform.Rotation;
+                    try
+                    {
+                        transform.Position = evt.Position;
+                        transform.Scale = new Vector2(evt.Scale, evt.Scale);
+                        transform.Rotation = evt.Rotation;
+                        RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation);
+                    }
+                    finally
+                    {
+                        transform.Position = originalPosition;
+                        transform.Scale = originalScale;
+                        transform.Rotation = originalRotation;
+                    }
+
                     var ui = evt.Card.GetComponent<UIElement>();
-                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
-                    transform.Scale = originalScale;
-                    transform.Rotation = originalRotation;
-                    transform.Position = originalPosition;
-                    if (ui != null) ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
+                    if (ui != null)
+                    {
+                        ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
+                    }
                 }
                 else
                 {
-                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
+                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation);
                 }
             }
             finally
@@ -644,7 +496,7 @@ namespace Crusaders30XX.ECS.Systems
             var bgTex = GetRoundedRectTexture(bgW, bgH, (int)(settings.CardCornerRadius * vs));
             var bgColor = isColorless
                 ? ColorlessBackground
-                : GetPaletteColor(BgColors, cc, new Color(220, 215, 206));
+                : CardPalette.Background(cc);
             if ((card.IsWeapon || card.IsToken) && !isColorless)
             {
                 bgColor = new Color(215, 186, 147);
@@ -660,7 +512,7 @@ namespace Crusaders30XX.ECS.Systems
                 layerDepth: 0f);
 
             // 2. Stripe (full height, rounded on left to match card corners)
-            // var stripeColor = GetPaletteColor(StripeColors, cc, new Color(153, 153, 153));
+            // var stripeColor = CardPalette.Stripe(cc);
             // int stripeW = (int)(StripeWidth * vs);
             // int stripeH = (int)sh;
             // int stripeCR = (int)(settings.CardCornerRadius * vs);
@@ -679,7 +531,7 @@ namespace Crusaders30XX.ECS.Systems
             // 4. Stat Gutter (starts below title band)
             var gutterColor = isColorless
                 ? ColorlessSurface
-                : GetPaletteColor(GutterColors, cc, Color.Black * 0.05f);
+                : CardPalette.Gutter(cc);
             float gutterY = GutterTopY * vs;
             DrawRectangleLocalScaled(cardCenter, rotation, new Vector2(GutterX * vs, gutterY),
                 GutterWidth * vs, sh - gutterY, gutterColor, vs);
@@ -711,7 +563,7 @@ namespace Crusaders30XX.ECS.Systems
                     DrawTextBackground(cardCenter, rotation, vs, cc, card, isColorless, descLines, descLayout.DrawScale, contentX, cursorY);
                     var descColor = isColorless
                         ? ColorlessPrimaryText
-                        : GetPaletteColor(NameTextColors, cc, new Color(26, 26, 26));
+                        : CardPalette.NameText(cc);
                     DrawWrappedLinesLocalScaled(cardCenter, rotation, new Vector2(contentX, cursorY), descLines, descColor, descLayout.DrawScale, vs, _bodyFont);
                 }
             }
@@ -860,10 +712,10 @@ namespace Crusaders30XX.ECS.Systems
             var bgTex = GetRoundedRectTexture(texW, texH, radius);
             bool usesWeaponPalette = (card.IsWeapon || card.IsToken) && !isColorless;
             var bgColor = usesWeaponPalette
-                ? WeaponTextBackgroundColor
+                ? CardPalette.WeaponTextBackground
                 : isColorless
                 ? ColorlessSurface
-                : GetPaletteColor(TextBackgroundColors, cc, new Color(8, 8, 8));
+                : CardPalette.TextBackground(cc);
 
             DrawTextureLocalScaled(cardCenter, rotation, new Vector2(bgX, bgY), bgTex, new Vector2(bgW, bgH),
                 bgColor * TextBackgroundOpacity, vs);
@@ -898,7 +750,7 @@ namespace Crusaders30XX.ECS.Systems
             string name = card.DisplayName ?? "";
             var nameColor = isColorless
                 ? ColorlessPrimaryText
-                : GetPaletteColor(NameTextColors, cc, new Color(26, 26, 26));
+                : CardPalette.NameText(cc);
             float nameScale = NameFontScale * vs;
             var nameSize = _nameFont.MeasureString(name) * nameScale;
             float nameX = (cardWidth - nameSize.X) / 2f;
@@ -909,7 +761,7 @@ namespace Crusaders30XX.ECS.Systems
             string typeLabel = GetTypeLabel(card.Type);
             var typeColor = isColorless
                 ? ColorlessMutedText
-                : GetPaletteColor(TypeTextColors, cc, new Color(153, 153, 153));
+                : CardPalette.TypeText(cc);
             float typeScale = CostLabelFontScale * vs;
 
             // Add letter spacing for type label measurement and drawing
@@ -926,7 +778,7 @@ namespace Crusaders30XX.ECS.Systems
                 string costLabel = "DISCARD";
                 var costLabelColor = isColorless
                     ? ColorlessMutedText
-                    : GetPaletteColor(CostLabelColors, cc, new Color(153, 153, 153));
+                    : CardPalette.CostLabel(cc);
                 float costLabelScale = CostLabelFontScale * vs;
 
                 // Letter spacing already active from type label setup (2f * vs)
@@ -972,7 +824,7 @@ namespace Crusaders30XX.ECS.Systems
             // Rule Line — full width with padding
             var ruleColor = isColorless
                 ? Color.Lerp(ColorlessSurface, ColorlessMutedText, 0.45f)
-                : GetPaletteColor(RuleLineColors, cc, new Color(192, 184, 170));
+                : CardPalette.RuleLine(cc);
             float ruleWidth = cardWidth - padLeft - padRight;
             DrawRectangleLocalScaled(cardCenter, rotation, new Vector2(padLeft, cursorY), ruleWidth, RuleHeight * vs, ruleColor, vs);
             cursorY += RuleHeight * vs;
@@ -1014,7 +866,7 @@ namespace Crusaders30XX.ECS.Systems
                 // Draw outline at full size, then fill at reduced scale
                 var outlineColor = Tint(isColorless
                     ? Color.Black
-                    : GetPaletteColor(CostPipOutlineColors, cc, Color.Black)) * alpha;
+                    : CardPalette.CostPipOutline(cc)) * alpha;
                 _spriteBatch.Draw(tex, world, null, outlineColor, diamondRotation,
                     new Vector2(texSize / 2f, texSize / 2f),
                     drawScale,
@@ -1205,20 +1057,20 @@ namespace Crusaders30XX.ECS.Systems
             switch (variant)
             {
                 case ChipVariant.BLK:
-                    bgColor = GetPaletteColor(BlkLabelSlabBgColors, cc, new Color(50, 100, 140) * 0.4f);
-                    textColor = GetPaletteColor(BlkLabelSlabTextColors, cc, new Color(138, 184, 216));
+                    bgColor = CardPalette.BlockLabelSlabBackground(cc);
+                    textColor = CardPalette.BlockLabelSlabText(cc);
                     break;
                 case ChipVariant.ATK:
-                    bgColor = AtkLabelSlabBgColor;
-                    textColor = AtkLabelSlabTextColor;
+                    bgColor = CardPalette.AttackLabelSlabBackground;
+                    textColor = CardPalette.AttackLabelSlabText;
                     break;
                 case ChipVariant.AP:
-                    bgColor = GetPaletteColor(ApLabelSlabBgColors, cc, new Color(85, 85, 85));
-                    textColor = GetPaletteColor(ApLabelSlabTextColors, cc, new Color(221, 221, 221));
+                    bgColor = CardPalette.ActionPointLabelSlabBackground(cc);
+                    textColor = CardPalette.ActionPointLabelSlabText(cc);
                     break;
                 case ChipVariant.FREE:
                     bgColor = Color.Transparent;
-                    textColor = GetPaletteColor(FreeLabelSlabTextColors, cc, new Color(136, 136, 136));
+                    textColor = CardPalette.FreeLabelSlabText(cc);
                     break;
                 default:
                     bgColor = Color.Transparent;
@@ -1265,8 +1117,8 @@ namespace Crusaders30XX.ECS.Systems
                 case ChipVariant.BLK:
                 {
                     // Solid fill — steel blue tint
-                    Color bgColor = GetPaletteColor(BlkChipBgColors, cc, new Color(42, 74, 94));
-                    Color valColor = GetPaletteColor(BlkChipTextColors, cc, new Color(176, 212, 232));
+                    Color bgColor = CardPalette.BlockChipBackground(cc);
+                    Color valColor = CardPalette.BlockChipText(cc);
 
                     var tex = GetPerCornerRoundedRectTexture((int)chipW, (int)chipH, rTL, rTR, rBR, rBL);
                     DrawTextureLocalScaled(cardCenter, rotation, new Vector2(x, y), tex, new Vector2(chipW, chipH), bgColor, vs);
@@ -1287,10 +1139,10 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     Color bgColor = isColorless
                         ? ColorlessSurface
-                        : GetPaletteColor(ApChipBgColors, cc, new Color(68, 68, 68));
+                        : CardPalette.ActionPointChipBackground(cc);
                     Color valColor = isColorless
                         ? ColorlessPrimaryText
-                        : GetPaletteColor(ApChipTextColors, cc, new Color(221, 221, 221));
+                        : CardPalette.ActionPointChipText(cc);
 
                     var tex = GetPerCornerRoundedRectTexture((int)chipW, (int)chipH, rTL, rTR, rBR, rBL);
                     DrawTextureLocalScaled(cardCenter, rotation, new Vector2(x, y), tex, new Vector2(chipW, chipH), bgColor, vs);
@@ -1302,10 +1154,10 @@ namespace Crusaders30XX.ECS.Systems
                     // Dashed border — approximate with solid border + card bg fill
                     Color borderColor = isColorless
                         ? ColorlessMutedText
-                        : GetPaletteColor(FreeChipBorderColors, cc, new Color(170, 170, 170));
+                        : CardPalette.FreeChipBorder(cc);
                     Color valColor = isColorless
                         ? ColorlessPrimaryText
-                        : GetPaletteColor(FreeChipTextColors, cc, new Color(136, 136, 136));
+                        : CardPalette.FreeChipText(cc);
 
                     var outerTex = GetPerCornerRoundedRectTexture((int)chipW, (int)chipH, rTL, rTR, rBR, rBL);
                     DrawTextureLocalScaled(cardCenter, rotation, new Vector2(x, y), outerTex, new Vector2(chipW, chipH), borderColor, vs);
@@ -1317,7 +1169,7 @@ namespace Crusaders30XX.ECS.Systems
                     {
                         var innerBg = isColorless
                             ? ColorlessBackground
-                            : GetPaletteColor(BgColors, cc, new Color(220, 215, 206));
+                            : CardPalette.Background(cc);
                         var innerTex = GetPerCornerRoundedRectTexture((int)innerW, (int)innerH,
                             Math.Max(0, rTL - bt), Math.Max(0, rTR - bt),
                             Math.Max(0, rBR - bt), Math.Max(0, rBL - bt));
@@ -1381,12 +1233,12 @@ namespace Crusaders30XX.ECS.Systems
         {
             return costType.Trim().ToLowerInvariant() switch
             {
-                "red"   => CostPipRedColor,
-                "white" => CostPipWhiteColor,
-                "black" => CostPipBlackColor,
+                "red"   => CardPalette.CostPipRed,
+                "white" => CardPalette.CostPipWhite,
+                "black" => CardPalette.CostPipBlack,
                 _       => isColorless
                     ? ColorlessMutedText
-                    : GetPaletteColor(CostPipAnyColors, cc, new Color(160, 152, 136)),
+                    : CardPalette.CostPipAny(cc),
             };
         }
 
@@ -1489,11 +1341,6 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
             return bonus;
-        }
-
-        private static Color GetPaletteColor(Dictionary<CardData.CardColor, Color> palette, CardData.CardColor cc, Color fallback)
-        {
-            return palette.TryGetValue(cc, out var c) ? c : fallback;
         }
 
         private Color ColorlessBackground => new(

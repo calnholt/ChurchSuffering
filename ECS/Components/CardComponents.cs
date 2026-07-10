@@ -407,6 +407,15 @@ namespace Crusaders30XX.ECS.Components
         ClimbEventSlotSelect,
         WayStationDialoguePoiSelect,
         SkipDialog,
+        BoosterPackOpeningClose,
+    }
+
+    public sealed class CardSheen : IComponent
+    {
+        public Entity Owner { get; set; }
+        public bool IsActive { get; set; }
+        public float Progress { get; set; }
+        public float Alpha { get; set; }
     }
 
     /// <summary>

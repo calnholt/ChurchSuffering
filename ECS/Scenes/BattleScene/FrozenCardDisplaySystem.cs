@@ -96,7 +96,8 @@ namespace Crusaders30XX.ECS.Systems
 			EntityManager,
 			evt.Card,
 			evt.Position,
-			evt.Scale);
+			evt.Scale,
+			evt.Rotation);
 		var center = geometry.Center;
 		center.X += FrostOffsetX * geometry.Scale;
 		center.Y += FrostOffsetY * geometry.Scale;
@@ -104,7 +105,7 @@ namespace Crusaders30XX.ECS.Systems
 		_settings ??= CardGeometryService.GetSettings(EntityManager);
 		int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
 		int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
-		DrawFrostOverlay(center, cardWidth, cardHeight, geometry.Scale, 0f);
+		DrawFrostOverlay(center, cardWidth, cardHeight, geometry.Scale, evt.Rotation);
 	}
 
 	private void OnCardRenderScaledRotatedEvent(CardRenderScaledRotatedEvent evt)

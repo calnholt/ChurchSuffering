@@ -33,6 +33,7 @@ public class Game1 : Game
     private BrittleDisplaySystem _brittleDisplaySystem;
     private ScorchedDisplaySystem _scorchedDisplaySystem;
     private CursedDisplaySystem _cursedDisplaySystem;
+    private CardSheenDisplaySystem _cardSheenDisplaySystem;
     private SealDisplaySystem _sealDisplaySystem;
     private PlayerInputSystem _playerInputSystem;
     private ControllerRumbleSystem _controllerRumbleSystem;
@@ -68,10 +69,12 @@ public class Game1 : Game
     private DialogDisplaySystem _dialogDisplaySystem;
     private DebugCommandSystem _debugCommandSystem;
     private MedalEquipDebugSystem _medalEquipDebugSystem;
+    private EquipmentEquipDebugSystem _equipmentEquipDebugSystem;
     private LocationNameDisplaySystem _locationNameDisplaySystem;
     private RewardModalDisplaySystem _rewardModalDisplaySystem;
     private NarrativeEventModalDisplaySystem _narrativeEventModalDisplaySystem;
     private CardListModalSystem _cardListModalSystem;
+    private BoosterPackOpeningDisplaySystem _boosterPackOpeningDisplaySystem;
     private PauseMenuDisplaySystem _pauseMenuDisplaySystem;
     private PauseMenuSliderDisplaySystem _pauseMenuSliderDisplaySystem;
     private GameOverOverlayDisplaySystem _gameOverOverlayDisplaySystem;
@@ -200,6 +203,7 @@ public class Game1 : Game
         _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _scorchedDisplaySystem = new ScorchedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _cursedDisplaySystem = new CursedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cardSheenDisplaySystem = new CardSheenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         var sealTexture = _imageAssets.GetRequiredTexture("seal");
         _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
         _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
@@ -233,6 +237,7 @@ public class Game1 : Game
         _uiElementHighlightSystem = new UIElementHighlightSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _debugCommandSystem = new DebugCommandSystem(_world.EntityManager);
         _medalEquipDebugSystem = new MedalEquipDebugSystem(_world.EntityManager);
+        _equipmentEquipDebugSystem = new EquipmentEquipDebugSystem(_world.EntityManager);
         _world.AddSystem(_drippingBloodDisplaySystem);
         _world.AddSystem(_titleMenuDisplaySystem);
         _world.AddSystem(_wayStationBackgroundDisplaySystem);
@@ -263,6 +268,7 @@ public class Game1 : Game
         _world.AddSystem(_brittleDisplaySystem);
         _world.AddSystem(_scorchedDisplaySystem);
         _world.AddSystem(_cursedDisplaySystem);
+        _world.AddSystem(_cardSheenDisplaySystem);
         _world.AddSystem(_sealDisplaySystem);
         _world.AddSystem(_dialogDisplaySystem);
         _world.AddSystem(new ModalAnimationSystem(_world.EntityManager), SystemUpdatePhase.Input);
@@ -288,12 +294,15 @@ public class Game1 : Game
         _world.AddSystem(_uiElementBorderDebugSystem);
         _world.AddSystem(_debugCommandSystem);
         _world.AddSystem(_medalEquipDebugSystem);
+        _world.AddSystem(_equipmentEquipDebugSystem);
         _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_rewardModalDisplaySystem);
         _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_narrativeEventModalDisplaySystem);
         _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_cardListModalSystem);
+        _boosterPackOpeningDisplaySystem = new BoosterPackOpeningDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _world.AddSystem(_boosterPackOpeningDisplaySystem);
         _world.AddSystem(new RunDeckLifecycleSystem(_world.EntityManager));
         _world.AddSystem(new ClimbEventSystem(_world.EntityManager));
         _world.AddSystem(new ClimbEncounterSystem(_world.EntityManager));
@@ -598,6 +607,7 @@ public class Game1 : Game
             FrameProfiler.Measure("UIElementHighlightSystem.Draw.CardListModal", _uiElementHighlightSystem.Draw);
         }
         FrameProfiler.Measure("CardListModalSystem.DrawForeground", _cardListModalSystem.DrawForeground);
+        FrameProfiler.Measure("BoosterPackOpeningDisplaySystem.Draw", _boosterPackOpeningDisplaySystem.Draw);
         FrameProfiler.Measure("POITitleTooltipDisplaySystem.Draw", _poiTitleTooltipDisplaySystem.Draw);
         FrameProfiler.Measure("TooltipDisplaySystem.Draw", _tooltipTextDisplaySystem.Draw);
         FrameProfiler.Measure("HintTooltipDisplaySystem.Draw", _hintTooltipDisplaySystem.Draw);
