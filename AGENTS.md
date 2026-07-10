@@ -22,34 +22,9 @@ Crusaders30XX is a .NET 8.0 MonoGame DesktopGL deckbuilder built around an ECS a
 
 Prefer pointers to authoritative files over copying long instructions into this file.
 
-## Core commands
+## Build, run, and verification
 
-```bash
-# Build
-dotnet build
-
-# Run
-dotnet run
-
-# Fresh save
-dotnet run -- new
-
-# Tests
-dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj
-```
-
-More commands and platform setup notes live in `docs/build-run.md`.
-
-## Verification by change type
-
-Use checks that match what changed:
-
-- Any code change: `dotnet build`
-- Game logic, services, rules, event flow, data model: `dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj`
-- UI, display, rendering, layout: relevant snapshot `--verify` commands from `docs/display-snapshots.md`
-- Player HUD display/layout: `./scripts/verify-player-hud-snapshots.sh`
-- Battle setup, cards, enemies, combat flow, balance-sensitive changes: `dotnet run -- test-fight hammer skeleton hard`
-- Content, SFX, music, shaders, `Content.mgcb`: `dotnet build /p:SkipMonoGameContentPipeline=false`
+Use `docs/build-run.md` as the canonical command list. It includes ordinary run commands, platform/content pipeline setup, and verification by change type.
 
 When you finish implementing an attached or approved plan, always run `dotnet build` from the repo root before marking work complete. Fix compile errors before handing off.
 
