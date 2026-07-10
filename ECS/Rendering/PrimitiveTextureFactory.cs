@@ -35,6 +35,8 @@ namespace Crusaders30XX.ECS.Rendering
 		private static readonly Dictionary<(int deviceId, int width, int height, float thickness), Texture2D> _ringMaskCache = new();
 		// Cache soft radial circle masks by device, diameter, and normalized stops
 		private static readonly Dictionary<(int deviceId, int diameter, float innerStop, float outerStop), Texture2D> _softRadialCircleCache = new();
+		private static readonly Dictionary<(int deviceId, int diameter, int spokeCount, float innerRadius, float outerRadius, float spokeFill), Texture2D> _radialBurstCache = new();
+		private static readonly Dictionary<(int deviceId, int diameter, float innerStop, float outerStop), Texture2D> _invertedSoftRadialCircleCache = new();
 
 		public static Texture2D GetAntiAliasedCircle(GraphicsDevice device, int radius)
 		{
@@ -208,6 +210,128 @@ namespace Crusaders30XX.ECS.Rendering
 			tex.SetData(data);
 			_softRadialCircleCache[key] = tex;
 			return tex;
+		}
+
+		public static Texture2D GetAntialiasedRadialBurstMask(
+			GraphicsDevice device,
+			int diameter,
+			int spokeCount,
+			float innerRadiusNormalized,
+			float outerRadiusNormalized,
+			float spokeFillNormalized)
+		{
+			diameter = System.Math.Max(1, diameter);
+			spokeCount = System.Math.Max(1, spokeCount);
+			innerRadiusNormalized = MathHelper.Clamp(innerRadiusNormalized, 0f, 1f);
+			outerRadiusNormalized = MathHelper.Clamp(outerRadiusNormalized, innerRadiusNormalized + 0.001f, 1f);
+			spokeFillNormalized = MathHelper.Clamp(spokeFillNormalized, 0.01f, 0.99f);
+			int deviceId = device?.GetHashCode() ?? 0;
+			var key = (
+				deviceId,
+				diameter,
+				spokeCount,
+				(float)System.Math.Round(innerRadiusNormalized, 3),
+				(float)System.Math.Round(outerRadiusNormalized, 3),
+				(float)System.Math.Round(spokeFillNormalized, 3));
+			if (_radialBurstCache.TryGetValue(key, out var existing) && existing != null) return existing;
+
+			var texture = new Texture2D(device, diameter, diameter);
+			var data = new Color[diameter * diameter];
+			float radius = diameter * 0.5f;
+			float[] offsets = { 0.25f, 0.75f };
+			const float sampleCount = 4f;
+			for (int y = 0; y < diameter; y++)
+			{
+				for (int x = 0; x < diameter; x++)
+				{
+					float coverage = 0f;
+					for (int sy = 0; sy < offsets.Length; sy++)
+					{
+						for (int sx = 0; sx < offsets.Length; sx++)
+						{
+							float dx = x + offsets[sx] - radius;
+							float dy = y + offsets[sy] - radius;
+							float normalizedRadius = (float)System.Math.Sqrt(dx * dx + dy * dy) / radius;
+							if (normalizedRadius <= innerRadiusNormalized || normalizedRadius >= outerRadiusNormalized) continue;
+
+							float angle = (float)System.Math.Atan2(dy, dx);
+							float spokeCoordinate = angle / MathHelper.TwoPi * spokeCount;
+							float withinSpoke = spokeCoordinate - (float)System.Math.Floor(spokeCoordinate);
+							float angularDistance = System.Math.Abs(withinSpoke - 0.5f) * 2f;
+							float angularFeather = System.Math.Max(0.02f, 2f / diameter * spokeCount);
+							float angularAlpha = 1f - SmoothStep(
+								spokeFillNormalized - angularFeather,
+								spokeFillNormalized + angularFeather,
+								angularDistance);
+							float radialFeather = System.Math.Max(0.004f, 2f / diameter);
+							float innerAlpha = SmoothStep(
+								innerRadiusNormalized,
+								innerRadiusNormalized + radialFeather,
+								normalizedRadius);
+							float outerAlpha = 1f - SmoothStep(
+								outerRadiusNormalized - radialFeather,
+								outerRadiusNormalized,
+								normalizedRadius);
+							coverage += angularAlpha * innerAlpha * outerAlpha;
+						}
+					}
+
+					byte alpha = (byte)MathHelper.Clamp(
+						(int)System.Math.Round(coverage / sampleCount * 255f),
+						0,
+						255);
+					data[y * diameter + x] = Color.FromNonPremultiplied(255, 255, 255, alpha);
+				}
+			}
+
+			texture.SetData(data);
+			_radialBurstCache[key] = texture;
+			return texture;
+		}
+
+		public static Texture2D GetInvertedSoftRadialCircle(
+			GraphicsDevice device,
+			int diameter,
+			float innerStop,
+			float outerStop)
+		{
+			diameter = System.Math.Max(1, diameter);
+			innerStop = MathHelper.Clamp(innerStop, 0f, 1f);
+			outerStop = MathHelper.Clamp(outerStop, innerStop + 0.001f, 1f);
+			int deviceId = device?.GetHashCode() ?? 0;
+			var key = (
+				deviceId,
+				diameter,
+				(float)System.Math.Round(innerStop, 3),
+				(float)System.Math.Round(outerStop, 3));
+			if (_invertedSoftRadialCircleCache.TryGetValue(key, out var existing) && existing != null) return existing;
+
+			var texture = new Texture2D(device, diameter, diameter);
+			var data = new Color[diameter * diameter];
+			float radius = diameter * 0.5f;
+			for (int y = 0; y < diameter; y++)
+			{
+				float dy = y + 0.5f - radius;
+				for (int x = 0; x < diameter; x++)
+				{
+					float dx = x + 0.5f - radius;
+					float normalizedRadius = (float)System.Math.Sqrt(dx * dx + dy * dy) / radius;
+					float alpha = SmoothStep(innerStop, outerStop, normalizedRadius);
+					byte alphaByte = (byte)MathHelper.Clamp((int)System.Math.Round(alpha * 255f), 0, 255);
+					data[y * diameter + x] = Color.FromNonPremultiplied(255, 255, 255, alphaByte);
+				}
+			}
+
+			texture.SetData(data);
+			_invertedSoftRadialCircleCache[key] = texture;
+			return texture;
+		}
+
+		private static float SmoothStep(float edge0, float edge1, float value)
+		{
+			if (edge1 <= edge0) return value >= edge1 ? 1f : 0f;
+			float t = MathHelper.Clamp((value - edge0) / (edge1 - edge0), 0f, 1f);
+			return t * t * (3f - 2f * t);
 		}
 
 		private static bool IsPointInPolygon(float x, float y, IReadOnlyList<Vector2> points)
@@ -842,4 +966,3 @@ namespace Crusaders30XX.ECS.Rendering
 		}
 	}
 }
-

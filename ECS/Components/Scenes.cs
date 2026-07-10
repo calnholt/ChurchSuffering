@@ -335,6 +335,17 @@ namespace Crusaders30XX.ECS.Components
 			Equipment,
 		}
 
+		public enum BoosterPackOpeningPhase
+		{
+			Summon,
+			Idle,
+			Charge,
+			Crack,
+			Rupture,
+			Showcase,
+			Ready,
+		}
+
 		public class BoosterPackLootPreview
 		{
 			public BoosterPackLootKind Kind { get; set; }
@@ -348,13 +359,37 @@ namespace Crusaders30XX.ECS.Components
 		{
 			public Entity Owner { get; set; }
 			public bool IsOpen { get; set; }
+			public bool CanDismiss { get; set; }
 			public float ElapsedSeconds { get; set; }
-			public bool RuptureTriggered { get; set; }
-			public bool RevealTriggered { get; set; }
-			public bool ChargeParticlesTriggered { get; set; }
-			public bool CrackParticlesTriggered { get; set; }
+			public float PreviousElapsedSeconds { get; set; }
 			public float NextChargeParticleSeconds { get; set; }
+			public BoosterPackOpeningPhase Phase { get; set; }
 			public List<BoosterPackLootPreview> Loot { get; set; } = new();
+			public List<BoosterPackParticleFx> Particles { get; set; } = new();
+			public List<BoosterPackShardFx> Shards { get; set; } = new();
+		}
+
+		public class BoosterPackParticleFx
+		{
+			public Vector2 Start { get; set; }
+			public Vector2 Delta { get; set; }
+			public float Width { get; set; }
+			public float Length { get; set; }
+			public Color Color { get; set; }
+			public float StartSeconds { get; set; }
+			public float DurationSeconds { get; set; }
+			public bool IsInward { get; set; }
+		}
+
+		public class BoosterPackShardFx
+		{
+			public Vector2 Start { get; set; }
+			public Vector2 Delta { get; set; }
+			public float Width { get; set; }
+			public float Height { get; set; }
+			public float RotationRadians { get; set; }
+			public float StartSeconds { get; set; }
+			public float DurationSeconds { get; set; }
 		}
 
 	public class PendingQuestDialog : IComponent

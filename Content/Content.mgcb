@@ -2389,6 +2389,12 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/Cursed.fx
 
+#begin Shaders/CardSheen.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/CardSheen.fx
+
 #begin Shaders/DrippingBlood.fx
 /importer:EffectImporter
 /processor:EffectProcessor

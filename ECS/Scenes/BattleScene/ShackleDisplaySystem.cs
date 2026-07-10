@@ -101,7 +101,8 @@ namespace Crusaders30XX.ECS.Systems
 				EntityManager,
 				evt.Card,
 				evt.Position,
-				evt.Scale);
+				evt.Scale,
+				evt.Rotation);
 			var center = geometry.Center;
 			center.X += ShackleOffsetX * geometry.Scale;
 			center.Y += ShackleOffsetY * geometry.Scale;
@@ -109,7 +110,7 @@ namespace Crusaders30XX.ECS.Systems
 			_settings ??= CardGeometryService.GetSettings(EntityManager);
 			int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
 			int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
-			DrawShackleOverlay(center, cardWidth, cardHeight, geometry.Scale, geometry.Rotation);
+			DrawShackleOverlay(center, cardWidth, cardHeight, geometry.Scale, evt.Rotation);
 		}
 
 		private bool ShouldRenderShackles(Entity card)

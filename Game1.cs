@@ -33,6 +33,7 @@ public class Game1 : Game
     private BrittleDisplaySystem _brittleDisplaySystem;
     private ScorchedDisplaySystem _scorchedDisplaySystem;
     private CursedDisplaySystem _cursedDisplaySystem;
+    private CardSheenDisplaySystem _cardSheenDisplaySystem;
     private SealDisplaySystem _sealDisplaySystem;
     private PlayerInputSystem _playerInputSystem;
     private ControllerRumbleSystem _controllerRumbleSystem;
@@ -202,6 +203,7 @@ public class Game1 : Game
         _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _scorchedDisplaySystem = new ScorchedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _cursedDisplaySystem = new CursedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+        _cardSheenDisplaySystem = new CardSheenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         var sealTexture = _imageAssets.GetRequiredTexture("seal");
         _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
         _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
@@ -266,6 +268,7 @@ public class Game1 : Game
         _world.AddSystem(_brittleDisplaySystem);
         _world.AddSystem(_scorchedDisplaySystem);
         _world.AddSystem(_cursedDisplaySystem);
+        _world.AddSystem(_cardSheenDisplaySystem);
         _world.AddSystem(_sealDisplaySystem);
         _world.AddSystem(_dialogDisplaySystem);
         _world.AddSystem(new ModalAnimationSystem(_world.EntityManager), SystemUpdatePhase.Input);

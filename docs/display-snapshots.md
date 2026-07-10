@@ -54,6 +54,7 @@ to the fixture.
 | `thorned-card` | Thorned card shader | One thorned card on a patterned backdrop, optionally composed with Frozen |
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
+| `booster-pack-opening` | Booster pack opening display | Phase-driven pack summon, rupture, reward travel, sheen, and ready states |
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
 | `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
@@ -70,6 +71,23 @@ to the fixture.
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
+
+---
+
+## `booster-pack-opening`
+
+Renders the production booster opening overlay at a deterministic timeline sample. `--time` accepts a finite value from `0.0` through `30.0`; `--seed` accepts any signed 32-bit integer.
+
+```bash
+dotnet run -- snapshot booster-pack-opening
+dotnet run -- snapshot booster-pack-opening --time 3.10 --seed 1337
+dotnet run -- snapshot booster-pack-opening --time 5.14 --seed 1337
+dotnet run -- snapshot booster-pack-opening --time 4.70 --seed 1337 no-shaders
+```
+
+Captures are stored at `debug/snapshots/booster-pack-opening/time-<seconds>-seed-<seed>.png`.
+
+Useful sequence samples are `0.45` (summon), `1.70` (charge), `2.40` (crack), `3.10` (rupture), `3.95` (reward travel), `4.70` (sheen), and `5.14` (ready).
 
 ---
 

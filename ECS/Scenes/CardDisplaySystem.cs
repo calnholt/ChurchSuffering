@@ -391,24 +391,34 @@ namespace Crusaders30XX.ECS.Systems
             try
             {
                 var transform = evt.Card.GetComponent<Transform>();
-                Vector2 originalScale = transform?.Scale ?? Vector2.One;
                 if (transform != null)
                 {
-                    transform.Scale = new Vector2(evt.Scale, evt.Scale);
-                    float originalRotation = transform.Rotation;
                     Vector2 originalPosition = transform.Position;
-                    transform.Rotation = 0f;
-                    transform.Position = evt.Position;
+                    Vector2 originalScale = transform.Scale;
+                    float originalRotation = transform.Rotation;
+                    try
+                    {
+                        transform.Position = evt.Position;
+                        transform.Scale = new Vector2(evt.Scale, evt.Scale);
+                        transform.Rotation = evt.Rotation;
+                        RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation);
+                    }
+                    finally
+                    {
+                        transform.Position = originalPosition;
+                        transform.Scale = originalScale;
+                        transform.Rotation = originalRotation;
+                    }
+
                     var ui = evt.Card.GetComponent<UIElement>();
-                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
-                    transform.Scale = originalScale;
-                    transform.Rotation = originalRotation;
-                    transform.Position = originalPosition;
-                    if (ui != null) ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
+                    if (ui != null)
+                    {
+                        ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
+                    }
                 }
                 else
                 {
-                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
+                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation);
                 }
             }
             finally
