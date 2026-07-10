@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Data.Save;
@@ -238,6 +239,12 @@ namespace Crusaders30XX.ECS.Systems
 		public int UpgradePlusSize { get; set; } = 24;
 		[DebugEditable(DisplayName = "Column Top Bar Thickness", Step = 1, Min = 1, Max = 8)]
 		public int ColumnTopBarThickness { get; set; } = 3;
+		[DebugEditable(DisplayName = "Sheen Stagger Seconds", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float SheenStaggerSeconds { get; set; } = 0.12f;
+		[DebugEditable(DisplayName = "Sheen Delay Seconds", Step = 0.01f, Min = 0f, Max = 3f)]
+		public float SheenDelaySeconds { get; set; } = 0.52f;
+		[DebugEditable(DisplayName = "Sheen Duration Seconds", Step = 0.01f, Min = 0.01f, Max = 3f)]
+		public float SheenDurationSeconds { get; set; } = 0.84f;
 
 		private struct DeckRewardOptionView
 		{
@@ -1838,6 +1845,7 @@ namespace Crusaders30XX.ECS.Systems
 
 				ApplyDeckRewardPreviewRestrictions(outgoing, option, forIncomingCard: false);
 				ApplyDeckRewardPreviewRestrictions(incoming, option, forIncomingCard: true);
+				EntityManager.AddComponent(incoming, new CardSheen());
 
 				_rewardCardEntities.Add(outgoing);
 				_rewardCardEntities.Add(incoming);
@@ -1896,6 +1904,7 @@ namespace Crusaders30XX.ECS.Systems
 		private void UpdateDeckRewardOfferControls(QuestRewardOverlayState state, SceneState scene, GameTime gameTime)
 		{
 			if (state?.DeckRewardOffer?.options == null) return;
+			UpdateDeckRewardCardSheens(state);
 			int colCount = state.DeckRewardOffer.options.Count;
 			var isUpgradeFlags = new bool[colCount];
 			for (int i = 0; i < colCount; i++)
@@ -1997,6 +2006,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (state == null || state.DeckColumnSelectionInProgress) return;
 
+			DisableDeckRewardCardSheens();
 			state.DeckColumnSelectionInProgress = true;
 			state.SelectedDeckRewardColumnIndex = selectedIndex;
 			state.DeckColumnSelectionElapsedSeconds = 0f;
@@ -2088,6 +2098,78 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			RequestCloseAnimation(state, transitionAfterClose: false, state.DismissScene);
+		}
+
+		private BoosterPackOpeningTiming BuildDeckRewardSheenTiming(float enterDurationSeconds)
+		{
+			return new BoosterPackOpeningTiming(
+				enterDurationSeconds,
+				0f,
+				0f,
+				0f,
+				0f,
+				0f,
+				0f,
+				SheenStaggerSeconds,
+				0f,
+				SheenDelaySeconds,
+				SheenDurationSeconds,
+				0f);
+		}
+
+		private static float GetDeckRewardSheenElapsedSeconds(ModalAnimation animation)
+		{
+			if (animation == null) return 0f;
+			return animation.Phase switch
+			{
+				ModalAnimationPhase.Entering => animation.ElapsedSeconds,
+				ModalAnimationPhase.Visible => animation.EnterDurationSeconds + animation.ElapsedSeconds,
+				_ => 0f,
+			};
+		}
+
+		private void UpdateDeckRewardCardSheens(QuestRewardOverlayState state)
+		{
+			if (state == null) return;
+			if (state.DeckColumnSelectionInProgress || state.DismissInProgress)
+			{
+				DisableDeckRewardCardSheens();
+				return;
+			}
+
+			var animation = EntityManager.GetEntity("QuestRewardOverlay")?.GetComponent<ModalAnimation>();
+			if (animation == null
+				|| animation.Phase == ModalAnimationPhase.Hidden
+				|| animation.Phase == ModalAnimationPhase.Exiting)
+			{
+				DisableDeckRewardCardSheens();
+				return;
+			}
+
+			float elapsed = GetDeckRewardSheenElapsedSeconds(animation);
+			var timing = BuildDeckRewardSheenTiming(animation.EnterDurationSeconds);
+			for (int index = 0; index < _deckRewardOptionViews.Count; index++)
+			{
+				var sheen = _deckRewardOptionViews[index].IncomingCard?.GetComponent<CardSheen>();
+				if (sheen == null) continue;
+				float progress = BoosterPackOpeningAnimationService.GetSheenProgress(elapsed, index, timing);
+				sheen.Progress = progress;
+				sheen.Alpha = progress > 0f && progress < 1f
+					? (float)Math.Sin(progress * MathHelper.Pi)
+					: 0f;
+				sheen.IsActive = progress > 0f && progress < 1f;
+			}
+		}
+
+		private void DisableDeckRewardCardSheens()
+		{
+			foreach (var view in _deckRewardOptionViews)
+			{
+				if (view.IncomingCard?.GetComponent<CardSheen>() is CardSheen sheen)
+				{
+					sheen.IsActive = false;
+				}
+			}
 		}
 
 		private void DisableDeckRewardControls()

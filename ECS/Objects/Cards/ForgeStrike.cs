@@ -6,7 +6,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class ForgeStrike : CardBase
     {
-        private int MightGainedUpgrade = 1;
+        private int MightGainedUpgrade = 2;
         public ForgeStrike()
         {
             CardId = "forge_strike";
