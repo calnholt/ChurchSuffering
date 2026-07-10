@@ -328,6 +328,35 @@ namespace Crusaders30XX.ECS.Components
 			public float DeckColumnSelectionElapsedSeconds { get; set; } = 0f;
 		}
 
+		public enum BoosterPackLootKind
+		{
+			Card,
+			Medal,
+			Equipment,
+		}
+
+		public class BoosterPackLootPreview
+		{
+			public BoosterPackLootKind Kind { get; set; }
+			public string Id { get; set; } = string.Empty;
+			public CardData.CardColor CardColor { get; set; } = CardData.CardColor.White;
+			public Entity PreviewEntity { get; set; }
+			public float RevealDelaySeconds { get; set; }
+		}
+
+		public class BoosterPackOpeningOverlayState : IComponent
+		{
+			public Entity Owner { get; set; }
+			public bool IsOpen { get; set; }
+			public float ElapsedSeconds { get; set; }
+			public bool RuptureTriggered { get; set; }
+			public bool RevealTriggered { get; set; }
+			public bool ChargeParticlesTriggered { get; set; }
+			public bool CrackParticlesTriggered { get; set; }
+			public float NextChargeParticleSeconds { get; set; }
+			public List<BoosterPackLootPreview> Loot { get; set; } = new();
+		}
+
 	public class PendingQuestDialog : IComponent
 	{
 		public Entity Owner { get; set; }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Crusaders30XX.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -17,6 +18,7 @@ namespace Crusaders30XX.ECS.Services
 		private readonly Dictionary<(int Width, int Height, int Tl, int Tr, int Br, int Bl), Texture2D> _roundedRectPerCornerCache = new();
 		private readonly Dictionary<Texture2D, Color[]> _pixelDataCache = new();
 		private readonly Dictionary<(string CacheKey, int Width, int Height, float SoftenStrength), Texture2D> _scaledMipmappedCache = new();
+		private readonly Dictionary<string, Texture2D> _rawTextureCache = new(StringComparer.Ordinal);
 		private bool _disposed;
 
 		public ImageAssetService(ContentManager content, GraphicsDevice graphicsDevice)
@@ -54,8 +56,28 @@ namespace Crusaders30XX.ECS.Services
 			}
 			catch
 			{
-				_missingTextureAssets.Add(assetName);
-				return null;
+				try
+				{
+					if (_rawTextureCache.TryGetValue(assetName, out var cachedRaw)) return cachedRaw;
+
+					string rawPath = Path.Combine(_content.RootDirectory, assetName + ".png");
+					if (!File.Exists(rawPath))
+					{
+						_missingTextureAssets.Add(assetName);
+						return null;
+					}
+
+					using var stream = File.OpenRead(rawPath);
+					var texture = Texture2D.FromStream(_graphicsDevice, stream);
+					PremultiplyAlpha(texture);
+					_rawTextureCache[assetName] = texture;
+					return texture;
+				}
+				catch
+				{
+					_missingTextureAssets.Add(assetName);
+					return null;
+				}
 			}
 		}
 
@@ -146,10 +168,12 @@ namespace Crusaders30XX.ECS.Services
 			DisposeGeneratedTextures(_roundedRectCache.Values);
 			DisposeGeneratedTextures(_roundedRectPerCornerCache.Values);
 			DisposeGeneratedTextures(_scaledMipmappedCache.Values);
+			DisposeGeneratedTextures(_rawTextureCache.Values);
 			_pixelCache.Clear();
 			_roundedRectCache.Clear();
 			_roundedRectPerCornerCache.Clear();
 			_scaledMipmappedCache.Clear();
+			_rawTextureCache.Clear();
 		}
 
 		public void ClearTransientCaches()
@@ -169,6 +193,24 @@ namespace Crusaders30XX.ECS.Services
 		private static int ClampRadius(int width, int height, int radius)
 		{
 			return Math.Max(0, Math.Min(radius, Math.Min(width, height) / 2));
+		}
+
+		private static void PremultiplyAlpha(Texture2D texture)
+		{
+			if (texture == null || texture.Format != SurfaceFormat.Color) return;
+			var data = new Color[texture.Width * texture.Height];
+			texture.GetData(data);
+			for (int i = 0; i < data.Length; i++)
+			{
+				var c = data[i];
+				float a = c.A / 255f;
+				data[i] = new Color(
+					(byte)Math.Round(c.R * a),
+					(byte)Math.Round(c.G * a),
+					(byte)Math.Round(c.B * a),
+					c.A);
+			}
+			texture.SetData(data);
 		}
 
 		private static void DisposeGeneratedTextures(IEnumerable<Texture2D> textures)
