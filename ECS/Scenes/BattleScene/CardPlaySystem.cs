@@ -409,12 +409,15 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            if (card.VisualEffectRecipe != null)
+            if (card.VisualEffectSequence != null)
             {
-                var request = VisualEffectRequestFactory.ForCard(EntityManager, evt.Card, card.VisualEffectRecipe);
-                if (request != null)
+                var requests = VisualEffectRequestFactory.ForCardSequence(EntityManager, evt.Card, card.VisualEffectSequence);
+                if (requests.Count > 0)
                 {
-                    EventManager.Publish(request);
+                    foreach (var request in requests)
+                    {
+                        EventManager.Publish(request);
+                    }
                 }
                 else
                 {

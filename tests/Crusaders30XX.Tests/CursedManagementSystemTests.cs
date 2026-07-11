@@ -185,6 +185,49 @@ public class CursedManagementSystemTests
 	}
 
 	[Fact]
+	public void Saved_cursed_card_tooltip_survives_battle_init_cleanup()
+	{
+		EventManager.Clear();
+		SaveCache.DeleteSaveFilesIfPresent();
+		try
+		{
+			SaveCache.StartNewRun();
+			var entry = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards.First();
+			SaveCache.SetRunDeckEntryRestrictions(
+				RunDeckService.PrimaryLoadoutId,
+				entry.entryId,
+				[RunScopedStateService.RestrictionCursed]);
+			SaveCache.Reload();
+
+			var entityManager = new EntityManager();
+			RunDeckService.EnsureRunDeck(entityManager);
+			var card = entityManager.GetEntitiesWithComponent<RunDeckCard>()
+				.Single(entity => entity.GetComponent<RunDeckCard>().EntryId == entry.entryId);
+
+			Assert.True(card.HasComponent<Cursed>());
+			Assert.NotNull(card.GetComponent<CardTooltip>());
+			var originalCardId = card.GetComponent<CursedOriginalCard>()?.CardId;
+			Assert.False(string.IsNullOrWhiteSpace(originalCardId));
+
+			SimulateBattleInitCardTooltipCleanup(entityManager);
+			Assert.Null(card.GetComponent<CardTooltip>());
+
+			_ = new CursedManagementSystem(entityManager);
+			EventManager.Publish(new StartBattleRequested());
+
+			var tooltip = card.GetComponent<CardTooltip>();
+			Assert.NotNull(tooltip);
+			Assert.Equal(originalCardId, tooltip.CardId);
+			Assert.Equal(TooltipType.Card, card.GetComponent<UIElement>()?.TooltipType);
+		}
+		finally
+		{
+			EventManager.Clear();
+			SaveCache.DeleteSaveFilesIfPresent();
+		}
+	}
+
+	[Fact]
 	public void Random_removal_removes_only_selected_cursed_cards()
 	{
 		EventManager.Clear();
@@ -210,6 +253,19 @@ public class CursedManagementSystemTests
 		finally
 		{
 			EventManager.Clear();
+		}
+	}
+
+	private static void SimulateBattleInitCardTooltipCleanup(EntityManager entityManager)
+	{
+		foreach (var entity in entityManager.GetEntitiesWithComponent<CardTooltip>().ToList())
+		{
+			var cardData = entity.GetComponent<CardData>();
+			var definition = CardFactory.Create(cardData?.Card?.CardId);
+			if (definition != null && string.IsNullOrEmpty(definition.CardTooltip))
+			{
+				entity.RemoveComponent<CardTooltip>();
+			}
 		}
 	}
 

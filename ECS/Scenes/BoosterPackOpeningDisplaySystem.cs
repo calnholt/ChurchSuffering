@@ -21,6 +21,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 {
 	private const string OverlayEntityName = "BoosterPackOpeningOverlay";
 	private const string BlockerEntityName = "BoosterPackOpeningBlocker";
+	private const string EquipmentTooltipEntityName = "BoosterPack_EquipmentTooltip";
 	private const string ContextId = "overlay.booster-pack-opening";
 	private const int FixedMaskDiameter = 512;
 	private const int ParticleCoreDiameter = 24;
@@ -48,6 +49,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	private Texture2D _particleCoreMask;
 	private Texture2D _shardMask;
 	private bool _snapshotTimeFrozen;
+	private EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
 
 	[DebugEditable(DisplayName = "Z Order", Step = 10, Min = 0, Max = 100000)]
 	public int ZOrder { get; set; } = 61000;
@@ -82,9 +84,6 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 
 	[DebugEditable(DisplayName = "Sheen Delay Seconds", Step = 0.01f, Min = 0f, Max = 3f)]
 	public float SheenDelaySeconds { get; set; } = 0.52f;
-
-	[DebugEditable(DisplayName = "Sheen Duration Seconds", Step = 0.01f, Min = 0.01f, Max = 3f)]
-	public float SheenDurationSeconds { get; set; } = 0.84f;
 
 	// Stage and pack
 	[DebugEditable(DisplayName = "Stage Center X", Step = 1, Min = 0, Max = 1920)]
@@ -287,6 +286,13 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		EventManager.Subscribe<ShowBoosterPackOpeningOverlayEvent>(_ => OpenOverlay());
 		EventManager.Subscribe<CloseBoosterPackOpeningOverlayEvent>(_ => CloseOverlay());
 		EventManager.Subscribe<DeleteCachesEvent>(_ => ClearRenderResources());
+		EnsureEquipmentTooltipEntity();
+		_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(
+			EntityManager,
+			_graphicsDevice,
+			_spriteBatch,
+			_imageAssets,
+			EquipmentTooltipEntityName);
 	}
 
 	protected override IEnumerable<Entity> GetRelevantEntities()
@@ -324,6 +330,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		SetDismissEnabled(
 			state,
 			BoosterPackOpeningAnimationService.CanDismiss(state.ElapsedSeconds, timing));
+		_equipmentTooltipDisplaySystem?.Update(gameTime);
 	}
 
 	public void Draw()
@@ -340,6 +347,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		DrawLoot(state);
 		DrawRewardTitle(state);
 		DrawVignette();
+		_equipmentTooltipDisplaySystem?.Draw();
 	}
 
 	[DebugAction("Play Booster Pack")]
@@ -379,7 +387,6 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			RevealStaggerSeconds,
 			RevealTravelSeconds,
 			SheenDelaySeconds,
-			SheenDurationSeconds,
 			RuptureShakeDurationSeconds);
 	}
 
@@ -426,6 +433,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		_lootTextures.Clear();
 		SetDismissEnabled(state, false);
 		SetBlockerActive(false);
+		ResetEquipmentTooltipState();
 	}
 
 	private Entity EnsureOverlay()
@@ -447,6 +455,54 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	}
 
 	private Entity GetOverlay() => EntityManager.GetEntity(OverlayEntityName);
+
+	private void EnsureEquipmentTooltipEntity()
+	{
+		var entity = EntityManager.GetEntity(EquipmentTooltipEntityName);
+		if (entity == null)
+		{
+			entity = EntityManager.CreateEntity(EquipmentTooltipEntityName);
+			EntityManager.AddComponent(entity, new EquipmentTooltipState());
+			EntityManager.AddComponent(entity, new Transform { ZOrder = 10002 });
+			EntityManager.AddComponent(entity, new UIElement
+			{
+				Bounds = Rectangle.Empty,
+				IsInteractable = false,
+				IsHidden = true,
+				TooltipType = TooltipType.None,
+			});
+			EntityManager.AddComponent(entity, new DontDestroyOnLoad());
+			return;
+		}
+
+		if (entity.GetComponent<EquipmentTooltipState>() == null)
+		{
+			EntityManager.AddComponent(entity, new EquipmentTooltipState());
+		}
+		if (entity.GetComponent<Transform>() == null)
+		{
+			EntityManager.AddComponent(entity, new Transform { ZOrder = 10002 });
+		}
+		if (entity.GetComponent<UIElement>() == null)
+		{
+			EntityManager.AddComponent(entity, new UIElement
+			{
+				Bounds = Rectangle.Empty,
+				IsInteractable = false,
+				IsHidden = true,
+				TooltipType = TooltipType.None,
+			});
+		}
+	}
+
+	private void ResetEquipmentTooltipState()
+	{
+		var state = EntityManager.GetEntity(EquipmentTooltipEntityName)
+			?.GetComponent<EquipmentTooltipState>();
+		if (state == null) return;
+		state.TargetVisible = false;
+		state.EquipmentEntity = null;
+	}
 
 	private bool IsSnapshotScene()
 	{
@@ -614,10 +670,8 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			Bounds = Rectangle.Empty,
 			IsInteractable = false,
 			IsHidden = true,
-			Tooltip = EquipmentService.GetTooltipText(equipment, EquipmentTooltipType.Shop),
-			TooltipType = TooltipType.Text,
-			TooltipPosition = TooltipPosition.Below,
-			TooltipOffsetPx = 18,
+			Tooltip = string.Empty,
+			TooltipType = TooltipType.Equipment,
 			EventType = UIElementEventType.None,
 			SecondaryEventType = UIElementEventType.None,
 			LayerType = UILayerType.Overlay,
@@ -810,15 +864,10 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		{
 			var sheen = state.Loot[index].PreviewEntity?.GetComponent<CardSheen>();
 			if (sheen == null) continue;
-			float progress = BoosterPackOpeningAnimationService.GetSheenProgress(
+			sheen.IsActive = BoosterPackOpeningAnimationService.HasSheenStarted(
 				state.ElapsedSeconds,
 				index,
 				timing);
-			sheen.Progress = progress;
-			sheen.Alpha = progress > 0f && progress < 1f
-				? (float)Math.Sin(progress * MathHelper.Pi)
-				: 0f;
-			sheen.IsActive = progress > 0f && progress < 1f;
 		}
 	}
 

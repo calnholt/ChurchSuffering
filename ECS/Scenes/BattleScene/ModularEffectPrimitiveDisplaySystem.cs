@@ -59,6 +59,30 @@ namespace Crusaders30XX.ECS.Systems
 			new(0.00f, 0.82f)
 		};
 
+		private static readonly Vector2[] HammerHeadMask =
+		{
+			new(0.24f, 0.00f),
+			new(0.76f, 0.00f),
+			new(0.94f, 0.08f),
+			new(1.00f, 0.24f),
+			new(0.78f, 0.34f),
+			new(0.68f, 0.40f),
+			new(0.68f, 0.60f),
+			new(0.78f, 0.66f),
+			new(1.00f, 0.76f),
+			new(0.94f, 0.92f),
+			new(0.76f, 1.00f),
+			new(0.24f, 1.00f),
+			new(0.06f, 0.92f),
+			new(0.00f, 0.76f),
+			new(0.22f, 0.66f),
+			new(0.32f, 0.60f),
+			new(0.32f, 0.40f),
+			new(0.22f, 0.34f),
+			new(0.00f, 0.24f),
+			new(0.06f, 0.08f)
+		};
+
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly Texture2D _pixel;
@@ -83,6 +107,18 @@ namespace Crusaders30XX.ECS.Systems
 
 		[DebugEditable(DisplayName = "Crack Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float CrackAlpha { get; set; } = 0.94f;
+
+		[DebugEditable(DisplayName = "Hammer Scale", Step = 0.05f, Min = 0.5f, Max = 2f)]
+		public float HammerScale { get; set; } = 1.25f;
+
+		[DebugEditable(DisplayName = "Hammer Wind-up Degrees", Step = 1f, Min = 60f, Max = 160f)]
+		public float HammerWindupDegrees { get; set; } = 112f;
+
+		[DebugEditable(DisplayName = "Hammer Acceleration", Step = 0.1f, Min = 1f, Max = 5f)]
+		public float HammerAccelerationPower { get; set; } = 3f;
+
+		[DebugEditable(DisplayName = "Hammer Follow-through Degrees", Step = 1f, Min = 0f, Max = 45f)]
+		public float HammerFollowThroughDegrees { get; set; } = 18f;
 
 		public ModularEffectPrimitiveDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(entityManager)
 		{
@@ -120,7 +156,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			return EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>()
 				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null);
+				.Where(e => e != null && e.ElapsedSeconds >= 0f);
 		}
 
 		private void DrawSwordArc(ActiveVisualEffect effect)
@@ -220,15 +256,45 @@ namespace Crusaders30XX.ECS.Systems
 		private void DrawHammerArc(ActiveVisualEffect effect)
 		{
 			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0f, 0.10f, 0.84f, 1f);
+			float duration = Math.Max(0.0001f, effect.Timing.DurationSeconds);
+			float contactSeconds = effect.Timing.HitStopDurationSeconds > 0f
+				? effect.Timing.HitStopStartSeconds
+				: effect.Timing.ImpactTimeSeconds;
+			float contactProgress = MathHelper.Clamp(contactSeconds / duration, 0.05f, 0.85f);
+			float followThroughEnd = Math.Min(0.62f, contactProgress + 0.28f);
+			float fadeEnd = Math.Min(1f, followThroughEnd + 0.18f);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0f, 0.06f, followThroughEnd, fadeEnd);
 			if (alpha <= 0f) return;
 
-			float swing = MathHelper.Lerp(-110f * effect.DirectionSign, 3f * effect.DirectionSign, VisualEffectDisplayMath.EaseOutCubic(MathHelper.Clamp(p / 0.84f, 0f, 1f)));
+			int directionSign = effect.DirectionSign;
+			if (directionSign == 0)
+			{
+				directionSign = effect.ImpactAnchor.X >= effect.SourceAnchor.X ? 1 : -1;
+			}
+
 			float baseAngle = MathF.Atan2(effect.ImpactAnchor.Y - effect.SourceAnchor.Y, effect.ImpactAnchor.X - effect.SourceAnchor.X);
-			float rotation = baseAngle + MathHelper.ToRadians(swing);
-			var pivot = effect.SourceAnchor + (effect.ImpactAnchor - effect.SourceAnchor) * 0.55f;
-			DrawHammerPart(pivot, rotation, new Vector2(66f, 0f), new Vector2(132f, 14f), alpha * 0.95f, 8f);
-			DrawHammerPart(pivot, rotation, new Vector2(172f, 0f), new Vector2(112f, 48f), alpha, 3f);
+			float contactRotation = baseAngle;
+			float windupRotation = contactRotation - MathHelper.ToRadians(HammerWindupDegrees * directionSign);
+			float rotation;
+			if (p <= contactProgress)
+			{
+				float swingProgress = MathHelper.Clamp(p / contactProgress, 0f, 1f);
+				float acceleratedSwing = MathF.Pow(swingProgress, HammerAccelerationPower);
+				rotation = MathHelper.Lerp(windupRotation, contactRotation, acceleratedSwing);
+			}
+			else
+			{
+				float followThroughProgress = MathHelper.Clamp((p - contactProgress) / Math.Max(0.0001f, followThroughEnd - contactProgress), 0f, 1f);
+				float followThrough = VisualEffectDisplayMath.EaseOutCubic(followThroughProgress);
+				rotation = contactRotation + MathHelper.ToRadians(HammerFollowThroughDegrees * directionSign) * followThrough;
+			}
+
+			const float headCenterDistance = 270f;
+			const float headHeight = 180f;
+			float scale = HammerScale;
+			var contactPoint = new Vector2(headCenterDistance, directionSign * headHeight * 0.5f) * scale;
+			var pivot = effect.ImpactAnchor - Rotate(contactPoint, contactRotation);
+			DrawHammer(pivot, rotation, scale, alpha);
 		}
 
 		private void DrawCrossBloom(ActiveVisualEffect effect)
@@ -367,12 +433,39 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void DrawHammerPart(Vector2 pivot, float rotation, Vector2 localCenter, Vector2 size, float alpha, float radius)
+		private void DrawHammer(Vector2 pivot, float rotation, float scale, float alpha)
 		{
-			var center = pivot + Rotate(localCenter, rotation);
-			DrawGlowRect(center, size + new Vector2(6f), Cream, alpha * 0.16f, rotation);
-			DrawRotatedRect(center, size, RockDark * alpha, rotation);
-			DrawRotatedRect(center, new Vector2(size.X + radius, 2f), Cream * (alpha * 0.12f), rotation);
+			var handleCenter = pivot + Rotate(new Vector2(130f, 0f) * scale, rotation);
+			var handleSize = new Vector2(280f, 24f) * scale;
+			DrawGlowRect(handleCenter, handleSize + new Vector2(6f * scale), Cream, alpha * 0.16f, rotation);
+			DrawRotatedRect(handleCenter, handleSize, RockDark * alpha, rotation);
+			var handleHighlight = handleCenter + Rotate(new Vector2(0f, -5f) * scale, rotation);
+			DrawRotatedRect(handleHighlight, new Vector2(266f, 3f) * scale, Cream * (alpha * 0.28f), rotation);
+
+			var gripCenter = pivot + Rotate(new Vector2(42f, 0f) * scale, rotation);
+			DrawRotatedRect(gripCenter, new Vector2(96f, 34f) * scale, RockDark * alpha, rotation);
+			for (int i = -2; i <= 2; i++)
+			{
+				var wrapCenter = gripCenter + Rotate(new Vector2(i * 18f, 0f) * scale, rotation);
+				DrawRotatedRect(wrapCenter, new Vector2(5f, 36f) * scale, Gold * (alpha * 0.55f), rotation);
+			}
+
+			var pommelCenter = pivot + Rotate(new Vector2(-18f, 0f) * scale, rotation);
+			DrawGlowRect(pommelCenter, new Vector2(34f, 44f) * scale, Gold, alpha * 0.12f, rotation);
+			DrawRotatedRect(pommelCenter, new Vector2(30f, 40f) * scale, RockDark * alpha, rotation);
+
+			var headCenter = pivot + Rotate(new Vector2(270f, 0f) * scale, rotation);
+			var headMask = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 108, 180, "modular_fx_hammer_head", HammerHeadMask);
+			DrawMask(headMask, headCenter, Cream * (alpha * 0.18f), rotation, new Vector2(scale * 1.08f));
+			DrawMask(headMask, headCenter, RockDark * alpha, rotation, new Vector2(scale));
+			DrawMask(headMask, headCenter, Steel * (alpha * 0.70f), rotation, new Vector2(scale * 0.84f));
+
+			DrawRotatedRect(headCenter, new Vector2(48f, 62f) * scale, Gold * (alpha * 0.72f), rotation);
+			DrawRotatedRect(headCenter, new Vector2(34f, 48f) * scale, RockDark * (alpha * 0.88f), rotation);
+			var upperFaceCenter = headCenter + Rotate(new Vector2(0f, -82f) * scale, rotation);
+			var lowerFaceCenter = headCenter + Rotate(new Vector2(0f, 82f) * scale, rotation);
+			DrawRotatedRect(upperFaceCenter, new Vector2(68f, 10f) * scale, Cream * (alpha * 0.72f), rotation);
+			DrawRotatedRect(lowerFaceCenter, new Vector2(68f, 10f) * scale, Cream * (alpha * 0.72f), rotation);
 		}
 
 		private void DrawGlowRect(Vector2 center, Vector2 size, Color color, float alpha, float rotation)

@@ -18,6 +18,11 @@ namespace Crusaders30XX.ECS.Components
 		public Vector2 ImpactAnchor { get; set; }
 		public int DirectionSign { get; set; } = 1;
 		public float ElapsedSeconds { get; set; }
+		public float DelaySeconds { get; set; }
+		public bool StartSfxPublished { get; set; }
+		public bool DrivesGameplayImpact { get; set; } = true;
+		public Guid SequenceId { get; set; }
+		public int BeatIndex { get; set; }
 		public bool ImpactPublished { get; set; }
 		public bool CompletionPublished { get; set; }
 		public bool IsPreview { get; set; }

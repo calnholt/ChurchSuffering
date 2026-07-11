@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
@@ -11,6 +12,53 @@ namespace Crusaders30XX.ECS.Services
 {
 	public static class VisualEffectRequestFactory
 	{
+		public static IReadOnlyList<VisualEffectRequested> ForCardSequence(
+			EntityManager entityManager,
+			Entity cardEntity,
+			VisualEffectSequence sequence,
+			bool isPreview = false)
+		{
+			if (entityManager == null || cardEntity == null) return Array.Empty<VisualEffectRequested>();
+			var card = cardEntity.GetComponent<CardData>()?.Card;
+			return BuildSequence(
+				entityManager,
+				sequence,
+				FindPlayer(entityManager),
+				VisualEffectSourceKind.Card,
+				card?.CardId,
+				card?.DisplayName,
+				isPreview);
+		}
+
+		public static IReadOnlyList<VisualEffectRequested> ForEnemyAttackSequence(
+			EntityManager entityManager,
+			Entity enemyEntity,
+			EnemyAttackBase attack,
+			VisualEffectSequence sequence,
+			bool isPreview = false)
+		{
+			if (entityManager == null || enemyEntity == null || attack == null) return Array.Empty<VisualEffectRequested>();
+			return BuildSequence(
+				entityManager,
+				sequence,
+				enemyEntity,
+				VisualEffectSourceKind.EnemyAttack,
+				attack.Id.ToKey(),
+				attack.Name,
+				isPreview);
+		}
+
+		public static IReadOnlyList<VisualEffectRequested> ForDebugPreviewSequence(
+			EntityManager entityManager,
+			VisualEffectSourceKind sourceKind,
+			string sourceId,
+			string displayName,
+			VisualEffectSequence sequence)
+		{
+			if (entityManager == null) return Array.Empty<VisualEffectRequested>();
+			var source = sourceKind == VisualEffectSourceKind.EnemyAttack ? FindEnemy(entityManager) : FindPlayer(entityManager);
+			return BuildSequence(entityManager, sequence, source, sourceKind, sourceId, displayName, true);
+		}
 		public static VisualEffectRequested ForCard(
 			EntityManager entityManager,
 			Entity cardEntity,
@@ -58,7 +106,8 @@ namespace Crusaders30XX.ECS.Services
 			bool isPreview = false)
 		{
 			if (entityManager == null || enemyEntity == null || attack == null) return null;
-			var resolvedRecipe = recipe ?? attack.AttackEffectRecipe ?? VisualEffectPresets.EnemyAttackLunge();
+			var resolvedRecipe = recipe ?? attack.AttackEffectRecipe;
+			if (resolvedRecipe == null) return null;
 			var target = ResolveTarget(entityManager, VisualEffectSourceKind.EnemyAttack, resolvedRecipe.TargetRole);
 			return Build(resolvedRecipe, enemyEntity, target, VisualEffectSourceKind.EnemyAttack, attack.Id.ToKey(), attack.Name, string.Empty, isPreview);
 		}
@@ -101,6 +150,48 @@ namespace Crusaders30XX.ECS.Services
 				DisplayName = displayName ?? string.Empty,
 				IsPreview = isPreview
 			};
+		}
+
+		private static IReadOnlyList<VisualEffectRequested> BuildSequence(
+			EntityManager entityManager,
+			VisualEffectSequence sequence,
+			Entity source,
+			VisualEffectSourceKind sourceKind,
+			string sourceId,
+			string displayName,
+			bool isPreview)
+		{
+			if (sequence?.Beats == null || sequence.Beats.Count == 0 || source == null)
+			{
+				return Array.Empty<VisualEffectRequested>();
+			}
+
+			var sequenceId = Guid.NewGuid();
+			var requests = new List<VisualEffectRequested>();
+			for (int index = 0; index < sequence.Beats.Count; index++)
+			{
+				var beat = sequence.Beats[index];
+				if (beat == null) continue;
+				var target = ResolveTarget(entityManager, sourceKind, beat.TargetRole);
+				if (target == null) continue;
+				requests.Add(new VisualEffectRequested
+				{
+					RequestId = Guid.NewGuid(),
+					Recipe = beat.ToLegacyRecipe(),
+					Source = source,
+					Target = target,
+					SourceKind = sourceKind,
+					SourceId = sourceId ?? string.Empty,
+					DisplayName = displayName ?? string.Empty,
+					IsPreview = isPreview,
+					DelaySeconds = Math.Max(0f, beat.DelaySeconds),
+					TimingOverride = beat.ToTiming(),
+					DrivesGameplayImpact = beat.DrivesGameplayImpact,
+					SequenceId = sequenceId,
+					BeatIndex = index
+				});
+			}
+			return requests;
 		}
 
 		private static Entity ResolveTarget(EntityManager entityManager, VisualEffectSourceKind sourceKind, VisualEffectTargetRole role)

@@ -243,9 +243,6 @@ namespace Crusaders30XX.ECS.Systems
 		public float SheenStaggerSeconds { get; set; } = 0.12f;
 		[DebugEditable(DisplayName = "Sheen Delay Seconds", Step = 0.01f, Min = 0f, Max = 3f)]
 		public float SheenDelaySeconds { get; set; } = 0.52f;
-		[DebugEditable(DisplayName = "Sheen Duration Seconds", Step = 0.01f, Min = 0.01f, Max = 3f)]
-		public float SheenDurationSeconds { get; set; } = 0.84f;
-
 		private struct DeckRewardOptionView
 		{
 			public Entity Lane;
@@ -2113,7 +2110,6 @@ namespace Crusaders30XX.ECS.Systems
 				SheenStaggerSeconds,
 				0f,
 				SheenDelaySeconds,
-				SheenDurationSeconds,
 				0f);
 		}
 
@@ -2152,12 +2148,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				var sheen = _deckRewardOptionViews[index].IncomingCard?.GetComponent<CardSheen>();
 				if (sheen == null) continue;
-				float progress = BoosterPackOpeningAnimationService.GetSheenProgress(elapsed, index, timing);
-				sheen.Progress = progress;
-				sheen.Alpha = progress > 0f && progress < 1f
-					? (float)Math.Sin(progress * MathHelper.Pi)
-					: 0f;
-				sheen.IsActive = progress > 0f && progress < 1f;
+				sheen.IsActive = BoosterPackOpeningAnimationService.HasSheenStarted(elapsed, index, timing);
 			}
 		}
 

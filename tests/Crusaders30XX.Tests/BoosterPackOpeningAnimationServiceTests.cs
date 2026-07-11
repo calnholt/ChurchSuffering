@@ -131,9 +131,14 @@ public sealed class BoosterPackOpeningAnimationServiceTests
 	}
 
 	[Fact]
-	public void Latest_sheen_ends_at_ready_and_controls_dismissal_boundary()
+	public void Latest_sheen_starts_before_ready_and_remains_active_after_ready()
 	{
-		Assert.Equal(1f, BoosterPackOpeningAnimationService.GetSheenProgress(5.14f, 2, Timing), 5);
+		float latestSheenStart = Timing.ShowcaseStart
+			+ Timing.RevealStagger * 2f
+			+ Timing.SheenDelayFromReveal;
+		Assert.False(BoosterPackOpeningAnimationService.HasSheenStarted(latestSheenStart - 0.001f, 2, Timing));
+		Assert.True(BoosterPackOpeningAnimationService.HasSheenStarted(latestSheenStart, 2, Timing));
+		Assert.True(BoosterPackOpeningAnimationService.HasSheenStarted(Timing.ReadyStart + 10f, 2, Timing));
 		Assert.False(BoosterPackOpeningAnimationService.CanDismiss(5.139f, Timing));
 		Assert.True(BoosterPackOpeningAnimationService.CanDismiss(5.14f, Timing));
 	}

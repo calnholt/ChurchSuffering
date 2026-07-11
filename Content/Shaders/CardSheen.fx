@@ -1,7 +1,8 @@
 float4x4 MatrixTransform;
 float2 CardSizePx;
-float Progress;
-float Alpha;
+float TimeSeconds;
+float SheenDurationSeconds;
+float RepeatDelaySeconds;
 float AngleRadians;
 float BandWidthNormalized;
 float FeatherNormalized;
@@ -64,7 +65,14 @@ float4 SheenPixelShader(VSOutput input) : COLOR0
     float2 direction = normalize(float2(cos(AngleRadians), sin(AngleRadians)));
     float projected = dot(input.TexCoord - 0.5, direction);
     float projectedHalfSpan = 0.5 * (abs(direction.x) + abs(direction.y));
-    float bandCenter = lerp(-1.3 * projectedHalfSpan, 1.3 * projectedHalfSpan, saturate(Progress));
+    float sheenDuration = max(0.001, SheenDurationSeconds);
+    float repeatDelay = max(0.0, RepeatDelaySeconds);
+    float cycleElapsed = fmod(max(0.0, TimeSeconds), sheenDuration + repeatDelay);
+    float sweepProgress = saturate(cycleElapsed / sheenDuration);
+    float sweepAlpha = cycleElapsed < sheenDuration
+        ? sin(sweepProgress * 3.14159265)
+        : 0.0;
+    float bandCenter = lerp(-1.3 * projectedHalfSpan, 1.3 * projectedHalfSpan, sweepProgress);
     float signedDistance = projected - bandCenter;
     float distanceToBand = abs(signedDistance);
 
@@ -83,7 +91,7 @@ float4 SheenPixelShader(VSOutput input) : COLOR0
     float3 color = CoreColor * core
         + GoldFringeColor * leading
         + BlueFringeColor * trailing;
-    float opacity = saturate((broadBand * 0.55 + core * 0.45) * Alpha * Intensity);
+    float opacity = saturate((broadBand * 0.55 + core * 0.45) * sweepAlpha * Intensity);
     return float4(color, opacity) * input.Color;
 }
 

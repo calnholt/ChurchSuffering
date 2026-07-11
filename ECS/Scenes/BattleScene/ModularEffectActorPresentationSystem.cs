@@ -75,6 +75,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void ApplyActiveEffect(ActiveVisualEffect effect)
 		{
+			if (effect.ElapsedSeconds < 0f) return;
 			if (effect.Recipe.Modules.Contains(VisualEffectModule.ActorLunge))
 			{
 				var actor = ResolveLungeActor(effect);

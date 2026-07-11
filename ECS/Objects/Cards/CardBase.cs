@@ -51,6 +51,12 @@ namespace Crusaders30XX.ECS.Objects.Cards
         }
         
         public VisualEffectRecipe VisualEffectRecipe { get; protected set; }
+        private VisualEffectSequence _visualEffectSequence;
+        public VisualEffectSequence VisualEffectSequence
+        {
+            get => _visualEffectSequence ??= VisualEffectSequenceAuthoring.ForCard(this);
+            protected set => _visualEffectSequence = value;
+        }
         public CardType Type { get; set; } = CardType.Attack;
         public string Target { get; set; } = "";
         public bool IsFreeAction { get; set; } = false;
@@ -89,37 +95,37 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
         protected static VisualEffectRecipe PlayerAttackEffect()
         {
-            return VisualEffectPresets.PlayerAttack();
+            return new VisualEffectRecipe();
         }
 
         protected static VisualEffectRecipe PlayerBuffEffect()
         {
-            return VisualEffectPresets.PlayerBuff();
+            return new VisualEffectRecipe();
         }
 
         protected static VisualEffectRecipe LightSlashEffect()
         {
-            return VisualEffectPresets.LightSlash();
+            return new VisualEffectRecipe();
         }
 
         protected static VisualEffectRecipe HeavyHammerEffect()
         {
-            return VisualEffectPresets.HeavyHammer();
+            return new VisualEffectRecipe();
         }
 
         protected static VisualEffectRecipe HolyStrikeEffect()
         {
-            return VisualEffectPresets.HolyStrike();
+            return new VisualEffectRecipe();
         }
 
         protected static VisualEffectRecipe HolySupportEffect()
         {
-            return VisualEffectPresets.HolySupport();
+            return new VisualEffectRecipe();
         }
 
         protected static VisualEffectRecipe DefensiveGuardEffect()
         {
-            return VisualEffectPresets.DefensiveGuard();
+            return new VisualEffectRecipe();
         }
 
         public virtual void Initialize(EntityManager entityManager, Entity cardEntity)

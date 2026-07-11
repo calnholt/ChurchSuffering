@@ -67,7 +67,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (!IsActive) return;
 			var active = EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>()
 				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null)
+				.Where(e => e != null && e.ElapsedSeconds >= 0f)
 				.ToDictionary(e => e.RequestId, e => e);
 
 			foreach (var effect in active.Values)
@@ -86,7 +86,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void Draw()
 		{
-			foreach (var active in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>().Select(e => e.GetComponent<ActiveVisualEffect>()).Where(e => e != null))
+			foreach (var active in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>().Select(e => e.GetComponent<ActiveVisualEffect>()).Where(e => e != null && e.ElapsedSeconds >= 0f))
 			{
 				if (!_particlesByRequest.TryGetValue(active.RequestId, out var particles)) continue;
 				float t = VisualEffectDisplayMath.ImpactProgress(active);

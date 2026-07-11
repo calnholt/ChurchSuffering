@@ -177,6 +177,104 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		}
 	}
 
+	/// <summary>
+	/// A directly-authored visual moment inside a card or enemy attack sequence.
+	/// Beats deliberately carry their own timing and weight so gameplay definitions
+	/// do not need to share a named preset.
+	/// </summary>
+	public sealed class VisualEffectBeat
+	{
+		private VisualEffectModule[] _modules = Array.Empty<VisualEffectModule>();
+
+		public string Id { get; init; } = string.Empty;
+		public VisualEffectTargetRole TargetRole { get; init; } = VisualEffectTargetRole.Enemy;
+		public float DelaySeconds { get; init; }
+		public float DurationSeconds { get; init; } = 0.56f;
+		public float ImpactTimeSeconds { get; init; } = 0.18f;
+		public float HitStopStartSeconds { get; init; }
+		public float HitStopDurationSeconds { get; init; }
+		public float Intensity { get; init; } = 1f;
+		public float ParticleMultiplier { get; init; } = 1f;
+		public IReadOnlyList<VisualEffectModule> Modules => _modules;
+		public SfxTrack StartSfx { get; init; } = SfxTrack.None;
+		public SfxTrack ImpactSfx { get; init; } = SfxTrack.None;
+		public float StartSfxVolume { get; init; } = 0.5f;
+		public float ImpactSfxVolume { get; init; } = 0.5f;
+		public float StartSfxPitch { get; init; }
+		public float ImpactSfxPitch { get; init; }
+		public bool DrivesGameplayImpact { get; init; }
+
+		public VisualEffectBeat WithModules(params VisualEffectModule[] modules)
+		{
+			return new VisualEffectBeat
+			{
+				Id = Id,
+				TargetRole = TargetRole,
+				DelaySeconds = DelaySeconds,
+				DurationSeconds = DurationSeconds,
+				ImpactTimeSeconds = ImpactTimeSeconds,
+				HitStopStartSeconds = HitStopStartSeconds,
+				HitStopDurationSeconds = HitStopDurationSeconds,
+				Intensity = Intensity,
+				ParticleMultiplier = ParticleMultiplier,
+				StartSfx = StartSfx,
+				ImpactSfx = ImpactSfx,
+				StartSfxVolume = StartSfxVolume,
+				ImpactSfxVolume = ImpactSfxVolume,
+				StartSfxPitch = StartSfxPitch,
+				ImpactSfxPitch = ImpactSfxPitch,
+				DrivesGameplayImpact = DrivesGameplayImpact,
+				_modules = (modules ?? Array.Empty<VisualEffectModule>()).Distinct().ToArray()
+			};
+		}
+
+		public VisualEffectRecipe ToLegacyRecipe()
+		{
+			return new VisualEffectRecipe
+			{
+				Id = Id,
+				Timing = VisualEffectTimingProfile.SnapImpact,
+				TargetRole = TargetRole,
+				Intensity = Intensity,
+				ParticleMultiplier = ParticleMultiplier,
+				StartSfx = StartSfx,
+				ImpactSfx = ImpactSfx,
+				StartSfxVolume = StartSfxVolume,
+				ImpactSfxVolume = ImpactSfxVolume,
+				StartSfxPitch = StartSfxPitch,
+				ImpactSfxPitch = ImpactSfxPitch
+			}.WithModules(_modules);
+		}
+
+		public VisualEffectTiming ToTiming()
+		{
+			float duration = Math.Max(0.01f, DurationSeconds);
+			return new VisualEffectTiming
+			{
+				DurationSeconds = duration,
+				ImpactTimeSeconds = Math.Clamp(ImpactTimeSeconds, 0f, duration),
+				HitStopStartSeconds = Math.Clamp(HitStopStartSeconds, 0f, duration),
+				HitStopDurationSeconds = Math.Max(0f, HitStopDurationSeconds)
+			};
+		}
+	}
+
+	public sealed class VisualEffectSequence
+	{
+		private VisualEffectBeat[] _beats = Array.Empty<VisualEffectBeat>();
+		public IReadOnlyList<VisualEffectBeat> Beats => _beats;
+
+		public VisualEffectSequence WithBeats(params VisualEffectBeat[] beats)
+		{
+			return new VisualEffectSequence
+			{
+				_beats = (beats ?? Array.Empty<VisualEffectBeat>())
+					.Where(beat => beat != null)
+					.ToArray()
+			};
+		}
+	}
+
 	public readonly struct VisualEffectTiming
 	{
 		public float DurationSeconds { get; init; }

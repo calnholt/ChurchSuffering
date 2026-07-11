@@ -29,6 +29,12 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
     public static EntityManager EntityManager { get; set; }
     public int? BlockRequiredToPreventEffect { get; protected set; }
     public VisualEffectRecipe AttackEffectRecipe { get; protected set; }
+    private VisualEffectSequence _attackEffectSequence;
+    public VisualEffectSequence AttackEffectSequence
+    {
+      get => _attackEffectSequence ??= VisualEffectSequenceAuthoring.ForEnemyAttack(this);
+      protected set => _attackEffectSequence = value;
+    }
 
     // Probability (0.0–1.0) that guard conversion is attempted. Set to 0f to opt out.
     public float GuardConversionChance { get; protected set; } = 0.75f;
@@ -41,22 +47,22 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
 
     protected static VisualEffectRecipe EnemySlashEffect()
     {
-      return VisualEffectPresets.EnemySlash();
+      return new VisualEffectRecipe();
     }
 
     protected static VisualEffectRecipe EnemyClawSlashEffect()
     {
-      return VisualEffectPresets.EnemyClawSlash();
+      return new VisualEffectRecipe();
     }
 
     protected static VisualEffectRecipe EnemyBiteEffect()
     {
-      return VisualEffectPresets.EnemyBite();
+      return new VisualEffectRecipe();
     }
 
     protected static VisualEffectRecipe EnemyRockBlastEffect()
     {
-      return VisualEffectPresets.EnemyRockBlast();
+      return new VisualEffectRecipe();
     }
 
     public virtual int RollGuardConversion(int damage)

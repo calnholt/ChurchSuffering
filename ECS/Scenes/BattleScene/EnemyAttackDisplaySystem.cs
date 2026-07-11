@@ -368,14 +368,17 @@ namespace Crusaders30XX.ECS.Systems
 			EventQueue.EnqueueRule(new QueuedWaitAbsorbEvent());
 			EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out var enemy, out _, out var planned);
 			var attack = planned?.AttackDefinition;
-			var recipe = attack?.AttackEffectRecipe ?? VisualEffectPresets.EnemyAttackLunge();
-			var request = attack == null
-				? null
-				: VisualEffectRequestFactory.ForEnemyAttack(EntityManager, enemy, attack, recipe);
-			if (request != null)
+			var requests = attack == null
+				? Array.Empty<VisualEffectRequested>()
+				: VisualEffectRequestFactory.ForEnemyAttackSequence(EntityManager, enemy, attack, attack.AttackEffectSequence);
+			var drivingRequest = requests.SingleOrDefault(request => request.DrivesGameplayImpact);
+			if (drivingRequest != null)
 			{
-				EventQueue.EnqueueRule(new QueuedStartVisualEffect(request));
-				EventQueue.EnqueueRule(new QueuedWaitVisualEffectImpact(request.RequestId));
+				foreach (var request in requests)
+				{
+					EventQueue.EnqueueRule(new QueuedStartVisualEffect(request));
+				}
+				EventQueue.EnqueueRule(new QueuedWaitVisualEffectImpact(drivingRequest.RequestId));
 			}
 			else
 			{

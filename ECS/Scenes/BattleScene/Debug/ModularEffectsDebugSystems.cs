@@ -23,13 +23,8 @@ namespace Crusaders30XX.ECS.Systems
 		public IEnumerable<DebugNamedAction> PlayEffects()
 		{
 			return CardFactory.GetAllCards()
-				.Where(pair => pair.Value?.VisualEffectRecipe != null)
-				.Select(pair => CreateAction(VisualEffectSourceKind.Card, pair.Key.ToKey(), pair.Value.DisplayName, pair.Value.VisualEffectRecipe));
-		}
-
-		private DebugNamedAction CreateAction(VisualEffectSourceKind kind, string id, string name, VisualEffectRecipe recipe)
-		{
-			return ModularEffectDebugActionFactory.Create(EntityManager, kind, id, name, recipe);
+				.Where(pair => pair.Value?.VisualEffectSequence != null)
+				.Select(pair => ModularEffectDebugActionFactory.CreateSequence(EntityManager, VisualEffectSourceKind.Card, pair.Key.ToKey(), pair.Value.DisplayName, pair.Value.VisualEffectSequence));
 		}
 	}
 
@@ -106,12 +101,13 @@ namespace Crusaders30XX.ECS.Systems
 		public IEnumerable<DebugNamedAction> PlayEffects()
 		{
 			return EnemyAttackFactory.GetAllAttacks()
-				.Select(pair => ModularEffectDebugActionFactory.Create(
+				.Where(pair => pair.Value?.AttackEffectSequence != null)
+				.Select(pair => ModularEffectDebugActionFactory.CreateSequence(
 					EntityManager,
 					VisualEffectSourceKind.EnemyAttack,
 					pair.Key.ToKey(),
 					pair.Value.Name,
-					pair.Value.AttackEffectRecipe ?? VisualEffectPresets.EnemyAttackLunge()));
+					pair.Value.AttackEffectSequence));
 		}
 	}
 
@@ -138,6 +134,28 @@ namespace Crusaders30XX.ECS.Systems
 						displayName,
 						recipe);
 					if (request != null)
+					{
+						EventManager.Publish(request);
+					}
+				}
+			};
+		}
+
+		public static DebugNamedAction CreateSequence(
+			EntityManager entityManager,
+			VisualEffectSourceKind sourceKind,
+			string sourceId,
+			string displayName,
+			VisualEffectSequence sequence)
+		{
+			string label = $"{displayName} [{sourceId}]";
+			return new DebugNamedAction
+			{
+				Label = label,
+				IsEnabled = sequence?.Beats?.Count > 0,
+				Invoke = () =>
+				{
+					foreach (var request in VisualEffectRequestFactory.ForDebugPreviewSequence(entityManager, sourceKind, sourceId, displayName, sequence))
 					{
 						EventManager.Publish(request);
 					}

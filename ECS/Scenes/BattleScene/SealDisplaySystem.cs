@@ -61,9 +61,9 @@ namespace Crusaders30XX.ECS.Systems
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_sealTexture = sealTexture;
-			EventManager.Subscribe<CardRenderEvent>(evt => FrameProfiler.Measure("SealDisplaySystem.OnCardRenderEvent", () => OnCardRenderEvent(evt)));
-			EventManager.Subscribe<CardRenderScaledEvent>(evt => FrameProfiler.Measure("SealDisplaySystem.OnCardRenderScaledEvent", () => OnCardRenderScaledEvent(evt)));
-			EventManager.Subscribe<CardRenderScaledRotatedEvent>(evt => FrameProfiler.Measure("SealDisplaySystem.OnCardRenderScaledRotatedEvent", () => OnCardRenderScaledRotatedEvent(evt)));
+			EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent);
+			EventManager.Subscribe<CardRenderScaledEvent>(OnCardRenderScaledEvent);
+			EventManager.Subscribe<CardRenderScaledRotatedEvent>(OnCardRenderScaledRotatedEvent);
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()

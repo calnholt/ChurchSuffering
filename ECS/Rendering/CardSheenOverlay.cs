@@ -13,8 +13,9 @@ public sealed class CardSheenOverlay
 	}
 
 	public bool IsAvailable => _effect != null;
-	public float Progress { get; set; }
-	public float Alpha { get; set; }
+	public float TimeSeconds { get; set; }
+	public float SheenDurationSeconds { get; set; }
+	public float RepeatDelaySeconds { get; set; }
 	public float AngleRadians { get; set; }
 	public float BandWidthNormalized { get; set; }
 	public float FeatherNormalized { get; set; }
@@ -39,8 +40,9 @@ public sealed class CardSheenOverlay
 			1);
 
 		Set("MatrixTransform", projection);
-		Set("Progress", Progress);
-		Set("Alpha", Alpha);
+		Set("TimeSeconds", TimeSeconds);
+		Set("SheenDurationSeconds", SheenDurationSeconds);
+		Set("RepeatDelaySeconds", RepeatDelaySeconds);
 		Set("AngleRadians", AngleRadians);
 		Set("BandWidthNormalized", BandWidthNormalized);
 		Set("FeatherNormalized", FeatherNormalized);

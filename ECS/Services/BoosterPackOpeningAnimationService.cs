@@ -16,7 +16,6 @@ public readonly record struct BoosterPackOpeningTiming(
 	float RevealStagger,
 	float RevealTravelDuration,
 	float SheenDelayFromReveal,
-	float SheenDuration,
 	float RuptureShakeDuration)
 {
 	public static BoosterPackOpeningTiming Default { get; } = new(
@@ -30,7 +29,6 @@ public readonly record struct BoosterPackOpeningTiming(
 		0.12f,
 		0.72f,
 		0.52f,
-		0.84f,
 		0.58f);
 
 	public float SummonStart => 0f;
@@ -184,7 +182,7 @@ public static class BoosterPackOpeningAnimationService
 			progress >= 1f);
 	}
 
-	public static float GetSheenProgress(
+	public static bool HasSheenStarted(
 		float elapsedSeconds,
 		int slotIndex,
 		BoosterPackOpeningTiming timing)
@@ -192,10 +190,7 @@ public static class BoosterPackOpeningAnimationService
 		float start = timing.ShowcaseStart
 			+ Math.Max(0, slotIndex) * Math.Max(0f, timing.RevealStagger)
 			+ Math.Max(0f, timing.SheenDelayFromReveal);
-		float duration = Math.Max(0.001f, timing.SheenDuration);
-		float elapsed = ClampElapsed(elapsedSeconds);
-		if (AtOrAfter(elapsed, start + duration)) return 1f;
-		return MathHelper.Clamp((elapsed - start) / duration, 0f, 1f);
+		return AtOrAfter(ClampElapsed(elapsedSeconds), start);
 	}
 
 	public static Vector2 SampleRuptureShake(

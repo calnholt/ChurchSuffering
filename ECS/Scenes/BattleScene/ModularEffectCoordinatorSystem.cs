@@ -49,6 +49,11 @@ namespace Crusaders30XX.ECS.Systems
 				var active = entity.GetComponent<ActiveVisualEffect>();
 				if (active == null) continue;
 				active.ElapsedSeconds += Math.Max(0f, dt);
+				if (active.ElapsedSeconds < 0f) continue;
+				if (!active.StartSfxPublished)
+				{
+					PublishStartSfx(active);
+				}
 				if (!active.ImpactPublished && active.ElapsedSeconds >= active.Timing.ImpactTimeSeconds)
 				{
 					PublishImpact(active);
@@ -82,11 +87,13 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			var effectEntity = EntityManager.CreateEntity($"VisualEffect_{request.SourceKind}_{request.SourceId}");
+			var timing = request.TimingOverride ?? VisualEffectTimingProfileResolver.Resolve(recipe.Timing);
+			float delay = Math.Max(0f, request.DelaySeconds);
 			EntityManager.AddComponent(effectEntity, new ActiveVisualEffect
 			{
 				RequestId = request.RequestId,
 				Recipe = recipe,
-				Timing = VisualEffectTimingProfileResolver.Resolve(recipe.Timing),
+				Timing = timing,
 				Source = request.Source,
 				Target = request.Target,
 				SourceAnchor = sourceAnchor,
@@ -97,18 +104,32 @@ namespace Crusaders30XX.ECS.Systems
 				SourceKind = request.SourceKind,
 				SourceId = request.SourceId ?? string.Empty,
 				ContextId = request.ContextId ?? string.Empty,
-				DisplayName = request.DisplayName ?? string.Empty
+				DisplayName = request.DisplayName ?? string.Empty,
+				ElapsedSeconds = -delay,
+				DelaySeconds = delay,
+				DrivesGameplayImpact = request.DrivesGameplayImpact,
+				SequenceId = request.SequenceId,
+				BeatIndex = request.BeatIndex
 			});
 
-			if (recipe.StartSfx != SfxTrack.None)
+			if (delay <= 0f)
 			{
-				EventManager.Publish(new PlaySfxEvent
-				{
-					Track = recipe.StartSfx,
-					Volume = recipe.StartSfxVolume,
-					Pitch = recipe.StartSfxPitch
-				});
+				var active = effectEntity.GetComponent<ActiveVisualEffect>();
+				PublishStartSfx(active);
 			}
+		}
+
+		private static void PublishStartSfx(ActiveVisualEffect active)
+		{
+			if (active == null || active.StartSfxPublished) return;
+			active.StartSfxPublished = true;
+			if (active.Recipe.StartSfx == SfxTrack.None) return;
+			EventManager.Publish(new PlaySfxEvent
+			{
+				Track = active.Recipe.StartSfx,
+				Volume = active.Recipe.StartSfxVolume,
+				Pitch = active.Recipe.StartSfxPitch
+			});
 		}
 
 		private bool TryReserveCapacity(VisualEffectRequested request)
@@ -167,7 +188,8 @@ namespace Crusaders30XX.ECS.Systems
 			});
 
 			if (!active.IsPreview
-				&& active.SourceKind == VisualEffectSourceKind.EnemyAttack)
+				&& active.SourceKind == VisualEffectSourceKind.EnemyAttack
+				&& active.DrivesGameplayImpact)
 			{
 				EventManager.Publish(new EnemyAttackImpactNow());
 			}
@@ -212,7 +234,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (_pendingRejectedGameplayRequests.Count == 0) return;
 			foreach (var request in _pendingRejectedGameplayRequests.ToList())
 			{
-				if (request.SourceKind == VisualEffectSourceKind.EnemyAttack)
+				if (request.SourceKind == VisualEffectSourceKind.EnemyAttack && request.DrivesGameplayImpact)
 				{
 					EventManager.Publish(new EnemyAttackImpactNow());
 				}

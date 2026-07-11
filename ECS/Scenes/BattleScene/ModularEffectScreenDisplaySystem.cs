@@ -179,7 +179,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			return EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>()
 				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null);
+				.Where(e => e != null && e.ElapsedSeconds >= 0f);
 		}
 
 		private static Vector2 ComputeStepShake(float progress)

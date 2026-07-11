@@ -26,6 +26,7 @@ public sealed class CardSheenDisplaySystem : Core.System
 	private Effect _effect;
 	private CardSheenOverlay _overlay;
 	private bool _failed;
+	private float _timeSeconds;
 
 	[DebugEditable(DisplayName = "Angle Degrees", Step = 1f, Min = 0f, Max = 360f)]
 	public float AngleDegrees { get; set; } = 105f;
@@ -44,6 +45,12 @@ public sealed class CardSheenDisplaySystem : Core.System
 
 	[DebugEditable(DisplayName = "Intensity", Step = 0.01f, Min = 0f, Max = 2f)]
 	public float Intensity { get; set; } = 0.55f;
+
+	[DebugEditable(DisplayName = "Sheen Duration Seconds", Step = 0.01f, Min = 0.01f, Max = 3f)]
+	public float SheenDurationSeconds { get; set; } = 0.84f;
+
+	[DebugEditable(DisplayName = "Repeat Delay Seconds", Step = 0.01f, Min = 0f, Max = 10f)]
+	public float RepeatDelaySeconds { get; set; } = 2f;
 
 	[DebugEditable(DisplayName = "Gold Fringe Strength", Step = 0.01f, Min = 0f, Max = 1f)]
 	public float GoldFringeStrength { get; set; } = 0.28f;
@@ -78,10 +85,26 @@ public sealed class CardSheenDisplaySystem : Core.System
 
 	protected override void UpdateEntity(Entity entity, GameTime gameTime)
 	{
+		var sheen = entity.GetComponent<CardSheen>();
+		if (sheen == null) return;
+		if (!sheen.IsActive)
+		{
+			sheen.HasActivationTime = false;
+			return;
+		}
+
+		if (!sheen.HasActivationTime)
+		{
+			sheen.ActivationTimeSeconds = _timeSeconds;
+			sheen.HasActivationTime = true;
+		}
 	}
 
 	public override void Update(GameTime gameTime)
 	{
+		_timeSeconds += MathHelper.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
+		base.Update(gameTime);
+
 		if (!ShaderRuntimeOptions.ShadersEnabled || _failed || _overlay != null) return;
 		foreach (var entity in GetRelevantEntities())
 		{
@@ -94,7 +117,7 @@ public sealed class CardSheenDisplaySystem : Core.System
 	{
 		if (!ShaderRuntimeOptions.ShadersEnabled || _overlay?.IsAvailable != true || evt?.Card == null) return;
 		var sheen = evt.Card.GetComponent<CardSheen>();
-		if (sheen?.IsActive != true || sheen.Progress <= 0f || sheen.Progress >= 1f || sheen.Alpha <= 0f) return;
+		if (sheen?.IsActive != true || !sheen.HasActivationTime) return;
 
 		var geometry = CardGeometryService.GetVisualGeometry(
 			EntityManager,
@@ -103,8 +126,9 @@ public sealed class CardSheenDisplaySystem : Core.System
 			evt.Scale,
 			evt.Rotation);
 
-		_overlay.Progress = sheen.Progress;
-		_overlay.Alpha = MathHelper.Clamp(sheen.Alpha, 0f, 1f);
+		_overlay.TimeSeconds = MathHelper.Max(0f, _timeSeconds - sheen.ActivationTimeSeconds);
+		_overlay.SheenDurationSeconds = MathHelper.Max(0.001f, SheenDurationSeconds);
+		_overlay.RepeatDelaySeconds = MathHelper.Max(0f, RepeatDelaySeconds);
 		_overlay.AngleRadians = MathHelper.ToRadians(AngleDegrees);
 		_overlay.BandWidthNormalized = BandWidthNormalized;
 		_overlay.FeatherNormalized = FeatherNormalized;

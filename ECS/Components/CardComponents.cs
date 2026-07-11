@@ -414,8 +414,8 @@ namespace Crusaders30XX.ECS.Components
     {
         public Entity Owner { get; set; }
         public bool IsActive { get; set; }
-        public float Progress { get; set; }
-        public float Alpha { get; set; }
+        public bool HasActivationTime { get; set; }
+        public float ActivationTimeSeconds { get; set; }
     }
 
     /// <summary>

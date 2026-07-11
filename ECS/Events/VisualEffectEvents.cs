@@ -41,6 +41,11 @@ namespace Crusaders30XX.ECS.Events
 		public string ContextId { get; init; } = string.Empty;
 		public string DisplayName { get; init; } = string.Empty;
 		public bool IsPreview { get; init; }
+		public float DelaySeconds { get; init; }
+		public VisualEffectTiming? TimingOverride { get; init; }
+		public bool DrivesGameplayImpact { get; init; } = true;
+		public Guid SequenceId { get; init; }
+		public int BeatIndex { get; init; }
 	}
 
 	public sealed class VisualEffectImpactReached

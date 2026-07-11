@@ -19,6 +19,8 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Subscribe<ApplyCardApplicationEvent>(OnApplyCardApplication);
 			EventManager.Subscribe<RemoveCardApplication>(OnRemoveCardApplication);
 			EventManager.Subscribe<RemoveCardApplications>(OnRemoveCardApplications);
+			EventManager.Subscribe<StartBattleRequested>(_ => RefreshAllCursedCardPresentations(), priority: -1);
+			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene, priority: -1);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -27,6 +29,20 @@ namespace Crusaders30XX.ECS.Systems
 		}
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
+
+		private void OnLoadScene(LoadSceneEvent evt)
+		{
+			if (evt.Scene != SceneId.Battle) return;
+			RefreshAllCursedCardPresentations();
+		}
+
+		private void RefreshAllCursedCardPresentations()
+		{
+			foreach (var card in EntityManager.GetEntitiesWithComponent<Cursed>())
+			{
+				RefreshCursedCardPresentation(EntityManager, card);
+			}
+		}
 
 		private void OnApplyCardApplication(ApplyCardApplicationEvent evt)
 		{
