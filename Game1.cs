@@ -286,7 +286,7 @@ public class Game1 : Game
         _world.AddSystem(_locationNameDisplaySystem);
         // _world.AddSystem(_worldMapSystem);
         _world.AddSystem(_cursorDisplaySystem, SystemUpdatePhase.Presentation);
-        _world.AddSystem(_cursorTrailDisplaySystem);
+        _world.AddSystem(_cursorTrailDisplaySystem, SystemUpdatePhase.Presentation);
         _world.AddSystem(_hotKeySystem);
         _world.AddSystem(_hotKeyProgressRingSystem);
         _world.AddLateSystem(_positionTweenSystem);

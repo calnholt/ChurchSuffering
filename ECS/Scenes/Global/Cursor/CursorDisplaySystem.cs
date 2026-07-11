@@ -19,7 +19,6 @@ namespace Crusaders30XX.ECS.Systems
         private readonly SpriteBatch _spriteBatch;
         private readonly Texture2D _cursorCross;
         private PlayerInputState _state;
-        private Texture2D _circleTexture;
         private Entity _previousTarget;
         private float _scale = 1f;
         private float _pulseTimer;
@@ -29,6 +28,9 @@ namespace Crusaders30XX.ECS.Systems
 
         [DebugEditable(DisplayName = "Cursor Opacity", Step = 0.05f, Min = 0f, Max = 1f)]
         public float CursorOpacity { get; set; } = 0.45f;
+
+        [DebugEditable(DisplayName = "Cross Opacity", Step = 0.05f, Min = 0f, Max = 1f)]
+        public float CrossOpacity { get; set; } = 0.9f;
 
         [DebugEditable(DisplayName = "Cross Scale Multiplier", Step = 0.05f, Min = 0.25f, Max = 3f)]
         public float CrossScale { get; set; } = 1f;
@@ -74,23 +76,29 @@ namespace Crusaders30XX.ECS.Systems
             if (_state == null) return;
             Vector2 position = _state.Frame.PointerPosition;
             int radius = Math.Max(1, CursorRadius);
-            _circleTexture = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, radius);
-            var destination = new Rectangle(
-                (int)Math.Round(position.X) - radius,
-                (int)Math.Round(position.Y) - radius,
-                radius * 2,
-                radius * 2);
-            byte alpha = (byte)Math.Round(MathHelper.Clamp(CursorOpacity, 0f, 1f) * 255f);
-            Color color = Color.FromNonPremultiplied(255, 255, 255, alpha);
-            _spriteBatch.Draw(_circleTexture, destination, color);
+            Texture2D circleTexture = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, radius);
+            byte discAlpha = (byte)Math.Round(MathHelper.Clamp(CursorOpacity, 0f, 1f) * 255f);
+            Color discColor = Color.FromNonPremultiplied(255, 255, 255, discAlpha);
+            _spriteBatch.Draw(
+                circleTexture,
+                position,
+                null,
+                discColor,
+                0f,
+                new Vector2(radius, radius),
+                1f,
+                SpriteEffects.None,
+                0f);
 
             Vector2 origin = new(_cursorCross.Width / 2f, _cursorCross.Height / 2f);
             float fit = radius * 2f / Math.Max(_cursorCross.Width, _cursorCross.Height) * 0.75f;
+            byte crossAlpha = (byte)Math.Round(MathHelper.Clamp(CrossOpacity, 0f, 1f) * 255f);
+            Color crossColor = Color.FromNonPremultiplied(255, 255, 255, crossAlpha);
             _spriteBatch.Draw(
                 _cursorCross,
                 position,
                 null,
-                color,
+                crossColor,
                 0f,
                 origin,
                 fit * CrossScale * _scale,

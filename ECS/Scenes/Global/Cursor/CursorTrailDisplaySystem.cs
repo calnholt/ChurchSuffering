@@ -4,6 +4,7 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -27,6 +28,11 @@ public class CursorTrailDisplaySystem : Core.System
 
     private Vector2 _cursorPos;
     private bool _hasCursorPos;
+    private Vector2 _previousStampPos;
+    private bool _hasPreviousStampPos;
+    private PlayerInputDevice _cursorSource;
+    private bool _hasCursorSource;
+    private readonly List<Vector2> _stampPositions = new();
 
     // Erase blend: punches a soft hole by multiplying dest by (1 - srcAlpha)
     private static readonly BlendState EraseBlend = new BlendState
@@ -59,17 +65,35 @@ public class CursorTrailDisplaySystem : Core.System
     [DebugEditable(DisplayName = "Trail Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
     public float TrailAlpha { get; set; } = 0.5f;
 
-    [DebugEditable(DisplayName = "Trail R", Step = 0.01f, Min = 0f, Max = 1f)]
-    public float TrailR { get; set; } = 0.6f;
+    [DebugEditable(DisplayName = "Outer R", Step = 0.01f, Min = 0f, Max = 1f)]
+    public float OuterR { get; set; } = 1f;
 
-    [DebugEditable(DisplayName = "Trail G", Step = 0.01f, Min = 0f, Max = 1f)]
-    public float TrailG { get; set; } = 0.85f;
+    [DebugEditable(DisplayName = "Outer G", Step = 0.01f, Min = 0f, Max = 1f)]
+    public float OuterG { get; set; } = 1f;
 
-    [DebugEditable(DisplayName = "Trail B", Step = 0.01f, Min = 0f, Max = 1f)]
-    public float TrailB { get; set; } = 1.0f;
+    [DebugEditable(DisplayName = "Outer B", Step = 0.01f, Min = 0f, Max = 1f)]
+    public float OuterB { get; set; } = 1f;
+
+    [DebugEditable(DisplayName = "Core R", Step = 0.01f, Min = 0f, Max = 1f)]
+    public float CoreR { get; set; } = 1f;
+
+    [DebugEditable(DisplayName = "Core G", Step = 0.01f, Min = 0f, Max = 1f)]
+    public float CoreG { get; set; } = 0f;
+
+    [DebugEditable(DisplayName = "Core B", Step = 0.01f, Min = 0f, Max = 1f)]
+    public float CoreB { get; set; } = 0f;
 
     [DebugEditable(DisplayName = "Stamp Radius", Step = 1f, Min = 2f, Max = 128f)]
     public int StampRadius { get; set; } = 27;
+
+    [DebugEditable(DisplayName = "Core Radius", Step = 1f, Min = 2f, Max = 128f)]
+    public int CoreRadius { get; set; } = 14;
+
+    [DebugEditable(DisplayName = "Stamp Spacing", Step = 1f, Min = 1f, Max = 128f)]
+    public float StampSpacing { get; set; } = 10f;
+
+    [DebugEditable(DisplayName = "Max Bridge Distance", Step = 25f, Min = 50f, Max = 3000f)]
+    public float MaxBridgeDistance { get; set; } = 800f;
 
     [DebugEditable(DisplayName = "Cutout Radius", Step = 1f, Min = 2f, Max = 128f)]
     public int CutoutRadius { get; set; } = 25;
@@ -89,13 +113,22 @@ public class CursorTrailDisplaySystem : Core.System
 
     private void OnCursorState(CursorStateEvent e)
     {
+        if (_hasCursorSource && e.Source != _cursorSource)
+        {
+            _hasPreviousStampPos = false;
+        }
+
         _cursorPos = e.Position;
+        _cursorSource = e.Source;
         _hasCursorPos = true;
+        _hasCursorSource = true;
     }
 
     private void OnDeleteCaches(DeleteCachesEvent e)
     {
         DisposeTargets();
+        _hasPreviousStampPos = false;
+        _hasCursorSource = false;
     }
 
     public override void Update(GameTime gameTime)
@@ -118,16 +151,41 @@ public class CursorTrailDisplaySystem : Core.System
         _gd.Clear(Color.Transparent);
 
         // Draw previous trail with decay (fade via tint color)
-        Color decayColor = new Color(TrailDecay, TrailDecay, TrailDecay, 1f);
+        float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        float frameDecay = CalculateFrameDecay(TrailDecay, elapsedSeconds);
+        Color decayColor = new Color(frameDecay, frameDecay, frameDecay, 1f);
         _sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
         _sb.Draw(_trailRt, _gd.Viewport.Bounds, decayColor);
         _sb.End();
 
-        // --- Step 2: Stamp cursor circle onto _blurA (additive) ---
-        var stampTex = PrimitiveTextureFactory.GetAntiAliasedCircle(_gd, StampRadius);
-        Color stampColor = new Color(TrailR, TrailG, TrailB, 1f);
+        // --- Step 2: Fill cursor movement gaps with a white outer trail and red core ---
+        BuildStampPositions(
+            _stampPositions,
+            _hasPreviousStampPos ? _previousStampPos : null,
+            _cursorPos,
+            StampSpacing,
+            MaxBridgeDistance);
+        _previousStampPos = _cursorPos;
+        _hasPreviousStampPos = true;
+
+        int outerRadius = Math.Max(1, StampRadius);
+        var stampTex = PrimitiveTextureFactory.GetAntiAliasedCircle(_gd, outerRadius);
+        Color stampColor = new Color(OuterR, OuterG, OuterB, 1f);
         _sb.Begin(SpriteSortMode.Immediate, BlendState.Additive, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
-        _sb.Draw(stampTex, _cursorPos, null, stampColor, 0f, new Vector2(StampRadius, StampRadius), 1f, SpriteEffects.None, 0f);
+        foreach (Vector2 position in _stampPositions)
+        {
+            _sb.Draw(stampTex, position, null, stampColor, 0f, new Vector2(outerRadius, outerRadius), 1f, SpriteEffects.None, 0f);
+        }
+        _sb.End();
+
+        int coreRadius = Math.Max(1, Math.Min(CoreRadius, outerRadius));
+        var coreTex = PrimitiveTextureFactory.GetAntiAliasedCircle(_gd, coreRadius);
+        Color coreColor = new Color(CoreR, CoreG, CoreB, 1f);
+        _sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
+        foreach (Vector2 position in _stampPositions)
+        {
+            _sb.Draw(coreTex, position, null, coreColor, 0f, new Vector2(coreRadius, coreRadius), 1f, SpriteEffects.None, 0f);
+        }
         _sb.End();
 
         // --- Step 3: Horizontal blur _blurA → _blurB ---
@@ -220,6 +278,41 @@ public class CursorTrailDisplaySystem : Core.System
         _trailRt?.Dispose(); _trailRt = null;
         _blurA?.Dispose(); _blurA = null;
         _blurB?.Dispose(); _blurB = null;
+    }
+
+    internal static void BuildStampPositions(
+        List<Vector2> positions,
+        Vector2? previousPosition,
+        Vector2 currentPosition,
+        float spacing,
+        float maxBridgeDistance)
+    {
+        positions.Clear();
+        if (!previousPosition.HasValue)
+        {
+            positions.Add(currentPosition);
+            return;
+        }
+
+        Vector2 previous = previousPosition.Value;
+        float distance = Vector2.Distance(previous, currentPosition);
+        if (distance <= 0f || distance > Math.Max(0f, maxBridgeDistance))
+        {
+            positions.Add(currentPosition);
+            return;
+        }
+
+        int segmentCount = Math.Max(1, (int)Math.Ceiling(distance / Math.Max(1f, spacing)));
+        for (int i = 1; i <= segmentCount; i++)
+        {
+            positions.Add(Vector2.Lerp(previous, currentPosition, i / (float)segmentCount));
+        }
+    }
+
+    internal static float CalculateFrameDecay(float decayAtSixtyFps, float elapsedSeconds)
+    {
+        float clampedDecay = MathHelper.Clamp(decayAtSixtyFps, 0f, 1f);
+        return MathF.Pow(clampedDecay, Math.Max(0f, elapsedSeconds) * 60f);
     }
 
     protected override void UpdateEntity(Entity entity, GameTime gameTime)
