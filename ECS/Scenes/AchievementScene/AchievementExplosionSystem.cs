@@ -19,8 +19,6 @@ namespace Crusaders30XX.ECS.Systems
     [DebugTab("Achievement Explosion")]
     public class AchievementExplosionSystem : Core.System
     {
-        private readonly AchievementGridDisplaySystem _gridDisplaySystem;
-
         // Animation state
         private enum AnimationPhase { Idle, Explosion, Reveal }
         private AnimationPhase _phase = AnimationPhase.Idle;
@@ -80,10 +78,8 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Small Explosion Multiplier", Step = 0.05f, Min = 0.1f, Max = 1f)]
         public float SmallExplosionMultiplier { get; set; } = 0.1f;
 
-        public AchievementExplosionSystem(EntityManager em, AchievementGridDisplaySystem gridDisplaySystem) : base(em)
+        public AchievementExplosionSystem(EntityManager em) : base(em)
         {
-            _gridDisplaySystem = gridDisplaySystem;
-
             EventManager.Subscribe<AchievementRevealClickedEvent>(OnRevealClicked);
             EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
         }
@@ -122,7 +118,7 @@ namespace Crusaders30XX.ECS.Systems
             GenerateExplosionNoise();
 
             // Mark all grid items as participating in explosion
-            foreach (var ent in _gridDisplaySystem.GetAllGridEntities())
+            foreach (var ent in GetGridEntities())
             {
                 var gridItem = ent.GetComponent<AchievementGridItem>();
                 if (gridItem != null)
@@ -132,7 +128,7 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             // Animate the source cell completion
-            var sourceEnt = _gridDisplaySystem.GetGridEntity(_sourceRow, _sourceCol);
+            var sourceEnt = GetGridEntity(_sourceRow, _sourceCol);
             if (sourceEnt != null)
             {
                 var gridItem = sourceEnt.GetComponent<AchievementGridItem>();
@@ -178,7 +174,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private void CheckDebugClicks()
         {
-            foreach (var ent in _gridDisplaySystem.GetAllGridEntities())
+            foreach (var ent in GetGridEntities())
             {
                 var ui = ent.GetComponent<UIElement>();
                 var gridItem = ent.GetComponent<AchievementGridItem>();
@@ -215,7 +211,7 @@ namespace Crusaders30XX.ECS.Systems
             GenerateExplosionNoise();
 
             // Mark all grid items as participating in explosion
-            foreach (var ent in _gridDisplaySystem.GetAllGridEntities())
+            foreach (var ent in GetGridEntities())
             {
                 var gridItem = ent.GetComponent<AchievementGridItem>();
                 if (gridItem != null)
@@ -225,7 +221,7 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             // Animate the source cell completion
-            var sourceEnt = _gridDisplaySystem.GetGridEntity(_sourceRow, _sourceCol);
+            var sourceEnt = GetGridEntity(_sourceRow, _sourceCol);
             if (sourceEnt != null)
             {
                 var gridItem = sourceEnt.GetComponent<AchievementGridItem>();
@@ -251,7 +247,7 @@ namespace Crusaders30XX.ECS.Systems
                 : easedProgress * (1f - returnEased);
 
             // Update source cell scale animation
-            var sourceEnt = _gridDisplaySystem.GetGridEntity(_sourceRow, _sourceCol);
+            var sourceEnt = GetGridEntity(_sourceRow, _sourceCol);
             if (sourceEnt != null)
             {
                 var gridItem = sourceEnt.GetComponent<AchievementGridItem>();
@@ -269,7 +265,7 @@ namespace Crusaders30XX.ECS.Systems
             // Update explosion offsets for all cells
             Vector2 sourceCenter = GetCellCenter(_sourceRow, _sourceCol);
 
-            foreach (var ent in _gridDisplaySystem.GetAllGridEntities())
+            foreach (var ent in GetGridEntities())
             {
                 var gridItem = ent.GetComponent<AchievementGridItem>();
                 if (gridItem == null) continue;
@@ -326,7 +322,7 @@ namespace Crusaders30XX.ECS.Systems
                     var achievement = AchievementManager.GetAchievement(revealedId);
                     if (achievement != null)
                     {
-                        var revealedEnt = _gridDisplaySystem.GetGridEntity(achievement.Row, achievement.Column);
+                        var revealedEnt = GetGridEntity(achievement.Row, achievement.Column);
                         if (revealedEnt != null)
                         {
                             var gridItem = revealedEnt.GetComponent<AchievementGridItem>();
@@ -347,7 +343,7 @@ namespace Crusaders30XX.ECS.Systems
             if (_animationTime >= ExplosionDuration)
             {
                 // Clear explosion offsets
-                foreach (var ent in _gridDisplaySystem.GetAllGridEntities())
+                foreach (var ent in GetGridEntities())
                 {
                     var gridItem = ent.GetComponent<AchievementGridItem>();
                     if (gridItem != null)
@@ -401,7 +397,7 @@ namespace Crusaders30XX.ECS.Systems
                 var achievement = AchievementManager.GetAchievement(revealedId);
                 if (achievement == null) continue;
 
-                var ent = _gridDisplaySystem.GetGridEntity(achievement.Row, achievement.Column);
+                var ent = GetGridEntity(achievement.Row, achievement.Column);
                 if (ent == null) continue;
 
                 var gridItem = ent.GetComponent<AchievementGridItem>();
@@ -423,7 +419,7 @@ namespace Crusaders30XX.ECS.Systems
                     var achievement = AchievementManager.GetAchievement(revealedId);
                     if (achievement == null) continue;
 
-                    var ent = _gridDisplaySystem.GetGridEntity(achievement.Row, achievement.Column);
+                    var ent = GetGridEntity(achievement.Row, achievement.Column);
                     if (ent == null) continue;
 
                     var gridItem = ent.GetComponent<AchievementGridItem>();
@@ -458,8 +454,10 @@ namespace Crusaders30XX.ECS.Systems
 
         private Vector2 GetCellCenter(int row, int col)
         {
-            var rect = _gridDisplaySystem.GetCellRect(row, col);
-            return new Vector2(rect.X + rect.Width / 2f, rect.Y + rect.Height / 2f);
+            var entity = GetGridEntity(row, col);
+            var transform = entity?.GetComponent<Transform>();
+            var item = entity?.GetComponent<AchievementGridItem>();
+            return transform == null ? Vector2.Zero : transform.Position - (item?.ExplosionOffset ?? Vector2.Zero);
         }
 
         private void GenerateExplosionNoise()
@@ -467,7 +465,7 @@ namespace Crusaders30XX.ECS.Systems
             _explosionRandom = new Random();
             _cellNoise.Clear();
 
-            foreach (var ent in _gridDisplaySystem.GetAllGridEntities())
+            foreach (var ent in GetGridEntities())
             {
                 var gridItem = ent.GetComponent<AchievementGridItem>();
                 if (gridItem == null) continue;
@@ -480,6 +478,21 @@ namespace Crusaders30XX.ECS.Systems
 
                 _cellNoise[(gridItem.Row, gridItem.Column)] = (angleNoise, magnitudeNoise);
             }
+        }
+
+        private IEnumerable<Entity> GetGridEntities()
+        {
+            return EntityManager.GetEntitiesWithComponent<AchievementGridItem>();
+        }
+
+        private Entity GetGridEntity(int row, int col)
+        {
+            foreach (var entity in GetGridEntities())
+            {
+                var item = entity.GetComponent<AchievementGridItem>();
+                if (item?.Row == row && item.Column == col) return entity;
+            }
+            return null;
         }
 
         private Vector2 RotateVector(Vector2 v, float radians)

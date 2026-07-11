@@ -6,7 +6,6 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -22,7 +21,7 @@ namespace Crusaders30XX.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
-        private readonly Dictionary<string, Texture2D> _roundedRectCache = new();
+        private readonly Texture2D _pixel;
         private readonly Dictionary<string, Entity> _gridEntities = new();
         private bool _gridCreated = false;
 
@@ -40,13 +39,13 @@ namespace Crusaders30XX.ECS.Systems
         public int CellGap { get; set; } = 16;
 
         [DebugEditable(DisplayName = "Grid Offset X", Step = 10, Min = 0, Max = 500)]
-        public int GridOffsetX { get; set; } = 170;
+        public int GridOffsetX { get; set; } = 120;
 
         [DebugEditable(DisplayName = "Grid Offset Y", Step = 10, Min = 0, Max = 500)]
-        public int GridOffsetY { get; set; } = 150;
+        public int GridOffsetY { get; set; } = 174;
 
         [DebugEditable(DisplayName = "Corner Radius", Step = 1, Min = 0, Max = 20)]
-        public int CornerRadius { get; set; } = 6;
+        public int CornerRadius { get; set; } = 0;
 
         [DebugEditable(DisplayName = "Hover Scale", Step = 0.05f, Min = 1f, Max = 2f)]
         public float HoverScale { get; set; } = 1.15f;
@@ -65,16 +64,18 @@ namespace Crusaders30XX.ECS.Systems
         public float ExclamationScale { get; set; } = 0.28f;
 
         // Colors
-        private readonly Color _completedColor = Color.White;
-        private readonly Color _visibleColor = new Color(139, 0, 0); // Dark Red
-        private readonly Color _hiddenColor = Color.Black;
-        private readonly Color _exclamationColor = Color.DarkRed;
-        private readonly Color _exclamationGlowColor = new Color(255, 215, 0, 128); // Semi-transparent gold
+        private readonly Color _completedColor = AchievementSceneDrawHelpers.WarmWhite;
+        private readonly Color _visibleColor = new Color(58, 12, 20);
+        private readonly Color _hiddenColor = AchievementSceneDrawHelpers.Black1;
+        private readonly Color _exclamationColor = AchievementSceneDrawHelpers.Red;
+        private readonly Color _exclamationGlowColor = AchievementSceneDrawHelpers.RedBright * 0.55f;
 
         public AchievementGridDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb) : base(em)
         {
             _graphicsDevice = gd;
             _spriteBatch = sb;
+            _pixel = new Texture2D(gd, 1, 1);
+            _pixel.SetData(new[] { Color.White });
 
             EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
         }
@@ -307,6 +308,8 @@ namespace Crusaders30XX.ECS.Systems
             var scene = EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault()?.GetComponent<SceneState>();
             if (scene == null || scene.Current != SceneId.Achievement) return;
 
+            DrawGridBackdrop();
+
             // Draw all grid cells
             foreach (var kv in _gridEntities)
             {
@@ -319,6 +322,28 @@ namespace Crusaders30XX.ECS.Systems
                 if (gridItem == null || ui == null) continue;
 
                 DrawGridCell(gridItem, ui);
+            }
+        }
+
+        private void DrawGridBackdrop()
+        {
+            var panel = AchievementSceneDrawHelpers.GridPanel;
+            AchievementSceneDrawHelpers.DrawPanel(_spriteBatch, _pixel, panel);
+
+            int firstCenterX = GridOffsetX + CellSize / 2;
+            int firstCenterY = GridOffsetY + CellSize / 2;
+            int lastCenterX = firstCenterX + (GRID_COLUMNS - 1) * (CellSize + CellGap);
+            int lastCenterY = firstCenterY + (GRID_ROWS - 1) * (CellSize + CellGap);
+            var railColor = Color.White * 0.035f;
+            for (int row = 0; row < GRID_ROWS; row++)
+            {
+                int y = firstCenterY + row * (CellSize + CellGap);
+                _spriteBatch.Draw(_pixel, new Rectangle(firstCenterX, y, lastCenterX - firstCenterX, 1), railColor);
+            }
+            for (int col = 0; col < GRID_COLUMNS; col++)
+            {
+                int x = firstCenterX + col * (CellSize + CellGap);
+                _spriteBatch.Draw(_pixel, new Rectangle(x, firstCenterY, 1, lastCenterY - firstCenterY), railColor);
             }
         }
 
@@ -364,23 +389,34 @@ namespace Crusaders30XX.ECS.Systems
                 pulseScale = 1f + 0.2f * (float)Math.Sin(pulseT * Math.PI);
             }
 
-            // Get scaled texture
             int size = (int)(CellSize * gridItem.CurrentScale * pulseScale);
-            var tex = GetOrCreateRoundedRect(size, size, (int)(CornerRadius * gridItem.CurrentScale * pulseScale));
-
-            // Draw centered on bounds (adjusted for pulse)
             var center = new Vector2(ui.Bounds.X + ui.Bounds.Width / 2f, ui.Bounds.Y + ui.Bounds.Height / 2f);
             var drawRect = new Rectangle(
                 (int)(center.X - size / 2f),
                 (int)(center.Y - size / 2f),
                 size,
                 size);
-            _spriteBatch.Draw(tex, drawRect, cellColor);
+            _spriteBatch.Draw(_pixel, drawRect, cellColor);
 
-            // Draw hover highlight
-            if (ui.IsHovered && achievement != null && achievement.State != AchievementState.Hidden)
+            Color borderColor = achievement?.State switch
             {
-                _spriteBatch.Draw(tex, drawRect, cellColor * 0.3f);
+                AchievementState.CompleteSeen => Color.White * 0.88f,
+                AchievementState.CompleteUnseen => AchievementSceneDrawHelpers.RedBright,
+                AchievementState.Visible => AchievementSceneDrawHelpers.Red * 0.82f,
+                _ => Color.White * 0.07f,
+            };
+            AchievementSceneDrawHelpers.DrawBorder(_spriteBatch, _pixel, drawRect, borderColor * gridItem.Alpha, 1);
+            AchievementSceneDrawHelpers.DrawBorder(
+                _spriteBatch,
+                _pixel,
+                new Rectangle(drawRect.X + 3, drawRect.Y + 3, drawRect.Width - 6, drawRect.Height - 6),
+                Color.Black * (0.35f * gridItem.Alpha),
+                1);
+
+            if (ui.IsHovered)
+            {
+                var hoverRect = new Rectangle(drawRect.X - 3, drawRect.Y - 3, drawRect.Width + 6, drawRect.Height + 6);
+                AchievementSceneDrawHelpers.DrawBorder(_spriteBatch, _pixel, hoverRect, AchievementSceneDrawHelpers.RedBright * 0.9f, 2);
             }
 
             // Draw pulsing exclamation mark on completed-unseen cells
@@ -425,15 +461,5 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch.DrawString(font, text, textPos, mainColor, 0f, Vector2.Zero, ExclamationScale, SpriteEffects.None, 0f);
         }
 
-        private Texture2D GetOrCreateRoundedRect(int width, int height, int radius)
-        {
-            string key = $"{width}x{height}r{radius}";
-            if (_roundedRectCache.TryGetValue(key, out var tex) && tex != null)
-                return tex;
-
-            tex = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, width, height, radius);
-            _roundedRectCache[key] = tex;
-            return tex;
-        }
     }
 }

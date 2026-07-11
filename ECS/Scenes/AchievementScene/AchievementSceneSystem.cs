@@ -117,13 +117,12 @@ namespace Crusaders30XX.ECS.Systems
                 _backButtonDisplaySystem = new AchievementBackButtonDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
             _world.AddSystem(_backButtonDisplaySystem);
 
-            // Explosion system depends on grid display system for accessing grid entities
             if (_explosionSystem == null)
-                _explosionSystem = new AchievementExplosionSystem(_world.EntityManager, _gridDisplaySystem);
+                _explosionSystem = new AchievementExplosionSystem(_world.EntityManager);
             _world.AddSystem(_explosionSystem);
 
             if (_confettiSystem == null)
-                _confettiSystem = new AchievementConfettiDisplaySystem(_world.EntityManager, _gridDisplaySystem, _graphicsDevice, _spriteBatch);
+                _confettiSystem = new AchievementConfettiDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
             _world.AddSystem(_confettiSystem);
         }
     }

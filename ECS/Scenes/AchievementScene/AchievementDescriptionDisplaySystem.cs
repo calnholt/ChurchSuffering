@@ -6,353 +6,167 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Systems
 {
-    /// <summary>
-    /// Displays achievement description panel on the right side when hovering over grid items.
-    /// </summary>
-    [DebugTab("Achievement Description")]
-    public class AchievementDescriptionDisplaySystem : Core.System
-    {
-        private readonly GraphicsDevice _graphicsDevice;
-        private readonly SpriteBatch _spriteBatch;
-        private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
-        private readonly SpriteFont _contentFont = FontSingleton.ContentFont;
+	[DebugTab("Achievement Description")]
+	public class AchievementDescriptionDisplaySystem : Core.System
+	{
+		private readonly SpriteBatch _spriteBatch;
+		private readonly Texture2D _pixel;
+		private string _currentHoveredId = string.Empty;
+		private float _slideProgress;
 
-        private string _currentHoveredId = string.Empty;
-        private float _slideProgress = 0f;
-        private Texture2D _panelTexture;
-        private int _cachedPanelW, _cachedPanelH, _cachedPanelR;
+		[DebugEditable(DisplayName = "Panel Width", Step = 10, Min = 300, Max = 800)]
+		public int PanelWidth { get; set; } = 576;
 
-        // Panel configuration
-        [DebugEditable(DisplayName = "Panel X", Step = 10, Min = 500, Max = 1800)]
-        public int PanelX { get; set; } = 1280;
+		[DebugEditable(DisplayName = "Panel Height", Step = 10, Min = 260, Max = 700)]
+		public int PanelHeight { get; set; } = 430;
 
-        [DebugEditable(DisplayName = "Panel Y", Step = 10, Min = 100, Max = 800)]
-        public int PanelY { get; set; } = 300;
+		[DebugEditable(DisplayName = "Padding", Step = 2, Min = 8, Max = 60)]
+		public int Padding { get; set; } = 32;
 
-        [DebugEditable(DisplayName = "Panel Width", Step = 10, Min = 200, Max = 800)]
-        public int PanelWidth { get; set; } = 530;
+		[DebugEditable(DisplayName = "Title Scale", Step = 0.01f, Min = 0.1f, Max = 1f)]
+		public float TitleScale { get; set; } = 0.31f;
 
-        [DebugEditable(DisplayName = "Panel Height", Step = 10, Min = 200, Max = 600)]
-        public int PanelHeight { get; set; } = 400;
+		[DebugEditable(DisplayName = "Body Scale", Step = 0.01f, Min = 0.05f, Max = 0.4f)]
+		public float BodyScale { get; set; } = 0.115f;
 
-        [DebugEditable(DisplayName = "Corner Radius", Step = 1, Min = 0, Max = 30)]
-        public int CornerRadius { get; set; } = 12;
+		[DebugEditable(DisplayName = "Meta Scale", Step = 0.01f, Min = 0.05f, Max = 0.4f)]
+		public float MetaScale { get; set; } = 0.10f;
 
-        [DebugEditable(DisplayName = "Padding", Step = 2, Min = 8, Max = 50)]
-        public int Padding { get; set; } = 24;
+		[DebugEditable(DisplayName = "Slide Speed", Step = 0.5f, Min = 1f, Max = 30f)]
+		public float SlideSpeed { get; set; } = 11f;
 
-        [DebugEditable(DisplayName = "Title Scale", Step = 0.01f, Min = 0.1f, Max = 1f)]
-        public float TitleScale { get; set; } = 0.3f;
+		[DebugEditable(DisplayName = "Slide Offset", Step = 10, Min = 20, Max = 400)]
+		public int SlideOffset { get; set; } = 180;
 
-        [DebugEditable(DisplayName = "Description Scale", Step = 0.01f, Min = 0.1f, Max = 0.5f)]
-        public float DescriptionScale { get; set; } = 0.18f;
+		public AchievementDescriptionDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+			: base(entityManager)
+		{
+			_spriteBatch = spriteBatch;
+			_pixel = new Texture2D(graphicsDevice, 1, 1);
+			_pixel.SetData(new[] { Color.White });
+			EventManager.Subscribe<AchievementGridItemHovered>(OnHovered);
+			EventManager.Subscribe<LoadSceneEvent>(evt =>
+			{
+				if (evt.Scene != SceneId.Achievement) return;
+				_currentHoveredId = string.Empty;
+				_slideProgress = 0f;
+			});
+		}
 
-        [DebugEditable(DisplayName = "Progress Scale", Step = 0.01f, Min = 0.1f, Max = 0.5f)]
-        public float ProgressScale { get; set; } = 0.2f;
+		private void OnHovered(AchievementGridItemHovered evt)
+		{
+			if (_currentHoveredId == evt.AchievementId) return;
+			_currentHoveredId = evt.AchievementId;
+			if (!string.IsNullOrEmpty(_currentHoveredId)) _slideProgress = 0f;
+		}
 
-        [DebugEditable(DisplayName = "Slide Speed", Step = 1f, Min = 2f, Max = 20f)]
-        public float SlideSpeed { get; set; } = 10f;
+		internal void ShowImmediatelyForSnapshot(string achievementId)
+		{
+			_currentHoveredId = achievementId ?? string.Empty;
+			_slideProgress = string.IsNullOrEmpty(_currentHoveredId) ? 0f : 1f;
+		}
 
-        [DebugEditable(DisplayName = "Slide Offset", Step = 10, Min = 20, Max = 200)]
-        public int SlideOffset { get; set; } = 50;
+		protected override IEnumerable<Entity> GetRelevantEntities() => EntityManager.GetEntitiesWithComponent<SceneState>();
 
-        [DebugEditable(DisplayName = "Title Margin", Step = 1, Min = 0, Max = 100)]
-        public int TitleMargin { get; set; } = 16;
+		protected override void UpdateEntity(Entity entity, GameTime gameTime)
+		{
+			if (entity.GetComponent<SceneState>()?.Current != SceneId.Achievement) return;
+			float target = string.IsNullOrEmpty(_currentHoveredId) ? 0f : 1f;
+			float amount = MathHelper.Clamp((float)gameTime.ElapsedGameTime.TotalSeconds * SlideSpeed, 0f, 1f);
+			_slideProgress = MathHelper.Lerp(_slideProgress, target, amount);
+		}
 
-        [DebugEditable(DisplayName = "Description Margin", Step = 1, Min = 0, Max = 100)]
-        public int DescriptionMargin { get; set; } = 24;
+		public void Draw()
+		{
+			var scene = EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault()?.GetComponent<SceneState>();
+			if (scene?.Current != SceneId.Achievement || _slideProgress < 0.01f) return;
+			var achievement = AchievementManager.GetAchievement(_currentHoveredId);
+			if (achievement == null) return;
 
-        [DebugEditable(DisplayName = "Progress Margin", Step = 1, Min = 0, Max = 100)]
-        public int ProgressMargin { get; set; } = 8;
+			var baseRect = AchievementSceneDrawHelpers.DetailPanel;
+			var panel = new Rectangle(
+				baseRect.X + (int)((1f - _slideProgress) * SlideOffset),
+				baseRect.Y,
+				PanelWidth,
+				PanelHeight);
+			float alpha = MathHelper.Clamp(_slideProgress, 0f, 1f);
+			AchievementSceneDrawHelpers.DrawPanel(_spriteBatch, _pixel, panel, alpha);
+			DrawContent(achievement, panel, alpha);
+		}
 
-        [DebugEditable(DisplayName = "Status Margin", Step = 1, Min = 0, Max = 100)]
-        public int StatusMargin { get; set; } = 45;
+		private void DrawContent(AchievementBase achievement, Rectangle panel, float alpha)
+		{
+			int x = panel.X + Padding;
+			int y = panel.Y + Padding;
+			int width = panel.Width - Padding * 2;
 
-        public AchievementDescriptionDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb) : base(em)
-        {
-            _graphicsDevice = gd;
-            _spriteBatch = sb;
+			AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, "ACHIEVEMENT RECORD", new Vector2(x, y), MetaScale, AchievementSceneDrawHelpers.RedBright * alpha);
+			y += 34;
+			AchievementSceneDrawHelpers.DrawTitleText(_spriteBatch, achievement.Name, new Vector2(x, y), TitleScale, Color.White * alpha);
+			y += 72;
+			_spriteBatch.Draw(_pixel, new Rectangle(x, y, width, 1), Color.White * (0.12f * alpha));
+			y += 22;
 
-            EventManager.Subscribe<AchievementGridItemHovered>(OnGridItemHovered);
-            EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
-        }
+			string description = WrapText(achievement.Description, width, BodyScale);
+			AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, description, new Vector2(x, y), BodyScale, AchievementSceneDrawHelpers.WarmWhite * alpha);
+			int lineCount = Math.Max(1, description.Count(c => c == '\n') + 1);
+			y += lineCount * 28 + 24;
 
-        private void OnLoadScene(LoadSceneEvent evt)
-        {
-            if (evt.Scene == SceneId.Achievement)
-            {
-                _currentHoveredId = string.Empty;
-                _slideProgress = 0f;
-            }
-        }
+			if (achievement.TargetValue > 0)
+			{
+				int current = GetAchievementProgress(achievement);
+				float progress = MathHelper.Clamp(current / (float)achievement.TargetValue, 0f, 1f);
+				AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, "PROGRESS", new Vector2(x, y), MetaScale, AchievementSceneDrawHelpers.MutedWhite * alpha);
+				string value = $"{current} / {achievement.TargetValue}";
+				var valueSize = AchievementSceneDrawHelpers.MeasureBodyText(value, MetaScale);
+				AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, value, new Vector2(panel.Right - Padding - valueSize.X, y), MetaScale, AchievementSceneDrawHelpers.WarmWhite * alpha);
+				y += 30;
+				var track = new Rectangle(x, y, width, 12);
+				_spriteBatch.Draw(_pixel, track, AchievementSceneDrawHelpers.Black3 * alpha);
+				AchievementSceneDrawHelpers.DrawBorder(_spriteBatch, _pixel, track, Color.White * (0.18f * alpha));
+				int fill = (int)(track.Width * progress);
+				if (fill > 0) _spriteBatch.Draw(_pixel, new Rectangle(track.X, track.Y, fill, track.Height), AchievementSceneDrawHelpers.Red * alpha);
+			}
 
-        private void OnGridItemHovered(AchievementGridItemHovered evt)
-        {
-            if (_currentHoveredId != evt.AchievementId)
-            {
-                _currentHoveredId = evt.AchievementId;
-                // Reset slide when changing to new achievement
-                if (!string.IsNullOrEmpty(_currentHoveredId))
-                {
-                    _slideProgress = 0f;
-                }
-            }
-        }
+			string status = achievement.IsCompleted ? "COMPLETED" : "IN PROGRESS";
+			Color statusColor = achievement.IsCompleted ? AchievementSceneDrawHelpers.RedBright : AchievementSceneDrawHelpers.MutedWhite;
+			int footerY = panel.Bottom - Padding - 22;
+			AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, status, new Vector2(x, footerY), MetaScale, statusColor * alpha);
+			string points = $"+{achievement.Points} ACHIEVEMENT POINTS";
+			var pointsSize = AchievementSceneDrawHelpers.MeasureBodyText(points, MetaScale);
+			AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, points, new Vector2(panel.Right - Padding - pointsSize.X, footerY), MetaScale, AchievementSceneDrawHelpers.WarmWhite * alpha);
+		}
 
-        protected override IEnumerable<Entity> GetRelevantEntities()
-        {
-            return EntityManager.GetEntitiesWithComponent<SceneState>();
-        }
+		private static int GetAchievementProgress(AchievementBase achievement)
+		{
+			var property = typeof(AchievementBase).GetProperty("Progress", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+			return (property?.GetValue(achievement) as AchievementProgress)?.CurrentValue ?? 0;
+		}
 
-        protected override void UpdateEntity(Entity entity, GameTime gameTime)
-        {
-            var scene = entity.GetComponent<SceneState>();
-            if (scene == null || scene.Current != SceneId.Achievement) return;
-
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // Animate slide
-            if (!string.IsNullOrEmpty(_currentHoveredId))
-            {
-                _slideProgress = MathHelper.Lerp(_slideProgress, 1f, dt * SlideSpeed);
-            }
-            else
-            {
-                _slideProgress = MathHelper.Lerp(_slideProgress, 0f, dt * SlideSpeed);
-            }
-        }
-
-        public void Draw()
-        {
-            var scene = EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault()?.GetComponent<SceneState>();
-            if (scene == null || scene.Current != SceneId.Achievement) return;
-
-            // Only draw if we have something hovered or are sliding out
-            if (_slideProgress < 0.01f && string.IsNullOrEmpty(_currentHoveredId))
-                return;
-
-            var achievement = !string.IsNullOrEmpty(_currentHoveredId)
-                ? AchievementManager.GetAchievement(_currentHoveredId)
-                : null;
-
-            if (achievement == null && _slideProgress < 0.01f)
-                return;
-
-            // Calculate slide offset
-            float slideOffset = (1f - _slideProgress) * SlideOffset;
-            int panelX = PanelX + (int)slideOffset;
-            float alpha = _slideProgress;
-
-            // Draw panel background
-            DrawPanel(panelX, PanelY, alpha);
-
-            // Draw content if we have an achievement
-            if (achievement != null)
-            {
-                DrawContent(achievement, panelX, PanelY, alpha);
-            }
-        }
-
-        private void DrawPanel(int x, int y, float alpha)
-        {
-            // Ensure panel texture
-            if (_panelTexture == null || _cachedPanelW != PanelWidth || _cachedPanelH != PanelHeight || _cachedPanelR != CornerRadius)
-            {
-                _panelTexture?.Dispose();
-                _panelTexture = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, PanelWidth, PanelHeight, CornerRadius);
-                _cachedPanelW = PanelWidth;
-                _cachedPanelH = PanelHeight;
-                _cachedPanelR = CornerRadius;
-            }
-
-            // Draw background
-            var bgColor = new Color(0, 0, 0, (int)(220 * alpha));
-            _spriteBatch.Draw(_panelTexture, new Rectangle(x, y, PanelWidth, PanelHeight), bgColor);
-
-            // Draw border
-            var borderColor = new Color(139, 0, 0, (int)(255 * alpha)); // Dark red
-            var borderTex = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, PanelWidth - 4, PanelHeight - 4, CornerRadius - 2);
-            // Just draw a subtle inner shadow effect by drawing slightly smaller rect
-        }
-
-        private void DrawContent(AchievementBase achievement, int panelX, int panelY, float alpha)
-        {
-            int contentX = panelX + Padding;
-            int contentY = panelY + Padding;
-            int contentWidth = PanelWidth - Padding * 2;
-
-            var textColor = Color.White * alpha;
-            var dimColor = new Color(180, 180, 180) * alpha;
-
-            // Draw title (achievement name)
-            if (_titleFont != null && !string.IsNullOrEmpty(achievement.Name))
-            {
-                var titleSize = _titleFont.MeasureString(achievement.Name) * TitleScale;
-                _spriteBatch.DrawString(
-                    _titleFont,
-                    achievement.Name,
-                    new Vector2(contentX, contentY),
-                    textColor,
-                    0f,
-                    Vector2.Zero,
-                    TitleScale,
-                    SpriteEffects.None,
-                    0f
-                );
-                contentY += (int)titleSize.Y + TitleMargin;
-            }
-
-            // Draw description
-            if (_contentFont != null && !string.IsNullOrEmpty(achievement.Description))
-            {
-                string wrappedDesc = WrapText(achievement.Description, contentWidth, DescriptionScale);
-                var descSize = _contentFont.MeasureString(wrappedDesc) * DescriptionScale;
-                _spriteBatch.DrawString(
-                    _contentFont,
-                    wrappedDesc,
-                    new Vector2(contentX, contentY),
-                    dimColor,
-                    0f,
-                    Vector2.Zero,
-                    DescriptionScale,
-                    SpriteEffects.None,
-                    0f
-                );
-                contentY += (int)descSize.Y + DescriptionMargin;
-            }
-
-            // Draw progress if applicable
-            if (achievement.TargetValue > 0 && _contentFont != null)
-            {
-                int currentProgress = GetAchievementProgress(achievement);
-                string progressText = $"Progress: {currentProgress} / {achievement.TargetValue}";
-                
-                // Draw progress bar background
-                int barWidth = contentWidth;
-                int barHeight = 20;
-                var barBg = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, barWidth, barHeight, 4);
-                _spriteBatch.Draw(barBg, new Rectangle(contentX, contentY, barWidth, barHeight), new Color(40, 40, 40) * alpha);
-
-                // Draw progress fill
-                float progressPct = Math.Min(1f, (float)currentProgress / achievement.TargetValue);
-                int fillWidth = Math.Max(8, (int)(barWidth * progressPct));
-                if (fillWidth > 8)
-                {
-                    var barFill = RoundedRectTextureFactory.CreateRoundedRect(_graphicsDevice, fillWidth, barHeight, 4);
-                    var fillColor = achievement.IsCompleted ? Color.White : new Color(139, 0, 0);
-                    _spriteBatch.Draw(barFill, new Rectangle(contentX, contentY, fillWidth, barHeight), fillColor * alpha);
-                }
-
-                contentY += barHeight + ProgressMargin;
-
-                // Draw progress text
-                _spriteBatch.DrawString(
-                    _contentFont,
-                    progressText,
-                    new Vector2(contentX, contentY),
-                    dimColor,
-                    0f,
-                    Vector2.Zero,
-                    ProgressScale,
-                    SpriteEffects.None,
-                    0f
-                );
-                contentY += StatusMargin;
-            }
-
-            // Draw completion status
-            if (_contentFont != null)
-            {
-                string statusText = achievement.State switch
-                {
-                    AchievementState.CompleteSeen => "Completed!",
-                    AchievementState.CompleteUnseen => "Completed!",
-                    AchievementState.Visible => "",
-                    _ => "Hidden"
-                };
-                var statusColor = achievement.IsCompleted ? Color.Gold : dimColor;
-                statusColor *= alpha;
-
-                _spriteBatch.DrawString(
-                    _contentFont,
-                    statusText,
-                    new Vector2(contentX, contentY),
-                    statusColor,
-                    0f,
-                    Vector2.Zero,
-                    ProgressScale,
-                    SpriteEffects.None,
-                    0f
-                );
-
-                // Draw points value (anchored to bottom-right)
-                string pointsText = $"+{achievement.Points} Achievement Points";
-                float pointsScale = ProgressScale * 0.9f;
-                var pointsSize = _contentFont.MeasureString(pointsText) * pointsScale;
-                Vector2 pointsPos = new Vector2(
-                    panelX + PanelWidth - Padding - pointsSize.X,
-                    panelY + PanelHeight - Padding - pointsSize.Y
-                );
-
-                _spriteBatch.DrawString(
-                    _contentFont,
-                    pointsText,
-                    pointsPos,
-                    new Color(255, 215, 0) * alpha, // Gold
-                    0f,
-                    Vector2.Zero,
-                    pointsScale,
-                    SpriteEffects.None,
-                    0f
-                );
-            }
-        }
-
-        private int GetAchievementProgress(AchievementBase achievement)
-        {
-            // Use reflection to access protected Progress property
-            var progressProperty = typeof(AchievementBase)
-                .GetProperty("Progress", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var progress = progressProperty?.GetValue(achievement) as AchievementProgress;
-            return progress?.CurrentValue ?? 0;
-        }
-
-        private string WrapText(string text, int maxWidth, float scale)
-        {
-            if (_contentFont == null || string.IsNullOrEmpty(text))
-                return text;
-
-            var words = text.Split(' ');
-            var lines = new List<string>();
-            var currentLine = "";
-
-            foreach (var word in words)
-            {
-                var testLine = string.IsNullOrEmpty(currentLine) ? word : currentLine + " " + word;
-                var testSize = _contentFont.MeasureString(testLine) * scale;
-
-                if (testSize.X > maxWidth && !string.IsNullOrEmpty(currentLine))
-                {
-                    lines.Add(currentLine);
-                    currentLine = word;
-                }
-                else
-                {
-                    currentLine = testLine;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(currentLine))
-                lines.Add(currentLine);
-
-            return string.Join("\n", lines);
-        }
-    }
+		private static string WrapText(string text, int maxWidth, float scale)
+		{
+			var font = FontSingleton.ChakraPetchFont;
+			if (font == null || string.IsNullOrWhiteSpace(text)) return text ?? string.Empty;
+			var lines = new List<string>();
+			string current = string.Empty;
+			foreach (string word in AchievementSceneDrawHelpers.ToAscii(text).Split(' ', StringSplitOptions.RemoveEmptyEntries))
+			{
+				string candidate = string.IsNullOrEmpty(current) ? word : current + " " + word;
+				if (font.MeasureString(candidate).X * scale > maxWidth && !string.IsNullOrEmpty(current))
+				{
+					lines.Add(current);
+					current = word;
+				}
+				else current = candidate;
+			}
+			if (!string.IsNullOrEmpty(current)) lines.Add(current);
+			return string.Join("\n", lines);
+		}
+	}
 }
