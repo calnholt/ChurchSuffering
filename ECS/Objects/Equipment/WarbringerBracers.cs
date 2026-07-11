@@ -14,8 +14,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "warbringer_bracers";
       Name = "Warbringer Bracers";
       Slot = EquipmentSlot.Arms;
-      Block = 0;
-      Color = CardData.CardColor.Red;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = $"Gain {MightAmount} might.";
       CanActivateDuringActionPhase = true;
 

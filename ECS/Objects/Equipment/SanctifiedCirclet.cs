@@ -14,8 +14,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "sanctified_circlet";
       Name = "Sanctified Circlet";
       Slot = EquipmentSlot.Head;
-      Block = 0;
-      Color = CardData.CardColor.White;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = $"Gain {TemperanceAmount} temperance.";
       CanActivateDuringActionPhase = true;
 

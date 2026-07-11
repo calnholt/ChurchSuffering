@@ -14,8 +14,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "heartforge_cuirass";
       Name = "Heartforge Cuirass";
       Slot = EquipmentSlot.Chest;
-      Block = 0;
-      Color = CardData.CardColor.White;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = $"Gain {VigorAmount} vigor.";
       CanActivateDuringActionPhase = true;
 

@@ -40,6 +40,7 @@ namespace Crusaders30XX.ECS.Systems
 		private DrawPileDisplaySystem _drawPileDisplaySystem;
 		private ShuffleDeckDisplaySystem _shuffleDeckDisplaySystem;
 		private DiscardPileDisplaySystem _discardPileDisplaySystem;
+		private BattlePileGamepadInputSystem _battlePileGamepadInputSystem;
 		private PileColorCountDisplaySystem _pileColorCountDisplaySystem;
 		private PlayerDisplaySystem _playerDisplaySystem;
 		private PlayerWispParticleSystem _playerWispParticleSystem;
@@ -437,16 +438,17 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("EquipmentDisplaySystem.Draw", _equipmentDisplaySystem.Draw);
 			FrameProfiler.Measure("EquipmentTooltipDisplaySystem.Draw", _equipmentTooltipDisplaySystem.Draw);
 			var guidedState = GuidedTutorialService.GetState(EntityManager);
-			bool showDrawPile = !guidedTutorial || (guidedState?.Section == 8);
+			bool showDrawPile = PileDisplayVisibilityService.IsDrawPileVisible(EntityManager);
+			bool showDiscardPile = PileDisplayVisibilityService.IsDiscardPileVisible(EntityManager);
 			if (guidedState == null || guidedState.Section >= 5)
 				FrameProfiler.Measure("EquippedWeaponDisplaySystem.Draw", _equippedWeaponDisplaySystem.Draw);
 			FrameProfiler.Measure("MedalDisplaySystem.Draw", _medalDisplaySystem.Draw);
 			if (showDrawPile) FrameProfiler.Measure("DrawPileDisplaySystem.Draw", _drawPileDisplaySystem.Draw);
-			if (showDrawPile || !guidedTutorial)
+			if (showDrawPile || showDiscardPile)
 				FrameProfiler.Measure("PileColorCountDisplaySystem.Draw",
-					() => _pileColorCountDisplaySystem.Draw(showDrawPile, !guidedTutorial));
+					() => _pileColorCountDisplaySystem.Draw(showDrawPile, showDiscardPile));
 			FrameProfiler.Measure("ShuffleDeckDisplaySystem.Draw", _shuffleDeckDisplaySystem.Draw);
-			if (!guidedTutorial) FrameProfiler.Measure("DiscardPileDisplaySystem.Draw", _discardPileDisplaySystem.Draw);
+			if (showDiscardPile) FrameProfiler.Measure("DiscardPileDisplaySystem.Draw", _discardPileDisplaySystem.Draw);
 			FrameProfiler.Measure("MillCardSystem.Draw", _millCardSystem.Draw);
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawForeground", _payCostOverlaySystem.DrawForeground);
 			FrameProfiler.Measure("CantPlayCardMessageSystem.Draw", _cantPlayCardMessageSystem.Draw);
@@ -724,6 +726,7 @@ namespace Crusaders30XX.ECS.Systems
 			_drawPileDisplaySystem = new DrawPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_shuffleDeckDisplaySystem = new ShuffleDeckDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_discardPileDisplaySystem = new DiscardPileDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_battlePileGamepadInputSystem = new BattlePileGamepadInputSystem(_world.EntityManager);
 			_pileColorCountDisplaySystem = new PileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_millCardSystem = new MillCardSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_playerDisplaySystem = new PlayerDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
@@ -872,6 +875,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_drawPileDisplaySystem);
 			_world.AddSystem(_shuffleDeckDisplaySystem);
 			_world.AddSystem(_discardPileDisplaySystem);
+			_world.AddSystem(_battlePileGamepadInputSystem);
 			_world.AddSystem(_pileColorCountDisplaySystem);
 			_world.AddSystem(_millCardSystem);
 			_world.AddSystem(_playerDisplaySystem);

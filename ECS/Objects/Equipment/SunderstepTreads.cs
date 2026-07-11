@@ -12,8 +12,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "sunderstep_treads";
       Name = "Sunderstep Treads";
       Slot = EquipmentSlot.Legs;
-      Block = 0;
-      Color = CardData.CardColor.Red;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = "Remove all guard from the enemy.";
       CanActivateDuringActionPhase = true;
 

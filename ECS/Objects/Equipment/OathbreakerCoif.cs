@@ -13,8 +13,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "oathbreaker_coif";
       Name = "Oathbreaker Coif";
       Slot = EquipmentSlot.Head;
-      Block = 0;
-      Color = CardData.CardColor.White;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = "Unpledge your pledged card.";
       CanActivateDuringActionPhase = true;
 

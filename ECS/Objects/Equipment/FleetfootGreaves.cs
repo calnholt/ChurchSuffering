@@ -14,8 +14,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "fleetfoot_greaves";
       Name = "Fleetfoot Greaves";
       Slot = EquipmentSlot.Legs;
-      Block = 0;
-      Color = CardData.CardColor.Red;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = $"Gain {ActionPointAmount} action point.";
       CanActivateDuringActionPhase = true;
 

@@ -14,7 +14,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "whetstone_gauntlets";
       Name = "Whetstone Gauntlets";
       Slot = EquipmentSlot.Arms;
-      Block = 0;
+      Block = 1;
       Color = CardData.CardColor.Black;
       Text = $"Gain sharpen {SharpenAmount}.";
       CanActivateDuringActionPhase = true;

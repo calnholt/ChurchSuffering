@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "kunai_sheath";
       Name = "Kunai Sheath";
       Slot = EquipmentSlot.Arms;
-      Block = 0;
+      Block = 1;
       Color = CardData.CardColor.Black;
       Text = $"Add {KunaiAmount} Kunai to your hand.";
       CanActivateDuringActionPhase = true;

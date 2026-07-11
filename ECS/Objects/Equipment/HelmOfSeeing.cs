@@ -14,8 +14,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "helm_of_seeing";
       Name = "Helm of Seeing";
       Slot = EquipmentSlot.Head;
-      Block = 0;
-      Color = CardData.CardColor.Red;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = $"Resurrect {ResurrectAmount}.";
       ActivationEffectRecipe = DefensiveGuardEffect();
       CanActivateDuringActionPhase = true;
