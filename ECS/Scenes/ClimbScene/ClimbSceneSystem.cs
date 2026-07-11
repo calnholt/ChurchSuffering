@@ -68,7 +68,6 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
-			SaveCache.ClearPendingBattle();
 			SaveCache.EnsureClimbState();
 			EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Climb });
 			EventManager.Publish(new HideLocationNameEvent());

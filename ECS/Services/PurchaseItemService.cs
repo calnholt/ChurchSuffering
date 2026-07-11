@@ -43,11 +43,6 @@ namespace Crusaders30XX.ECS.Services
 			int price = System.Math.Max(0, fs.Price);
 			if (!CanAfford(price)) { result.Error = "InsufficientGold"; return result; }
 
-			if (!string.IsNullOrWhiteSpace(fs.ShopId) && fs.ShopSlotIndex >= 0)
-			{
-				return TryPurchaseRunMapShop(entityManager, itemEntity, fs, price, ref result);
-			}
-
 			result.ItemId = fs.Id ?? string.Empty;
 			result.Spent = price;
 			result.ShopName = fs.SourceShopName ?? string.Empty;
@@ -85,56 +80,6 @@ namespace Crusaders30XX.ECS.Services
 			try { SaveCache.Reload(); } catch { }
 
 			result.Success = true;
-			return result;
-		}
-
-		private static PurchaseResult TryPurchaseRunMapShop(
-			EntityManager entityManager,
-			Entity itemEntity,
-			ForSaleItem fs,
-			int price,
-			ref PurchaseResult result)
-		{
-			result.ItemId = fs.Id ?? string.Empty;
-			result.Spent = price;
-			result.ShopName = fs.SourceShopName ?? string.Empty;
-
-			int oldGold = 0;
-			try { oldGold = SaveCache.GetGold(); } catch { oldGold = 0; }
-
-			if (!SaveCache.TryPurchaseRunMapShopItem(fs.ShopId, fs.ShopSlotIndex, out int newGold))
-			{
-				result.Error = "SaveUpdateFailed";
-				return result;
-			}
-
-			if (fs.ItemType == ForSaleItemType.Medal)
-			{
-				SaveCache.MarkWayStationMedalPurchased(fs.Id);
-				RunMedalService.AcquireAndEquip(entityManager, fs.Id);
-			}
-			else if (fs.ItemType == ForSaleItemType.Equipment)
-			{
-				RunEquipmentService.EquipOnPlayer(entityManager, fs.Id);
-			}
-
-			result.NewGold = newGold;
-			result.Success = true;
-
-			try
-			{
-				EventManager.Publish(new GoldChanged
-				{
-					OldGold = oldGold,
-					NewGold = newGold,
-					Delta = newGold - oldGold,
-					Reason = "Purchase"
-				});
-			}
-			catch { }
-
-			try { SaveCache.Reload(); } catch { }
-
 			return result;
 		}
 

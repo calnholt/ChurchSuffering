@@ -1,4 +1,3 @@
-using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
@@ -22,26 +21,6 @@ namespace Crusaders30XX.ECS.Services
 			PrepareRunEntities(world);
 
 			EventManager.Publish(new ShowTransition { Scene = SceneId.Climb, SkipHold = true });
-		}
-
-		public static void BeginStartQuestBattle(World world)
-		{
-			if (world == null) return;
-			if (SaveCache.IsStartQuestCompleted()) return;
-
-			BeginBattleFromNodeId(world, SaveCache.GetStartNodeId());
-		}
-
-		public static void BeginBattleFromNodeId(World world, string nodeId)
-		{
-			if (world == null || string.IsNullOrEmpty(nodeId)) return;
-
-			PrepareRunEntities(world);
-
-			var tempPoi = world.EntityManager.CreateEntity("TempQuestBattleTrigger");
-			world.EntityManager.AddComponent(tempPoi, new PointOfInterest { Id = nodeId });
-			EventManager.Publish(new QuestSelectRequested { Entity = tempPoi });
-			world.EntityManager.DestroyEntity(tempPoi.Id);
 		}
 
 		private static void PrepareRunEntities(World world)

@@ -2845,3 +2845,23 @@
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /build:SFX/temperance.wav
+
+#begin SFX/take-reward.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/take-reward.wav
+
+#begin SFX/upgrade-card.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/upgrade-card.wav
+
+#begin SFX/booster-pack-reveal.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/booster-pack-reveal.wav
+
+#begin SFX/deck-shuffle.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/deck-shuffle.wav

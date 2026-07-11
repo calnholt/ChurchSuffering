@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Components;
@@ -192,7 +191,6 @@ namespace Crusaders30XX.ECS.Data.Save
 			lock (_lock)
 			{
 				if (_save == null) _save = CreateDefaultRunSave();
-				EnsureRunMap();
 				EnsurePrimaryLoadout(_save);
 
 				var resolvedWeaponId = string.IsNullOrWhiteSpace(weaponId) ? "sword" : weaponId;
@@ -272,153 +270,6 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
-		public static int GetValueOrDefault(string locationId, int defaultValue = 0)
-		{
-			EnsureLoaded();
-			EnsureRunMap();
-			if (_save?.runMapNodes == null) return defaultValue;
-			int count = 0;
-			foreach (var node in _save.runMapNodes)
-			{
-				if (node != null && node.isCompleted) count++;
-			}
-			return count;
-		}
-
-		public static void EnsureRunMap()
-		{
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) _save = new SaveFile();
-				if (!_save.isRunActive) return;
-				if (_save.runMapNodes != null && _save.runMapNodes.Count > 0)
-				{
-					if (SanitizeRunMapEnemyIds())
-					{
-						Persist();
-					}
-					return;
-				}
-				var (seed, nodes, shops, treasures, events) = GenerateRunMapForSave();
-				_save.runMapSeed = seed;
-				_save.runMapNodes = nodes;
-				_save.runMapShops = shops;
-				_save.runMapTreasures = treasures;
-				_save.runMapEvents = events;
-				if (string.IsNullOrEmpty(_save.lastLocation) && nodes.Count > 0)
-				{
-					_save.lastLocation = nodes[0].id;
-				}
-				Persist();
-			}
-		}
-
-		public static IReadOnlyList<RunMapNode> GetRunMapNodes()
-		{
-			EnsureLoaded();
-			if (_save?.isRunActive != true) return new List<RunMapNode>();
-			EnsureRunMap();
-			return _save?.runMapNodes ?? new List<RunMapNode>();
-		}
-
-		public static int RunMapNodeCount => LocationMapConstants.NodeCount;
-
-		public static string GetStartNodeId()
-		{
-			EnsureRunMap();
-			if (_save?.runMapNodes == null || _save.runMapNodes.Count == 0) return "run_0";
-			return _save.runMapNodes[0].id;
-		}
-
-		public static bool TryGetRunNode(string nodeId, out RunMapNode node, out int index)
-		{
-			node = null;
-			index = -1;
-			EnsureRunMap();
-			if (_save?.runMapNodes == null || string.IsNullOrEmpty(nodeId)) return false;
-			for (int i = 0; i < _save.runMapNodes.Count; i++)
-			{
-				var n = _save.runMapNodes[i];
-				if (n != null && string.Equals(n.id, nodeId, System.StringComparison.OrdinalIgnoreCase))
-				{
-					node = n;
-					index = i;
-					return true;
-				}
-			}
-			return false;
-		}
-
-		public static bool TryGetRunNode(int index, out RunMapNode node)
-		{
-			node = null;
-			EnsureRunMap();
-			if (_save?.runMapNodes == null || index < 0 || index >= _save.runMapNodes.Count) return false;
-			node = _save.runMapNodes[index];
-			return node != null;
-		}
-
-		public static void SetRunNodeRevealed(string nodeId, bool revealed = true)
-		{
-			if (!TryGetRunNode(nodeId, out var node, out _)) return;
-			lock (_lock)
-			{
-				node.isRevealed = revealed;
-				Persist();
-			}
-		}
-
-		public static void SetRunNodeCompleted(string nodeId, bool completed = true)
-		{
-			if (!TryGetRunNode(nodeId, out var node, out _)) return;
-			lock (_lock)
-			{
-				node.isCompleted = completed;
-				Persist();
-			}
-		}
-
-		private static bool SanitizeRunMapEnemyIds()
-		{
-			if (_save?.runMapNodes == null || _save.runMapNodes.Count == 0) return false;
-			var pool = EnemyPortraitContent.GetRunMapEnemyPool().ToList();
-			if (pool.Count == 0) return false;
-			var rng = new System.Random(_save.runMapSeed != 0 ? _save.runMapSeed : 1);
-			bool changed = false;
-			foreach (var node in _save.runMapNodes)
-			{
-				if (node == null) continue;
-				if (!string.IsNullOrEmpty(node.enemyId) && !EnemyPortraitContent.HasPortrait(node.enemyId))
-				{
-					node.enemyId = pool[rng.Next(pool.Count)];
-					changed = true;
-				}
-
-				if (node.battleEnemyIds == null || node.battleEnemyIds.Count == 0) continue;
-				for (int i = 0; i < node.battleEnemyIds.Count; i++)
-				{
-					string id = node.battleEnemyIds[i];
-					if (string.IsNullOrEmpty(id) || EnemyPortraitContent.HasPortrait(id)) continue;
-					node.battleEnemyIds[i] = pool[rng.Next(pool.Count)];
-					changed = true;
-				}
-			}
-			return changed;
-		}
-
-		public static bool TryRevealRunNode(string nodeId)
-		{
-			if (!TryGetRunNode(nodeId, out var node, out _)) return false;
-			if (node.isRevealed) return false;
-			lock (_lock)
-			{
-				node.isRevealed = true;
-				Persist();
-			}
-			return true;
-		}
-
 		public static int GetGold()
 		{
 			EnsureLoaded();
@@ -448,23 +299,6 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
-		public static bool IsQuestCompleted(string locationId, string questId)
-		{
-			EnsureRunMap();
-			if (string.IsNullOrEmpty(questId)) return false;
-			return TryGetRunNode(questId, out var node, out _) && node.isCompleted;
-		}
-
-		public static bool IsStartQuestCompleted()
-		{
-			return IsQuestCompleted(null, GetStartNodeId());
-		}
-
-		public static void SetQuestCompleted(string locationId, string questId, bool completed)
-		{
-			SetRunNodeCompleted(questId, completed);
-		}
-
 		private static bool Persist()
 		{
 			try
@@ -477,67 +311,6 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				return false;
 			}
-		}
-
-		public static void SetLastLocation(string locationId)
-		{
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) _save = new SaveFile();
-				_save.lastLocation = locationId ?? string.Empty;
-				Persist();
-			}
-		}
-
-		public static void SetPendingBattleNode(string nodeId)
-		{
-			if (string.IsNullOrEmpty(nodeId)) return;
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) _save = new SaveFile();
-				_save.pendingBattleNodeId = nodeId;
-				Persist();
-			}
-		}
-
-		public static void ClearPendingBattle()
-		{
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) return;
-				if (string.IsNullOrEmpty(_save.pendingBattleNodeId)) return;
-				_save.pendingBattleNodeId = string.Empty;
-				Persist();
-			}
-		}
-
-		public static bool TryGetResumableBattleNode(out string nodeId)
-		{
-			nodeId = string.Empty;
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) return false;
-				nodeId = _save.pendingBattleNodeId ?? string.Empty;
-			}
-
-			if (string.IsNullOrEmpty(nodeId)) return false;
-			if (!TryGetRunNode(nodeId, out var node, out _))
-			{
-				ClearPendingBattle();
-				return false;
-			}
-
-			if (!node.isRevealed || node.isCompleted || node.ResolveBattleEnemyIds().Count == 0)
-			{
-				ClearPendingBattle();
-				return false;
-			}
-
-			return true;
 		}
 
 		private static void EnsureLoaded()
@@ -571,7 +344,6 @@ namespace Crusaders30XX.ECS.Data.Save
 							Persist();
 						}
 					}
-					EnsureRunMap();
 				}
 			}
 		}
@@ -843,13 +615,8 @@ namespace Crusaders30XX.ECS.Data.Save
 				musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
 				sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
 				runMapSeed = 0,
-				runMapNodes = new List<RunMapNode>(),
-				runMapShops = new List<RunMapShop>(),
-				runMapTreasures = new List<RunMapTreasure>(),
-				runMapEvents = new List<RunMapEvent>(),
 				items = new List<SaveItem>(),
 				lastLocation = string.Empty,
-				pendingBattleNodeId = string.Empty,
 				loadouts = new List<LoadoutDefinition>(),
 				nextRunDeckEntryId = 0,
 				runLongPassives = new Dictionary<string, int>(),
@@ -870,7 +637,7 @@ namespace Crusaders30XX.ECS.Data.Save
 
 		private static SaveFile CreateDefaultRunSave()
 		{
-			var (seed, nodes, shops, treasures, events) = GenerateRunMapForSave();
+			int seed = Random.Shared.Next();
 			var startingDeck = StartingDeckGeneratorService.Generate(
 				StartingDeckGeneratorService.DefaultStarterCardPool,
 				seed);
@@ -880,13 +647,8 @@ namespace Crusaders30XX.ECS.Data.Save
 				isRunActive = true,
 				gold = 4,
 				runMapSeed = seed,
-				runMapNodes = nodes,
-				runMapShops = shops,
-				runMapTreasures = treasures,
-				runMapEvents = events,
 				items = new List<SaveItem>(),
-				lastLocation = nodes.Count > 0 ? nodes[0].id : "run_0",
-				pendingBattleNodeId = string.Empty,
+				lastLocation = string.Empty,
 				pendingDeckRewardOffer = null,
 				collection = CreateInitialCollection(),
 				nextRunDeckEntryId = startingDeck.Count,
@@ -936,25 +698,6 @@ namespace Crusaders30XX.ECS.Data.Save
 			string path = ResolveFilePath();
 			if (string.IsNullOrEmpty(path)) return string.Empty;
 			return Path.GetDirectoryName(path);
-		}
-
-		private static (int seed, List<RunMapNode> nodes, List<RunMapShop> shops, List<RunMapTreasure> treasures, List<RunMapEvent> events) GenerateRunMapForSave()
-		{
-			var (seed, nodes) = LocationMapGeneratorService.Generate();
-			var shops = RunMapShopGeneratorService.Generate(seed, nodes);
-			var treasures = RunMapTreasureGeneratorService.Generate(seed, nodes, shops);
-			var events = RunMapEventGeneratorService.Generate(seed, nodes, shops, treasures);
-#if DEBUG
-			RunMapGeneratorLog.Append(LocationMapGeneratorService.ComputeSpreadMetrics(seed, nodes));
-#endif
-			return (seed, nodes, shops, treasures, events);
-		}
-
-		public static IReadOnlyList<RunMapShop> GetRunMapShops()
-		{
-			EnsureLoaded();
-			EnsureRunMap();
-			return _save?.runMapShops ?? new List<RunMapShop>();
 		}
 
 		public static ClimbSaveState GetClimbState()
@@ -1292,166 +1035,6 @@ namespace Crusaders30XX.ECS.Data.Save
 				EnsurePrimaryLoadout(_save);
 				_save.climb = ClimbRuleService.CreateInitialState(_save.runMapSeed, _save.loadouts[0]);
 				Persist();
-			}
-		}
-
-		public static bool TryGetRunShop(string shopId, out RunMapShop shop, out int index)
-		{
-			shop = null;
-			index = -1;
-			EnsureRunMap();
-			return RunMapShopService.TryGetShop(shopId, _save?.runMapShops, out shop, out index);
-		}
-
-		public static IReadOnlyList<RunMapTreasure> GetRunMapTreasures()
-		{
-			EnsureLoaded();
-			EnsureRunMap();
-			return _save?.runMapTreasures ?? new List<RunMapTreasure>();
-		}
-
-		public static bool TryGetRunTreasure(string treasureId, out RunMapTreasure treasure, out int index)
-		{
-			treasure = null;
-			index = -1;
-			EnsureRunMap();
-			return RunMapTreasureService.TryGetTreasure(treasureId, _save?.runMapTreasures, out treasure, out index);
-		}
-
-		public static IReadOnlyList<RunMapEvent> GetRunMapEvents()
-		{
-			EnsureLoaded();
-			EnsureRunMap();
-			return _save?.runMapEvents ?? new List<RunMapEvent>();
-		}
-
-		public static bool TryGetRunEvent(string eventId, out RunMapEvent mapEvent, out int index)
-		{
-			mapEvent = null;
-			index = -1;
-			EnsureRunMap();
-			return RunMapEventService.TryGetEvent(eventId, _save?.runMapEvents, out mapEvent, out index);
-		}
-
-		public static bool TryCompleteRunMapEvent(string eventId)
-		{
-			if (string.IsNullOrWhiteSpace(eventId)) return false;
-
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) return false;
-				if (!TryGetRunEvent(eventId, out var mapEvent, out _)) return false;
-				if (mapEvent == null || mapEvent.isCompleted) return false;
-
-				mapEvent.isCompleted = true;
-				Persist();
-				return true;
-			}
-		}
-
-		public static bool TryClaimRunMapTreasure(
-			string treasureId,
-			EntityManager entityManager,
-			out int rewardGold,
-			out string rewardMedalId,
-			out string rewardEquipmentId)
-		{
-			rewardGold = 0;
-			rewardMedalId = string.Empty;
-			rewardEquipmentId = string.Empty;
-			if (string.IsNullOrWhiteSpace(treasureId)) return false;
-
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) return false;
-				if (!TryGetRunTreasure(treasureId, out var treasure, out int index)) return false;
-				if (treasure == null || treasure.isClaimed) return false;
-
-				var rng = new Random((_save.runMapSeed ^ 0x71EA5A71) + index);
-				rewardGold = System.Math.Max(0, treasure.rewardGold);
-
-				EnsurePrimaryLoadout(_save);
-				var loadout = _save.loadouts[0];
-
-				if (treasure.grantsEquipmentReward)
-				{
-					rewardEquipmentId = RunMapEquipmentPoolService.PickRandomEquipment(
-						rng,
-						loadout,
-						_save.runMapShops,
-						excludeShopOffers: true);
-					RunMapEquipmentPoolService.ApplyEquipmentToLoadout(loadout, rewardEquipmentId);
-				}
-				else
-				{
-					rewardMedalId = RunMapTreasureMedalPoolService.PickRandomMedal(rng, entityManager);
-					if (loadout.medalIds == null) loadout.medalIds = new List<string>();
-					loadout.medalIds.Add(rewardMedalId);
-				}
-
-				treasure.isClaimed = true;
-				AddGold(rewardGold);
-				Persist();
-				return true;
-			}
-		}
-
-		public static bool TryPurchaseRunMapShopItem(string shopId, int slotIndex, out int newGold)
-		{
-			newGold = 0;
-			if (string.IsNullOrWhiteSpace(shopId) || slotIndex < 0) return false;
-
-			EnsureLoaded();
-			lock (_lock)
-			{
-				if (_save == null) return false;
-				if (!TryGetRunShop(shopId, out var shop, out _) || shop?.items == null) return false;
-				if (slotIndex >= shop.items.Count) return false;
-
-				var item = shop.items[slotIndex];
-				if (item == null || item.isPurchased) return false;
-				if (string.IsNullOrWhiteSpace(item.cardId)) return false;
-				if (!item.IsMedal && !item.IsEquipment && string.IsNullOrWhiteSpace(item.color)) return false;
-
-				int price = System.Math.Max(0, item.price);
-				if (_save.gold < price) return false;
-
-				EnsurePrimaryLoadout(_save);
-				var loadout = _save.loadouts[0];
-				if (loadout.cards == null) loadout.cards = new List<LoadoutCardEntry>();
-				if (loadout.medalIds == null) loadout.medalIds = new List<string>();
-
-				if (item.IsEquipment && IsItemOwned(item.cardId, ForSaleItemType.Equipment))
-				{
-					return false;
-				}
-
-				_save.gold = System.Math.Max(0, _save.gold - price);
-				item.isPurchased = true;
-				if (item.IsMedal)
-				{
-					loadout.medalIds.Add(item.cardId);
-				}
-				else if (item.IsEquipment)
-				{
-					RunMapEquipmentPoolService.ApplyEquipmentToLoadout(loadout, item.cardId);
-				}
-				else
-				{
-					string cardKey = $"{item.cardId}|{item.color}";
-					var entry = CreateEntryLocked(cardKey, isStarter: false, countsAsTraded: false);
-					loadout.cards.Add(entry);
-					Persist();
-					EventManager.Publish(new LoadoutCardAdded { LoadoutId = loadout.id, EntryId = entry.entryId, CardKey = cardKey });
-					newGold = _save.gold;
-					return true;
-				}
-
-				Persist();
-				newGold = _save.gold;
-				return true;
 			}
 		}
 

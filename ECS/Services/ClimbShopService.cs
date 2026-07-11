@@ -144,7 +144,7 @@ namespace Crusaders30XX.ECS.Services
 			{
 				ClimbEncounterService.TryQueuePendingFinalEncounter(entityManager);
 			}
-			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Purchase, Volume = 0.5f });
+			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.TakeReward, Volume = 0.5f });
 			return true;
 		}
 
@@ -197,7 +197,7 @@ namespace Crusaders30XX.ECS.Services
 		{
 			if (string.IsNullOrWhiteSpace(equipmentId) || EquipmentFactory.Create(equipmentId) == null) return false;
 			if (SaveCache.IsItemOwned(equipmentId, ForSaleItemType.Equipment)) return false;
-			RunMapEquipmentPoolService.ApplyEquipmentToLoadout(loadout, equipmentId);
+			RunEquipmentService.ApplyEquipmentToLoadout(loadout, equipmentId);
 			RunEquipmentService.EquipOnPlayer(entityManager, equipmentId);
 			return true;
 		}

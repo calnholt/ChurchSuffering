@@ -416,7 +416,15 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void PlayModificationSfx(UpgradeAnim anim)
 		{
-			if (anim == null || anim.Mode != ClimbCardAnimMode.Mutation) return;
+			if (anim == null) return;
+
+			if (anim.Mode == ClimbCardAnimMode.Upgrade)
+			{
+				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.UpgradeCard, Volume = 0.5f });
+				return;
+			}
+
+			if (anim.Mode != ClimbCardAnimMode.Mutation) return;
 
 			var track = anim.RestrictionName switch
 			{

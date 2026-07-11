@@ -299,7 +299,7 @@ namespace Crusaders30XX.ECS.Services
 
 		public static IReadOnlyList<string> GetClimbEncounterEnemyPool()
 		{
-			return EnemyPortraitContent.GetRunMapEnemyPool()
+			return EnemyPortraitContent.GetClimbEncounterEnemyPool()
 				.Where(IsValidClimbEncounterEnemy)
 				.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
 				.ToList();

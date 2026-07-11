@@ -548,6 +548,10 @@ namespace Crusaders30XX.ECS.Events
         Purchase = 36,
         SaintInfo = 37,
         Temperance = 38,
+        TakeReward = 39,
+        UpgradeCard = 40,
+        BoosterPackReveal = 41,
+        DeckShuffle = 42,
     }
 
     /// <summary>

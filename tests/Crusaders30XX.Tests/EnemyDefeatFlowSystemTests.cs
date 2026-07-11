@@ -23,7 +23,16 @@ public class EnemyDefeatFlowSystemTests
 
 		try
 		{
+			SaveCache.DeleteSaveFilesIfPresent();
+			SaveCache.StartNewRun();
+			var climb = SaveCache.GetClimbState();
+			climb.encounterSlots[0].enemyId = "skeleton";
+			SaveCache.SaveClimbState(climb);
+
 			var world = BuildWorld(out var phaseState, out var enemy);
+			var queued = world.EntityManager.GetEntity("QueuedEvents").GetComponent<QueuedEvents>();
+			queued.IsClimbEncounter = true;
+			queued.ClimbEncounterSlotId = climb.encounterSlots[0].id;
 			_ = new EnemyDefeatFlowSystem(world.EntityManager, imageAssets: null);
 
 			int enemyKilledCount = 0;

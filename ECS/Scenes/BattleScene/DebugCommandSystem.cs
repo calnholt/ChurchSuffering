@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.Diagnostics;
+using Crusaders30XX.ECS.Data.Save;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -186,6 +187,14 @@ namespace Crusaders30XX.ECS.Systems
         public void Debug_ClimbPOC()
         {
             EventManager.Publish(new ShowTransition { Scene = SceneId.Climb });
+        }
+
+        [DebugAction("+30 Climb Points")]
+        public void Debug_GainClimbPoints()
+        {
+            var collection = SaveCache.GetCollection();
+            collection.pendingClimbPoints += 30;
+            SaveCache.SaveCollection(collection);
         }
         [DebugActionInt("Apply Power", Step = 1, Min = 1, Max = 999, Default = 1)]
         public void Debug_ApplyPower(int amount)

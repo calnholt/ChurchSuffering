@@ -14,8 +14,6 @@ using Crusaders30XX.ECS.Utils.RichText;
 using Crusaders30XX.ECS.Rendering;
 using System;
 using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Data.Locations;
-using Crusaders30XX.ECS.Data.Save;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -1448,8 +1446,7 @@ namespace Crusaders30XX.ECS.Systems
             string id = evt.QuestId;
             var qeEntity = EntityManager.GetEntitiesWithComponent<QueuedEvents>().FirstOrDefault();
             if (qeEntity == null) return;
-            bool isGate = SaveCache.TryGetRunNode(id, out var node, out _)
-                && node.combatNodeType == RunMapCombatNodeType.Hellrift;
+            bool isGate = string.Equals(id, "fallen_shepherd", StringComparison.OrdinalIgnoreCase);
             string dialogId = isGate ? "fallen_shepherd" : id;
             if (DialogDefinitionCache.TryGet(dialogId, out var _))
             {
