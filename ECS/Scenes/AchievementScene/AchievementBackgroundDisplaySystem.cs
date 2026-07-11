@@ -19,15 +19,16 @@ namespace Crusaders30XX.ECS.Systems
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
         private readonly ContentManager _content;
+        private readonly Texture2D _pixel;
         private AchievementBackgroundOverlay _overlay;
         private float _timeSeconds;
 
         // Noise parameters
         [DebugEditable(DisplayName = "Noise Scale", Step = 0.5f, Min = 0.5f, Max = 20f)]
-        public float NoiseScale { get; set; } = 3.0f;
+        public float NoiseScale { get; set; } = 3.8f;
 
         [DebugEditable(DisplayName = "Time Speed", Step = 0.05f, Min = 0f, Max = 2f)]
-        public float TimeSpeed { get; set; } = 0.05f;
+        public float TimeSpeed { get; set; } = 0.025f;
 
         // Turbulence parameters
         [DebugEditable(DisplayName = "Turb Initial Inc", Step = 0.05f, Min = 0f, Max = 2f)]
@@ -54,32 +55,35 @@ namespace Crusaders30XX.ECS.Systems
 
         // Color parameters
         [DebugEditable(DisplayName = "Brightness", Step = 0.1f, Min = 0f, Max = 5f)]
-        public float ColorBrightness { get; set; } = 0.8f;
+        public float ColorBrightness { get; set; } = 0.36f;
 
         [DebugEditable(DisplayName = "Tint R", Step = 0.05f, Min = 0f, Max = 2f)]
-        public float TintR { get; set; } = 2.0f;
+        public float TintR { get; set; } = 1.15f;
 
         [DebugEditable(DisplayName = "Tint G", Step = 0.05f, Min = 0f, Max = 2f)]
-        public float TintG { get; set; } = 2.0f;
+        public float TintG { get; set; } = 0.82f;
 
         [DebugEditable(DisplayName = "Tint B", Step = 0.05f, Min = 0f, Max = 2f)]
-        public float TintB { get; set; } = 2.0f;
+        public float TintB { get; set; } = 0.86f;
 
         [DebugEditable(DisplayName = "Channel Weight R", Step = 0.1f, Min = 0f, Max = 3f)]
-        public float ChannelWeightR { get; set; } = 1.0f;
+        public float ChannelWeightR { get; set; } = 1.25f;
 
         [DebugEditable(DisplayName = "Channel Weight G", Step = 0.1f, Min = 0f, Max = 3f)]
-        public float ChannelWeightG { get; set; } = 1.0f;
+        public float ChannelWeightG { get; set; } = 0.72f;
 
         [DebugEditable(DisplayName = "Channel Weight B", Step = 0.1f, Min = 0f, Max = 3f)]
-        public float ChannelWeightB { get; set; } = 2.0f;
+        public float ChannelWeightB { get; set; } = 0.78f;
 
         // Vignette parameters
         [DebugEditable(DisplayName = "Vignette Strength", Step = 0.05f, Min = 0f, Max = 1f)]
-        public float VignetteStrength { get; set; } = 0.3f;
+        public float VignetteStrength { get; set; } = 0.72f;
 
         [DebugEditable(DisplayName = "Vignette Radius", Step = 0.05f, Min = 0.1f, Max = 1.5f)]
         public float VignetteRadius { get; set; } = 0.75f;
+
+        [DebugEditable(DisplayName = "UI Darken Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+        public float UiDarkenAlpha { get; set; } = 0.38f;
 
         public AchievementBackgroundDisplaySystem(EntityManager em, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
             : base(em)
@@ -87,6 +91,8 @@ namespace Crusaders30XX.ECS.Systems
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
             _content = content;
+            _pixel = new Texture2D(graphicsDevice, 1, 1);
+            _pixel.SetData(new[] { Color.White });
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -106,9 +112,11 @@ namespace Crusaders30XX.ECS.Systems
 
         public void Draw()
         {
-            if (!ShaderRuntimeOptions.ShadersEnabled) return;
             var scene = EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault()?.GetComponent<SceneState>();
             if (scene == null || scene.Current != SceneId.Achievement) return;
+
+            DrawStaticBackdrop();
+            if (!ShaderRuntimeOptions.ShadersEnabled) return;
 
             EnsureOverlayLoaded();
             if (_overlay == null || !_overlay.IsAvailable) return;
@@ -152,6 +160,23 @@ namespace Crusaders30XX.ECS.Systems
                 savedDepth,
                 savedRasterizer
             );
+
+            _spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * UiDarkenAlpha);
+        }
+
+        private void DrawStaticBackdrop()
+        {
+            _spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), AchievementSceneDrawHelpers.Black0);
+            const int strips = 24;
+            for (int i = 0; i < strips; i++)
+            {
+                int x0 = Game1.VirtualWidth * i / strips;
+                int x1 = Game1.VirtualWidth * (i + 1) / strips;
+                float t = i / (float)(strips - 1);
+                float center = 1f - MathHelper.Clamp(System.Math.Abs(t - 0.38f) * 2.2f, 0f, 1f);
+                var tint = Color.Lerp(AchievementSceneDrawHelpers.Black0, new Color(34, 10, 14), center) * 0.45f;
+                _spriteBatch.Draw(_pixel, new Rectangle(x0, 0, System.Math.Max(1, x1 - x0), Game1.VirtualHeight), tint);
+            }
         }
 
         private void EnsureOverlayLoaded()

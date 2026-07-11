@@ -6,13 +6,15 @@ using Crusaders30XX.ECS.Data.Save;
 ShaderRuntimeOptions.ConfigureFromArgs(args);
 NewGameLaunchOptions.ConfigureFromArgs(args);
 TutorialLaunchOptions.ConfigureFromArgs(args);
+UnlockLaunchOptions.ConfigureFromArgs(args);
 if (!ShaderRuntimeOptions.ShadersEnabled)
 {
     Console.WriteLine("[Launch] GPU screen effects disabled (no-shaders)");
 }
 
 var appArgs = TutorialLaunchOptions.StripLaunchFlag(
-    NewGameLaunchOptions.StripLaunchFlag(ShaderRuntimeOptions.StripLaunchFlags(args)));
+    NewGameLaunchOptions.StripLaunchFlag(
+        UnlockLaunchOptions.StripLaunchFlag(ShaderRuntimeOptions.StripLaunchFlags(args))));
 
 DisplaySnapshotLaunchOptions snapshotOptions = null;
 TestFightLaunchOptions testFightOptions = null;
@@ -20,10 +22,10 @@ try
 {
     if (TestFightLaunchOptions.TryParse(appArgs, out var parsedTestFight))
     {
-        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch)
+        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch || UnlockLaunchOptions.UnlockAllCollectionItems)
         {
             throw new TestFightSetupException(
-                "The new flag cannot be combined with test-fight because test fights do not modify saves.");
+                "The new and unlock flags cannot be combined with test-fight because test fights do not modify saves.");
         }
         testFightOptions = parsedTestFight;
         TutorialLaunchOptions.ForceSkip();
@@ -50,6 +52,12 @@ if (TutorialLaunchOptions.SkipTutorials)
 if (NewGameLaunchOptions.DeleteSaveBeforeLaunch)
 {
     SaveCache.DeleteSaveFilesIfPresent();
+}
+
+if (UnlockLaunchOptions.UnlockAllCollectionItems)
+{
+    SaveCache.UnlockAllCollectionItems();
+    Console.WriteLine("[Launch] Collection unlocked (cards, medals, equipment)");
 }
 
 using var game = new Crusaders30XX.Game1(snapshotOptions, testFightOptions);

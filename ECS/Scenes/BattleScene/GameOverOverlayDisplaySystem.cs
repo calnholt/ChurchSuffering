@@ -129,6 +129,12 @@ namespace Crusaders30XX.ECS.Systems
 					var arrivalKind = _pendingRunEndCause == RunEndCause.Abandon
 						? WayStationArrivalKind.ReturnedFromAbandonedClimb
 						: WayStationArrivalKind.ReturnedFromFailedClimb;
+					EventManager.Publish(new ClimbEndedEvent
+					{
+						TimeReached = SaveCache.GetClimbState()?.time ?? 0,
+						Abandoned = _pendingRunEndCause == RunEndCause.Abandon,
+						CompletedFinalBoss = false,
+					});
 					SaveCache.RecordWayStationClimbReturn(arrivalKind);
 					WayStationArrivalContextService.Set(EntityManager, arrivalKind);
 					RunLifecycleService.EndCurrentRun(EntityManager);

@@ -58,6 +58,8 @@ to the fixture.
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
 | `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
+| `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
+| `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
 | `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
 | `climb-hazard-event` | Climb scene | Active Hazard card with visible resource gain |
 | `climb-character-event` | Climb scene | Active Character card with portrait and visible reward |
@@ -74,9 +76,25 @@ to the fixture.
 
 ---
 
+## `achievement-overview` and `achievement-detail`
+
+Render the production Achievement scene with deterministic collection progress. The overview covers hidden, visible, completed, and completed-unseen cells plus an enabled claim action; the detail variant opens the hover-driven achievement record panel.
+
+```bash
+dotnet run -- snapshot achievement-overview
+dotnet run -- snapshot achievement-detail
+./scripts/verify-achievement-snapshots.sh
+```
+
+Output files are stored under `debug/snapshots/<fixture-id>/<fixture-id>.png`.
+
+---
+
 ## `booster-pack-opening`
 
 Renders the production booster opening overlay at a deterministic timeline sample. `--time` accepts a finite value from `0.0` through `30.0`; `--seed` accepts any signed 32-bit integer.
+
+The fixture always displays a fixed Card, Medal, and Scarlet Vest reward so equipment-art changes are covered by the baseline; the seed controls presentation particles only.
 
 ```bash
 dotnet run -- snapshot booster-pack-opening

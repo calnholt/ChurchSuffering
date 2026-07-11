@@ -13,6 +13,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Data.Climb;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.Diagnostics;
 
 namespace Crusaders30XX.ECS.Data.Save
@@ -28,6 +29,63 @@ namespace Crusaders30XX.ECS.Data.Save
 		{
 			EnsureLoaded();
 			return _save;
+		}
+
+		public static PlayerCollectionSave GetCollection()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				return CloneCollection(_save?.collection) ?? CreateInitialCollection();
+			}
+		}
+
+		public static void SaveCollection(PlayerCollectionSave collection)
+		{
+			if (collection == null) return;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				_save ??= new SaveFile();
+				_save.collection = CloneCollection(collection) ?? CreateInitialCollection();
+				Persist();
+			}
+		}
+
+		public static void UnlockAllCollectionItems()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				_save ??= CreateInactiveSavePreservingMeta(null);
+				var collection = CloneCollection(_save.collection) ?? CreateInitialCollection();
+				AddMissingCollectionItems(
+					collection.cardIds,
+					CardFactory.GetAllCards()
+						.Where(entry => entry.Value != null && entry.Value.CanAddToLoadout && !entry.Value.IsWeapon && !entry.Value.IsToken)
+						.Select(entry => entry.Key.ToKey()));
+				AddMissingCollectionItems(
+					collection.medalIds,
+					MedalFactory.GetAllMedals().Keys.Select(id => id.ToKey()));
+				AddMissingCollectionItems(
+					collection.equipmentIds,
+					EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey()));
+				_save.collection = collection;
+				Persist();
+			}
+		}
+
+		public static bool IsCollectionItemUnlocked(string itemId, ForSaleItemType itemType)
+		{
+			if (string.IsNullOrWhiteSpace(itemId)) return false;
+			var collection = GetCollection();
+			return itemType switch
+			{
+				ForSaleItemType.Card => collection.cardIds.Contains(itemId, StringComparer.OrdinalIgnoreCase),
+				ForSaleItemType.Medal => collection.medalIds.Contains(itemId, StringComparer.OrdinalIgnoreCase),
+				ForSaleItemType.Equipment => collection.equipmentIds.Contains(itemId, StringComparer.OrdinalIgnoreCase),
+				_ => false,
+			};
 		}
 
 		public static int GetMusicVolumeLevel()
@@ -769,6 +827,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			save.seenTutorials = seenTutorials ?? new List<string>();
 			save.guidedTutorialCompleted = prior?.guidedTutorialCompleted == true;
 			save.waystation = CloneWayStationMeta(prior?.waystation);
+			save.collection = CloneCollection(prior?.collection) ?? CreateInitialCollection();
 			save.musicVolumeLevel = musicVolumeLevel;
 			save.sfxVolumeLevel = sfxVolumeLevel;
 			return save;
@@ -797,6 +856,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				pendingDeckRewardOffer = null,
 				climb = new ClimbSaveState(),
 				achievements = prior?.achievements ?? new Dictionary<string, AchievementProgress>(),
+				collection = CloneCollection(prior?.collection) ?? CreateInitialCollection(),
 				seenTutorials = prior?.seenTutorials ?? new List<string>(),
 				guidedTutorialCompleted = prior?.guidedTutorialCompleted == true,
 				waystation = CloneWayStationMeta(prior?.waystation),
@@ -828,6 +888,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				lastLocation = nodes.Count > 0 ? nodes[0].id : "run_0",
 				pendingBattleNodeId = string.Empty,
 				pendingDeckRewardOffer = null,
+				collection = CreateInitialCollection(),
 				nextRunDeckEntryId = startingDeck.Count,
 				loadouts = new List<LoadoutDefinition>
 				{
@@ -2139,6 +2200,82 @@ namespace Crusaders30XX.ECS.Data.Save
 			return list == null
 				? new List<string>()
 				: list.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+		}
+
+		private static void AddMissingCollectionItems(List<string> collectionIds, IEnumerable<string> itemIds)
+		{
+			if (collectionIds == null || itemIds == null) return;
+			var existing = new HashSet<string>(collectionIds, StringComparer.OrdinalIgnoreCase);
+			foreach (var itemId in itemIds)
+			{
+				if (!string.IsNullOrWhiteSpace(itemId) && existing.Add(itemId))
+				{
+					collectionIds.Add(itemId);
+				}
+			}
+		}
+
+		private static PlayerCollectionSave CreateInitialCollection()
+		{
+			var collection = new PlayerCollectionSave
+			{
+				cardIds = new List<string>
+				{
+					"consecrate", "crimson_rite", "crusade", "divine_protection",
+					"dowse_with_holy_water", "fury", "impale", "lacerate", "pierce_through",
+					"pouch_of_kunai", "quick_wit", "ravage", "reap", "shield_of_faith",
+					"strike", "sudden_thrust", "temper_the_blade", "tempest", "zealous_vow",
+				},
+				medalIds = new List<string>
+				{
+					"st_augustine", "st_bartholomew", "st_clare", "st_francis_de_sales",
+					"st_homobonus", "st_joan_of_arc", "st_luke", "st_michael", "st_sebastian",
+				},
+				equipmentIds = new List<string>
+				{
+					"scarlet_coif", "scarlet_treads", "scarlet_vest", "scarlet_wraps",
+					"ivory_coif", "ivory_treads", "ivory_vest", "ivory_wraps",
+					"knightly_chest", "knightly_grieves", "knightly_gauntlets", "knightly_helm",
+				},
+			};
+			foreach (var cardId in StartingDeckGeneratorService.DefaultStarterCardPool)
+			{
+				if (!collection.cardIds.Contains(cardId, StringComparer.OrdinalIgnoreCase))
+					collection.cardIds.Add(cardId);
+			}
+			return CloneCollection(collection);
+		}
+
+		private static PlayerCollectionSave CloneCollection(PlayerCollectionSave collection)
+		{
+			if (collection == null) return null;
+			var clone = new PlayerCollectionSave
+			{
+				cardIds = CloneStringList(collection.cardIds),
+				medalIds = CloneStringList(collection.medalIds),
+				equipmentIds = CloneStringList(collection.equipmentIds),
+				totalPoints = Math.Max(0, collection.totalPoints),
+				pendingClimbPoints = Math.Max(0, collection.pendingClimbPoints),
+				processedRewardLevels = Math.Max(0, collection.processedRewardLevels),
+				pendingBoosterPacks = new List<BoosterPackSave>(),
+			};
+			foreach (var pack in collection.pendingBoosterPacks ?? new List<BoosterPackSave>())
+			{
+				if (pack?.rewards == null || pack.rewards.Count == 0) continue;
+				clone.pendingBoosterPacks.Add(new BoosterPackSave
+				{
+					rewards = pack.rewards
+						.Where(reward => reward != null && !string.IsNullOrWhiteSpace(reward.kind) && !string.IsNullOrWhiteSpace(reward.id))
+						.Select(reward => new BoosterPackRewardSave
+						{
+							kind = reward.kind,
+							id = reward.id,
+							cardColor = string.IsNullOrWhiteSpace(reward.cardColor) ? "White" : reward.cardColor,
+						})
+						.ToList(),
+				});
+			}
+			return clone;
 		}
 
 		private static void EnsureWayStationMetaLocked()

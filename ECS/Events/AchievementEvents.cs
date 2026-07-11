@@ -38,4 +38,11 @@ namespace Crusaders30XX.ECS.Events
         /// </summary>
         public int CurrentValue { get; set; } = 0;
     }
+
+    /// <summary>Published once a completed achievement has been acknowledged in the Achievement scene.</summary>
+    public class AchievementSeenEvent
+    {
+        public string AchievementId { get; set; } = string.Empty;
+        public int Points { get; set; }
+    }
 }

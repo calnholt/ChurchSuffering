@@ -4,6 +4,7 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
@@ -283,7 +284,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		_titleFont = FontSingleton.TitleFont;
 		_bodyFont = FontSingleton.ChakraPetchFont;
 
-		EventManager.Subscribe<ShowBoosterPackOpeningOverlayEvent>(_ => OpenOverlay());
+		EventManager.Subscribe<ShowBoosterPackOpeningOverlayEvent>(evt => OpenOverlay(evt?.Pack));
 		EventManager.Subscribe<CloseBoosterPackOpeningOverlayEvent>(_ => CloseOverlay());
 		EventManager.Subscribe<DeleteCachesEvent>(_ => ClearRenderResources());
 		EnsureEquipmentTooltipEntity();
@@ -356,9 +357,9 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	[DebugAction("Close Booster Pack")]
 	public void DebugCloseBoosterPack() => CloseOverlay();
 
-	internal void OpenForSnapshot(float elapsedSeconds)
+	internal void OpenForSnapshot(float elapsedSeconds, BoosterPackSave pack = null)
 	{
-		OpenOverlay();
+		OpenOverlay(pack);
 		_snapshotTimeFrozen = true;
 		var state = GetOverlay()?.GetComponent<BoosterPackOpeningOverlayState>();
 		if (state == null) return;
@@ -390,7 +391,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			RuptureShakeDurationSeconds);
 	}
 
-	private void OpenOverlay()
+	private void OpenOverlay(BoosterPackSave pack = null)
 	{
 		_snapshotTimeFrozen = false;
 		var overlay = EnsureOverlay();
@@ -406,9 +407,10 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		state.ElapsedSeconds = 0f;
 		state.PreviousElapsedSeconds = 0f;
 		state.Phase = BoosterPackOpeningPhase.Summon;
+		state.IsAuthoritativePack = pack?.rewards?.Count == 3;
 		var timing = BuildTiming();
 		state.NextChargeParticleSeconds = timing.ChargeStart + Math.Max(0.001f, timing.ChargeParticleInterval);
-		state.Loot = CreateLootPreviews(timing);
+		state.Loot = CreateLootPreviews(timing, pack);
 		EnsureBlocker();
 		SetDismissEnabled(state, false);
 		SetBlockerActive(true);
@@ -424,7 +426,9 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			return;
 		}
 
+		bool wasAuthoritativePack = state.IsAuthoritativePack;
 		state.IsOpen = false;
+		state.IsAuthoritativePack = false;
 		state.CanDismiss = false;
 		DestroyPreviewEntities(state);
 		state.Loot.Clear();
@@ -434,6 +438,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		SetDismissEnabled(state, false);
 		SetBlockerActive(false);
 		ResetEquipmentTooltipState();
+		EventManager.Publish(new BoosterPackOpeningDismissedEvent { WasAuthoritativePack = wasAuthoritativePack });
 	}
 
 	private Entity EnsureOverlay()
@@ -563,16 +568,24 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		}
 	}
 
-	private List<BoosterPackLootPreview> CreateLootPreviews(BoosterPackOpeningTiming timing)
+	private List<BoosterPackLootPreview> CreateLootPreviews(BoosterPackOpeningTiming timing, BoosterPackSave pack = null)
 	{
 		var loot = new List<BoosterPackLootPreview>(3);
 		for (int index = 0; index < 3; index++)
 		{
 			var preview = new BoosterPackLootPreview
 			{
-				Kind = (BoosterPackLootKind)_rng.Next(3),
 				RevealDelaySeconds = index * Math.Max(0f, timing.RevealStagger),
 			};
+			var reward = pack?.rewards?[index];
+			if (reward != null && TryConfigureAuthoritativePreview(preview, reward, index))
+			{
+				PreparePreviewEntity(preview.PreviewEntity);
+				PreloadLootTexture(preview, index);
+				loot.Add(preview);
+				continue;
+			}
+			preview.Kind = (BoosterPackLootKind)_rng.Next(3);
 
 			switch (preview.Kind)
 			{
@@ -592,6 +605,40 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			loot.Add(preview);
 		}
 		return loot;
+	}
+
+	private bool TryConfigureAuthoritativePreview(BoosterPackLootPreview preview, BoosterPackRewardSave reward, int index)
+	{
+		if (preview == null || reward == null || string.IsNullOrWhiteSpace(reward.id)) return false;
+		if (!Enum.TryParse<BoosterPackLootKind>(reward.kind, true, out var kind)) return false;
+		preview.Kind = kind;
+		preview.Id = reward.id;
+		if (kind == BoosterPackLootKind.Card)
+		{
+			preview.CardColor = Enum.TryParse<CardData.CardColor>(reward.cardColor, true, out var color)
+				? color
+				: CardData.CardColor.White;
+			preview.PreviewEntity = EntityFactory.CreateCardFromDefinition(
+				EntityManager, preview.Id, preview.CardColor, allowWeapons: false, index: index);
+			if (preview.PreviewEntity == null) return false;
+			if (preview.PreviewEntity.GetComponent<UIElement>() is UIElement ui)
+			{
+				ui.EventType = UIElementEventType.None;
+				ui.SecondaryEventType = UIElementEventType.None;
+				ui.TooltipPosition = TooltipPosition.Above;
+				ui.TooltipOffsetPx = 18;
+			}
+			if (preview.PreviewEntity.GetComponent<CardTooltip>() is CardTooltip tooltip) tooltip.CardColor = preview.CardColor;
+			EntityManager.AddComponent(preview.PreviewEntity, new CardSheen());
+			return true;
+		}
+		if (kind == BoosterPackLootKind.Medal)
+		{
+			ConfigureMedalPreview(preview, index);
+			return preview.PreviewEntity != null;
+		}
+		ConfigureEquipmentPreview(preview, index);
+		return preview.PreviewEntity != null;
 	}
 
 	private void ConfigureCardPreview(BoosterPackLootPreview preview, int index)
@@ -627,7 +674,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	{
 		var medalIds = MedalFactory.GetAllMedals().Keys.Select(id => id.ToKey()).ToList();
 		if (medalIds.Count == 0) return;
-		preview.Id = medalIds[_rng.Next(medalIds.Count)];
+		if (string.IsNullOrWhiteSpace(preview.Id)) preview.Id = medalIds[_rng.Next(medalIds.Count)];
 		var medal = MedalFactory.Create(preview.Id);
 		if (medal == null) return;
 
@@ -659,7 +706,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	{
 		var equipmentIds = EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey()).ToList();
 		if (equipmentIds.Count == 0) return;
-		preview.Id = equipmentIds[_rng.Next(equipmentIds.Count)];
+		if (string.IsNullOrWhiteSpace(preview.Id)) preview.Id = equipmentIds[_rng.Next(equipmentIds.Count)];
 		var equipment = EquipmentFactory.Create(preview.Id);
 		if (equipment == null) return;
 
@@ -711,11 +758,11 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 
 	private void PreloadLootTexture(BoosterPackLootPreview preview, int index)
 	{
+		var equipment = preview.PreviewEntity?.GetComponent<EquippedEquipment>()?.Equipment;
 		Texture2D texture = preview.Kind switch
 		{
 			BoosterPackLootKind.Medal => LoadAssetTexture("Medals/" + preview.Id),
-			BoosterPackLootKind.Equipment => LoadAssetTexture(
-				preview.PreviewEntity?.GetComponent<EquippedEquipment>()?.Equipment?.Slot.ToString().ToLowerInvariant()),
+			BoosterPackLootKind.Equipment => EquipmentArtService.GetTexture(_imageAssets, equipment),
 			_ => null,
 		};
 		if (texture != null) _lootTextures[index] = texture;

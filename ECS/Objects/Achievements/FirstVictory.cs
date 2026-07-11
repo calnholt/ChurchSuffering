@@ -12,12 +12,12 @@ namespace Crusaders30XX.ECS.Objects.Achievements
         public FirstVictory()
         {
             Id = "first_victory";
-            Name = "First Quest";
+            Name = "First Victory";
             Description = "Complete your first battle";
             Row = 1;
             Column = 0;
             StartsVisible = true;
-            Points = 10;
+            Points = 20;
         }
 
         public override void RegisterListeners()

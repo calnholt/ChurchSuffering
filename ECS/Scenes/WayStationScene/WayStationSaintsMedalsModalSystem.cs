@@ -570,6 +570,7 @@ namespace Crusaders30XX.ECS.Systems
 		private List<MedalEntry> GetMedalEntries()
 		{
 			var purchased = new HashSet<string>(SaveCache.GetPurchasedWayStationMedalIds(), StringComparer.OrdinalIgnoreCase);
+			purchased.UnionWith(SaveCache.GetCollection().medalIds);
 			return MedalFactory.GetAllMedals()
 				.Select(kv =>
 				{

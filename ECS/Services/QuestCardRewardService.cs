@@ -91,9 +91,9 @@ namespace Crusaders30XX.ECS.Services
 			public CardBase Card { get; }
 		}
 
-		public static DeckRewardOfferSave GenerateAndPersistPendingOffer(int rewardGold = 0)
+		public static DeckRewardOfferSave GenerateAndPersistPendingOffer(int rewardGold = 0, bool restrictToCollection = false)
 		{
-			var offer = GenerateDeckRewardOffer(rewardGold);
+			var offer = GenerateDeckRewardOffer(rewardGold, restrictToCollection);
 			if (offer?.options?.Count > 0)
 			{
 				SaveCache.SetPendingDeckRewardOffer(offer);
@@ -105,30 +105,30 @@ namespace Crusaders30XX.ECS.Services
 			return offer;
 		}
 
-		public static DeckRewardOfferSave GenerateDeckRewardOffer(int rewardGold = 0)
+		public static DeckRewardOfferSave GenerateDeckRewardOffer(int rewardGold = 0, bool restrictToCollection = false)
 		{
 			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
 			var deckEntries = loadout?.cards ?? new List<LoadoutCardEntry>();
 			string weaponId = loadout?.weaponId ?? string.Empty;
-			return GenerateDeckRewardOffer(deckEntries, weaponId, rewardGold);
+			return GenerateDeckRewardOffer(deckEntries, weaponId, rewardGold, restrictToCollection);
 		}
 
-		internal static DeckRewardOfferSave GenerateDeckRewardOffer(IReadOnlyList<string> deckKeys, string weaponId, int rewardGold = 0)
+		internal static DeckRewardOfferSave GenerateDeckRewardOffer(IReadOnlyList<string> deckKeys, string weaponId, int rewardGold = 0, bool restrictToCollection = false)
 		{
 			var entries = (deckKeys ?? Array.Empty<string>())
 				.Select((cardKey, index) => new LoadoutCardEntry { entryId = $"test_entry_{index}", cardKey = cardKey })
 				.ToList();
-			return GenerateDeckRewardOffer(entries, weaponId, rewardGold);
+			return GenerateDeckRewardOffer(entries, weaponId, rewardGold, restrictToCollection);
 		}
 
-		internal static DeckRewardOfferSave GenerateDeckRewardOffer(IReadOnlyList<LoadoutCardEntry> deckEntries, string weaponId, int rewardGold = 0)
+		internal static DeckRewardOfferSave GenerateDeckRewardOffer(IReadOnlyList<LoadoutCardEntry> deckEntries, string weaponId, int rewardGold = 0, bool restrictToCollection = false)
 		{
 			var offer = new DeckRewardOfferSave { rewardGold = Math.Max(0, rewardGold) };
 			var usedIndices = new HashSet<int>();
 
 			foreach (var entry in PickExchangeOutgoingEntries(deckEntries).Take(PreferredExchangeOptions))
 			{
-				string incomingKey = PickIncomingCardKey(entry.CardId, weaponId);
+				string incomingKey = PickIncomingCardKey(entry.CardId, weaponId, restrictToCollection);
 				if (string.IsNullOrWhiteSpace(incomingKey)) continue;
 
 				offer.options.Add(new DeckRewardOfferOptionSave
@@ -358,7 +358,7 @@ namespace Crusaders30XX.ECS.Services
 				.ToList();
 		}
 
-		private static string PickIncomingCardKey(string outgoingCardId, string weaponId)
+		private static string PickIncomingCardKey(string outgoingCardId, string weaponId, bool restrictToCollection)
 		{
 			var pool = BuildIncomingPool(weaponId)
 				.Select(NormalizeCardId)
@@ -367,7 +367,11 @@ namespace Crusaders30XX.ECS.Services
 				.Where(id =>
 				{
 					var card = CardFactory.Create(id);
-					return card != null && card.CanAddToLoadout && !card.IsWeapon && !card.IsToken;
+					return card != null
+						&& card.CanAddToLoadout
+						&& !card.IsWeapon
+						&& !card.IsToken
+						&& (!restrictToCollection || SaveCache.IsCollectionItemUnlocked(id, ForSaleItemType.Card));
 				})
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.ToList();

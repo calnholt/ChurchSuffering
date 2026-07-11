@@ -184,6 +184,12 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (enemyId == EnemyId.FallenShepherd)
 			{
+				EventManager.Publish(new ClimbEndedEvent
+				{
+					TimeReached = SaveCache.GetClimbState()?.time ?? ClimbRuleService.MaxTime,
+					CompletedFinalBoss = true,
+					Abandoned = false,
+				});
 				SaveCache.RecordWayStationClimbCompletion();
 				WayStationArrivalContextService.Set(EntityManager, WayStationArrivalKind.ReturnedFromCompletedClimb);
 				return new PostVictoryAction

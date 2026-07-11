@@ -49,9 +49,26 @@ namespace Crusaders30XX.ECS.Events
 		public string RewardEquipmentId;
 	}
 
-	public class ShowBoosterPackOpeningOverlayEvent { }
+	public class ShowBoosterPackOpeningOverlayEvent
+	{
+		public BoosterPackSave Pack { get; set; }
+	}
 
 	public class CloseBoosterPackOpeningOverlayEvent { }
+
+	public class BoosterPackOpeningDismissedEvent
+	{
+		public bool WasAuthoritativePack { get; set; }
+	}
+
+	public class ClaimPendingClimbPointsEvent { }
+
+	public class ClimbEndedEvent
+	{
+		public int TimeReached { get; set; }
+		public bool Abandoned { get; set; }
+		public bool CompletedFinalBoss { get; set; }
+	}
 
 	public class ShowNarrativeEventOverlay
 	{

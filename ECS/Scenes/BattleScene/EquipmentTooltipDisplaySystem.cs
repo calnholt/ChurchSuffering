@@ -355,7 +355,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			int x = gutter.Center.X;
 			int y = gutter.Y + GutterPaddingTop;
-			var icon = GetIcon(equipment.Slot);
+			var icon = EquipmentArtService.GetTexture(_imageAssets, equipment);
 			if (icon != null)
 			{
 				var iconBounds = new Rectangle(
@@ -603,12 +603,6 @@ namespace Crusaders30XX.ECS.Systems
 			int innerWidth = Math.Max(1, maxWidth - TextBlockPaddingX * 2);
 			int lineCount = TextUtils.WrapText(font, text, scale, innerWidth).Count;
 			return lineCount * font.LineSpacing * scale * BodyLineHeightMultiplier + TextBlockPaddingY * 2;
-		}
-
-		private Texture2D GetIcon(EquipmentSlot slot)
-		{
-			string key = slot.ToString().ToLowerInvariant();
-			return _imageAssets.TryGetTexture(key);
 		}
 
 		private void DrawRoundedRect(Rectangle bounds, Color color)

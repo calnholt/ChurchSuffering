@@ -1,5 +1,6 @@
 using System;
 using Crusaders30XX.ECS.Systems;
+using Crusaders30XX.ECS.Data.Save;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -24,7 +25,15 @@ public sealed class BoosterPackOpeningSnapshotFixture : IDisplaySnapshotFixture
 			ctx.SpriteBatch,
 			ctx.ImageAssets,
 			new Random(_variant.Seed));
-		_display.OpenForSnapshot(_variant.TimeSeconds);
+		_display.OpenForSnapshot(_variant.TimeSeconds, new BoosterPackSave
+		{
+			rewards =
+			{
+				new BoosterPackRewardSave { kind = "card", id = "strike", cardColor = "White" },
+				new BoosterPackRewardSave { kind = "medal", id = "st_luke" },
+				new BoosterPackRewardSave { kind = "equipment", id = "scarlet_vest" },
+			},
+		});
 
 		_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 		_pixel.SetData(new[] { Color.White });

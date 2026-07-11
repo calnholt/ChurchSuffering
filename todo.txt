@@ -70,3 +70,44 @@ MUST FOLLOW - Style: Anime. Solid flat color fills, 2-tone cel-shading at most (
 Create a physical description for the following characer so we can create an art brief
 
 loot chest // booster pack animation for acruing points from level up
+
+
+
+core card set:
+
+- consecrate
+- crimson rite
+- crusade
+- divine protection
+- douse with holy water
+- fury
+- impale
+- lacerate
+- pierce through
+- pouch of kunai
+- quick wit
+- ravage
+- reap
+- shield of faith
+- strike
+- sudden thrust
+- temper the blade
+- tempest
+- zealous vow
+
+core medal set:
+
+- st_augustine
+- st_bartholomew
+- st_clare
+- st_francis_de_sales
+- st_homobonus
+- st_joan_of_arc
+- st_luke
+- st_michael
+- st_sebastian
+
+core equipment set:
+- scarlet
+- ivory
+- knightly
