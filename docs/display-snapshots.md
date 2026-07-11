@@ -60,6 +60,7 @@ to the fixture.
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
+| `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
 | `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
@@ -75,6 +76,19 @@ to the fixture.
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
+
+---
+
+## `battle-phase-transition`
+
+Renders the production battle phase transition over a fixed gothic battle background. The variants cover every phase-specific title lockup plus representative entry and exit motion.
+
+```bash
+dotnet run -- snapshot battle-phase-transition block-hold --verify
+./scripts/verify-battle-phase-transition-snapshots.sh
+```
+
+Approved images are `start-hold.png`, `block-entry.png`, `block-hold.png`, `action-hold.png`, `action-exit.png`, `pledge-hold.png`, and `victory-hold.png` under `tests/VisualBaselines/battle-phase-transition/`.
 
 ---
 
