@@ -10,7 +10,6 @@ namespace Crusaders30XX.ECS.Objects.Equipment
             Name = "Scarlet Coif";
             Slot = EquipmentSlot.Head;
             Block = 1;
-            Uses = 2;
             Color = CardData.CardColor.Red;
             FlavorText = "Dyed for the field. A lighter hood for those who mean to press the attack.";
             CanActivate = () => false;

@@ -155,8 +155,6 @@ public class EnemyAttackMustBlockRequirementServiceTests
 			Equipment = new TestEquipment
 			{
 				Block = 1,
-				Uses = 1,
-				RemainingUses = 1,
 				Color = color,
 				Slot = EquipmentSlot.Arms
 			}

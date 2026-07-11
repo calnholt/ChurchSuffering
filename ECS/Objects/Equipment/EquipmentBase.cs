@@ -15,8 +15,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
     public bool CanActivateDuringActionPhase { get; set; }
     public EntityManager EntityManager { get; set; }
     public int Block { get; set; }
-    public int Uses { get; set; }
-    public int RemainingUses { get; set; }
+    public bool IsUsed { get; private set; }
     public CardData.CardColor Color { get; set; }
     public EquipmentSlot Slot { get; set; }
     public Entity EquipmentEntity { get; set; }
@@ -25,7 +24,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
     public virtual void Initialize(EntityManager entityManager, Entity equipmentEntity) {
       EntityManager = entityManager;
       EquipmentEntity = equipmentEntity;
-      RemainingUses = Uses;
+      RefreshForBattle();
     }
 
 
@@ -35,7 +34,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
 
     public virtual void CantActivateMessage()
     {
-      EventManager.Publish(new CantPlayCardMessage { Message = "Not enough uses!" });
+      EventManager.Publish(new CantPlayCardMessage { Message = "This equipment has already been used this battle!" });
     }
 
     public virtual void Dispose()
@@ -43,14 +42,16 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Console.WriteLine($"[EquipmentBase] Dispose: {Id}");
     }
 
-    public bool HasUses { get => RemainingUses > 0; }
+    public bool IsAvailable { get => !IsUsed; }
 
-    public void DecrementRemainingUses(){
-      RemainingUses = Math.Max(0, RemainingUses - 1);
+    public void MarkUsed()
+    {
+      IsUsed = true;
     }
 
-    public void ReplenishUses(){
-      RemainingUses = Uses;
+    public void RefreshForBattle()
+    {
+      IsUsed = false;
     }
 
     public Action<EntityManager, Entity> OnActivate { get; protected set; } = (entityManager, entity) => { };

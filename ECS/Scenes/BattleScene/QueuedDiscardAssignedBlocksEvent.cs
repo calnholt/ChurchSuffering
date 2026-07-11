@@ -126,7 +126,7 @@ namespace Crusaders30XX.ECS.Systems
             var eqComp = entity.GetComponent<EquippedEquipment>();
             if (eqComp != null && !string.IsNullOrEmpty(eqComp.Equipment.Id))
             {
-                eqComp.Equipment.DecrementRemainingUses();
+                eqComp.Equipment.MarkUsed();
             }
 
             try

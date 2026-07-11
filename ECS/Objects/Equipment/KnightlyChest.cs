@@ -10,7 +10,6 @@ namespace Crusaders30XX.ECS.Objects.Equipment
             Name = "Knightly Chest";
             Slot = EquipmentSlot.Chest;
             Block = 2;
-            Uses = 2;
             Color = CardData.CardColor.Black;
             CanActivate = () => false;
         }

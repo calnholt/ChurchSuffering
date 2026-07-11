@@ -521,6 +521,10 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			var battleStateInfo = player.GetComponent<BattleStateInfo>();
 			battleStateInfo.EquipmentTriggeredThisBattle.Clear();
+			foreach (var equipmentEntity in EntityManager.GetEntitiesWithComponent<EquippedEquipment>())
+			{
+				equipmentEntity.GetComponent<EquippedEquipment>()?.Equipment?.RefreshForBattle();
+			}
 			var playerPassives = player.GetComponent<AppliedPassives>();
 
 			var allCards = EntityManager.GetEntitiesWithComponent<CardData>();

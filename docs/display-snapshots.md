@@ -58,6 +58,7 @@ to the fixture.
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
 | `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
+| `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
 | `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
@@ -73,6 +74,21 @@ to the fixture.
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
+
+---
+
+## `equipment-tooltip`
+
+Renders an equipped item with its hover tooltip. The `active` and `used` variants use the activation-only Helm of Seeing to verify that zero-block equipment has no BLOCK chip; the `used` variant also verifies the transparent used-state treatment. The `passive` variant covers block-only equipment.
+
+```bash
+dotnet run -- snapshot equipment-tooltip active --verify
+dotnet run -- snapshot equipment-tooltip passive --verify
+dotnet run -- snapshot equipment-tooltip used --verify
+./scripts/verify-equipment-tooltip-snapshots.sh
+```
+
+Approved images are `active.png`, `passive.png`, and `used.png` under `tests/VisualBaselines/equipment-tooltip/`.
 
 ---
 

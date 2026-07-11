@@ -9,20 +9,20 @@ public class EquipmentTooltipSnapshotVariantTests
 	[Theory]
 	[InlineData("active", EquipmentTooltipSnapshotVariantId.Active, "active", "helm_of_seeing", false)]
 	[InlineData("passive", EquipmentTooltipSnapshotVariantId.Passive, "passive", "knightly_grieves", false)]
-	[InlineData("out-of-uses", EquipmentTooltipSnapshotVariantId.OutOfUses, "out-of-uses", "helm_of_seeing", true)]
+	[InlineData("used", EquipmentTooltipSnapshotVariantId.Used, "used", "helm_of_seeing", true)]
 	public void Parses_supported_variants(
 		string token,
 		EquipmentTooltipSnapshotVariantId expectedId,
 		string expectedSlug,
 		string expectedEquipmentId,
-		bool expectedExhausted)
+		bool expectedIsUsed)
 	{
 		var variant = EquipmentTooltipSnapshotVariant.Parse([token]);
 
 		Assert.Equal(expectedId, variant.Id);
 		Assert.Equal(expectedSlug, variant.FileSlug);
 		Assert.Equal(expectedEquipmentId, variant.EquipmentId);
-		Assert.Equal(expectedExhausted, variant.Exhausted);
+		Assert.Equal(expectedIsUsed, variant.IsUsed);
 	}
 
 	[Fact]

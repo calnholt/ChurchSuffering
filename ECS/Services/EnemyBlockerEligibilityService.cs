@@ -61,7 +61,7 @@ namespace Crusaders30XX.ECS.Services
 			var equipped = equipmentEntity.GetComponent<EquippedEquipment>();
 			var equipment = equipped?.Equipment;
 			if (equipment == null) return false;
-			if (!equipment.HasUses) return false;
+			if (!equipment.IsAvailable) return false;
 			if (equipment.Block <= 0) return false;
 
 			var zone = equipmentEntity.GetComponent<EquipmentZone>();

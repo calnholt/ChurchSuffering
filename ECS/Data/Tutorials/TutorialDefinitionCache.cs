@@ -38,7 +38,7 @@ namespace Crusaders30XX.ECS.Data.Tutorials
                 };
             }
 
-            Add("equipment", "Equipment can block or activate for an effect. Uses are limited.", "equipment", "Equipment", "right", "has_equipment");
+            Add("equipment", "Equipment can block or activate for an effect once per battle.", "equipment", "Equipment", "right", "has_equipment");
             return definitions;
         }
     }

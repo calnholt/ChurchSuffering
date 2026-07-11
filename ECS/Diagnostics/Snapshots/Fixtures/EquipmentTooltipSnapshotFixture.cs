@@ -38,9 +38,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					$"Failed to create equipment '{_variant.EquipmentId}'");
 			}
 			equipment.Initialize(ctx.World.EntityManager, _equipmentEntity);
-			if (_variant.Exhausted)
+			if (_variant.IsUsed)
 			{
-				equipment.RemainingUses = 0;
+				equipment.MarkUsed();
 			}
 			ctx.World.AddComponent(_equipmentEntity, new Transform());
 			ctx.World.AddComponent(_equipmentEntity, new UIElement { IsInteractable = true });

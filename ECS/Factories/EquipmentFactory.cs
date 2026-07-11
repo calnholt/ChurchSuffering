@@ -11,10 +11,9 @@ namespace Crusaders30XX.ECS.Factories
         private static readonly IReadOnlyDictionary<EquipmentId, Func<EquipmentBase>> EquipmentConstructors =
             new Dictionary<EquipmentId, Func<EquipmentBase>>
             {
-                { EquipmentId.CrimsonCuirass, () => new CrimsonCuirass() },
-                { EquipmentId.CrimsonGreathelm, () => new CrimsonGreathelm() },
-                { EquipmentId.CrimsonGreaves, () => new CrimsonGreaves() },
-                { EquipmentId.CrimsonVambraces, () => new CrimsonVambraces() },
+                { EquipmentId.BulwarkPlate, () => new BulwarkPlate() },
+                { EquipmentId.FleetfootGreaves, () => new FleetfootGreaves() },
+                { EquipmentId.HeartforgeCuirass, () => new HeartforgeCuirass() },
                 { EquipmentId.HelmOfSeeing, () => new HelmOfSeeing() },
                 { EquipmentId.IvoryCoif, () => new IvoryCoif() },
                 { EquipmentId.IvoryTreads, () => new IvoryTreads() },
@@ -24,16 +23,18 @@ namespace Crusaders30XX.ECS.Factories
                 { EquipmentId.KnightlyGrieves, () => new KnightlyGrieves() },
                 { EquipmentId.KnightlyGauntlets, () => new KnightlyGauntlets() },
                 { EquipmentId.KnightlyHelm, () => new KnightlyHelm() },
-                { EquipmentId.PaleCuirass, () => new PaleCuirass() },
-                { EquipmentId.PaleGreathelm, () => new PaleGreathelm() },
-                { EquipmentId.PaleGreaves, () => new PaleGreaves() },
-                { EquipmentId.PaleVambraces, () => new PaleVambraces() },
+                { EquipmentId.KunaiSheath, () => new KunaiSheath() },
+                { EquipmentId.OathbreakerCoif, () => new OathbreakerCoif() },
                 { EquipmentId.PiercedHeartPlate, () => new PiercedHeartPlate() },
                 { EquipmentId.PurgingBracers, () => new PurgingBracers() },
+                { EquipmentId.SanctifiedCirclet, () => new SanctifiedCirclet() },
                 { EquipmentId.ScarletCoif, () => new ScarletCoif() },
                 { EquipmentId.ScarletTreads, () => new ScarletTreads() },
                 { EquipmentId.ScarletVest, () => new ScarletVest() },
                 { EquipmentId.ScarletWraps, () => new ScarletWraps() },
+                { EquipmentId.SunderstepTreads, () => new SunderstepTreads() },
+                { EquipmentId.WarbringerBracers, () => new WarbringerBracers() },
+                { EquipmentId.WhetstoneGauntlets, () => new WhetstoneGauntlets() },
             };
 
         public static EquipmentBase Create(EquipmentId equipmentId)

@@ -11,10 +11,6 @@ namespace Crusaders30XX.ECS.Rendering
 		public static readonly Color WeaponTextBackground = new(154, 112, 72);
 		public static readonly Color AttackLabelSlabBackground = new(153, 26, 26);
 		public static readonly Color AttackLabelSlabText = new(255, 204, 187);
-		public static readonly Color EquipmentUseLabelSlabBackground = new(15, 15, 15);
-		public static readonly Color EquipmentUseLabelSlabText = new(136, 136, 136);
-		public static readonly Color EquipmentUseChipBackground = new(38, 38, 38);
-		public static readonly Color EquipmentUseChipText = new(224, 224, 224);
 		public static readonly Color AbilityRed = new(196, 30, 58);
 
 		public static Color Background(CardData.CardColor color) => color switch

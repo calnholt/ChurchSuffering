@@ -4,7 +4,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 	{
 		Active,
 		Passive,
-		OutOfUses,
+		Used,
 	}
 
 	public sealed class EquipmentTooltipSnapshotVariant
@@ -12,7 +12,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		public EquipmentTooltipSnapshotVariantId Id { get; init; }
 		public string FileSlug { get; init; }
 		public string EquipmentId { get; init; }
-		public bool Exhausted { get; init; }
+		public bool IsUsed { get; init; }
 
 		public static EquipmentTooltipSnapshotVariant Parse(string[] args)
 		{
@@ -23,14 +23,14 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			if (args.Length != 1)
 			{
 				throw new DisplaySnapshotSetupException(
-					"equipment-tooltip expects one variant: active, passive, or out-of-uses");
+					"equipment-tooltip expects one variant: active, passive, or used");
 			}
 
 			return args[0].Trim().ToLowerInvariant() switch
 			{
 				"active" => Create(EquipmentTooltipSnapshotVariantId.Active),
 				"passive" => Create(EquipmentTooltipSnapshotVariantId.Passive),
-				"out-of-uses" => Create(EquipmentTooltipSnapshotVariantId.OutOfUses),
+				"used" => Create(EquipmentTooltipSnapshotVariantId.Used),
 				_ => throw new DisplaySnapshotSetupException(
 					$"Unknown equipment-tooltip variant: '{args[0]}'"),
 			};
@@ -47,12 +47,12 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					FileSlug = "passive",
 					EquipmentId = "knightly_grieves",
 				},
-				EquipmentTooltipSnapshotVariantId.OutOfUses => new EquipmentTooltipSnapshotVariant
+				EquipmentTooltipSnapshotVariantId.Used => new EquipmentTooltipSnapshotVariant
 				{
 					Id = id,
-					FileSlug = "out-of-uses",
+					FileSlug = "used",
 					EquipmentId = "helm_of_seeing",
-					Exhausted = true,
+					IsUsed = true,
 				},
 				_ => new EquipmentTooltipSnapshotVariant
 				{

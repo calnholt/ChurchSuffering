@@ -108,10 +108,9 @@ public enum MedalId
 
 public enum EquipmentId
 {
-    CrimsonCuirass,
-    CrimsonGreathelm,
-    CrimsonGreaves,
-    CrimsonVambraces,
+    BulwarkPlate,
+    FleetfootGreaves,
+    HeartforgeCuirass,
     HelmOfSeeing,
     IvoryCoif,
     IvoryTreads,
@@ -121,16 +120,18 @@ public enum EquipmentId
     KnightlyGrieves,
     KnightlyGauntlets,
     KnightlyHelm,
-    PaleCuirass,
-    PaleGreathelm,
-    PaleGreaves,
-    PaleVambraces,
+    KunaiSheath,
+    OathbreakerCoif,
     PiercedHeartPlate,
     PurgingBracers,
+    SanctifiedCirclet,
     ScarletCoif,
     ScarletTreads,
     ScarletVest,
     ScarletWraps,
+    SunderstepTreads,
+    WarbringerBracers,
+    WhetstoneGauntlets,
 }
 
 public enum EnemyId
@@ -367,10 +368,9 @@ public static class GameIdExtensions
 
     public static string ToKey(this EquipmentId id) => id switch
     {
-        EquipmentId.CrimsonCuirass => "crimson_cuirass",
-        EquipmentId.CrimsonGreathelm => "crimson_greathelm",
-        EquipmentId.CrimsonGreaves => "crimson_greaves",
-        EquipmentId.CrimsonVambraces => "crimson_vambraces",
+        EquipmentId.BulwarkPlate => "bulwark_plate",
+        EquipmentId.FleetfootGreaves => "fleetfoot_greaves",
+        EquipmentId.HeartforgeCuirass => "heartforge_cuirass",
         EquipmentId.HelmOfSeeing => "helm_of_seeing",
         EquipmentId.IvoryCoif => "ivory_coif",
         EquipmentId.IvoryTreads => "ivory_treads",
@@ -380,16 +380,18 @@ public static class GameIdExtensions
         EquipmentId.KnightlyGrieves => "knightly_grieves",
         EquipmentId.KnightlyGauntlets => "knightly_gauntlets",
         EquipmentId.KnightlyHelm => "knightly_helm",
-        EquipmentId.PaleCuirass => "pale_cuirass",
-        EquipmentId.PaleGreathelm => "pale_greathelm",
-        EquipmentId.PaleGreaves => "pale_greaves",
-        EquipmentId.PaleVambraces => "pale_vambraces",
+        EquipmentId.KunaiSheath => "kunai_sheath",
+        EquipmentId.OathbreakerCoif => "oathbreaker_coif",
         EquipmentId.PiercedHeartPlate => "pierced_heart_plate",
         EquipmentId.PurgingBracers => "purging_bracers",
+        EquipmentId.SanctifiedCirclet => "sanctified_circlet",
         EquipmentId.ScarletCoif => "scarlet_coif",
         EquipmentId.ScarletTreads => "scarlet_treads",
         EquipmentId.ScarletVest => "scarlet_vest",
         EquipmentId.ScarletWraps => "scarlet_wraps",
+        EquipmentId.SunderstepTreads => "sunderstep_treads",
+        EquipmentId.WarbringerBracers => "warbringer_bracers",
+        EquipmentId.WhetstoneGauntlets => "whetstone_gauntlets",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 

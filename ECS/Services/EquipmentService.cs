@@ -24,7 +24,7 @@ namespace Crusaders30XX.ECS.Services
 			}
 			if (type == EquipmentTooltipType.Shop && equipment.Block > 0)
 			{
-				sections.Add($"Block: {equipment.Block} | Uses: {equipment.Uses}");
+				sections.Add($"Block: {equipment.Block}");
 			}
 			if (equipment.CanActivateDuringActionPhase)
 			{

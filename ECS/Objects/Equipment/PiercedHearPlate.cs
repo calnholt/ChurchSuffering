@@ -7,7 +7,6 @@ namespace Crusaders30XX.ECS.Objects.Equipment
 {
   public class PiercedHeartPlate : EquipmentBase
   {
-    private readonly int Cost = 2;
     private readonly int Courage = 2;
     public PiercedHeartPlate()
     {
@@ -15,19 +14,13 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Name = "Pierced Heart Plate";
       Slot = EquipmentSlot.Chest;
       Block = 1;
-      Uses = 2;
       Color = CardData.CardColor.Black;
-      Text = $"Gain {Courage} courage. Costs {Cost} uses.";
+      Text = $"Gain {Courage} courage.";
       CanActivateDuringActionPhase = true;
-      CanActivate = () => RemainingUses == Uses;
 
       OnActivate = (entityManager, entity) =>
       {
         EventManager.Publish(new ModifyCourageRequestEvent { Delta = Courage, Type = ModifyCourageType.Gain});
-        for (int i = 0; i < Cost; i++)
-        {
-          RemainingUses--;
-        }
       };
     }
   }
