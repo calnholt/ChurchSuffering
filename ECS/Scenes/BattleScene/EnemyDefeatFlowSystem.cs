@@ -238,21 +238,6 @@ namespace Crusaders30XX.ECS.Systems
 						},
 					};
 				}
-
-				var completion = QuestCompleteService.SaveIfCompletedHighest(EntityManager);
-				return new PostVictoryAction
-				{
-					Kind = PostVictoryKind.ShowQuestReward,
-					QuestReward = new ShowQuestRewardOverlay
-					{
-						Message = "Quest Complete!",
-						RewardGold = completion.IsNewlyCompleted ? completion.RewardGold : 0,
-						HasCardReward = completion.HasCardReward,
-						RewardCardKey = completion.RewardCardKey,
-						RewardCardKeys = completion.RewardCardKeys,
-						DeckRewardOffer = completion.DeckRewardOffer
-					},
-				};
 			}
 
 			return new PostVictoryAction

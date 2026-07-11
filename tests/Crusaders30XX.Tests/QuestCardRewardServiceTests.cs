@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Services;
 using Xunit;
@@ -12,38 +15,11 @@ namespace Crusaders30XX.Tests;
 
 public class QuestCardRewardServiceTests
 {
-	private static readonly string[] ExpectedSharedIncomingPool =
-	{
-		"strike",
-		"crusade",
-		"zealous_vow",
-		"tempest",
-		"shield_of_faith",
-		"increase_faith",
-		"renounce_and_hone",
-		"sacrifice",
-		"steel_the_spirit",
-		"iron_covenant",
-		"whirlwind",
-		"pouch_of_kunai",
-		"ravage",
-		"reap",
-		"relentless_strike",
-		"serpent_crush",
-		"stalwart",
-		"temper_the_blade",
-		"vindicate",
-		"vanguards_promise",
-		"steadfast_resolve",
-		"exaltation",
-		"deus_vult",
-		"carpe_diem",
-		"crimson_rite",
-		"consecrate",
-		"ark_of_the_covenant",
-		"dowse_with_holy_water",
-		"fury"
-	};
+	private static readonly string[] ExpectedSharedIncomingPool = CardFactory.GetAllCards()
+		.Where(pair => pair.Value.CanAddToLoadout && !pair.Value.IsWeapon && !pair.Value.IsToken && pair.Value.Rarity != Rarity.Starter)
+		.Select(pair => pair.Key.ToKey())
+		.Order(StringComparer.OrdinalIgnoreCase)
+		.ToArray();
 
 	[Fact]
 	public void GenerateDeckRewardOffer_prioritizes_starter_exchange_targets()

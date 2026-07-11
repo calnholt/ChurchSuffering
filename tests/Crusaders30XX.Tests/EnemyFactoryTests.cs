@@ -24,9 +24,9 @@ public class EnemyFactoryTests
 	}
 
 	[Fact]
-	public void Normal_run_map_pool_contains_only_registered_non_boss_enemies()
+	public void Climb_encounter_pool_contains_only_registered_non_boss_enemies()
 	{
-		var pool = EnemyPortraitContent.GetRunMapEnemyPool();
+		var pool = EnemyPortraitContent.GetClimbEncounterEnemyPool();
 
 		Assert.NotEmpty(pool);
 		Assert.DoesNotContain("fallen_shepherd", pool);

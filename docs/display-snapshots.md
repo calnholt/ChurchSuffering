@@ -58,6 +58,9 @@ to the fixture.
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
 | `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
+| `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
+| `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
+| `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
 | `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
@@ -73,6 +76,50 @@ to the fixture.
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
+
+---
+
+## `battle-phase-transition`
+
+Renders the production battle phase transition over a fixed gothic battle background. The variants cover every phase-specific title lockup plus representative entry and exit motion.
+
+```bash
+dotnet run -- snapshot battle-phase-transition block-hold --verify
+./scripts/verify-battle-phase-transition-snapshots.sh
+```
+
+Approved images are `start-hold.png`, `block-entry.png`, `block-hold.png`, `action-hold.png`, `action-exit.png`, `pledge-hold.png`, and `victory-hold.png` under `tests/VisualBaselines/battle-phase-transition/`.
+
+---
+
+## `enemy-damage-meter`
+
+Renders the enemy damage meter against a fixed attack-banner anchor. The variants cover its initial damage/aegis state, a mid-transition block assignment, the settled result, and the EnemyAttack absorb exit.
+
+```bash
+dotnet run -- snapshot enemy-damage-meter initial --verify
+dotnet run -- snapshot enemy-damage-meter transition --verify
+dotnet run -- snapshot enemy-damage-meter settled --verify
+dotnet run -- snapshot enemy-damage-meter absorb --verify
+./scripts/verify-enemy-damage-meter-snapshots.sh
+```
+
+Approved images are `initial.png`, `transition.png`, `settled.png`, and `absorb.png` under `tests/VisualBaselines/enemy-damage-meter/`. Unknown variants or extra arguments exit with code `1` without producing a PNG.
+
+---
+
+## `equipment-tooltip`
+
+Renders an equipped item with its hover tooltip. The `active` and `used` variants use the activation-only Bulwark Plate to verify that zero-block equipment has no footer band or BLOCK chip; the `used` variant also verifies the transparent used-state treatment. The `passive` variant covers block-only equipment.
+
+```bash
+dotnet run -- snapshot equipment-tooltip active --verify
+dotnet run -- snapshot equipment-tooltip passive --verify
+dotnet run -- snapshot equipment-tooltip used --verify
+./scripts/verify-equipment-tooltip-snapshots.sh
+```
+
+Approved images are `active.png`, `passive.png`, and `used.png` under `tests/VisualBaselines/equipment-tooltip/`.
 
 ---
 

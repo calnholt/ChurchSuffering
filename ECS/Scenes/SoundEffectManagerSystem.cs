@@ -198,6 +198,10 @@ namespace Crusaders30XX.ECS.Systems
                 SfxTrack.Purchase => "SFX/purchase",
                 SfxTrack.SaintInfo => "SFX/saint-info",
                 SfxTrack.Temperance => "SFX/temperance",
+                SfxTrack.TakeReward => "SFX/take-reward",
+                SfxTrack.UpgradeCard => "SFX/upgrade-card",
+                SfxTrack.BoosterPackReveal => "SFX/booster-pack-reveal",
+                SfxTrack.DeckShuffle => "SFX/deck-shuffle",
                 _ => null
             };
 

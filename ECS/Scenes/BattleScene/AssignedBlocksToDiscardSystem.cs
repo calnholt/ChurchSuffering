@@ -119,12 +119,12 @@ namespace Crusaders30XX.ECS.Systems
                     var zone = entity.GetComponent<EquipmentZone>();
                     if (zone == null) { zone = new EquipmentZone(); EntityManager.AddComponent(entity, zone); }
                     zone.Zone = EquipmentZoneType.Default;
-                    // Update usage count for this equipment id
+                    // Mark equipment unavailable for the rest of this battle.
                     var eqComp = entity.GetComponent<EquippedEquipment>();
                     if (eqComp != null && !string.IsNullOrEmpty(eqComp.Equipment.Id))
                     {
-                        eqComp.Equipment.DecrementRemainingUses();
-                        LoggingService.Append("AssignedBlocksToDiscardSystem.UpdateEntity", new System.Text.Json.Nodes.JsonObject { ["equipmentId"] = eqComp.Equipment.Id, ["remainingUses"] = eqComp.Equipment.RemainingUses });
+                        eqComp.Equipment.MarkUsed();
+                        LoggingService.Append("AssignedBlocksToDiscardSystem.UpdateEntity", new System.Text.Json.Nodes.JsonObject { ["equipmentId"] = eqComp.Equipment.Id, ["isUsed"] = eqComp.Equipment.IsUsed });
                     }
                     // Mirror card resolution rewards: red equipment grants Courage, white grants Temperance
                     try

@@ -238,32 +238,12 @@ namespace Crusaders30XX.ECS.Systems
                 }
                 case UIElementEventType.ViewDeck:
                 {
-                    var deckEntity = entityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
-                    var deck = deckEntity?.GetComponent<Deck>();
-                    if (deck != null)
-                    {
-                        EventManager.Publish(new OpenCardListModalEvent
-                        {
-                            Title = "Draw Pile",
-                            Cards = deck.DrawPile.ToList(),
-                            Mode = CardListModalMode.CardList,
-                        });
-                    }
+                    PileViewService.OpenDrawPile(entityManager);
                     break;
                 }
                 case UIElementEventType.ViewDiscard:
                 {
-                    var deckEntity = entityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
-                    var deck = deckEntity?.GetComponent<Deck>();
-                    if (deck != null)
-                    {
-                        EventManager.Publish(new OpenCardListModalEvent
-                        {
-                            Title = "Discard Pile",
-                            Cards = deck.DiscardPile.ToList(),
-                            Mode = CardListModalMode.CardList,
-                        });
-                    }
+                    PileViewService.OpenDiscardPile(entityManager);
                     break;
                 }
                 default:

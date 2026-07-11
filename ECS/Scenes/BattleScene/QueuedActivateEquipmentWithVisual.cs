@@ -37,6 +37,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			equipment.OnActivate(_entityManager, _equipmentEntity);
+			equipment.MarkUsed();
 			EventManager.Publish(new EquipmentAbilityTriggered { Equipment = _equipmentEntity, EquipmentId = equipment.Id });
 
 			var request = VisualEffectRequestFactory.ForEquipment(

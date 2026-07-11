@@ -63,6 +63,12 @@ namespace Crusaders30XX.ECS.Events
 
 	public class ClaimPendingClimbPointsEvent { }
 
+	public class ClimbPointsSegmentAwardedEvent
+	{
+		public int NewTotalPoints { get; set; }
+		public bool TriggeredLevelComplete { get; set; }
+	}
+
 	public class ClimbEndedEvent
 	{
 		public int TimeReached { get; set; }

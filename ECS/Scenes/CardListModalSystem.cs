@@ -696,8 +696,10 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch.Draw(_pixel, new Rectangle(body.X, body.Y + 30, body.Width, 2), GetCardColor(equipment.Color));
             DrawWrappedBody(equipment.Text ?? string.Empty, new Rectangle(body.X, body.Y + 40, body.Width, body.Height - 40), White3);
 
-            DrawSmallStat(new Rectangle(inner.X + 16, inner.Y + 52, 38, 38), equipment.Block.ToString(), "Block");
-            DrawSmallStat(new Rectangle(inner.X + 16, inner.Y + 98, 38, 38), Math.Max(0, equipment.RemainingUses).ToString(), "Uses");
+            if (equipment.Block > 0)
+            {
+                DrawSmallStat(new Rectangle(inner.X + 16, inner.Y + 52, 38, 38), equipment.Block.ToString(), "Block");
+            }
         }
 
         private void DrawSmallStat(Rectangle rect, string value, string label)

@@ -2,7 +2,6 @@ using System.IO;
 using System.Text.Json;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Data.Locations;
 
 namespace Crusaders30XX.ECS.Data.Save
 {
@@ -18,10 +17,6 @@ namespace Crusaders30XX.ECS.Data.Save
 				var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 				var data = JsonSerializer.Deserialize<SaveFile>(json, opts) ?? new SaveFile();
 				// Ensure non-null collections
-				if (data.runMapNodes == null) data.runMapNodes = new System.Collections.Generic.List<RunMapNode>();
-				if (data.runMapShops == null) data.runMapShops = new System.Collections.Generic.List<RunMapShop>();
-				if (data.runMapTreasures == null) data.runMapTreasures = new System.Collections.Generic.List<RunMapTreasure>();
-				if (data.runMapEvents == null) data.runMapEvents = new System.Collections.Generic.List<RunMapEvent>();
 				if (data.items == null) data.items = new System.Collections.Generic.List<SaveItem>();
 				if (data.loadouts == null) data.loadouts = new System.Collections.Generic.List<LoadoutDefinition>();
 				if (data.seenTutorials == null) data.seenTutorials = new System.Collections.Generic.List<string>();

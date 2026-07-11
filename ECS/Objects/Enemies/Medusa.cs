@@ -52,7 +52,6 @@ namespace Crusaders30XX.ECS.Objects.Enemies
 
 public class Gaze : EnemyAttackBase
 {
-	private int RevealSeals = 3;
 	private int HitSeals = 3;
 
 	public Gaze()

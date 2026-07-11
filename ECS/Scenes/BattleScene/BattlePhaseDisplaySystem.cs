@@ -40,6 +40,28 @@ namespace Crusaders30XX.ECS.Systems
 		public float TextScale { get; set; } = 0.6f;
 		[DebugEditable(DisplayName = "Text Fade In %", Step = 0.05f, Min = 0.1f, Max = 1f)]
 		public float TextFadeInPercent { get; set; } = 1f;
+		[DebugEditable(DisplayName = "Text Landing Overshoot", Step = 0.01f, Min = 0f, Max = 0.5f)]
+		public float TextLandingOvershoot { get; set; } = 0.1f;
+		[DebugEditable(DisplayName = "Text Exit Distance", Step = 10f, Min = 0f, Max = 1000f)]
+		public float TextExitDistance { get; set; } = 120f;
+		[DebugEditable(DisplayName = "Text Extrusion X", Step = 1f, Min = -50f, Max = 50f)]
+		public float TextExtrusionX { get; set; } = 9f;
+		[DebugEditable(DisplayName = "Text Extrusion Y", Step = 1f, Min = -50f, Max = 50f)]
+		public float TextExtrusionY { get; set; } = 7f;
+		[DebugEditable(DisplayName = "Text Outline Thickness", Step = 1f, Min = 0f, Max = 10f)]
+		public float TextOutlineThickness { get; set; } = 2f;
+
+		// --- Title Plate ---
+		[DebugEditable(DisplayName = "Plate Padding X", Step = 5f, Min = 0f, Max = 300f)]
+		public float PlatePaddingX { get; set; } = 72f;
+		[DebugEditable(DisplayName = "Plate Padding Y", Step = 5f, Min = 0f, Max = 150f)]
+		public float PlatePaddingY { get; set; } = 22f;
+		[DebugEditable(DisplayName = "Plate Slant Angle", Step = 1f, Min = 0f, Max = 60f)]
+		public float PlateSlantAngle { get; set; } = 18f;
+		[DebugEditable(DisplayName = "Plate Opacity", Step = 0.05f, Min = 0f, Max = 1f)]
+		public float PlateOpacity { get; set; } = 0.92f;
+		[DebugEditable(DisplayName = "Plate Accent Thickness", Step = 1f, Min = 1f, Max = 40f)]
+		public float PlateAccentThickness { get; set; } = 7f;
 
 		// --- Strip Configuration ---
 		[DebugEditable(DisplayName = "Base Strip Length", Step = 50f, Min = 100f, Max = 3000f)]
@@ -60,6 +82,12 @@ namespace Crusaders30XX.ECS.Systems
 		public float LateralSpread { get; set; } = 160f; // Spread perpendicular to motion
 		[DebugEditable(DisplayName = "Hold Move Dist", Step = 10f, Min = 0f, Max = 1000f)]
 		public float HoldMoveDistance { get; set; } = 100f; // Distance moved during hold phase
+		[DebugEditable(DisplayName = "Strip Count", Step = 1f, Min = 2f, Max = 40f)]
+		public int StripCount { get; set; } = 12;
+		[DebugEditable(DisplayName = "Strip Longitudinal Variance", Step = 10f, Min = 0f, Max = 1000f)]
+		public float StripLongitudinalVariance { get; set; } = 200f;
+		[DebugEditable(DisplayName = "Strip Exit Alpha", Step = 0.05f, Min = 0f, Max = 1f)]
+		public float StripExitAlpha { get; set; } = 0.5f;
 
 		private enum AnimState
 		{
@@ -77,6 +105,30 @@ namespace Crusaders30XX.ECS.Systems
 		private int _lastTurn = 0;
 		private bool _shownBlockAnimationForTurn = false;
 		private bool _isVictoryAnimation = false;
+		private Texture2D _plateTexture;
+		private Vector2 _plateSize;
+		private TransitionPresentation _presentation;
+
+		private static readonly Color InkColor = new Color(7, 7, 9);
+		private static readonly Color IvoryColor = new Color(244, 239, 225);
+		private static readonly Color CrimsonColor = new Color(174, 24, 44);
+
+		private enum AccentStyle
+		{
+			Start,
+			Block,
+			Action,
+			Pledge,
+			Victory
+		}
+
+		private readonly struct TransitionPresentation
+		{
+			public AccentStyle Style { get; init; }
+			public Color Primary { get; init; }
+			public Color Secondary { get; init; }
+			public float Scale { get; init; }
+		}
 
 		// Strip Definition
 		private struct Strip
@@ -100,7 +152,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			EventManager.Subscribe<ShowStartOfBattleAnimationEvent>(_ => {
 				LoggingService.Append("BattlePhaseDisplaySystem.OnShowStartOfBattleAnimation", new System.Text.Json.Nodes.JsonObject { ["event"] = "ShowStartOfBattleAnimationEvent" });
-				StartAnimation(SubPhaseToString(SubPhase.StartBattle));
+				StartAnimation(SubPhaseToString(SubPhase.StartBattle), ResolvePresentation(SubPhase.StartBattle));
 			});
 			EventManager.Subscribe<ShowVictoryAnimationEvent>(_ => {
 				LoggingService.Append("BattlePhaseDisplaySystem.OnShowVictoryAnimation", new System.Text.Json.Nodes.JsonObject { ["event"] = "ShowVictoryAnimationEvent" });
@@ -114,6 +166,9 @@ namespace Crusaders30XX.ECS.Systems
 				_lastTurn = 0;
 				_shownBlockAnimationForTurn = false;
 				_isVictoryAnimation = false;
+				_strips.Clear();
+				_plateTexture = null;
+				_plateSize = Vector2.Zero;
 			});
 		}
 
@@ -164,12 +219,12 @@ namespace Crusaders30XX.ECS.Systems
 					else
 					{
 						_shownBlockAnimationForTurn = true;
-						StartAnimation(newText);
+						StartAnimation(newText, ResolvePresentation(phase.Sub));
 					}
 				}
 				else
 				{
-					StartAnimation(newText);
+					StartAnimation(newText, ResolvePresentation(phase.Sub));
 				}
 			}
 		}
@@ -211,13 +266,14 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void StartAnimation(string text)
+		private void StartAnimation(string text, TransitionPresentation presentation)
 		{
 			_isVictoryAnimation = false;
 			_transitionText = text;
+			_presentation = presentation;
 			_animState = AnimState.Entering;
 			_animTimer = 0f;
-			GenerateStrips();
+			PrepareVisuals();
 			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.PhaseChange, Volume = 0.5f });
 		}
 
@@ -225,9 +281,10 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			_isVictoryAnimation = true;
 			_transitionText = "Victory!";
+			_presentation = ResolveVictoryPresentation();
 			_animState = AnimState.Entering;
 			_animTimer = 0f;
-			GenerateStrips();
+			PrepareVisuals();
 			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.PhaseChange, Volume = 0.5f });
 		}
 
@@ -238,16 +295,36 @@ namespace Crusaders30XX.ECS.Systems
 			_isVictoryAnimation = false;
 		}
 
+		private void PrepareVisuals()
+		{
+			GenerateStrips();
+			GeneratePlateTexture();
+		}
+
+		private void GeneratePlateTexture()
+		{
+			Vector2 textSize = _font.MeasureString(_transitionText) * TextScale * _presentation.Scale;
+			float width = Math.Max(1f, textSize.X + PlatePaddingX * 2f);
+			float height = Math.Max(1f, textSize.Y + PlatePaddingY * 2f);
+			_plateSize = new Vector2(width, height);
+			_plateTexture = PrimitiveTextureFactory.GetAntialiasedTrapezoidMask(
+				_graphicsDevice,
+				width,
+				height,
+				0f,
+				0f,
+				-PlateSlantAngle,
+				0f,
+				PlateSlantAngle);
+		}
+
 		private void GenerateStrips()
 		{
 			_strips.Clear();
 			var rng = new Random(12345); // Fixed seed for consistent look, or use Time for random
 
-			// Generate a bunch of strips
-			// Mix of BottomLeft and TopRight
-			int count = 12; 
-			
-			for (int i = 0; i < count; i++)
+			// Alternate strips from both corners to preserve the opposing convergence.
+			for (int i = 0; i < StripCount; i++)
 			{
 				bool fromBL = i % 2 == 0;
 				
@@ -266,7 +343,7 @@ namespace Crusaders30XX.ECS.Systems
 
 				// Varied offsets
 				float latOff = ((float)rng.NextDouble() * 2f - 1f) * LateralSpread; // -Spread to +Spread
-				float longOff = ((float)rng.NextDouble() * 2f - 1f) * 200f; // Small lead/lag along track
+				float longOff = ((float)rng.NextDouble() * 2f - 1f) * StripLongitudinalVariance;
 
 				// Create Texture
 				var tex = PrimitiveTextureFactory.GetAntialiasedTrapezoidMask(
@@ -296,7 +373,7 @@ namespace Crusaders30XX.ECS.Systems
 		private void DrawTransition()
 		{
 			if (_animState == AnimState.None) return;
-			if (_strips.Count == 0) GenerateStrips();
+			if (_strips.Count == 0 || _plateTexture == null) return;
 
 			Vector2 centerScreen = new Vector2(Game1.VirtualWidth / 2f, Game1.VirtualHeight / 2f);
 			
@@ -356,8 +433,7 @@ namespace Crusaders30XX.ECS.Systems
 				else
 				{
 					currentDist = MathHelper.Lerp(endDist, throughDist, travelPos - 1f);
-					// Fade out slightly on exit?
-					alpha = 1f - (travelPos - 1f) * 0.5f;
+					alpha = 1f - (travelPos - 1f) * (1f - StripExitAlpha);
 				}
 
 				Vector2 pos = centerScreen + perpDir * strip.LateralOffset - moveDir * currentDist;
@@ -376,6 +452,8 @@ namespace Crusaders30XX.ECS.Systems
 
 			float alpha = 1f;
 			Vector2 offset = Vector2.Zero;
+			float landingScale = 1f;
+			float plateWidthScale = 1f;
 
 			if (_animState == AnimState.Entering)
 			{
@@ -389,6 +467,8 @@ namespace Crusaders30XX.ECS.Systems
 
 				float moveProgress = EaseOutCubic(t);
 				offset = Vector2.Lerp(new Vector2(TextSpawnOffsetX, TextSpawnOffsetY), Vector2.Zero, moveProgress);
+				plateWidthScale = MathHelper.Lerp(0.58f, 1f, moveProgress);
+				landingScale = CalculateLandingScale(t);
 			}
 			else if (_animState == AnimState.Holding)
 			{
@@ -399,7 +479,9 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				float t = MathHelper.Clamp(_animTimer / PhaseOutDuration, 0f, 1f);
 				alpha = 1f - t;
-				offset = Vector2.Zero;
+				float exitProgress = EaseInCubic(t);
+				offset = new Vector2(-TextExitDistance, TextExitDistance * 0.45f) * exitProgress;
+				plateWidthScale = MathHelper.Lerp(1f, 0.72f, exitProgress);
 			}
 
 			if (alpha <= 0.01f) return;
@@ -407,10 +489,120 @@ namespace Crusaders30XX.ECS.Systems
 			Vector2 textSize = _font.MeasureString(_transitionText);
 			Vector2 textOrigin = textSize / 2f;
 			Vector2 textPos = center + offset;
-			float scale = TextScale;
+			float scale = TextScale * _presentation.Scale * landingScale;
 
-			_spriteBatch.DrawString(_font, _transitionText, textPos + new Vector2(2, 2), Color.Black * alpha * 0.6f, 0f, textOrigin, scale, SpriteEffects.None, 0f);
-			_spriteBatch.DrawString(_font, _transitionText, textPos, Color.White * alpha, 0f, textOrigin, scale, SpriteEffects.None, 0f);
+			DrawTitlePlate(textPos, alpha, plateWidthScale, landingScale);
+			DrawLayeredTitle(textPos, textOrigin, scale, alpha);
+		}
+
+		private float CalculateLandingScale(float t)
+		{
+			const float overshootTime = 0.72f;
+			if (t <= overshootTime)
+			{
+				float rise = EaseOutCubic(t / overshootTime);
+				return MathHelper.Lerp(0.92f, 1f + TextLandingOvershoot, rise);
+			}
+
+			float settle = (t - overshootTime) / (1f - overshootTime);
+			return MathHelper.Lerp(1f + TextLandingOvershoot, 1f, EaseInOutCubic(settle));
+		}
+
+		private void DrawTitlePlate(Vector2 center, float alpha, float widthScale, float landingScale)
+		{
+			float width = _plateSize.X * widthScale * landingScale;
+			float height = _plateSize.Y * landingScale;
+			float accent = PlateAccentThickness * landingScale;
+			float plateAlpha = alpha * PlateOpacity;
+
+			if (_presentation.Style == AccentStyle.Victory)
+			{
+				DrawPlateLayer(center, width + accent * 3f, height + accent * 2f, _presentation.Primary * plateAlpha);
+			}
+			else if (_presentation.Style == AccentStyle.Start)
+			{
+				DrawPlateLayer(center + new Vector2(-accent, accent), width + accent * 2f, height + accent, _presentation.Secondary * plateAlpha);
+			}
+
+			DrawPlateLayer(center, width, height, InkColor * plateAlpha);
+
+			switch (_presentation.Style)
+			{
+				case AccentStyle.Start:
+					DrawPlateLayer(center + new Vector2(-width * 0.08f, -height * 0.5f + accent * 0.5f), width * 0.72f, accent, _presentation.Primary * alpha);
+					DrawPlateLayer(center + new Vector2(width * 0.08f, height * 0.5f - accent * 0.5f), width * 0.9f, accent, _presentation.Secondary * alpha);
+					break;
+				case AccentStyle.Block:
+					DrawPlateLayer(center + new Vector2(0f, -height * 0.5f + accent * 0.5f), width * 0.46f, accent, _presentation.Primary * alpha);
+					DrawPlateLayer(center + new Vector2(0f, height * 0.5f - accent * 0.5f), width * 0.62f, accent, _presentation.Secondary * alpha);
+					break;
+				case AccentStyle.Action:
+					DrawPlateLayer(center + new Vector2(width * 0.05f, height * 0.5f - accent * 0.5f), width * 0.88f, accent, _presentation.Primary * alpha);
+					break;
+				case AccentStyle.Pledge:
+					DrawPlateLayer(center + new Vector2(-width * 0.05f, -height * 0.5f + accent * 0.5f), width * 0.8f, accent, _presentation.Primary * alpha);
+					DrawPlateLayer(center + new Vector2(width * 0.05f, height * 0.5f - accent * 0.5f), width * 0.8f, accent, _presentation.Secondary * alpha);
+					break;
+				case AccentStyle.Victory:
+					DrawPlateLayer(center + new Vector2(0f, height * 0.5f - accent * 0.5f), width * 0.92f, accent, _presentation.Secondary * alpha);
+					DrawPlateLayer(center + new Vector2(0f, height * 0.5f - accent * 2f), width * 0.68f, accent * 0.65f, _presentation.Primary * alpha);
+					break;
+			}
+		}
+
+		private void DrawPlateLayer(Vector2 center, float width, float height, Color color)
+		{
+			Vector2 origin = new Vector2(_plateTexture.Width / 2f, _plateTexture.Height / 2f);
+			Vector2 scale = new Vector2(
+				Math.Max(0.001f, width / _plateTexture.Width),
+				Math.Max(0.001f, height / _plateTexture.Height));
+			_spriteBatch.Draw(_plateTexture, center, null, color, 0f, origin, scale, SpriteEffects.None, 0f);
+		}
+
+		private void DrawLayeredTitle(Vector2 position, Vector2 origin, float scale, float alpha)
+		{
+			Vector2 extrusion = new Vector2(TextExtrusionX, TextExtrusionY);
+			_spriteBatch.DrawString(_font, _transitionText, position + extrusion, _presentation.Primary * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+			_spriteBatch.DrawString(_font, _transitionText, position + extrusion * 0.48f, InkColor * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+
+			if (TextOutlineThickness > 0f)
+			{
+				float o = TextOutlineThickness;
+				DrawTitleOutline(position + new Vector2(-o, 0f), origin, scale, alpha);
+				DrawTitleOutline(position + new Vector2(o, 0f), origin, scale, alpha);
+				DrawTitleOutline(position + new Vector2(0f, -o), origin, scale, alpha);
+				DrawTitleOutline(position + new Vector2(0f, o), origin, scale, alpha);
+			}
+
+			_spriteBatch.DrawString(_font, _transitionText, position, IvoryColor * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+		}
+
+		private void DrawTitleOutline(Vector2 position, Vector2 origin, float scale, float alpha)
+		{
+			_spriteBatch.DrawString(_font, _transitionText, position, InkColor * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+		}
+
+		private static TransitionPresentation ResolvePresentation(SubPhase phase)
+		{
+			return phase switch
+			{
+				SubPhase.StartBattle => new TransitionPresentation { Style = AccentStyle.Start, Primary = IvoryColor, Secondary = CrimsonColor, Scale = 1f },
+				SubPhase.Block => new TransitionPresentation { Style = AccentStyle.Block, Primary = IvoryColor, Secondary = CrimsonColor, Scale = 1f },
+				SubPhase.Action => new TransitionPresentation { Style = AccentStyle.Action, Primary = CrimsonColor, Secondary = InkColor, Scale = 1f },
+				SubPhase.Pledge => new TransitionPresentation { Style = AccentStyle.Pledge, Primary = IvoryColor, Secondary = CrimsonColor, Scale = 1f },
+				_ => new TransitionPresentation { Style = AccentStyle.Action, Primary = CrimsonColor, Secondary = InkColor, Scale = 1f }
+			};
+		}
+
+		private static TransitionPresentation ResolveVictoryPresentation()
+		{
+			return new TransitionPresentation
+			{
+				Style = AccentStyle.Victory,
+				Primary = IvoryColor,
+				Secondary = CrimsonColor,
+				Scale = 1.08f
+			};
 		}
 
 		private static string SubPhaseToString(SubPhase sp)
@@ -438,6 +630,14 @@ namespace Crusaders30XX.ECS.Systems
 			return t * t * t;
 		}
 
+		private static float EaseInOutCubic(float t)
+		{
+			t = MathHelper.Clamp(t, 0f, 1f);
+			return t < 0.5f
+				? 4f * t * t * t
+				: 1f - (float)Math.Pow(-2f * t + 2f, 3f) / 2f;
+		}
+
 		[DebugAction("Replay Transition Animation")]
 		public void Debug_ReplayTransitionAnimation()
 		{
@@ -448,15 +648,15 @@ namespace Crusaders30XX.ECS.Systems
 				string text = SubPhaseToString(phase.Sub);
 				if (!string.IsNullOrWhiteSpace(text))
 				{
-					StartAnimation(text);
+					StartAnimation(text, ResolvePresentation(phase.Sub));
 				}
 			}
 		}
 
-		[DebugAction("Regenerate Strips")]
+		[DebugAction("Regenerate Transition Visuals")]
 		public void Debug_RegenerateStrips()
 		{
-			GenerateStrips();
+			PrepareVisuals();
 		}
 	}
 }

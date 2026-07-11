@@ -52,7 +52,7 @@ namespace Crusaders30XX.ECS.Services
 		public static bool HasPortrait(string enemyId) =>
 			!string.IsNullOrEmpty(enemyId) && PortraitEnemyIds.Contains(enemyId);
 
-		public static IReadOnlyList<string> GetRunMapEnemyPool()
+		public static IReadOnlyList<string> GetClimbEncounterEnemyPool()
 		{
 			return EnemyFactory.GetAllEnemies()
 				.Where(entry => entry.Value != null

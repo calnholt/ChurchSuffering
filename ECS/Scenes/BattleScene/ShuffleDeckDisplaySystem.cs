@@ -30,6 +30,7 @@ namespace Crusaders30XX.ECS.Systems
 		private string _targetEntityName = DefaultTargetEntityName;
 		private float _elapsedSeconds;
 		private bool _isActive;
+		private bool _deckAssembleSfxPlayed;
 
 		[DebugEditable(DisplayName = "Card Scale Percent", Step = 0.01f, Min = 0.1f, Max = 2f)]
 		public float CardScalePercent { get; set; } = 0.65f;
@@ -119,7 +120,15 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (!_isActive) return;
 
+			float previousElapsed = _elapsedSeconds;
 			_elapsedSeconds += (float)gameTime.ElapsedGameTime.TotalSeconds;
+			float phase1End = Math.Max(0.001f, CornerConvergeDuration) + Math.Max(0f, CrossHoldDuration);
+			if (!_deckAssembleSfxPlayed && previousElapsed < phase1End && _elapsedSeconds >= phase1End)
+			{
+				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.DeckShuffle, Volume = 0.5f });
+				_deckAssembleSfxPlayed = true;
+			}
+
 			float totalDuration = GetTotalDuration();
 			UpdateCards();
 			if (_elapsedSeconds >= totalDuration)
@@ -166,9 +175,11 @@ namespace Crusaders30XX.ECS.Systems
 				: evt.TargetEntityName;
 			_elapsedSeconds = 0f;
 			_isActive = true;
+			_deckAssembleSfxPlayed = false;
 			SetBattleAnimationActive(true);
 			BuildCards();
 			UpdateCards();
+			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.DeckShuffle, Volume = 0.5f });
 		}
 
 		private void BuildCards()
@@ -312,6 +323,7 @@ namespace Crusaders30XX.ECS.Systems
 			_isActive = false;
 			_activeRequestId = Guid.Empty;
 			_elapsedSeconds = 0f;
+			_deckAssembleSfxPlayed = false;
 			_cards.Clear();
 			SetBattleAnimationActive(false);
 		}

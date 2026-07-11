@@ -82,7 +82,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void TryLoadAssets()
 		{
-			_chaliceTexture = _imageAssets.TryGetTexture("chalice");
+			_chaliceTexture = _imageAssets?.TryGetTexture("chalice");
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()

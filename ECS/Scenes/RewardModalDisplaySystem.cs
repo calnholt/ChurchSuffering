@@ -2024,6 +2024,23 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			var hotKey = _deckRewardSkipButton?.GetComponent<HotKey>();
 			if (hotKey != null) hotKey.IsActive = false;
+
+			var option = state.DeckRewardOffer?.options != null
+				&& selectedIndex >= 0
+				&& selectedIndex < state.DeckRewardOffer.options.Count
+				? state.DeckRewardOffer.options[selectedIndex]
+				: null;
+			if (option != null)
+			{
+				if (string.Equals(option.kind, DeckRewardOfferKinds.Exchange, System.StringComparison.OrdinalIgnoreCase))
+				{
+					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.TakeReward, Volume = 0.5f });
+				}
+				else if (string.Equals(option.kind, DeckRewardOfferKinds.Upgrade, System.StringComparison.OrdinalIgnoreCase))
+				{
+					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.UpgradeCard, Volume = 0.5f });
+				}
+			}
 		}
 
 		private void PreparePreviewCard(Entity card, int zOffset, QuestRewardOverlayState state)

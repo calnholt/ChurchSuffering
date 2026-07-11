@@ -10,7 +10,6 @@ namespace Crusaders30XX.ECS.Objects.Equipment
             Name = "Knightly Gauntlets";
             Slot = EquipmentSlot.Arms;
             Block = 2;
-            Uses = 2;
             Color = CardData.CardColor.Black;
             CanActivate = () => false;
         }

@@ -67,9 +67,9 @@ namespace Crusaders30XX.ECS.Systems
 
 				if (isBlockPhase)
 				{
-					if (!comp.Equipment.HasUses)
+					if (!comp.Equipment.IsAvailable)
 					{
-						PublishInvalidClick("Not enough uses!");
+						PublishInvalidClick("This equipment has already been used this battle!");
 						break;
 					}
 					if (comp.Equipment.Block <= 0)
@@ -192,9 +192,9 @@ namespace Crusaders30XX.ECS.Systems
 						PublishInvalidClick("This equipment cannot be activated during the Action phase!");
 						break;
 					}
-					if (!comp.Equipment.HasUses)
+					if (!comp.Equipment.IsAvailable)
 					{
-						PublishInvalidClick("Not enough uses!");
+						PublishInvalidClick("This equipment has already been used this battle!");
 						break;
 					}
 					if (!comp.Equipment.CanActivate())

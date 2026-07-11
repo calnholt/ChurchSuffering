@@ -133,7 +133,7 @@ namespace Crusaders30XX.ECS.Systems
 				OpenSupplied(e.ResolutionContextId, e.Content);
 				return;
 			}
-			OpenLegacy(e.RunMapEventId, e.EventTypeId, snapshotVisibleOptionCap: 0);
+			OpenByEventTypeId(e.RunMapEventId, e.EventTypeId, snapshotVisibleOptionCap: 0);
 		}
 
 		private void OnNarrativeEventOverlayClosed(NarrativeEventOverlayClosedEvent e)
@@ -144,10 +144,10 @@ namespace Crusaders30XX.ECS.Systems
 		public void OpenForSnapshot(string eventTypeId, int visibleOptionCount = 0)
 		{
 			_forceSnapshotDraw = true;
-			OpenLegacy(string.Empty, eventTypeId, visibleOptionCount);
+			OpenByEventTypeId(string.Empty, eventTypeId, visibleOptionCount);
 		}
 
-		private void OpenLegacy(string runMapEventId, string eventTypeId, int snapshotVisibleOptionCap)
+		private void OpenByEventTypeId(string runMapEventId, string eventTypeId, int snapshotVisibleOptionCap)
 		{
 			if (string.IsNullOrWhiteSpace(eventTypeId)) return;
 
@@ -302,9 +302,6 @@ namespace Crusaders30XX.ECS.Systems
 				case 2: _activeEvent.OnOption2(EntityManager); break;
 				case 3: _activeEvent.OnOption3(EntityManager); break;
 			}
-
-			if (!string.IsNullOrWhiteSpace(state.RunMapEventId))
-				SaveCache.TryCompleteRunMapEvent(state.RunMapEventId);
 
 			EventManager.Publish(new NarrativeEventOverlayClosedEvent
 			{

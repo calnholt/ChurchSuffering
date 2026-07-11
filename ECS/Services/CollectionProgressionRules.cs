@@ -35,6 +35,15 @@ public static class CollectionProgressionRules
 		return (level, Math.Max(0, totalPoints - completedPointCost), level == 0 ? FirstLevelPoints : SubsequentLevelPoints);
 	}
 
+	public static int GetNextLevelThresholdTotal(int totalPoints)
+	{
+		var state = GetLevelState(totalPoints);
+		int completedCost = state.Level == 0
+			? 0
+			: FirstLevelPoints + (state.Level - 1) * SubsequentLevelPoints;
+		return completedCost + state.PointsRequired;
+	}
+
 	public static int CalculateClimbPoints(int climbTime, bool completedFinalBoss, bool abandoned)
 	{
 		if (abandoned) return 0;

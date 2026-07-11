@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Events;
 
 namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 19;
+		public const int CURRENT_VERSION = 20;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -18,14 +17,8 @@ namespace Crusaders30XX.ECS.Data.Save
 		public int musicVolumeLevel { get; set; } = DEFAULT_AUDIO_VOLUME_LEVEL;
 		public int sfxVolumeLevel { get; set; } = DEFAULT_AUDIO_VOLUME_LEVEL;
 		public int runMapSeed { get; set; }
-		public List<RunMapNode> runMapNodes { get; set; } = new List<RunMapNode>();
-		public List<RunMapShop> runMapShops { get; set; } = new List<RunMapShop>();
-		public List<RunMapTreasure> runMapTreasures { get; set; } = new List<RunMapTreasure>();
-		public List<RunMapEvent> runMapEvents { get; set; } = new List<RunMapEvent>();
 		public List<SaveItem> items { get; set; } = new List<SaveItem>();
 		public string lastLocation { get; set; } = string.Empty;
-		/// <summary>Run-map node id when the player entered battle but has not returned to the location map.</summary>
-		public string pendingBattleNodeId { get; set; } = string.Empty;
 		public List<LoadoutDefinition> loadouts { get; set; } = new List<LoadoutDefinition>();
 		public int nextRunDeckEntryId { get; set; }
 		public List<string> seenTutorials { get; set; } = new List<string>();

@@ -62,11 +62,11 @@ A battle resource spent to play cards during the **Action phase**. Playing a car
 
 ## Free Action
 
-A card play or equipment ability that can be activated during the **Action phase** without spending an Action Point. Equipment marked as a Free Action still consumes any equipment uses or other resources listed by its ability.
+A card play or equipment ability that can be activated during the **Action phase** without spending an Action Point. Activating equipment marked as a Free Action uses that item for the current battle.
 
-## Equipment use
+## Equipment availability
 
-An encounter-scoped charge shared by an equipment item's block and activation behavior. Blocking with equipment or activating its ability consumes the listed uses. Uses do not reset between **queued encounters** in the same **Climb encounter**. All equipped items replenish to their total uses when the **encounter reward** overlay opens after encounter completion.
+A battle-scoped state shared by an equipment item's block and activation behavior. Blocking with equipment or activating its ability marks the item used. A used item cannot block or activate again until the battle ends, when all equipped items refresh.
 
 ## Pledge available
 

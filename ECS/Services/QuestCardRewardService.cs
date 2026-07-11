@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Factories;
@@ -391,7 +392,7 @@ namespace Crusaders30XX.ECS.Services
 		{
 			var pool = CardFactory.GetAllCards()
 				.Where(c => c.Value.CanAddToLoadout && !c.Value.IsWeapon && !c.Value.IsToken && c.Value.Rarity != Rarity.Starter)
-				.Select(c => c.Key.ToString())
+				.Select(c => c.Key.ToKey())
 				.ToList();
 			foreach (var id in pool)
 			{

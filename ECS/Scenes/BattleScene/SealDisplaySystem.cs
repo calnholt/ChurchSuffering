@@ -99,13 +99,13 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
 		{
+			if (!ShouldRenderSeal(evt.Card)) return;
 			LoggingService.Append("SealDisplaySystem.OnCardRenderScaledEvent", new System.Text.Json.Nodes.JsonObject
 			{
 				["cardId"] = evt.Card?.Id ?? -1,
 				["scale"] = evt.Scale,
 				["seals"] = evt.Card?.GetComponent<Sealed>()?.Seals ?? 0
 			});
-			if (!ShouldRenderSeal(evt.Card)) return;
 			using var clip = CardRenderClipScope.Apply(_graphicsDevice, evt.ClipRect);
 
 			var geometry = CardGeometryService.GetVisualGeometry(

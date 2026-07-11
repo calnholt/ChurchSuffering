@@ -58,9 +58,33 @@ namespace Crusaders30XX.ECS.Services
 			if (string.IsNullOrWhiteSpace(equipmentId)) return null;
 
 			var loadout = SaveCache.GetLoadout("loadout_1") ?? new LoadoutDefinition { id = "loadout_1" };
-			RunMapEquipmentPoolService.ApplyEquipmentToLoadout(loadout, equipmentId);
+			ApplyEquipmentToLoadout(loadout, equipmentId);
 			SaveCache.SaveLoadout(loadout);
 			return EquipOnPlayer(entityManager, equipmentId);
+		}
+
+		public static void ApplyEquipmentToLoadout(LoadoutDefinition loadout, string equipmentId)
+		{
+			if (loadout == null || string.IsNullOrWhiteSpace(equipmentId)) return;
+
+			EquipmentBase equipment = EquipmentFactory.Create(equipmentId);
+			if (equipment == null) return;
+
+			switch (equipment.Slot)
+			{
+				case EquipmentSlot.Chest:
+					loadout.chestId = equipmentId;
+					break;
+				case EquipmentSlot.Legs:
+					loadout.legsId = equipmentId;
+					break;
+				case EquipmentSlot.Arms:
+					loadout.armsId = equipmentId;
+					break;
+				case EquipmentSlot.Head:
+					loadout.headId = equipmentId;
+					break;
+			}
 		}
 
 		private static void DestroyEquippedInSlot(EntityManager entityManager, Entity player, EquipmentSlot slot)

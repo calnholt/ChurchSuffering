@@ -10,7 +10,6 @@ namespace Crusaders30XX.ECS.Objects.Equipment
             Name = "Ivory Treads";
             Slot = EquipmentSlot.Legs;
             Block = 1;
-            Uses = 2;
             Color = CardData.CardColor.White;
             FlavorText = "Soft leather over hard miles. The faithful learn to keep walking.";
             CanActivate = () => false;

@@ -16,10 +16,16 @@ namespace Crusaders30XX.ECS.Systems
 	public class AchievementMeterDisplaySystem : Core.System
 	{
 		private const string ClaimButtonName = "AchievementClaimClimbPointsButton";
+		private const float SegmentEpsilon = 0.01f;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly Texture2D _pixel;
 		private Entity _claimButtonEntity;
 		private float _displayedProgress;
+		private bool _isClaiming;
+		private int _claimTargetTotal;
+		private int _claimPersistedTotal;
+		private float _animatedDisplayTotal;
+		private bool _pausedForBooster;
 
 		[DebugEditable(DisplayName = "Meter X", Step = 10, Min = 100, Max = 1000)]
 		public int MeterX { get; set; } = 332;
@@ -54,8 +60,15 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Subscribe<LoadSceneEvent>(evt =>
 			{
 				if (evt.Scene != SceneId.Achievement) return;
+				_isClaiming = false;
+				_pausedForBooster = false;
 				_displayedProgress = CalculateProgress();
 				EnsureClaimButton();
+			});
+			EventManager.Subscribe<BoosterPackOpeningDismissedEvent>(_ =>
+			{
+				if (!_isClaiming || !_pausedForBooster) return;
+				_pausedForBooster = false;
 			});
 		}
 
@@ -65,15 +78,83 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (entity.GetComponent<SceneState>()?.Current != SceneId.Achievement) return;
 			float amount = MathHelper.Clamp((float)gameTime.ElapsedGameTime.TotalSeconds * AnimationSpeed, 0f, 1f);
-			_displayedProgress = MathHelper.Lerp(_displayedProgress, CalculateProgress(), amount);
+			if (_isClaiming)
+			{
+				UpdateClaimSequence(amount);
+			}
+			else
+			{
+				_displayedProgress = MathHelper.Lerp(_displayedProgress, CalculateProgress(), amount);
+			}
 			UpdateClaimButton();
 		}
 
+		private void UpdateClaimSequence(float amount)
+		{
+			if (_pausedForBooster) return;
+
+			int nextThreshold = CollectionProgressionRules.GetNextLevelThresholdTotal(_claimPersistedTotal);
+			bool willCrossLevel = nextThreshold > _claimPersistedTotal && nextThreshold <= _claimTargetTotal;
+			float segmentTarget = willCrossLevel ? nextThreshold : _claimTargetTotal;
+
+			_animatedDisplayTotal = MathHelper.Lerp(_animatedDisplayTotal, segmentTarget, amount);
+			_displayedProgress = CalculateProgressFromTotal(_animatedDisplayTotal);
+
+			if (_animatedDisplayTotal < segmentTarget - SegmentEpsilon) return;
+
+			int awardedTotal = (int)Math.Round(segmentTarget);
+			bool levelComplete = willCrossLevel && segmentTarget == nextThreshold;
+			_claimPersistedTotal = awardedTotal;
+			_animatedDisplayTotal = segmentTarget;
+
+			EventManager.Publish(new ClimbPointsSegmentAwardedEvent
+			{
+				NewTotalPoints = awardedTotal,
+				TriggeredLevelComplete = levelComplete,
+			});
+
+			if (levelComplete)
+			{
+				_pausedForBooster = true;
+			}
+			else if (_claimPersistedTotal >= _claimTargetTotal)
+			{
+				_isClaiming = false;
+			}
+		}
+
+		private void StartClaim()
+		{
+			int pending = SaveCache.GetCollection().pendingClimbPoints;
+			if (pending <= 0 || _isClaiming || IsBoosterOverlayOpen()) return;
+			_isClaiming = true;
+			_claimPersistedTotal = GetTotalPoints();
+			_claimTargetTotal = _claimPersistedTotal + pending;
+			_animatedDisplayTotal = _claimPersistedTotal;
+			_pausedForBooster = false;
+		}
+
+		private bool IsBoosterOverlayOpen()
+		{
+			return EntityManager.GetEntity("BoosterPackOpeningOverlay")
+				?.GetComponent<BoosterPackOpeningOverlayState>()
+				?.IsOpen == true;
+		}
+
 		private static int GetTotalPoints() => SaveCache.GetCollection().totalPoints;
-		private static (int Level, int PointsInLevel, int PointsRequired) GetLevelState() => CollectionProgressionRules.GetLevelState(GetTotalPoints());
-		private static float CalculateProgress()
+		private int GetDisplayTotalPoints() => _isClaiming ? (int)Math.Round(_animatedDisplayTotal) : GetTotalPoints();
+		private (int Level, int PointsInLevel, int PointsRequired) GetLevelState() => CollectionProgressionRules.GetLevelState(GetTotalPoints());
+		private (int Level, int PointsInLevel, int PointsRequired) GetDisplayLevelState() => CollectionProgressionRules.GetLevelState(GetDisplayTotalPoints());
+
+		private float CalculateProgress()
 		{
 			var state = GetLevelState();
+			return state.PointsRequired <= 0 ? 0f : state.PointsInLevel / (float)state.PointsRequired;
+		}
+
+		private static float CalculateProgressFromTotal(float totalPoints)
+		{
+			var state = CollectionProgressionRules.GetLevelState((int)Math.Round(totalPoints));
 			return state.PointsRequired <= 0 ? 0f : state.PointsInLevel / (float)state.PointsRequired;
 		}
 
@@ -84,7 +165,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			var rail = AchievementSceneDrawHelpers.FooterRail;
 			AchievementSceneDrawHelpers.DrawPanel(_spriteBatch, _pixel, rail);
-			var state = GetLevelState();
+			var state = GetDisplayLevelState();
 			int labelY = rail.Y + 19;
 
 			AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, "COLLECTION LEVEL", new Vector2(rail.X + 28, labelY), LabelScale, AchievementSceneDrawHelpers.MutedWhite);
@@ -101,7 +182,7 @@ namespace Crusaders30XX.ECS.Systems
 			int fill = (int)(track.Width * MathHelper.Clamp(_displayedProgress, 0f, 1f));
 			if (fill > 0) _spriteBatch.Draw(_pixel, new Rectangle(track.X, track.Y, fill, track.Height), AchievementSceneDrawHelpers.Red);
 
-			string total = $"TOTAL {GetTotalPoints()} POINTS";
+			string total = $"TOTAL {GetDisplayTotalPoints()} POINTS";
 			AchievementSceneDrawHelpers.DrawBodyText(_spriteBatch, total, new Vector2(MeterX, rail.Bottom - 27), LabelScale, AchievementSceneDrawHelpers.MutedWhite);
 			DrawClaimButton();
 		}
@@ -128,10 +209,11 @@ namespace Crusaders30XX.ECS.Systems
 			if (ui == null) return;
 			ui.Bounds = GetClaimButtonRect();
 			ui.IsHidden = false;
-			ui.IsInteractable = SaveCache.GetCollection().pendingClimbPoints > 0;
+			int pending = SaveCache.GetCollection().pendingClimbPoints;
+			ui.IsInteractable = pending > 0 && !_isClaiming && !IsBoosterOverlayOpen();
 			if (ui.IsClicked && ui.IsInteractable)
 			{
-				EventManager.Publish(new ClaimPendingClimbPointsEvent());
+				StartClaim();
 				ui.IsClicked = false;
 			}
 		}
@@ -141,7 +223,7 @@ namespace Crusaders30XX.ECS.Systems
 			var ui = _claimButtonEntity?.GetComponent<UIElement>();
 			if (ui == null || ui.IsHidden) return;
 			int pending = SaveCache.GetCollection().pendingClimbPoints;
-			bool enabled = pending > 0;
+			bool enabled = pending > 0 && !_isClaiming;
 			Color fill = enabled
 				? ui.IsHovered ? AchievementSceneDrawHelpers.RedDim : AchievementSceneDrawHelpers.Black3
 				: AchievementSceneDrawHelpers.Black2;

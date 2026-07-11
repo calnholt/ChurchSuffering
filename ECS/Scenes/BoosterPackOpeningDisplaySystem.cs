@@ -830,6 +830,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 				break;
 			case BoosterPackOpeningMilestoneKind.ShowcaseStarted:
 				SpawnParticles(state, milestone.Seconds, ShowcaseParticleCount, ParticleGroup.Showcase);
+				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.BoosterPackReveal, Volume = 0.5f });
 				break;
 			case BoosterPackOpeningMilestoneKind.ReadyStarted:
 				state.CanDismiss = true;

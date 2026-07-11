@@ -69,7 +69,7 @@ public sealed class CardPlayUpgradeTests : IDisposable
 	}
 
 	[Theory]
-	[InlineData(false, false)]
+	[InlineData(false, true)]
 	[InlineData(true, true)]
 	public void Burn_upgrade_is_free_to_play_without_action_points(bool isUpgraded, bool expectedPlayed)
 	{

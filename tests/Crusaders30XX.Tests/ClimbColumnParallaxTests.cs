@@ -191,9 +191,6 @@ public class ClimbColumnParallaxTests : IDisposable
 	public void Shop_purchase_without_refresh_only_animates_purchased_slot()
 	{
 		var entityManager = BuildWorld();
-		var layout = new ClimbColumnLayoutSystem(entityManager);
-		layout.Update(new GameTime());
-
 		var climb = SaveCache.GetClimbState();
 		climb.time = 0;
 		climb.resources = new ClimbResourceSave { red = 3, white = 3, black = 3 };
@@ -224,6 +221,7 @@ public class ClimbColumnParallaxTests : IDisposable
 		};
 		SaveCache.SaveClimbState(climb);
 
+		var layout = new ClimbColumnLayoutSystem(entityManager);
 		layout.Update(new GameTime());
 
 		Assert.True(ClimbShopService.TryPurchaseSlot(entityManager, 0));

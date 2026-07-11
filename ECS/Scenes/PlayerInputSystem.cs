@@ -236,6 +236,7 @@ namespace Crusaders30XX.ECS.Systems
                 })
                 .Where(item => item.UI != null
                     && !item.UI.IsHidden
+                    && !item.Entity.HasComponent<FilteredFromHand>()
                     && CanReceiveCursorHover(item.Entity, item.UI)
                     && InputContextResolver.IsMember(item.Entity, contextId))
                 .Where(item =>

@@ -38,7 +38,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_pledgeTexture = imageAssets.TryGetTexture("pledge");
+			_pledgeTexture = imageAssets?.TryGetTexture("pledge");
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()

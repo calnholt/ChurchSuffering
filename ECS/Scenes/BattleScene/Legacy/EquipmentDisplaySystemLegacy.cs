@@ -76,12 +76,6 @@ namespace Crusaders30XX.ECS.Systems
 		public int CheckmarkOffsetX { get; set; } = 9;
 		[DebugEditable(DisplayName = "Checkmark Offset Y", Step = 1, Min = -200, Max = 200)]
 		public int CheckmarkOffsetY { get; set; } = -9;
-		[DebugEditable(DisplayName = "Usage Text Scale", Step = 0.05f, Min = 0.3f, Max = 3f)]
-		public float UsageTextScale { get; set; } = 0.138f;
-		[DebugEditable(DisplayName = "Usage Offset X", Step = 1, Min = -200, Max = 200)]
-		public int UsageOffsetX { get; set; } = -6;
-		[DebugEditable(DisplayName = "Usage Offset Y", Step = 1, Min = -200, Max = 200)]
-		public int UsageOffsetY { get; set; } = -6;
 
 		public EquipmentDisplaySystemLegacy(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
 			: base(entityManager)
@@ -286,8 +280,6 @@ namespace Crusaders30XX.ECS.Systems
 
 						// Draw block value and shield icon at bottom-left
 						DrawBlockAndShield(item, bgRect, fillColor);
-						// Draw usage {remaining}/{total}
-						DrawUsageCounter(item, bgRect, fillColor);
 						// Overlay yellow X if destroyed
 						x += bgW + ColGap;
 					}
@@ -298,7 +290,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private bool IsDisabledForBlock(EquippedEquipment item)
 		{
-			return item.Equipment.RemainingUses <= 0;
+			return item.Equipment.IsUsed;
 		}
 
 		private Color DisabledFill(Color baseFill)
@@ -311,36 +303,12 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var ui = item.Owner.GetComponent<UIElement>();
 			ui.Bounds = rect;
-			// Disable interaction when out of uses during enemy turn
-			if (IsDisabledForBlock(item))
-			{
-				ui.IsInteractable = false;
-				// ui.IsHovered = false;
-			}
+			ui.IsInteractable = true;
 			ui.Tooltip = BuildTooltipText(item);
 			ui.TooltipPosition = TooltipPosition.Right;
 			// Panel (default zone) items should use direct click handling, not delegate routing
 			ui.EventType = UIElementEventType.None;
 			// Transform.Position already reflects parallax; ZOrder handled above
-		}
-
-		private void DrawUsageCounter(EquippedEquipment item, Rectangle bgRect, Color fillColor)
-		{
-			if (_font == null) return;
-			try
-			{
-				int total = item.Equipment.Uses;
-				int remaining = Math.Max(0, item.Equipment.RemainingUses);
-				string text = $"{remaining}/{total}";
-				float scale = UsageTextScale;
-				var size = _font.MeasureString(text) * scale;
-				int x = bgRect.Right - (int)Math.Round(size.X) + UsageOffsetX;
-				int y = bgRect.Bottom - (int)Math.Round(size.Y) + UsageOffsetY;
-				// Match block text visibility: black on white fill, white otherwise
-				var textColor = (fillColor == Color.White) ? Color.Black : Color.White;
-				_spriteBatch.DrawString(_font, text, new Vector2(x, y), textColor, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-			}
-			catch { }
 		}
 
 		private void DrawRoundedBackground(Rectangle rect, Color fill)

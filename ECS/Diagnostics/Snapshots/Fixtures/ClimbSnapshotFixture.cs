@@ -153,7 +153,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			var save = SaveCache.GetAll();
 			save.isRunActive = true;
 			save.runMapSeed = SnapshotSeed;
-			save.pendingBattleNodeId = string.Empty;
 			save.pendingDeckRewardOffer = null;
 
 			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId)

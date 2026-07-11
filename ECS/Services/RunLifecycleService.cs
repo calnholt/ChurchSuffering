@@ -26,7 +26,6 @@ namespace Crusaders30XX.ECS.Services
 				if (queuedEvents != null)
 					entityManager.DestroyEntity(queuedEvents.Id);
 			}
-			SaveCache.ClearPendingBattle();
 			SaveCache.MarkRunInactive();
 		}
 	}

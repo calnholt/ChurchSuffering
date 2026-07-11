@@ -225,6 +225,55 @@ public class PlayerInputArchitectureTests
     }
 
     [Fact]
+    public void Cursor_target_ignores_filtered_cards_with_stale_tooltip_bounds()
+    {
+        EventManager.Clear();
+        var entityManager = CreateSceneEntityManager();
+        const string payCostContext = "overlay.pay-cost";
+
+        Entity overlayRoot = entityManager.CreateEntity("PayCostOverlay");
+        entityManager.AddComponent(overlayRoot, new InputContext
+        {
+            Id = payCostContext,
+            Priority = 600,
+            IsActive = true,
+        });
+
+        Entity paymentCandidate = CreateUi(
+            entityManager,
+            "PaymentCandidate",
+            10,
+            new Rectangle(0, 0, 100, 100));
+        entityManager.AddComponent(paymentCandidate, new InputContextMember
+        {
+            ContextId = payCostContext,
+        });
+
+        Entity filteredCard = CreateUi(
+            entityManager,
+            "FilteredCard",
+            100,
+            new Rectangle(0, 0, 100, 100));
+        UIElement filteredUi = filteredCard.GetComponent<UIElement>();
+        filteredUi.IsInteractable = false;
+        filteredUi.TooltipType = TooltipType.Card;
+        entityManager.AddComponent(filteredCard, new FilteredFromHand());
+        entityManager.AddComponent(filteredCard, new InputContextMember
+        {
+            ContextId = payCostContext,
+        });
+
+        var system = new PlayerInputSystem(
+            entityManager,
+            new FakeInputSource(Frame(pointer: new Vector2(50, 50))));
+
+        system.Update(new GameTime());
+
+        Assert.Same(paymentCandidate, GetPlayerInputState(entityManager).CursorTarget.Entity);
+        EventManager.Clear();
+    }
+
+    [Fact]
     public void UI_interaction_publishes_hover_enter_feedback_once_for_interactable_ui()
     {
         EventManager.Clear();

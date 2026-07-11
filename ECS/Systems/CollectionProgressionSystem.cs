@@ -17,7 +17,7 @@ public sealed class CollectionProgressionSystem : Core.System
 	{
 		EventManager.Subscribe<AchievementSeenEvent>(OnAchievementSeen);
 		EventManager.Subscribe<AchievementAnimationsComplete>(_ => TryOpenQueuedPack());
-		EventManager.Subscribe<ClaimPendingClimbPointsEvent>(_ => ClaimPendingClimbPoints());
+		EventManager.Subscribe<ClimbPointsSegmentAwardedEvent>(OnClimbPointsSegmentAwarded);
 		EventManager.Subscribe<ClimbEndedEvent>(OnClimbEnded);
 		EventManager.Subscribe<BoosterPackOpeningDismissedEvent>(OnBoosterDismissed);
 		EventManager.Subscribe<LoadSceneEvent>(evt =>
@@ -38,15 +38,17 @@ public sealed class CollectionProgressionSystem : Core.System
 		SaveCache.SaveCollection(collection);
 	}
 
-	private void ClaimPendingClimbPoints()
+	private void OnClimbPointsSegmentAwarded(ClimbPointsSegmentAwardedEvent evt)
 	{
+		if (evt == null) return;
 		var collection = SaveCache.GetCollection();
-		if (collection.pendingClimbPoints <= 0) return;
-		collection.totalPoints += collection.pendingClimbPoints;
-		collection.pendingClimbPoints = 0;
+		int delta = evt.NewTotalPoints - collection.totalPoints;
+		if (delta <= 0) return;
+		collection.totalPoints = evt.NewTotalPoints;
+		collection.pendingClimbPoints = Math.Max(0, collection.pendingClimbPoints - delta);
 		CollectionProgressionRules.ReconcileEarnedPacks(collection);
 		SaveCache.SaveCollection(collection);
-		TryOpenQueuedPack();
+		if (evt.TriggeredLevelComplete) TryOpenQueuedPack();
 	}
 
 	private void OnClimbEnded(ClimbEndedEvent evt)

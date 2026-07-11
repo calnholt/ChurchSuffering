@@ -151,37 +151,40 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 		Assert.Equal(
 			new Vector2(
 				display.LeftMargin + display.PanelWidth / 2f,
-				display.TopMargin + display.PanelHeight * 3 + display.RowGap * 3 + display.PanelHeight / 2f),
+				display.TopMargin + display.PanelHeight * 3 + display.RowGap * 3 + display.PanelHeight / 2),
 			equipment.GetComponent<EquipmentZone>().LastPanelCenter);
 	}
 
 	[Fact]
-	public void Quest_reward_overlay_does_not_replenish_equipment_uses()
+	public void Quest_reward_overlay_does_not_refresh_used_equipment()
 	{
 		var entityManager = BuildBattle(out var player, SubPhase.Action);
 		var equipment = AddEquipment(entityManager, player, "helm_of_seeing");
-		equipment.GetComponent<EquippedEquipment>().Equipment.RemainingUses = 0;
+		equipment.GetComponent<EquippedEquipment>().Equipment.MarkUsed();
 		_ = new EquipmentManagerSystem(entityManager);
 
 		EventManager.Publish(new ShowQuestRewardOverlay());
 
 		var model = equipment.GetComponent<EquippedEquipment>().Equipment;
-		Assert.Equal(0, model.RemainingUses);
+		Assert.True(model.IsUsed);
 	}
 
 	[Theory]
-	[InlineData(SubPhase.Block, "knightly_grieves", 0, "Not enough uses!")]
-	[InlineData(SubPhase.Action, "knightly_grieves", 2, "This equipment cannot be activated during the Action phase!")]
-	[InlineData(SubPhase.Action, "purging_bracers", 0, "Not enough uses!")]
+	[InlineData(SubPhase.Block, "knightly_grieves", true, "This equipment has already been used this battle!")]
+	[InlineData(SubPhase.Action, "knightly_grieves", false, "This equipment cannot be activated during the Action phase!")]
+	[InlineData(SubPhase.Action, "purging_bracers", true, "This equipment has already been used this battle!")]
 	public void Invalid_block_and_action_clicks_emit_expected_message(
 		SubPhase phase,
 		string equipmentId,
-		int remainingUses,
+		bool isUsed,
 		string expectedMessage)
 	{
 		var entityManager = BuildBattle(out var player, phase);
 		var equipment = AddEquipment(entityManager, player, equipmentId);
-		equipment.GetComponent<EquippedEquipment>().Equipment.RemainingUses = remainingUses;
+		if (isUsed)
+		{
+			equipment.GetComponent<EquippedEquipment>().Equipment.MarkUsed();
+		}
 		if (phase == SubPhase.Block)
 		{
 			var enemy = entityManager.CreateEntity("Enemy");
@@ -238,7 +241,7 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 	}
 
 	[Fact]
-	public void Layout_enables_hover_highlight_when_equipment_has_uses()
+	public void Layout_enables_hover_highlight_when_equipment_is_available()
 	{
 		var entityManager = BuildBattle(out var player, SubPhase.Action);
 		var equipment = AddEquipment(entityManager, player, "helm_of_seeing");
@@ -253,18 +256,29 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 	}
 
 	[Fact]
-	public void Layout_disables_hover_highlight_when_equipment_exhausted()
+	public void Layout_disables_hover_highlight_when_equipment_is_used_but_keeps_tooltips_available()
 	{
 		var entityManager = BuildBattle(out var player, SubPhase.Action);
 		var equipment = AddEquipment(entityManager, player, "helm_of_seeing");
-		equipment.GetComponent<EquippedEquipment>().Equipment.RemainingUses = 0;
+		equipment.GetComponent<EquippedEquipment>().Equipment.MarkUsed();
 		var display = new EquipmentDisplaySystem(entityManager, null, null, null);
+		var tooltipDisplay = new EquipmentTooltipDisplaySystem(entityManager, null, null, null);
 
 		display.Update(Frame());
 
 		var ui = equipment.GetComponent<UIElement>();
 		Assert.False(ui.ShowHoverHighlight);
+		Assert.True(ui.IsInteractable);
+		Assert.Equal(TooltipType.Equipment, ui.TooltipType);
 		ui.IsHovered = true;
+		tooltipDisplay.Update(Frame());
+
+		Assert.Same(
+			equipment,
+			entityManager.GetEntitiesWithComponent<EquipmentTooltipState>()
+				.Single()
+				.GetComponent<EquipmentTooltipState>()
+				.EquipmentEntity);
 		Assert.False(UIElementHighlightSystem.ShouldShowHoverHighlight(ui));
 	}
 
@@ -285,6 +299,88 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 		new EquipmentBlockInteractionSystem(entityManager).Update(Frame());
 
 		Assert.Equal(1, activationRequests);
+	}
+
+	[Fact]
+	public void Equipment_tracks_one_shared_use_and_refreshes_for_the_next_battle()
+	{
+		var equipment = EquipmentFactory.Create("pierced_heart_plate");
+
+		equipment.MarkUsed();
+
+		Assert.True(equipment.IsUsed);
+		Assert.False(equipment.IsAvailable);
+
+		equipment.RefreshForBattle();
+
+		Assert.False(equipment.IsUsed);
+		Assert.True(equipment.IsAvailable);
+	}
+
+	[Fact]
+	public void Enemy_defeat_refreshes_all_equipment_for_the_next_battle()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Action);
+		var equipment = AddEquipment(entityManager, player, "pierced_heart_plate");
+		equipment.GetComponent<EquippedEquipment>().Equipment.MarkUsed();
+		_ = new EquipmentManagerSystem(entityManager);
+
+		EventManager.Publish(new EnemyKilledEvent());
+
+		Assert.False(equipment.GetComponent<EquippedEquipment>().Equipment.IsUsed);
+	}
+
+	[Fact]
+	public void Block_resolution_marks_equipment_used()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Block);
+		var equipment = AddEquipment(entityManager, player, "knightly_grieves");
+		entityManager.AddComponent(equipment, new AssignedBlockCard { IsEquipment = true });
+
+		QueuedDiscardAssignedBlocksEvent.ResolveImmediately(entityManager, discardSpentBlocks: true);
+
+		Assert.True(equipment.GetComponent<EquippedEquipment>().Equipment.IsUsed);
+	}
+
+	[Fact]
+	public void Activation_marks_equipment_used()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Action);
+		var equipment = AddEquipment(entityManager, player, "pierced_heart_plate");
+		_ = new EquipmentManagerSystem(entityManager);
+
+		EventManager.Publish(new EquipmentActivateEvent { EquipmentEntity = equipment });
+
+		Assert.True(equipment.GetComponent<EquippedEquipment>().Equipment.IsUsed);
+	}
+
+	[Fact]
+	public void Zero_block_equipment_cannot_be_assigned_to_block()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Block);
+		var equipment = AddEquipment(entityManager, player, "bulwark_plate");
+		var enemy = entityManager.CreateEntity("Enemy");
+		entityManager.AddComponent(enemy, new AttackIntent
+		{
+			ActiveAttackSequence = 1,
+			Planned =
+			[
+				new PlannedAttack
+				{
+					AttackDefinition = new EnemyAttackBase
+					{
+						Id = EnemyAttackId.Cinderbolt,
+						Damage = 5,
+					},
+				},
+			],
+		});
+		new EquipmentDisplaySystem(entityManager, null, null, null).Update(Frame());
+		equipment.GetComponent<UIElement>().IsClicked = true;
+
+		new EquipmentBlockInteractionSystem(entityManager).Update(Frame());
+
+		Assert.Null(equipment.GetComponent<AssignedBlockCard>());
 	}
 
 	private static EntityManager BuildBattle(out Entity player, SubPhase subPhase)

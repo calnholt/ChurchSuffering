@@ -12,18 +12,16 @@ public class RunLifecycleTests
 		SaveCache.DeleteSaveFilesIfPresent();
 		SaveCache.StartNewRun();
 		Assert.True(SaveCache.IsRunActive());
-		Assert.NotEmpty(SaveCache.GetRunMapNodes());
+		Assert.Equal(ClimbRuleService.ShopSlotCount, SaveCache.GetClimbState().shopSlots.Count);
 
 		RunLifecycleService.EndCurrentRun();
 		Assert.False(SaveCache.IsRunActive());
-		Assert.Empty(SaveCache.GetRunMapNodes());
 
 		SaveCache.Reload();
 		Assert.False(SaveCache.IsRunActive());
-		Assert.Empty(SaveCache.GetRunMapNodes());
 
 		SaveCache.StartNewRun();
 		Assert.True(SaveCache.IsRunActive());
-		Assert.NotEmpty(SaveCache.GetRunMapNodes());
+		Assert.Equal(ClimbRuleService.ShopSlotCount, SaveCache.GetClimbState().shopSlots.Count);
 	}
 }

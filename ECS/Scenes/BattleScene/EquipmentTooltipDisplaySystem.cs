@@ -305,13 +305,11 @@ namespace Crusaders30XX.ECS.Systems
 
 			float gutterHeight = GutterPaddingTop
 				+ GutterIconSize
-				+ GutterGap
-				+ ChipLabelHeight
-				+ ChipValueHeight
-				+ GutterGap
-				+ ChipLabelHeight
-				+ ChipValueHeight
 				+ GutterPaddingBottom;
+			if (equipment.Block > 0)
+			{
+				gutterHeight += GutterGap + ChipLabelHeight + ChipValueHeight;
+			}
 			return Math.Max(TooltipMinHeight, (int)Math.Ceiling(Math.Max(bodyHeight, gutterHeight)));
 		}
 
@@ -367,28 +365,20 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			y += GutterIconSize + GutterGap;
 
-			int chipHeight = Math.Max(1, ChipLabelHeight + ChipValueHeight);
-			var blockChip = new Rectangle(x - ChipSize / 2, y, ChipSize, chipHeight);
-			DrawChipStack(
-				blockChip,
-				equipment.Block.ToString(),
-				"BLOCK",
-				CardPalette.BlockLabelSlabBackground(equipment.Color),
-				CardPalette.BlockLabelSlabText(equipment.Color),
-				CardPalette.BlockChipBackground(equipment.Color),
-				CardPalette.BlockChipText(equipment.Color),
-				alpha);
-			y += chipHeight + GutterGap;
-			var usesChip = new Rectangle(x - ChipSize / 2, y, ChipSize, chipHeight);
-			DrawChipStack(
-				usesChip,
-				Math.Max(0, equipment.RemainingUses).ToString(),
-				"USES",
-				CardPalette.EquipmentUseLabelSlabBackground,
-				CardPalette.EquipmentUseLabelSlabText,
-				CardPalette.EquipmentUseChipBackground,
-				CardPalette.EquipmentUseChipText,
-				alpha);
+			if (equipment.Block > 0)
+			{
+				int chipHeight = Math.Max(1, ChipLabelHeight + ChipValueHeight);
+				var blockChip = new Rectangle(x - ChipSize / 2, y, ChipSize, chipHeight);
+				DrawChipStack(
+					blockChip,
+					equipment.Block.ToString(),
+					"BLOCK",
+					CardPalette.BlockLabelSlabBackground(equipment.Color),
+					CardPalette.BlockLabelSlabText(equipment.Color),
+					CardPalette.BlockChipBackground(equipment.Color),
+					CardPalette.BlockChipText(equipment.Color),
+					alpha);
+			}
 		}
 
 		private void DrawChipStack(

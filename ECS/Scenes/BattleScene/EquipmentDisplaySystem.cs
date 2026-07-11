@@ -105,8 +105,8 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Ability Mark Offset Y", Step = 1, Min = -20, Max = 40)]
 		public int AbilityMarkOffsetY { get; set; } = 4;
 
-		[DebugEditable(DisplayName = "Disabled Brightness", Step = 0.01f, Min = 0f, Max = 1f)]
-		public float DisabledBrightness { get; set; } = 0.4f;
+		[DebugEditable(DisplayName = "Used Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float UsedOpacity { get; set; } = 0.4f;
 
 		[DebugEditable(DisplayName = "Pulse Seconds", Step = 0.01f, Min = 0.01f, Max = 1f)]
 		public float PulseDurationSeconds { get; set; } = 0.18f;
@@ -349,7 +349,7 @@ namespace Crusaders30XX.ECS.Systems
 					ui.TooltipPosition = TooltipPosition.Right;
 					ui.TooltipOffsetPx = 20;
 					ui.EventType = UIElementEventType.None;
-					ui.ShowHoverHighlight = entity.GetComponent<EquippedEquipment>().Equipment.HasUses;
+					ui.ShowHoverHighlight = entity.GetComponent<EquippedEquipment>().Equipment.IsAvailable;
 
 					Rectangle worldBounds = TransformResolverService.ResolveUIBounds(EntityManager, entity, ui);
 					if (zone.LastPanelCenter == Vector2.Zero)
@@ -374,7 +374,7 @@ namespace Crusaders30XX.ECS.Systems
 			Rectangle stableBounds = GetPanelWorldBounds(entity);
 			if (stableBounds.Width <= 0 || stableBounds.Height <= 0) return;
 			Rectangle drawBounds = ScaleAroundCenter(stableBounds, GetPulseScale(entity.Id));
-			bool exhausted = !equipped.Equipment.HasUses;
+			float opacity = equipped.Equipment.IsUsed ? UsedOpacity : 1f;
 			Color background = CardPalette.Background(equipped.Equipment.Color);
 			Color socket = CardPalette.Gutter(equipped.Equipment.Color);
 
@@ -383,56 +383,55 @@ namespace Crusaders30XX.ECS.Systems
 				drawBounds.Y + ShadowOffsetY,
 				drawBounds.Width,
 				Math.Max(1, drawBounds.Height - ShadowOffsetY));
-			DrawRoundedRect(shadow, Color.Black * ShadowAlpha);
-			DrawRoundedRect(drawBounds, exhausted ? Dim(background, DisabledBrightness) : background);
+			DrawRoundedRect(shadow, Color.Black * ShadowAlpha * opacity);
+			DrawRoundedRect(drawBounds, background * opacity);
 
-			int footerHeight = Math.Max(1, drawBounds.Height - SlotHeight);
+			bool hasBlock = equipped.Equipment.Block > 0;
+			int footerHeight = hasBlock
+				? Math.Max(1, drawBounds.Height - SlotHeight)
+				: 0;
 			var socketBounds = new Rectangle(
 				drawBounds.X,
 				drawBounds.Y,
 				drawBounds.Width,
-				Math.Max(1, drawBounds.Height - footerHeight));
+				hasBlock ? Math.Max(1, drawBounds.Height - footerHeight) : drawBounds.Height);
 			DrawRoundedRectPerCorner(
 				socketBounds,
-				exhausted ? Dim(socket, DisabledBrightness) : socket,
+				socket * opacity,
 				PanelCornerRadius,
 				PanelCornerRadius,
-				0,
-				0);
+				hasBlock ? 0 : PanelCornerRadius,
+				hasBlock ? 0 : PanelCornerRadius);
 
-			var footer = new Rectangle(drawBounds.X, socketBounds.Bottom, drawBounds.Width, footerHeight);
-			int chipHeight = Math.Max(1, ChipLabelHeight + ChipValueHeight);
-			int chipWidth = Math.Max(1, (footer.Width - FooterPadding * 2 - FooterGap) / 2);
-			int chipY = footer.Y + Math.Max(0, (footer.Height - chipHeight) / 2);
-			var blockRect = new Rectangle(footer.X + FooterPadding, chipY, chipWidth, chipHeight);
-			var usesRect = new Rectangle(blockRect.Right + FooterGap, chipY, chipWidth, chipHeight);
-
-			DrawEquipmentIcon(equipped.Equipment, socketBounds, exhausted);
-			DrawFooterStatChip(
-				blockRect,
-				"BLOCK",
-				equipped.Equipment.Block.ToString(),
-				CardPalette.BlockLabelSlabBackground(equipped.Equipment.Color),
-				CardPalette.BlockLabelSlabText(equipped.Equipment.Color),
-				CardPalette.BlockChipBackground(equipped.Equipment.Color),
-				CardPalette.BlockChipText(equipped.Equipment.Color),
-				exhausted);
-			DrawFooterStatChip(
-				usesRect,
-				"USES",
-				$"{Math.Max(0, equipped.Equipment.RemainingUses)}/{equipped.Equipment.Uses}",
-				CardPalette.EquipmentUseLabelSlabBackground,
-				CardPalette.EquipmentUseLabelSlabText,
-				CardPalette.EquipmentUseChipBackground,
-				CardPalette.EquipmentUseChipText,
-				exhausted);
+			DrawEquipmentIcon(equipped.Equipment, socketBounds, opacity);
+			if (hasBlock)
+			{
+				var footer = new Rectangle(drawBounds.X, socketBounds.Bottom, drawBounds.Width, footerHeight);
+				int chipHeight = Math.Max(1, ChipLabelHeight + ChipValueHeight);
+				int chipWidth = Math.Max(1, footer.Width - FooterPadding * 2);
+				int chipY = Math.Max(footer.Y, footer.Bottom - FooterPadding - chipHeight);
+				var blockRect = new Rectangle(
+					footer.Center.X - chipWidth / 2,
+					chipY,
+					chipWidth,
+					chipHeight);
+				DrawFooterStatChip(
+					blockRect,
+					"BLOCK",
+					equipped.Equipment.Block.ToString(),
+					CardPalette.BlockLabelSlabBackground(equipped.Equipment.Color),
+					CardPalette.BlockLabelSlabText(equipped.Equipment.Color),
+					CardPalette.BlockChipBackground(equipped.Equipment.Color),
+					CardPalette.BlockChipText(equipped.Equipment.Color),
+					opacity);
+			}
 			if (equipped.Equipment.CanActivateDuringActionPhase)
 			{
-				DrawAbilityStar(drawBounds, exhausted);
+				DrawAbilityStar(drawBounds, opacity);
 			}
 		}
 
-		private void DrawEquipmentIcon(EquipmentBase equipment, Rectangle socketBounds, bool exhausted)
+		private void DrawEquipmentIcon(EquipmentBase equipment, Rectangle socketBounds, float opacity)
 		{
 			Texture2D texture = EquipmentArtService.GetTexture(_imageAssets, equipment);
 			if (texture == null) return;
@@ -442,7 +441,7 @@ namespace Crusaders30XX.ECS.Systems
 				socketBounds.Center.Y - size / 2,
 				size,
 				size);
-			_spriteBatch.Draw(texture, destination, exhausted ? new Color(102, 102, 102) : Color.White);
+			_spriteBatch.Draw(texture, destination, Color.White * opacity);
 		}
 
 		private void DrawFooterStatChip(
@@ -453,7 +452,7 @@ namespace Crusaders30XX.ECS.Systems
 			Color labelText,
 			Color valueFill,
 			Color valueText,
-			bool exhausted)
+			float opacity)
 		{
 			var labelFont = FontSingleton.ChakraPetchFont;
 			var valueFont = FontSingleton.TitleFont;
@@ -467,21 +466,19 @@ namespace Crusaders30XX.ECS.Systems
 				Math.Max(1, bounds.Bottom - labelBounds.Bottom));
 			DrawRoundedRectPerCorner(
 				labelBounds,
-				exhausted ? Dim(labelFill, DisabledBrightness) : labelFill,
+				labelFill * opacity,
 				ChipCornerRadius,
 				ChipCornerRadius,
 				0,
 				0);
 			DrawRoundedRectPerCorner(
 				valueBounds,
-				exhausted ? Dim(valueFill, DisabledBrightness) : valueFill,
+				valueFill * opacity,
 				0,
 				0,
 				ChipCornerRadius,
 				ChipCornerRadius);
 
-			Color finalLabelText = exhausted ? new Color(136, 136, 136) : labelText;
-			Color finalValueText = exhausted ? new Color(136, 136, 136) : valueText;
 			Vector2 labelSize = labelFont.MeasureString(label) * LabelFontScale;
 			Vector2 valueSize = valueFont.MeasureString(value) * ValueFontScale;
 			var labelPos = new Vector2(
@@ -490,11 +487,11 @@ namespace Crusaders30XX.ECS.Systems
 			var valuePos = new Vector2(
 				bounds.Center.X - valueSize.X / 2f,
 				valueBounds.Center.Y - valueSize.Y / 2f);
-			_spriteBatch.DrawString(labelFont, label, labelPos, finalLabelText, 0f, Vector2.Zero, LabelFontScale, SpriteEffects.None, 0f);
-			_spriteBatch.DrawString(valueFont, value, valuePos, finalValueText, 0f, Vector2.Zero, ValueFontScale, SpriteEffects.None, 0f);
+			_spriteBatch.DrawString(labelFont, label, labelPos, labelText * opacity, 0f, Vector2.Zero, LabelFontScale, SpriteEffects.None, 0f);
+			_spriteBatch.DrawString(valueFont, value, valuePos, valueText * opacity, 0f, Vector2.Zero, ValueFontScale, SpriteEffects.None, 0f);
 		}
 
-		private void DrawAbilityStar(Rectangle bounds, bool exhausted)
+		private void DrawAbilityStar(Rectangle bounds, float opacity)
 		{
 			int size = Math.Max(1, AbilityMarkSize);
 			var texture = PrimitiveTextureFactory.GetAntialiasedPolygonMask(
@@ -503,7 +500,7 @@ namespace Crusaders30XX.ECS.Systems
 				size,
 				"equipment-ability-star-v1",
 				AbilityStarPoints);
-			Color color = exhausted ? new Color(102, 102, 102) * 0.45f : CardPalette.AbilityRed;
+			Color color = CardPalette.AbilityRed * opacity;
 			_spriteBatch.Draw(
 				texture,
 				new Rectangle(bounds.X + AbilityMarkOffsetX, bounds.Y + AbilityMarkOffsetY, size, size),
@@ -672,16 +669,6 @@ namespace Crusaders30XX.ECS.Systems
 				EquipmentSlot.Legs => 3,
 				_ => 4,
 			};
-		}
-
-		private static Color Dim(Color color, float brightness)
-		{
-			brightness = MathHelper.Clamp(brightness, 0f, 1f);
-			return new Color(
-				(byte)(color.R * brightness),
-				(byte)(color.G * brightness),
-				(byte)(color.B * brightness),
-				color.A);
 		}
 
 		private static Rectangle ScaleAroundCenter(Rectangle bounds, float scale)
