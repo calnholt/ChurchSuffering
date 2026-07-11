@@ -301,6 +301,7 @@ public class Game1 : Game
         _world.AddSystem(_narrativeEventModalDisplaySystem);
         _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_cardListModalSystem);
+        _world.AddSystem(new CollectionProgressionSystem(_world.EntityManager));
         _boosterPackOpeningDisplaySystem = new BoosterPackOpeningDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_boosterPackOpeningDisplaySystem);
         _world.AddSystem(new RunDeckLifecycleSystem(_world.EntityManager));

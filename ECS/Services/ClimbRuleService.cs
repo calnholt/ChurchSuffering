@@ -581,11 +581,13 @@ namespace Crusaders30XX.ECS.Services
 		public static string RollReplacementIncomingCardKey(Random rng, LoadoutDefinition loadout)
 		{
 			rng ??= Random.Shared;
+			var unlockedCards = new HashSet<string>(SaveCache.GetCollection().cardIds, StringComparer.OrdinalIgnoreCase);
 			var deckIds = new HashSet<string>(
 				(loadout?.cards ?? new List<LoadoutCardEntry>()).Select(entry => DeckRules.ParseBaseCardId(entry.cardKey)),
 				StringComparer.OrdinalIgnoreCase);
 			var pool = CardFactory.GetAllCards().Values
 				.Where(card => card != null && card.CanAddToLoadout && !card.IsWeapon && !card.IsToken)
+				.Where(card => unlockedCards.Contains(card.CardId))
 				.Where(card => !string.IsNullOrWhiteSpace(card.CardId))
 				.Where(card => !deckIds.Contains(card.CardId) || card.Rarity != Rarity.Starter)
 				.Select(card => card.CardId)
@@ -621,13 +623,18 @@ namespace Crusaders30XX.ECS.Services
 
 			if (kind == ClimbShopSlotKinds.Medal)
 			{
-				slot.itemId = PickUnshown(MedalFactory.GetAllMedals().Keys.Select(id => id.ToKey()), state.shownMedalIds, rng);
+				var unlockedMedals = new HashSet<string>(SaveCache.GetCollection().medalIds, StringComparer.OrdinalIgnoreCase);
+				slot.itemId = PickUnshown(
+					MedalFactory.GetAllMedals().Keys.Select(id => id.ToKey()).Where(unlockedMedals.Contains),
+					state.shownMedalIds,
+					rng);
 				if (string.IsNullOrWhiteSpace(slot.itemId)) slot.kind = ClimbShopSlotKinds.Empty;
 				else AddDistinct(state.shownMedalIds, slot.itemId);
 			}
 			else if (kind == ClimbShopSlotKinds.Equipment)
 			{
-				var allEquipment = EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey());
+				var unlockedEquipment = new HashSet<string>(SaveCache.GetCollection().equipmentIds, StringComparer.OrdinalIgnoreCase);
+				var allEquipment = EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey()).Where(unlockedEquipment.Contains);
 				slot.itemId = PickUnshown(allEquipment, state.shownEquipmentIds, rng);
 				if (string.IsNullOrWhiteSpace(slot.itemId)) slot.kind = ClimbShopSlotKinds.Empty;
 				else AddDistinct(state.shownEquipmentIds, slot.itemId);

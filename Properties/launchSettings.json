@@ -10,6 +10,10 @@
     "skip-tutorials": {
       "commandName": "Project",
       "commandLineArgs": "skip-tutorials"
+    },
+    "unlock": {
+      "commandName": "Project",
+      "commandLineArgs": "unlock"
     }
   }
 }

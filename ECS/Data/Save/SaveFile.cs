@@ -9,7 +9,7 @@ namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 18;
+		public const int CURRENT_VERSION = 19;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -31,12 +31,39 @@ namespace Crusaders30XX.ECS.Data.Save
 		public List<string> seenTutorials { get; set; } = new List<string>();
 		public bool guidedTutorialCompleted { get; set; }
 		public Dictionary<string, AchievementProgress> achievements { get; set; } = new Dictionary<string, AchievementProgress>();
+		/// <summary>Persistent unlocks and reward-progression state shared by all future climbs.</summary>
+		public PlayerCollectionSave collection { get; set; } = new PlayerCollectionSave();
 		/// <summary>Run-long applied passive type name to stack count (e.g. Frostbite).</summary>
 		public Dictionary<string, int> runLongPassives { get; set; } = new Dictionary<string, int>();
 		public WayStationMetaSave waystation { get; set; } = new WayStationMetaSave();
 		/// <summary>Exact unresolved deck reward offer shown after a quest reward.</summary>
 		public DeckRewardOfferSave pendingDeckRewardOffer { get; set; }
 		public ClimbSaveState climb { get; set; } = new ClimbSaveState();
+	}
+
+	public class PlayerCollectionSave
+	{
+		public List<string> cardIds { get; set; } = new List<string>();
+		public List<string> medalIds { get; set; } = new List<string>();
+		public List<string> equipmentIds { get; set; } = new List<string>();
+		public int totalPoints { get; set; }
+		public int pendingClimbPoints { get; set; }
+		/// <summary>Reward thresholds already processed, including thresholds reached after the collection is full.</summary>
+		public int processedRewardLevels { get; set; }
+		public List<BoosterPackSave> pendingBoosterPacks { get; set; } = new List<BoosterPackSave>();
+	}
+
+	public class BoosterPackSave
+	{
+		public List<BoosterPackRewardSave> rewards { get; set; } = new List<BoosterPackRewardSave>();
+	}
+
+	public class BoosterPackRewardSave
+	{
+		public string kind { get; set; } = string.Empty;
+		public string id { get; set; } = string.Empty;
+		/// <summary>Cosmetic printed color used when a card reward is displayed.</summary>
+		public string cardColor { get; set; } = "White";
 	}
 
 	public class WayStationMetaSave

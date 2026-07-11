@@ -364,6 +364,7 @@ namespace Crusaders30XX.ECS.Components
 			public float PreviousElapsedSeconds { get; set; }
 			public float NextChargeParticleSeconds { get; set; }
 			public BoosterPackOpeningPhase Phase { get; set; }
+			public bool IsAuthoritativePack { get; set; }
 			public List<BoosterPackLootPreview> Loot { get; set; } = new();
 			public List<BoosterPackParticleFx> Particles { get; set; } = new();
 			public List<BoosterPackShardFx> Shards { get; set; } = new();

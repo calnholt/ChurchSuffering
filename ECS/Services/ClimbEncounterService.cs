@@ -109,7 +109,7 @@ namespace Crusaders30XX.ECS.Services
 
 			if (slot.hasDeckReward)
 			{
-				result.DeckRewardOffer = QuestCardRewardService.GenerateAndPersistPendingOffer(0);
+				result.DeckRewardOffer = QuestCardRewardService.GenerateAndPersistPendingOffer(0, restrictToCollection: true);
 			}
 			else
 			{

@@ -233,6 +233,11 @@ namespace Crusaders30XX.ECS.Data.Achievements
             {
                 State = AchievementState.CompleteSeen;
                 AchievementManager.SaveProgress();
+                EventManager.Publish(new AchievementSeenEvent
+                {
+                    AchievementId = Id,
+                    Points = Points,
+                });
             }
         }
 

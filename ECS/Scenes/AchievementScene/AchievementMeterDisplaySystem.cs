@@ -5,8 +5,10 @@ using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Achievements;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
+using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -25,7 +27,9 @@ namespace Crusaders30XX.ECS.Systems
 
         private Texture2D _barBackgroundTex;
         private Texture2D _barFillTex;
-        private int _cachedBarW, _cachedBarH, _cachedBarR;
+		private int _cachedBarW, _cachedBarH, _cachedBarR;
+		private Texture2D _claimButtonTexture;
+		private Entity _claimButtonEntity;
 
         private float _displayedProgress = 0f; // For smooth animation
         private float _targetProgress = 0f;
@@ -46,8 +50,11 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Corner Radius", Step = 1, Min = 0, Max = 20)]
         public int CornerRadius { get; set; } = 8;
 
-        [DebugEditable(DisplayName = "Points Per Level", Step = 10, Min = 50, Max = 500)]
-        public int PointsPerLevel { get; set; } = 100;
+		[DebugEditable(DisplayName = "Claim Button Width", Step = 10, Min = 180, Max = 700)]
+		public int ClaimButtonWidth { get; set; } = 360;
+
+		[DebugEditable(DisplayName = "Claim Button Height", Step = 2, Min = 24, Max = 100)]
+		public int ClaimButtonHeight { get; set; } = 44;
 
         [DebugEditable(DisplayName = "Label Scale", Step = 0.01f, Min = 0.1f, Max = 0.4f)]
         public float LabelScale { get; set; } = 0.18f;
@@ -75,6 +82,7 @@ namespace Crusaders30XX.ECS.Systems
                 // Reset animation to start from current progress
                 _displayedProgress = CalculateProgress();
                 _targetProgress = _displayedProgress;
+				EnsureClaimButton();
             }
         }
 
@@ -95,43 +103,23 @@ namespace Crusaders30XX.ECS.Systems
 
             // Animate towards target
             _displayedProgress = MathHelper.Lerp(_displayedProgress, _targetProgress, dt * AnimationSpeed);
+			UpdateClaimButton();
         }
 
         private float CalculateProgress()
         {
-            int totalPoints = 0;
-            // Only count points from achievements that have been clicked/seen
-            foreach (var achievement in AchievementManager.GetAll())
-            {
-                if (achievement.State == AchievementState.CompleteSeen)
-                {
-                    totalPoints += achievement.Points;
-                }
-            }
-
-            // Progress within current level (0 to 1)
-            int pointsInLevel = totalPoints % PointsPerLevel;
-            return (float)pointsInLevel / PointsPerLevel;
+            var state = CollectionProgressionRules.GetLevelState(GetTotalPoints());
+            return (float)state.PointsInLevel / state.PointsRequired;
         }
 
         private int GetTotalPoints()
         {
-            int total = 0;
-            // Only count points from achievements that have been clicked/seen
-            foreach (var achievement in AchievementManager.GetAll())
-            {
-                if (achievement.State == AchievementState.CompleteSeen)
-                {
-                    total += achievement.Points;
-                }
-            }
-            return total;
+            return SaveCache.GetCollection().totalPoints;
         }
 
         private int GetCurrentLevel()
         {
-            int totalPoints = GetTotalPoints();
-            return totalPoints / PointsPerLevel;
+            return CollectionProgressionRules.GetLevelState(GetTotalPoints()).Level;
         }
 
         public void Draw()
@@ -157,6 +145,7 @@ namespace Crusaders30XX.ECS.Systems
 
             // Draw labels
             DrawLabels();
+			DrawClaimButton();
         }
 
         private void EnsureTextures()
@@ -194,7 +183,7 @@ namespace Crusaders30XX.ECS.Systems
 
             int totalPoints = GetTotalPoints();
             int currentLevel = GetCurrentLevel();
-            int pointsInLevel = totalPoints % PointsPerLevel;
+            var levelState = CollectionProgressionRules.GetLevelState(totalPoints);
 
             // Draw level label on the left
             string levelText = $"Level {currentLevel}";
@@ -204,7 +193,7 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch.DrawString(_font, levelText, new Vector2(levelX, levelY), _textColor, 0f, Vector2.Zero, LabelScale, SpriteEffects.None, 0f);
 
             // Draw points label on the right
-            string pointsText = $"{pointsInLevel} / {PointsPerLevel}";
+            string pointsText = $"{levelState.PointsInLevel} / {levelState.PointsRequired}";
             var pointsSize = _font.MeasureString(pointsText) * LabelScale;
             float pointsX = BarX + BarWidth - pointsSize.X;
             float pointsY = BarY - pointsSize.Y - 4;
@@ -217,5 +206,58 @@ namespace Crusaders30XX.ECS.Systems
             float totalY = BarY + BarHeight + 6;
             _spriteBatch.DrawString(_font, totalText, new Vector2(totalX, totalY), _textColor, 0f, Vector2.Zero, LabelScale * 0.85f, SpriteEffects.None, 0f);
         }
+
+		private void EnsureClaimButton()
+		{
+			if (_claimButtonEntity != null && EntityManager.GetEntity(_claimButtonEntity.Name) != null) return;
+			_claimButtonEntity = EntityManager.CreateEntity("AchievementClaimClimbPointsButton");
+			EntityManager.AddComponent(_claimButtonEntity, new Transform { ZOrder = 205 });
+			EntityManager.AddComponent(_claimButtonEntity, new UIElement { TooltipType = TooltipType.None });
+			EntityManager.AddComponent(_claimButtonEntity, new OwnedByScene { Scene = SceneId.Achievement });
+		}
+
+		private Rectangle GetClaimButtonRect()
+		{
+			return new Rectangle(
+				BarX + BarWidth - ClaimButtonWidth,
+				BarY - ClaimButtonHeight - 40,
+				ClaimButtonWidth,
+				ClaimButtonHeight);
+		}
+
+		private void UpdateClaimButton()
+		{
+			EnsureClaimButton();
+			var ui = _claimButtonEntity?.GetComponent<UIElement>();
+			if (ui == null) return;
+			ui.Bounds = GetClaimButtonRect();
+			int pending = SaveCache.GetCollection().pendingClimbPoints;
+			ui.IsHidden = false;
+			ui.IsInteractable = pending > 0;
+			if (ui.IsClicked && pending > 0)
+			{
+				EventManager.Publish(new ClaimPendingClimbPointsEvent());
+				ui.IsClicked = false;
+			}
+		}
+
+		private void DrawClaimButton()
+		{
+			var ui = _claimButtonEntity?.GetComponent<UIElement>();
+			if (ui == null || ui.IsHidden) return;
+			int pending = SaveCache.GetCollection().pendingClimbPoints;
+			bool enabled = pending > 0;
+			_claimButtonTexture ??= RoundedRectTextureFactory.CreateRoundedRect(
+				_graphicsDevice,
+				ClaimButtonWidth,
+				ClaimButtonHeight,
+				Math.Min(CornerRadius, ClaimButtonHeight / 2));
+			var fill = enabled ? new Color(132, 38, 38) : new Color(55, 55, 55);
+			_spriteBatch.Draw(_claimButtonTexture, ui.Bounds, fill);
+			string label = enabled ? $"CLAIM +{pending} CLIMB POINTS" : "NO CLIMB POINTS";
+			var size = _font.MeasureString(label) * LabelScale;
+			var position = new Vector2(ui.Bounds.Center.X - size.X / 2f, ui.Bounds.Center.Y - size.Y / 2f);
+			_spriteBatch.DrawString(_font, label, position, enabled ? Color.White : new Color(150, 150, 150), 0f, Vector2.Zero, LabelScale, SpriteEffects.None, 0f);
+		}
     }
 }

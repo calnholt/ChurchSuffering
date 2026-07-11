@@ -5,6 +5,7 @@ using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Objects.Equipment;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
@@ -406,7 +407,7 @@ namespace Crusaders30XX.ECS.Systems
 			var blockRect = new Rectangle(footer.X + FooterPadding, chipY, chipWidth, chipHeight);
 			var usesRect = new Rectangle(blockRect.Right + FooterGap, chipY, chipWidth, chipHeight);
 
-			DrawSlotIcon(equipped.Equipment.Slot, socketBounds, exhausted);
+			DrawEquipmentIcon(equipped.Equipment, socketBounds, exhausted);
 			DrawFooterStatChip(
 				blockRect,
 				"BLOCK",
@@ -431,9 +432,9 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		private void DrawSlotIcon(EquipmentSlot slot, Rectangle socketBounds, bool exhausted)
+		private void DrawEquipmentIcon(EquipmentBase equipment, Rectangle socketBounds, bool exhausted)
 		{
-			Texture2D texture = GetIcon(slot);
+			Texture2D texture = EquipmentArtService.GetTexture(_imageAssets, equipment);
 			if (texture == null) return;
 			int size = Math.Min(SlotIconSize, Math.Min(socketBounds.Width, socketBounds.Height));
 			var destination = new Rectangle(
@@ -555,12 +556,6 @@ namespace Crusaders30XX.ECS.Systems
 				_perCornerRoundedRectCache[key] = texture;
 			}
 			_spriteBatch.Draw(texture, bounds, color);
-		}
-
-		private Texture2D GetIcon(EquipmentSlot slot)
-		{
-			string key = slot.ToString().ToLowerInvariant();
-			return _imageAssets.TryGetTexture(key);
 		}
 
 		private void EnsureParent(Entity child, Entity root)

@@ -21,6 +21,10 @@ dotnet run --launch-profile no-shaders
 # Run without in-battle tutorials
 dotnet run -- skip-tutorials
 
+# Unlock every collectible card, medal, and equipment item in the current save
+dotnet run -- unlock
+dotnet run --launch-profile unlock
+
 # Repeated isolated balance fight; tutorials and persistence are disabled
 dotnet run -- test-fight hammer skeleton hard
 
