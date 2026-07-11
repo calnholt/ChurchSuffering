@@ -51,14 +51,14 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				{
 					Id = id,
 					FileSlug = "used",
-					EquipmentId = "helm_of_seeing",
+					EquipmentId = "bulwark_plate",
 					IsUsed = true,
 				},
 				_ => new EquipmentTooltipSnapshotVariant
 				{
 					Id = EquipmentTooltipSnapshotVariantId.Active,
 					FileSlug = "active",
-					EquipmentId = "helm_of_seeing",
+					EquipmentId = "bulwark_plate",
 				},
 			};
 		}

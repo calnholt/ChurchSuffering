@@ -358,7 +358,7 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 	public void Zero_block_equipment_cannot_be_assigned_to_block()
 	{
 		var entityManager = BuildBattle(out var player, SubPhase.Block);
-		var equipment = AddEquipment(entityManager, player, "helm_of_seeing");
+		var equipment = AddEquipment(entityManager, player, "bulwark_plate");
 		var enemy = entityManager.CreateEntity("Enemy");
 		entityManager.AddComponent(enemy, new AttackIntent
 		{

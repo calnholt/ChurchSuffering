@@ -386,33 +386,35 @@ namespace Crusaders30XX.ECS.Systems
 			DrawRoundedRect(shadow, Color.Black * ShadowAlpha * opacity);
 			DrawRoundedRect(drawBounds, background * opacity);
 
-			int footerHeight = Math.Max(1, drawBounds.Height - SlotHeight);
+			bool hasBlock = equipped.Equipment.Block > 0;
+			int footerHeight = hasBlock
+				? Math.Max(1, drawBounds.Height - SlotHeight)
+				: 0;
 			var socketBounds = new Rectangle(
 				drawBounds.X,
 				drawBounds.Y,
 				drawBounds.Width,
-				Math.Max(1, drawBounds.Height - footerHeight));
+				hasBlock ? Math.Max(1, drawBounds.Height - footerHeight) : drawBounds.Height);
 			DrawRoundedRectPerCorner(
 				socketBounds,
 				socket * opacity,
 				PanelCornerRadius,
 				PanelCornerRadius,
-				0,
-				0);
-
-			var footer = new Rectangle(drawBounds.X, socketBounds.Bottom, drawBounds.Width, footerHeight);
-			int chipHeight = Math.Max(1, ChipLabelHeight + ChipValueHeight);
-			int chipWidth = Math.Max(1, footer.Width - FooterPadding * 2);
-			int chipY = Math.Max(footer.Y, footer.Bottom - FooterPadding - chipHeight);
-			var blockRect = new Rectangle(
-				footer.Center.X - chipWidth / 2,
-				chipY,
-				chipWidth,
-				chipHeight);
+				hasBlock ? 0 : PanelCornerRadius,
+				hasBlock ? 0 : PanelCornerRadius);
 
 			DrawEquipmentIcon(equipped.Equipment, socketBounds, opacity);
-			if (equipped.Equipment.Block > 0)
+			if (hasBlock)
 			{
+				var footer = new Rectangle(drawBounds.X, socketBounds.Bottom, drawBounds.Width, footerHeight);
+				int chipHeight = Math.Max(1, ChipLabelHeight + ChipValueHeight);
+				int chipWidth = Math.Max(1, footer.Width - FooterPadding * 2);
+				int chipY = Math.Max(footer.Y, footer.Bottom - FooterPadding - chipHeight);
+				var blockRect = new Rectangle(
+					footer.Center.X - chipWidth / 2,
+					chipY,
+					chipWidth,
+					chipHeight);
 				DrawFooterStatChip(
 					blockRect,
 					"BLOCK",

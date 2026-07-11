@@ -7,9 +7,9 @@ namespace Crusaders30XX.Tests;
 public class EquipmentTooltipSnapshotVariantTests
 {
 	[Theory]
-	[InlineData("active", EquipmentTooltipSnapshotVariantId.Active, "active", "helm_of_seeing", false)]
+	[InlineData("active", EquipmentTooltipSnapshotVariantId.Active, "active", "bulwark_plate", false)]
 	[InlineData("passive", EquipmentTooltipSnapshotVariantId.Passive, "passive", "knightly_grieves", false)]
-	[InlineData("used", EquipmentTooltipSnapshotVariantId.Used, "used", "helm_of_seeing", true)]
+	[InlineData("used", EquipmentTooltipSnapshotVariantId.Used, "used", "bulwark_plate", true)]
 	public void Parses_supported_variants(
 		string token,
 		EquipmentTooltipSnapshotVariantId expectedId,

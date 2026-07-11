@@ -23,6 +23,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new WayStationSnapshotFixture());
             Register(new PlayerHudSnapshotFixture());
             Register(new EquipmentTooltipSnapshotFixture());
+			Register(new EnemyDamageMeterSnapshotFixture());
 			Register(new AchievementSnapshotFixture(AchievementSnapshotVariant.Overview));
 			Register(new AchievementSnapshotFixture(AchievementSnapshotVariant.Detail));
 			Register(new BoosterPackOpeningSnapshotFixture());

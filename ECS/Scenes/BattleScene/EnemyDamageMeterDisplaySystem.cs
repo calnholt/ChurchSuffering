@@ -36,19 +36,14 @@ namespace Crusaders30XX.ECS.Systems
 		// Segment types for iteration - ordered: Damage, Block, Aegis, Condition
 		private enum SegmentType { Damage, Block, Aegis, Condition }
 
-		// Animated values for smooth transitions
-		private float _animatedDamage;
-		private float _animatedBlock;
-		private float _animatedAegis;
-		private float _animatedCondition;
-		private float _animatedOverflow;
-
-		// Target values (what we're animating toward)
-		private int _targetDamage;
-		private int _targetBlock;
-		private int _targetAegis;
-		private int _targetCondition;
-		private int _targetOverflow;
+		// Per-segment presentation state. Gameplay values remain instantaneous.
+		private readonly EnemyDamageMeterSegmentAnimation _damageAnimation = new();
+		private readonly EnemyDamageMeterSegmentAnimation _blockAnimation = new();
+		private readonly EnemyDamageMeterSegmentAnimation _aegisAnimation = new();
+		private readonly EnemyDamageMeterSegmentAnimation _conditionAnimation = new();
+		private readonly EnemyDamageMeterSegmentAnimation _overflowAnimation = new();
+		private bool _hasTargets;
+		private int _lastAttackSequence = -1;
 
 		// Absorb animation state (mirrors EnemyAttackDisplaySystem)
 		private float _absorbElapsedSeconds;
@@ -60,8 +55,20 @@ namespace Crusaders30XX.ECS.Systems
 
 		#region Debug-Editable Fields
 
-		[DebugEditable(DisplayName = "Animation Speed", Step = 1f, Min = 1f, Max = 50f)]
+		[DebugEditable(DisplayName = "Spring Response", Step = 1f, Min = 1f, Max = 50f)]
 		public float AnimationSpeed { get; set; } = 15f;
+
+		[DebugEditable(DisplayName = "Segment Enter/Exit (s)", Step = 0.02f, Min = 0.05f, Max = 1f)]
+		public float SegmentPresenceDurationSeconds { get; set; } = 0.18f;
+
+		[DebugEditable(DisplayName = "Change Pulse Duration (s)", Step = 0.02f, Min = 0f, Max = 1f)]
+		public float ChangePulseDurationSeconds { get; set; } = 0.2f;
+
+		[DebugEditable(DisplayName = "Change Pulse Scale", Step = 0.01f, Min = 0f, Max = 0.25f)]
+		public float ChangePulseScale { get; set; } = 0.06f;
+
+		[DebugEditable(DisplayName = "Change Highlight Strength", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float ChangeHighlightStrength { get; set; } = 0.18f;
 
 		[DebugEditable(DisplayName = "Absorb Duration (s)", Step = 0.02f, Min = 0.05f, Max = 3f)]
 		public float AbsorbDurationSeconds { get; set; } = 0.4f;
@@ -202,6 +209,11 @@ namespace Crusaders30XX.ECS.Systems
 				ResetAnimatedValues();
 				return;
 			}
+			if (_lastAttackSequence != progress.AttackSequence)
+			{
+				ResetAnimatedValues();
+				_lastAttackSequence = progress.AttackSequence;
+			}
 
 			// Calculate target values (block prioritized over aegis)
 			int baseDamage = progress.DamageBeforePrevention;
@@ -216,27 +228,22 @@ namespace Crusaders30XX.ECS.Systems
 			int effectiveAegis = Math.Min(totalAegis, damageAfterBlock);
 			int damageVal = Math.Max(0, progress.ActualDamage);
 
-			_targetDamage = damageVal;
-			_targetBlock = effectiveBlock;
-			_targetAegis = effectiveAegis;
-			_targetCondition = conditionVal;
-			_targetOverflow = overflowBlock;
+			bool emphasize = _hasTargets;
+			bool overflowChanged = overflowBlock != _overflowAnimation.Target;
+			_damageAnimation.Retarget(damageVal, damageVal > 0, ChangePulseDurationSeconds, emphasize);
+			_blockAnimation.Retarget(effectiveBlock, effectiveBlock > 0 || overflowBlock > 0, ChangePulseDurationSeconds, emphasize);
+			if (emphasize && overflowChanged)
+				_blockAnimation.Emphasize(ChangePulseDurationSeconds);
+			_aegisAnimation.Retarget(effectiveAegis, effectiveAegis > 0, ChangePulseDurationSeconds, emphasize);
+			_conditionAnimation.Retarget(conditionVal, conditionVal > 0, ChangePulseDurationSeconds, emphasize);
+			_overflowAnimation.Retarget(overflowBlock, overflowBlock > 0, ChangePulseDurationSeconds, false);
+			_hasTargets = true;
 
-			// Lerp animated values toward targets
-			float lerpFactor = 1f - (float)Math.Exp(-AnimationSpeed * dt);
-			_animatedDamage = MathHelper.Lerp(_animatedDamage, _targetDamage, lerpFactor);
-			_animatedBlock = MathHelper.Lerp(_animatedBlock, _targetBlock, lerpFactor);
-			_animatedAegis = MathHelper.Lerp(_animatedAegis, _targetAegis, lerpFactor);
-			_animatedCondition = MathHelper.Lerp(_animatedCondition, _targetCondition, lerpFactor);
-			_animatedOverflow = MathHelper.Lerp(_animatedOverflow, _targetOverflow, lerpFactor);
-
-			// Snap to target if very close (avoid floating point drift)
-			const float snapThreshold = 0.01f;
-			if (Math.Abs(_animatedDamage - _targetDamage) < snapThreshold) _animatedDamage = _targetDamage;
-			if (Math.Abs(_animatedBlock - _targetBlock) < snapThreshold) _animatedBlock = _targetBlock;
-			if (Math.Abs(_animatedAegis - _targetAegis) < snapThreshold) _animatedAegis = _targetAegis;
-			if (Math.Abs(_animatedCondition - _targetCondition) < snapThreshold) _animatedCondition = _targetCondition;
-			if (Math.Abs(_animatedOverflow - _targetOverflow) < snapThreshold) _animatedOverflow = _targetOverflow;
+			_damageAnimation.Advance(dt, AnimationSpeed, SegmentPresenceDurationSeconds);
+			_blockAnimation.Advance(dt, AnimationSpeed, SegmentPresenceDurationSeconds);
+			_aegisAnimation.Advance(dt, AnimationSpeed, SegmentPresenceDurationSeconds);
+			_conditionAnimation.Advance(dt, AnimationSpeed, SegmentPresenceDurationSeconds);
+			_overflowAnimation.Advance(dt, AnimationSpeed, SegmentPresenceDurationSeconds);
 		}
 
 		public void Draw()
@@ -354,20 +361,18 @@ namespace Crusaders30XX.ECS.Systems
 				_lastLoggedPanelScale = panelScale;
 			}
 
-			// Build segments list using animated values for width calculation
-			// but target values for text display
-			// Only include segments that have meaningful animated values (threshold prevents sliver artifacts)
-			const float visibilityThreshold = 0.5f;
-			var segments = new List<(SegmentType type, float animatedValue, int displayValue, Color color, string label, int overflow)>();
+			// Keep entering and exiting segments in the layout until their presence envelope completes.
+			const float visibilityThreshold = 0.001f;
+			var segments = new List<(SegmentType type, EnemyDamageMeterSegmentAnimation animation, Color color, string label)>();
 
-			if (_animatedDamage >= visibilityThreshold)
-				segments.Add((SegmentType.Damage, _animatedDamage, _targetDamage, new Color(DamageColorR, DamageColorG, DamageColorB), "Damage", 0));
-			if (_animatedBlock >= visibilityThreshold || (_targetOverflow > 0 && _animatedBlock >= 0.01f))
-				segments.Add((SegmentType.Block, Math.Max(visibilityThreshold, _animatedBlock), _targetBlock, new Color(BlockColorR, BlockColorG, BlockColorB), "Block", _targetOverflow));
-			if (_animatedAegis >= visibilityThreshold)
-				segments.Add((SegmentType.Aegis, _animatedAegis, _targetAegis, new Color(AegisColorR, AegisColorG, AegisColorB), "Aegis", 0));
-			if (_animatedCondition >= visibilityThreshold)
-				segments.Add((SegmentType.Condition, _animatedCondition, _targetCondition, new Color(ConditionColorR, ConditionColorG, ConditionColorB), "Condition", 0));
+			if (_damageAnimation.Presence > visibilityThreshold)
+				segments.Add((SegmentType.Damage, _damageAnimation, new Color(DamageColorR, DamageColorG, DamageColorB), "Damage"));
+			if (_blockAnimation.Presence > visibilityThreshold)
+				segments.Add((SegmentType.Block, _blockAnimation, new Color(BlockColorR, BlockColorG, BlockColorB), "Block"));
+			if (_aegisAnimation.Presence > visibilityThreshold)
+				segments.Add((SegmentType.Aegis, _aegisAnimation, new Color(AegisColorR, AegisColorG, AegisColorB), "Aegis"));
+			if (_conditionAnimation.Presence > visibilityThreshold)
+				segments.Add((SegmentType.Condition, _conditionAnimation, new Color(ConditionColorR, ConditionColorG, ConditionColorB), "Condition"));
 
 			if (segments.Count == 0)
 			{
@@ -378,7 +383,7 @@ namespace Crusaders30XX.ECS.Systems
 			// Calculate proportional widths using animated values
 			float totalAnimatedValue = 0f;
 			foreach (var seg in segments)
-				totalAnimatedValue += Math.Max(0.01f, seg.animatedValue);
+				totalAnimatedValue += Math.Max(0.01f, seg.animation.Value) * seg.animation.Presence;
 
 			var segmentWidths = new List<float>();
 			float baseMeterWidth = TotalMeterWidth;
@@ -386,21 +391,23 @@ namespace Crusaders30XX.ECS.Systems
 			float scaledMinSegmentWidth = MinSegmentWidth * panelScale;
 			float scaledSegmentGap = SegmentGap * panelScale;
 
-			float availableWidth = scaledMeterWidth - (segments.Count - 1) * Math.Max(0, scaledSegmentGap);
+			var segmentGaps = new List<float>();
+			float totalPositiveGap = 0f;
+			for (int i = 0; i < segments.Count - 1; i++)
+			{
+				float gapPresence = Math.Min(segments[i].animation.Presence, segments[i + 1].animation.Presence);
+				float gap = scaledSegmentGap * gapPresence;
+				segmentGaps.Add(gap);
+				totalPositiveGap += Math.Max(0f, gap);
+			}
+
+			float availableWidth = scaledMeterWidth - totalPositiveGap;
 			float usedWidth = 0f;
 			for (int i = 0; i < segments.Count; i++)
 			{
-				float proportion = Math.Max(0.01f, segments[i].animatedValue) / Math.Max(0.01f, totalAnimatedValue);
-				// Use minimum width only if this segment has a non-zero target, otherwise let it shrink freely
-				bool hasTarget = segments[i].type switch
-				{
-					SegmentType.Damage => _targetDamage > 0,
-					SegmentType.Block => _targetBlock > 0 || _targetOverflow > 0,
-					SegmentType.Aegis => _targetAegis > 0,
-					SegmentType.Condition => _targetCondition > 0,
-					_ => false
-				};
-				float minW = hasTarget ? scaledMinSegmentWidth : 0f;
+				float weightedValue = Math.Max(0.01f, segments[i].animation.Value) * segments[i].animation.Presence;
+				float proportion = weightedValue / Math.Max(0.01f, totalAnimatedValue);
+				float minW = scaledMinSegmentWidth * EnemyDamageMeterAnimationService.EasePresence(segments[i].animation.Presence);
 				float segW = Math.Max(minW, availableWidth * proportion);
 				if (i == segments.Count - 1)
 					segW = Math.Max(minW, availableWidth - usedWidth);
@@ -424,12 +431,14 @@ namespace Crusaders30XX.ECS.Systems
 
 			// Calculate total visual width and center position (using banner center)
 			// Total visual width = segment widths + gaps + rightmost slant extension
-			float totalWidth = usedWidth + (segments.Count - 1) * scaledSegmentGap + lastSegmentSlant;
+			float totalGapWidth = 0f;
+			foreach (float gap in segmentGaps) totalGapWidth += gap;
+			float totalWidth = usedWidth + totalGapWidth + lastSegmentSlant;
 			float startX = bannerBounds.Center.X - totalWidth / 2f;
 
-		// Scale the Y offset and position relative to banner
-		float scaledOffsetY = OffsetYFromBannerTop * panelScale;
-		float baseY = bannerBounds.Top + scaledOffsetY;
+			// Scale the Y offset and position relative to banner
+			float scaledOffsetY = OffsetYFromBannerTop * panelScale;
+			float baseY = bannerBounds.Top + scaledOffsetY;
 			float scaledDamageYOffset = DamageYOffset * panelScale;
 			float scaledFontScale = FontScale * panelScale;
 
@@ -450,7 +459,7 @@ namespace Crusaders30XX.ECS.Systems
 			// Draw each segment as parallelogram
 			for (int i = 0; i < segments.Count; i++)
 			{
-				var (type, animatedValue, displayValue, color, label, overflow) = segments[i];
+				var (type, animation, color, label) = segments[i];
 				float segWidth = segmentWidths[i];
 
 				// Skip drawing segments with negligible width
@@ -459,16 +468,24 @@ namespace Crusaders30XX.ECS.Systems
 				// Damage segment is elevated
 				float yOffset = (type == SegmentType.Damage) ? scaledDamageYOffset : 0;
 				float drawY = baseY + yOffset;
+				float presence = EnemyDamageMeterAnimationService.EasePresence(animation.Presence);
+				float emphasis = EnemyDamageMeterAnimationService.GetEmphasisAmount(animation);
+				float pulseScale = 1f + emphasis * ChangePulseScale;
+				float drawWidth = segWidth * pulseScale;
+				float drawHeight = scaledHeight * presence * pulseScale;
+				float pulseX = currentX - (drawWidth - segWidth) / 2f;
+				float pulseY = drawY + (scaledHeight - drawHeight) / 2f;
 
 				// Scale slant proportionally to segment width to avoid sliver artifacts
 				// When width is at MinSegmentWidth, use full slant; when smaller, reduce slant proportionally
-				float slantRatio = Math.Min(1f, segWidth / Math.Max(1f, scaledMinSegmentWidth));
-				float effectiveSlant = scaledSlant * slantRatio;
+				float slantRatio = Math.Min(1f, drawWidth / Math.Max(1f, scaledMinSegmentWidth));
+				float effectiveSlant = scaledSlant * slantRatio * pulseScale;
+				Color drawColor = Color.Lerp(color, Color.White, emphasis * ChangeHighlightStrength) * presence;
 
 				// Draw the parallelogram
-				DrawParallelogram(currentX, drawY, segWidth, scaledHeight, effectiveSlant, color);
+				DrawParallelogram(pulseX, pulseY, drawWidth, drawHeight, effectiveSlant, drawColor);
 
-				currentX += segWidth + scaledSegmentGap;
+				currentX += segWidth + (i < segmentGaps.Count ? segmentGaps[i] : 0f);
 			}
 
 			// Restart SpriteBatch for text rendering
@@ -478,7 +495,7 @@ namespace Crusaders30XX.ECS.Systems
 			currentX = startX;
 			for (int i = 0; i < segments.Count; i++)
 			{
-				var (type, animatedValue, displayValue, color, label, overflow) = segments[i];
+				var (type, animation, color, label) = segments[i];
 				float segWidth = segmentWidths[i];
 
 				// Skip segments with negligible width
@@ -486,45 +503,57 @@ namespace Crusaders30XX.ECS.Systems
 
 				float yOffset = (type == SegmentType.Damage) ? scaledDamageYOffset : 0;
 				float drawY = baseY + yOffset;
+				float presence = EnemyDamageMeterAnimationService.EasePresence(animation.Presence);
+				float emphasis = EnemyDamageMeterAnimationService.GetEmphasisAmount(animation);
+				float pulseScale = 1f + emphasis * ChangePulseScale;
+				float drawWidth = segWidth * pulseScale;
+				float drawHeight = scaledHeight * presence * pulseScale;
+				float pulseX = currentX - (drawWidth - segWidth) / 2f;
+				float pulseY = drawY + (scaledHeight - drawHeight) / 2f;
 
 				// Calculate effective slant (same as drawing)
-				float slantRatio = Math.Min(1f, segWidth / Math.Max(1f, scaledMinSegmentWidth));
-				float effectiveSlant = scaledSlant * slantRatio;
+				float slantRatio = Math.Min(1f, drawWidth / Math.Max(1f, scaledMinSegmentWidth));
+				float effectiveSlant = scaledSlant * slantRatio * pulseScale;
+				int displayValue = EnemyDamageMeterAnimationService.GetDisplayedValue(animation.Value, animation.Target);
+				int overflow = type == SegmentType.Block
+					? EnemyDamageMeterAnimationService.GetDisplayedValue(_overflowAnimation.Value, _overflowAnimation.Target)
+					: 0;
+				float segmentFontScale = scaledFontScale * presence * pulseScale;
 
 				// Draw number centered (accounting for parallelogram slant)
-				if (_font != null && (displayValue > 0 || overflow > 0) && scaledFontScale > 0.02f && segWidth > scaledMinSegmentWidth * 0.5f)
+				if (_font != null && (displayValue > 0 || overflow > 0) && segmentFontScale > 0.02f && drawWidth > scaledMinSegmentWidth * 0.5f)
 				{
 					// For block segment with overflow, show as "value (+overflow)"
 					string numText = (type == SegmentType.Block && overflow > 0)
 						? $"{displayValue} (+{overflow})"
 						: displayValue.ToString();
 
-					var textSize = _font.MeasureString(numText) * scaledFontScale;
+					var textSize = _font.MeasureString(numText) * segmentFontScale;
 
 					// Text color: white for dark backgrounds, black for light
-					Color textColor = (type == SegmentType.Aegis) ? Color.Black : Color.White;
+					Color textColor = ((type == SegmentType.Aegis) ? Color.Black : Color.White) * presence;
 
 					// Center text in parallelogram (shift right by half slant)
 					var textPos = new Vector2(
-						currentX + segWidth / 2f + effectiveSlant / 2f - textSize.X / 2f,
-						drawY + scaledHeight / 2f - textSize.Y / 2f
+						pulseX + drawWidth / 2f + effectiveSlant / 2f - textSize.X / 2f,
+						pulseY + drawHeight / 2f - textSize.Y / 2f
 					);
-					_spriteBatch.DrawString(_font, numText, textPos, textColor, 0f, Vector2.Zero, scaledFontScale, SpriteEffects.None, 0f);
+					_spriteBatch.DrawString(_font, numText, textPos, textColor, 0f, Vector2.Zero, segmentFontScale, SpriteEffects.None, 0f);
 				}
 
 				// Update tooltip (only when scale is reasonable and segment is large enough)
-				if (panelScale > 0.5f && segWidth > scaledMinSegmentWidth * 0.5f)
+				if (panelScale > 0.5f && presence > 0.8f && drawWidth > scaledMinSegmentWidth * 0.5f)
 				{
 					string key = $"DamageMeter_{type}";
 					presentKeys.Add(key);
-					var segmentRect = new Rectangle((int)currentX, (int)drawY, (int)(segWidth + effectiveSlant), (int)scaledHeight);
-					string tooltipText = (type == SegmentType.Block && overflow > 0)
-						? $"{label}: {displayValue} (+{overflow} overflow)"
-						: $"{label}: {displayValue}";
+					var segmentRect = new Rectangle((int)pulseX, (int)pulseY, (int)(drawWidth + effectiveSlant), (int)drawHeight);
+					string tooltipText = (type == SegmentType.Block && _overflowAnimation.Target > 0)
+						? $"{label}: {animation.Target} (+{_overflowAnimation.Target} overflow)"
+						: $"{label}: {animation.Target}";
 					UpdateSegmentTooltipUi(key, segmentRect, tooltipText);
 				}
 
-				currentX += segWidth + scaledSegmentGap;
+				currentX += segWidth + (i < segmentGaps.Count ? segmentGaps[i] : 0f);
 			}
 
 			// Cleanup tooltips for segments no longer present
@@ -566,16 +595,13 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void ResetAnimatedValues()
 		{
-			_animatedDamage = 0f;
-			_animatedBlock = 0f;
-			_animatedAegis = 0f;
-			_animatedCondition = 0f;
-			_animatedOverflow = 0f;
-			_targetDamage = 0;
-			_targetBlock = 0;
-			_targetAegis = 0;
-			_targetCondition = 0;
-			_targetOverflow = 0;
+			_damageAnimation.Reset();
+			_blockAnimation.Reset();
+			_aegisAnimation.Reset();
+			_conditionAnimation.Reset();
+			_overflowAnimation.Reset();
+			_hasTargets = false;
+			_lastAttackSequence = -1;
 		}
 
 		private EnemyAttackProgress GetCurrentProgress()

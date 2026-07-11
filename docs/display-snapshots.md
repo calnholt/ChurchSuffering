@@ -59,6 +59,7 @@ to the fixture.
 | `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
+| `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
 | `climb-no-events` | Climb scene | Shop + Encounters only (no active events column) |
@@ -77,9 +78,25 @@ to the fixture.
 
 ---
 
+## `enemy-damage-meter`
+
+Renders the enemy damage meter against a fixed attack-banner anchor. The variants cover its initial damage/aegis state, a mid-transition block assignment, the settled result, and the EnemyAttack absorb exit.
+
+```bash
+dotnet run -- snapshot enemy-damage-meter initial --verify
+dotnet run -- snapshot enemy-damage-meter transition --verify
+dotnet run -- snapshot enemy-damage-meter settled --verify
+dotnet run -- snapshot enemy-damage-meter absorb --verify
+./scripts/verify-enemy-damage-meter-snapshots.sh
+```
+
+Approved images are `initial.png`, `transition.png`, `settled.png`, and `absorb.png` under `tests/VisualBaselines/enemy-damage-meter/`. Unknown variants or extra arguments exit with code `1` without producing a PNG.
+
+---
+
 ## `equipment-tooltip`
 
-Renders an equipped item with its hover tooltip. The `active` and `used` variants use the activation-only Helm of Seeing to verify that zero-block equipment has no BLOCK chip; the `used` variant also verifies the transparent used-state treatment. The `passive` variant covers block-only equipment.
+Renders an equipped item with its hover tooltip. The `active` and `used` variants use the activation-only Bulwark Plate to verify that zero-block equipment has no footer band or BLOCK chip; the `used` variant also verifies the transparent used-state treatment. The `passive` variant covers block-only equipment.
 
 ```bash
 dotnet run -- snapshot equipment-tooltip active --verify
