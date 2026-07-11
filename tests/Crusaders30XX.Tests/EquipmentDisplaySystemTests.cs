@@ -151,7 +151,7 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 		Assert.Equal(
 			new Vector2(
 				display.LeftMargin + display.PanelWidth / 2f,
-				display.TopMargin + display.PanelHeight * 3 + display.RowGap * 3 + display.PanelHeight / 2f),
+				display.TopMargin + display.PanelHeight * 3 + display.RowGap * 3 + display.PanelHeight / 2),
 			equipment.GetComponent<EquipmentZone>().LastPanelCenter);
 	}
 

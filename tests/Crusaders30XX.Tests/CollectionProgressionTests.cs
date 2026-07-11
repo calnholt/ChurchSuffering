@@ -121,6 +121,16 @@ public sealed class CollectionProgressionTests : IDisposable
 		Assert.Equal(expected, CollectionProgressionRules.CalculateClimbPoints(time, completed, abandoned));
 	}
 
+	[Theory]
+	[InlineData(0, 20)]
+	[InlineData(19, 20)]
+	[InlineData(20, 50)]
+	[InlineData(49, 50)]
+	public void Next_level_threshold_uses_twenty_then_thirty_point_costs(int total, int expected)
+	{
+		Assert.Equal(expected, CollectionProgressionRules.GetNextLevelThresholdTotal(total));
+	}
+
 	[Fact]
 	public void Collection_system_claims_banked_climb_points()
 	{
@@ -136,10 +146,47 @@ public sealed class CollectionProgressionTests : IDisposable
 		collection.pendingBoosterPacks.Clear();
 		SaveCache.SaveCollection(collection);
 
-		EventManager.Publish(new ClaimPendingClimbPointsEvent());
+		EventManager.Publish(new ClimbPointsSegmentAwardedEvent
+		{
+			NewTotalPoints = 20,
+			TriggeredLevelComplete = true,
+		});
 
 		var claimed = SaveCache.GetCollection();
 		Assert.Equal(20, claimed.totalPoints);
+		Assert.Equal(0, claimed.pendingClimbPoints);
+		Assert.Equal(1, claimed.processedRewardLevels);
+		Assert.Single(claimed.pendingBoosterPacks);
+	}
+
+	[Fact]
+	public void Collection_system_awards_partial_climb_points_without_booster()
+	{
+		var manager = new EntityManager();
+		var scene = manager.CreateEntity("SceneState");
+		manager.AddComponent(scene, new SceneState { Current = SceneId.Achievement });
+		_ = new CollectionProgressionSystem(manager);
+		var collection = SaveCache.GetCollection();
+		collection.cardIds = new List<string>(collection.cardIds);
+		collection.pendingClimbPoints = 25;
+		collection.totalPoints = 0;
+		collection.processedRewardLevels = 0;
+		collection.pendingBoosterPacks.Clear();
+		SaveCache.SaveCollection(collection);
+
+		EventManager.Publish(new ClimbPointsSegmentAwardedEvent
+		{
+			NewTotalPoints = 20,
+			TriggeredLevelComplete = true,
+		});
+		EventManager.Publish(new ClimbPointsSegmentAwardedEvent
+		{
+			NewTotalPoints = 25,
+			TriggeredLevelComplete = false,
+		});
+
+		var claimed = SaveCache.GetCollection();
+		Assert.Equal(25, claimed.totalPoints);
 		Assert.Equal(0, claimed.pendingClimbPoints);
 		Assert.Equal(1, claimed.processedRewardLevels);
 		Assert.Single(claimed.pendingBoosterPacks);

@@ -106,7 +106,7 @@ namespace Crusaders30XX.ECS.Services
             }
         }
 
-        private static JsonNode SerializePrimitive(object value) => value switch
+        private static JsonNode? SerializePrimitive(object value) => value switch
         {
             bool b    => JsonValue.Create(b),
             byte by   => JsonValue.Create(by),
@@ -117,7 +117,7 @@ namespace Crusaders30XX.ECS.Services
             decimal m => JsonValue.Create(m),
             DateTime dt => JsonValue.Create(dt.ToString("O")),
             TimeSpan ts => JsonValue.Create(ts.ToString()),
-            _           => JsonValue.Create(value.ToString())
+            _           => JsonValue.Create(value.ToString() ?? string.Empty)
         };
 
         private static JsonArray SerializeEnumerable(IEnumerable enumerable, int depth, int maxDepth)
@@ -150,10 +150,10 @@ namespace Crusaders30XX.ECS.Services
             return obj;
         }
 
-        private static JsonNode SerializeObject(object obj, Type type, int depth, int maxDepth)
+        private static JsonNode? SerializeObject(object obj, Type type, int depth, int maxDepth)
         {
             var fields = GetFields(type);
-            if (fields.Length == 0) return JsonValue.Create(obj.ToString());
+            if (fields.Length == 0) return JsonValue.Create(obj.ToString() ?? string.Empty);
 
             var result = new JsonObject();
             foreach (var field in fields)

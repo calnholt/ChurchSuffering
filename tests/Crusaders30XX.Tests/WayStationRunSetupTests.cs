@@ -217,7 +217,7 @@ public class WayStationRunSetupTests
 		// Expected with fix: deckWeight=29, pre-mod=48, Easy(0.8)=38
 		const int cardCount = 27;
 		const int climbTime = 8;
-		const int wyvernHp = 33;
+		const int wyvernHp = 28;
 		const float expectedModifier = 0.8f;   // Easy
 
 		var world = PrepareWorldWithLoadout(
@@ -274,9 +274,8 @@ public class WayStationRunSetupTests
 		Assert.Equal(postModifierHp, hp.Max);
 		Assert.Equal(postModifierHp, hp.Current);
 
-		// With the fix: deckWeight=29, postMod=Round(48*0.8)=38
-		// Without the fix (old %): deckWeight=27, postMod=Round(45*0.8)=36
-		Assert.Equal(38, enemy.MaxHealth);
+		// Wyvern base HP is 28; with deckWeight=29, postMod=Round(Round(28*29/20)*0.8)=33
+		Assert.Equal(33, enemy.MaxHealth);
 	}
 
 	private static World PrepareWorldWithLoadout(

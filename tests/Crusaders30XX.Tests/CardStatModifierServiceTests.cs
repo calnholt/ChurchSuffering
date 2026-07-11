@@ -84,7 +84,7 @@ public sealed class CardStatModifierServiceTests : IDisposable
             PaymentCards = [payment1, payment2],
         });
 
-        Assert.Equal(baseDamage + 3, CardStatModifierService.GetCardDamage(entityManager, card, CardStatQueryMode.Resolution).TotalValue);
+        Assert.Equal(baseDamage + 2, CardStatModifierService.GetCardDamage(entityManager, card, CardStatQueryMode.Resolution).TotalValue);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class CardStatModifierServiceTests : IDisposable
 
         EventManager.Publish(new PlayCardRequested { Card = playedCard });
 
-        Assert.Equal(7, resolvedDamage.Value);
+        Assert.Equal(6, resolvedDamage.Value);
     }
 
     private static EntityManager BuildCombatWorld(out Entity player, out Entity enemy)

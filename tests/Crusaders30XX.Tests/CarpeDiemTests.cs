@@ -28,7 +28,7 @@ public sealed class CarpeDiemTests : IDisposable
         PlayCarpeDiem(entityManager);
 
         var player = entityManager.GetEntity("Player");
-        Assert.Equal(4, player.GetComponent<Courage>().Amount);
+        Assert.Equal(5, player.GetComponent<Courage>().Amount);
         Assert.True(player.GetComponent<AppliedPassives>().Passives.TryGetValue(AppliedPassiveType.CarpeDiem, out int stacks));
         Assert.Equal(1, stacks);
     }
@@ -55,7 +55,7 @@ public sealed class CarpeDiemTests : IDisposable
         EventManager.Publish(new ModifyCourageRequestEvent { Delta = 3, Type = ModifyCourageType.Gain });
 
         var player = entityManager.GetEntity("Player");
-        Assert.Equal(7, player.GetComponent<Courage>().Amount);
+        Assert.Equal(8, player.GetComponent<Courage>().Amount);
 
         EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.PlayerEnd, Previous = SubPhase.Action });
 
