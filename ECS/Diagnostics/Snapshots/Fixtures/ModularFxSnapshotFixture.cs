@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.VisualEffects;
@@ -12,27 +13,35 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 	{
 		public string Id => "modular-fx";
 		public int WarmupFrames => 2;
-		public string OutputFileName => $"{_presetSlug}-{_sampleSlug}";
+		public string OutputFileName => _moduleSlug != null
+			? $"module-{_moduleSlug}-{_sampleSlug}-{_directionSlug}-seed-{_seed}"
+			: $"{_presetSlug}-{_sampleSlug}{(_explicitSeed ? $"-seed-{_seed}" : string.Empty)}{(_explicitDirection ? $"-{_directionSlug}" : string.Empty)}";
 
 		private static readonly Vector2 PlayerAnchor = new(520f, 575f);
 		private static readonly Vector2 EnemyAnchor = new(1380f, 540f);
 
 		private string _presetSlug = "heavy-hammer";
 		private string _sampleSlug = "impact";
+		private string _moduleSlug;
+		private string _directionSlug = "auto";
+		private int _seed = 1337;
+		private bool _explicitSeed;
+		private bool _explicitDirection;
 		private Texture2D _pixel;
 		private Texture2D _playerTexture;
 		private Texture2D _enemyTexture;
 		private ModularEffectScreenDisplaySystem _screenDisplay;
 		private ModularEffectPrimitiveDisplaySystem _primitiveDisplay;
 		private ModularEffectParticleDisplaySystem _particleDisplay;
+		private ModularEffectActorPresentationSystem _actorDisplay;
+		private BattlePresentationTransform _battleTransform;
 		private Entity _player;
 		private Entity _enemy;
 
 		public void Setup(DisplaySnapshotContext ctx, string[] args)
 		{
-			_presetSlug = args.Length > 0 ? args[0] : "heavy-hammer";
-			_sampleSlug = args.Length > 1 ? args[1] : "impact";
-			var recipe = ResolveRecipe(_presetSlug);
+			ParseArgs(args ?? Array.Empty<string>());
+			var recipe = _moduleSlug != null ? ResolveModuleRecipe(_moduleSlug) : ResolveRecipe(_presetSlug);
 			var timing = VisualEffectTimingProfileResolver.Resolve(recipe.Timing);
 
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
@@ -45,10 +54,24 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 			var source = recipe.TargetRole == VisualEffectTargetRole.Player ? _enemy : _player;
 			var target = recipe.TargetRole == VisualEffectTargetRole.Player ? _player : _enemy;
+			if (_directionSlug == "right")
+			{
+				source = _player;
+				target = _enemy;
+			}
+			else if (_directionSlug == "left")
+			{
+				source = _enemy;
+				target = _player;
+			}
+			else
+			{
+				_directionSlug = ReferenceEquals(target, _enemy) ? "right" : "left";
+			}
 			var activeEntity = ctx.World.CreateEntity("SnapshotActiveVisualEffect");
 			ctx.World.AddComponent(activeEntity, new ActiveVisualEffect
 			{
-				RequestId = Guid.Parse("11111111-2222-3333-4444-555555555555"),
+				RequestId = GuidFromSeed(_seed),
 				Recipe = recipe.Clone(),
 				Timing = timing,
 				Source = source,
@@ -60,14 +83,19 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				ElapsedSeconds = ResolveElapsedSeconds(timing, _sampleSlug),
 				IsPreview = true,
 				SourceKind = recipe.TargetRole == VisualEffectTargetRole.Player ? VisualEffectSourceKind.EnemyAttack : VisualEffectSourceKind.Card,
-				SourceId = _presetSlug,
-				DisplayName = _presetSlug
+				SourceId = _moduleSlug ?? _presetSlug,
+				DisplayName = _moduleSlug ?? _presetSlug
 			});
 
 			_screenDisplay = new ModularEffectScreenDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
 			_primitiveDisplay = new ModularEffectPrimitiveDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
 			_particleDisplay = new ModularEffectParticleDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
-			_particleDisplay.Update(new GameTime(TimeSpan.Zero, TimeSpan.Zero));
+			_actorDisplay = new ModularEffectActorPresentationSystem(ctx.World.EntityManager);
+			var sampleTime = new GameTime(TimeSpan.Zero, TimeSpan.Zero);
+			_actorDisplay.Update(sampleTime);
+			_screenDisplay.Update(sampleTime);
+			_particleDisplay.Update(sampleTime);
+			_battleTransform = ctx.World.EntityManager.GetEntity("BattlePresentationTransform")?.GetComponent<BattlePresentationTransform>();
 		}
 
 		public void Draw(DisplaySnapshotContext ctx)
@@ -107,7 +135,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 		private void DrawActor(SpriteBatch spriteBatch, Entity actor, Texture2D texture, float scale)
 		{
-			var position = actor.GetComponent<Transform>().Position;
+			var presentation = actor.GetComponent<ActorPresentationState>();
+			var position = actor.GetComponent<Transform>().Position + (presentation?.DrawOffset ?? Vector2.Zero) + (_battleTransform?.Offset ?? Vector2.Zero);
+			var drawScale = new Vector2(scale) * (presentation?.ScaleMultiplier ?? Vector2.One) * (_battleTransform?.Scale ?? Vector2.One);
 			spriteBatch.Draw(
 				texture,
 				position,
@@ -115,7 +145,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				Color.White,
 				0f,
 				new Vector2(texture.Width * 0.5f, texture.Height * 0.5f),
-				scale,
+				drawScale,
 				SpriteEffects.None,
 				0f);
 		}
@@ -151,6 +181,85 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				_ => throw new DisplaySnapshotSetupException(
 					$"Unknown modular-fx preset '{slug}'. Expected heavy-hammer, holy-strike, enemy-rock-blast, enemy-bite, enemy-slash, or light-slash.")
 			};
+		}
+
+		private static VisualEffectRecipe ResolveModuleRecipe(string slug)
+		{
+			string enumToken = slug.Replace("-", string.Empty, StringComparison.Ordinal);
+			if (!Enum.TryParse(enumToken, true, out VisualEffectModule module))
+			{
+				throw new DisplaySnapshotSetupException($"Unknown modular-fx module '{slug}'.");
+			}
+			var entry = VisualEffectModuleDebugCatalog.All.FirstOrDefault(candidate => candidate.Module == module);
+			if (!VisualEffectModuleDebugCatalog.All.Any(candidate => candidate.Module == module))
+			{
+				throw new DisplaySnapshotSetupException($"Module '{slug}' is not available in the debug catalog.");
+			}
+			return VisualEffectModuleDebugCatalog.BuildRecipe(entry);
+		}
+
+		private void ParseArgs(string[] args)
+		{
+			int positional = 0;
+			for (int i = 0; i < args.Length; i++)
+			{
+				string arg = args[i];
+				if (arg == "--module")
+				{
+					_moduleSlug = RequireValue(args, ref i, arg).ToLowerInvariant();
+				}
+				else if (arg == "--sample")
+				{
+					_sampleSlug = RequireValue(args, ref i, arg).ToLowerInvariant();
+				}
+				else if (arg == "--seed")
+				{
+					string value = RequireValue(args, ref i, arg);
+					if (!int.TryParse(value, out _seed)) throw new DisplaySnapshotSetupException($"Invalid modular-fx seed '{value}'.");
+					_explicitSeed = true;
+				}
+				else if (arg == "--direction")
+				{
+					_directionSlug = RequireValue(args, ref i, arg).ToLowerInvariant();
+					if (_directionSlug is not ("left" or "right")) throw new DisplaySnapshotSetupException("Modular-fx direction must be left or right.");
+					_explicitDirection = true;
+				}
+				else if (arg.StartsWith("--", StringComparison.Ordinal))
+				{
+					throw new DisplaySnapshotSetupException($"Unknown modular-fx option '{arg}'.");
+				}
+				else if (positional++ == 0)
+				{
+					_presetSlug = arg.ToLowerInvariant();
+				}
+				else if (positional == 2)
+				{
+					_sampleSlug = arg.ToLowerInvariant();
+				}
+				else
+				{
+					throw new DisplaySnapshotSetupException($"Unexpected modular-fx argument '{arg}'.");
+				}
+			}
+			_ = ResolveElapsedSeconds(VisualEffectTimingProfileResolver.Resolve(VisualEffectTimingProfile.SnapImpact), _sampleSlug);
+		}
+
+		private static string RequireValue(string[] args, ref int index, string option)
+		{
+			if (++index >= args.Length) throw new DisplaySnapshotSetupException($"Missing value for modular-fx option '{option}'.");
+			return args[index];
+		}
+
+		private static Guid GuidFromSeed(int seed)
+		{
+			var bytes = new byte[16];
+			uint value = unchecked((uint)seed);
+			for (int i = 0; i < bytes.Length; i++)
+			{
+				value = value * 1664525u + 1013904223u;
+				bytes[i] = (byte)(value >> 24);
+			}
+			return new Guid(bytes);
 		}
 
 		private static float ResolveElapsedSeconds(VisualEffectTiming timing, string sampleSlug)

@@ -19,6 +19,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Lunge Overshoot", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float LungeOvershoot { get; set; } = 0.18f;
 
+		[DebugEditable(DisplayName = "Lunge Anticipation", Step = 1f, Min = 0f, Max = 80f)]
+		public float LungeAnticipationDistance { get; set; } = 18f;
+
+		[DebugEditable(DisplayName = "Lunge Recoil", Step = 1f, Min = 0f, Max = 80f)]
+		public float LungeRecoilDistance { get; set; } = 14f;
+
 		[DebugEditable(DisplayName = "Damage Flash Duration (s)", Step = 0.05f, Min = 0.05f, Max = 2f)]
 		public float DamageFlashDurationSec { get; set; } = 0.3f;
 
@@ -86,7 +92,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (effect.Recipe.Modules.Contains(VisualEffectModule.ActorSquashStretch))
 			{
 				var state = EnsureState(effect.Target);
-				var scale = ComputeBuffScale(VisualEffectDisplayMath.SampleElapsed(effect));
+				var scale = ComputeBuffScale(effect);
 				state.ScaleMultiplier = new Vector2(
 					state.ScaleMultiplier.X * scale.X,
 					state.ScaleMultiplier.Y * scale.Y);
@@ -95,12 +101,8 @@ namespace Crusaders30XX.ECS.Systems
 
 		private Vector2 ComputeLungeOffset(ActiveVisualEffect effect)
 		{
-			float duration = Math.Max(0.0001f, effect.Timing.DurationSeconds);
-			float elapsed = VisualEffectDisplayMath.SampleElapsed(effect);
-			float impact = MathHelper.Clamp(effect.Timing.ImpactTimeSeconds / duration, 0.08f, 0.82f);
-			float t = MathHelper.Clamp(elapsed / duration, 0f, 1f);
-			float outPhase = MathHelper.Clamp(t / impact, 0f, 1f);
-			float backPhase = MathHelper.Clamp((t - impact) / Math.Max(0.0001f, 1f - impact), 0f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
 			var dir = effect.TargetAnchor - effect.SourceAnchor;
 			if (dir.LengthSquared() > 0.0001f)
 			{
@@ -110,11 +112,27 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				dir = new Vector2(effect.DirectionSign, 0f);
 			}
-			var peak = dir * LungeDistance * Math.Max(0f, effect.Recipe.Intensity);
+			float intensity = Math.Max(0f, effect.Recipe.Intensity);
+			var peak = dir * LungeDistance * intensity;
 			var overshoot = peak * (1f + Math.Max(0f, LungeOvershoot));
-			var outOffset = Vector2.Lerp(Vector2.Zero, overshoot, VisualEffectDisplayMath.EaseOutCubic(outPhase));
-			if (backPhase <= 0f) return outOffset;
-			return Vector2.Lerp(peak, Vector2.Zero, VisualEffectDisplayMath.EaseInOutQuad(backPhase));
+			if (recovery <= 0f)
+			{
+				const float anticipationEnd = 0.28f;
+				if (approach <= anticipationEnd)
+				{
+					float anticipation = VisualEffectDisplayMath.EaseInOutQuad(approach / anticipationEnd);
+					return -dir * LungeAnticipationDistance * intensity * anticipation;
+				}
+				float strike = (approach - anticipationEnd) / (1f - anticipationEnd);
+				return Vector2.Lerp(-dir * LungeAnticipationDistance * intensity, overshoot, VisualEffectDisplayMath.EaseOutCubic(strike));
+			}
+
+			const float recoilEnd = 0.24f;
+			if (recovery <= recoilEnd)
+			{
+				return Vector2.Lerp(overshoot, -dir * LungeRecoilDistance * intensity, VisualEffectDisplayMath.EaseOutCubic(recovery / recoilEnd));
+			}
+			return Vector2.Lerp(-dir * LungeRecoilDistance * intensity, Vector2.Zero, VisualEffectDisplayMath.EaseInOutQuad((recovery - recoilEnd) / (1f - recoilEnd)));
 		}
 
 		private Entity ResolveLungeActor(ActiveVisualEffect effect)
@@ -130,33 +148,25 @@ namespace Crusaders30XX.ECS.Systems
 			return EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
 		}
 
-		private static Vector2 ComputeBuffScale(float elapsed)
+		private static Vector2 ComputeBuffScale(ActiveVisualEffect effect)
 		{
-			var keyframes = new[]
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float intensity = Math.Max(0f, effect.Recipe.Intensity);
+			if (recovery <= 0f)
 			{
-				(scale: new Vector2(1.25f, 0.75f), duration: 0.288f),
-				(scale: new Vector2(0.75f, 1.25f), duration: 0.096f),
-				(scale: new Vector2(1.15f, 0.85f), duration: 0.096f),
-				(scale: new Vector2(0.95f, 1.05f), duration: 0.144f),
-				(scale: new Vector2(1.05f, 0.95f), duration: 0.096f),
-				(scale: new Vector2(1f, 1f), duration: 0.240f),
-			};
-
-			var from = Vector2.One;
-			float remaining = Math.Max(0f, elapsed);
-			foreach (var keyframe in keyframes)
-			{
-				float duration = Math.Max(0.0001f, keyframe.duration);
-				if (remaining <= duration)
-				{
-					float t = MathHelper.Clamp(remaining / duration, 0f, 1f);
-					float eased = t < 0.5f ? 2f * t * t : 1f - MathF.Pow(-2f * t + 2f, 2f) / 2f;
-					return Vector2.Lerp(from, keyframe.scale, eased);
-				}
-				remaining -= duration;
-				from = keyframe.scale;
+				var compressed = new Vector2(1f + 0.22f * intensity, 1f - 0.20f * intensity);
+				return Vector2.Lerp(Vector2.One, compressed, VisualEffectDisplayMath.EaseOutCubic(approach));
 			}
-			return Vector2.One;
+			if (recovery < 0.26f)
+			{
+				var compressed = new Vector2(1f + 0.22f * intensity, 1f - 0.20f * intensity);
+				var released = new Vector2(1f - 0.16f * intensity, 1f + 0.24f * intensity);
+				return Vector2.Lerp(compressed, released, VisualEffectDisplayMath.EaseOutCubic(recovery / 0.26f));
+			}
+			float settle = (recovery - 0.26f) / 0.74f;
+			float wobble = MathF.Sin(settle * MathHelper.Pi * 3f) * (1f - settle) * 0.08f * intensity;
+			return new Vector2(1f + wobble, 1f - wobble);
 		}
 
 		private void OnModifyHp(ModifyHpEvent evt)

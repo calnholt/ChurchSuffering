@@ -43,10 +43,10 @@ namespace Crusaders30XX.ECS.Systems
 		public float ParticleAlpha { get; set; } = 1f;
 
 		[DebugEditable(DisplayName = "Particle Size", Step = 1f, Min = 1f, Max = 80f)]
-		public float ParticleSize { get; set; } = 1f;
+		public float ParticleSize { get; set; } = 1.45f;
 
 		[DebugEditable(DisplayName = "Scatter Distance", Step = 1f, Min = 0f, Max = 500f)]
-		public float ScatterDistance { get; set; } = 1f;
+		public float ScatterDistance { get; set; } = 1.25f;
 
 		[DebugEditable(DisplayName = "Smoke Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float SmokeAlpha { get; set; } = 0.82f;
@@ -89,7 +89,7 @@ namespace Crusaders30XX.ECS.Systems
 			foreach (var active in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>().Select(e => e.GetComponent<ActiveVisualEffect>()).Where(e => e != null && e.ElapsedSeconds >= 0f))
 			{
 				if (!_particlesByRequest.TryGetValue(active.RequestId, out var particles)) continue;
-				float t = VisualEffectDisplayMath.ImpactProgress(active);
+				float t = VisualEffectDisplayMath.RecoveryProgress(active);
 				foreach (var p in particles)
 				{
 					if (p.Kind == ParticleKind.Smoke) DrawSmokeParticle(p, t, active.Recipe.Intensity);
@@ -101,10 +101,10 @@ namespace Crusaders30XX.ECS.Systems
 		private List<Particle> Spawn(ActiveVisualEffect effect)
 		{
 			var particles = new List<Particle>();
-			var random = new Random(effect.RequestId.GetHashCode());
-			AddJaggedParticles(effect, VisualEffectModule.Shards, ParticleKind.Shard, 11, particles, random);
-			AddJaggedParticles(effect, VisualEffectModule.Debris, ParticleKind.Debris, 12, particles, random);
-			AddSmokeParticles(effect, 7, particles, random);
+			var random = new Random(new VisualEffectVariation(effect).Seed);
+			AddJaggedParticles(effect, VisualEffectModule.Shards, ParticleKind.Shard, 16, particles, random);
+			AddJaggedParticles(effect, VisualEffectModule.Debris, ParticleKind.Debris, 18, particles, random);
+			AddSmokeParticles(effect, 11, particles, random);
 			return particles;
 		}
 
@@ -115,22 +115,22 @@ namespace Crusaders30XX.ECS.Systems
 			bool targetRight = effect.DirectionSign >= 0;
 			float startDeg = targetRight ? -175f : 165f;
 			float endDeg = targetRight ? 15f : 355f;
-			float minDistance = kind == ParticleKind.Shard ? 70f : 95f;
-			float maxDistance = kind == ParticleKind.Shard ? 210f : 250f;
+			float minDistance = kind == ParticleKind.Shard ? 100f : 120f;
+			float maxDistance = kind == ParticleKind.Shard ? 330f : 390f;
 
 			for (int i = 0; i < count; i++)
 			{
 				float angle = MathHelper.ToRadians(RandomRange(random, startDeg, endDeg));
 				float distance = RandomRange(random, minDistance, maxDistance);
 				var offset = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * distance;
-				offset.Y += RandomRange(random, -20f, 40f);
+				offset.Y += RandomRange(random, -70f, 55f);
 				particles.Add(new Particle
 				{
 					Kind = kind,
 					Start = effect.ImpactAnchor + new Vector2(RandomRange(random, -10f, 10f), RandomRange(random, -10f, 10f)),
 					Offset = offset,
 					Rotation = MathHelper.ToRadians(RandomRange(random, -240f, 240f)),
-					Scale = RandomRange(random, 0.6f, 1.35f),
+					Scale = RandomRange(random, 0.72f, 1.75f),
 					Color = kind == ParticleKind.Shard ? RedBright : DebrisColor
 				});
 			}
@@ -148,10 +148,10 @@ namespace Crusaders30XX.ECS.Systems
 					Kind = ParticleKind.Smoke,
 					Start = effect.ImpactAnchor + new Vector2(RandomRange(random, -16f, 16f), RandomRange(random, -10f, 10f)),
 					Offset = new Vector2(
-						RandomRange(random, targetRight ? -62f : 16f, targetRight ? 62f : 82f),
-						RandomRange(random, -82f, -24f)),
+						RandomRange(random, targetRight ? -110f : 20f, targetRight ? 90f : 140f),
+						RandomRange(random, -150f, -48f)),
 					Rotation = 0f,
-					Scale = RandomRange(random, 0.84f, 1.28f),
+					Scale = RandomRange(random, 1.0f, 1.72f),
 					Color = SmokeColor
 				});
 			}
@@ -159,10 +159,11 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawJaggedParticle(Particle particle, float t, float intensity)
 		{
-			float alpha = ParticleAlpha * intensity * VisualEffectDisplayMath.Window(t, 0.18f, 0.26f, 0.26f, 1f);
+			float alpha = ParticleAlpha * intensity * VisualEffectDisplayMath.Window(t, 0f, 0.08f, 0.36f, 1f);
 			if (alpha <= 0f) return;
 			float eased = VisualEffectDisplayMath.EaseOutCubic(t);
-			var pos = particle.Start + particle.Offset * eased * ScatterDistance;
+			float gravity = particle.Kind == ParticleKind.Debris ? 150f : 70f;
+			var pos = particle.Start + particle.Offset * eased * ScatterDistance + new Vector2(0f, gravity * t * t);
 			float scale = MathHelper.Lerp(0.5f, particle.Scale, eased) * ParticleSize;
 			float rotation = particle.Rotation * eased;
 			var mask = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 22, 34, "modular_fx_jagged_particle", JaggedParticleMask);
@@ -171,6 +172,10 @@ namespace Crusaders30XX.ECS.Systems
 				DrawMask(mask, pos, Cream * (alpha * 0.14f), rotation, new Vector2(scale * 1.16f));
 			}
 			DrawMask(mask, pos, particle.Color * alpha, rotation, new Vector2(scale));
+			if (particle.Kind == ParticleKind.Shard)
+			{
+				DrawMask(mask, pos, Cream * (alpha * 0.52f), rotation, new Vector2(scale * 0.48f));
+			}
 		}
 
 		private void DrawSmokeParticle(Particle particle, float t, float intensity)
@@ -179,8 +184,8 @@ namespace Crusaders30XX.ECS.Systems
 			if (alpha <= 0f) return;
 			float eased = VisualEffectDisplayMath.EaseOutCubic(t);
 			var pos = particle.Start + new Vector2(0f, 10f) * (1f - eased) + particle.Offset * eased;
-			float scale = MathHelper.Lerp(0.36f, 1.05f, eased) * particle.Scale * ParticleSize;
-			int diameter = Math.Max(1, (int)MathF.Round(34f * scale));
+			float scale = MathHelper.Lerp(0.48f, 1.28f, eased) * particle.Scale * ParticleSize;
+			int diameter = Math.Max(1, (int)MathF.Round(48f * scale));
 			var smoke = PrimitiveTextureFactory.GetSoftRadialCircle(_graphicsDevice, diameter, 0f, 0.86f);
 			DrawMask(smoke, pos, particle.Color * alpha, 0f, Vector2.One);
 			DrawMask(smoke, pos, new Color(116, 18, 32) * (alpha * 0.28f), 0f, new Vector2(1.18f));

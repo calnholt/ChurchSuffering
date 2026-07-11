@@ -261,13 +261,28 @@ dotnet run -- snapshot modular-fx heavy-hammer impact
 dotnet run -- snapshot modular-fx holy-strike impact
 dotnet run -- snapshot modular-fx enemy-rock-blast impact
 dotnet run -- snapshot modular-fx enemy-bite impact
+
+# Isolated module with deterministic organic variation and direction
+dotnet run -- snapshot modular-fx --module cracks --sample impact --seed 1337 --direction right
+dotnet run -- snapshot modular-fx --module slash-band --sample impact --seed 1337 --direction left
 ```
 
 Preset tokens: `heavy-hammer`, `holy-strike`, `enemy-rock-blast`, `enemy-bite`, `enemy-slash`, `light-slash`.
 
 Sample tokens: `start`, `impact`, `late`.
 
-Output: `debug/snapshots/modular-fx/<preset>-<sample>.png`
+Isolated-module options:
+
+| Option | Values | Default |
+|--------|--------|---------|
+| `--module` | Any `VisualEffectModule` name in kebab case | None; render the positional preset |
+| `--sample` | `start`, `impact`, `late` | `impact` |
+| `--seed` | Any signed 32-bit integer | `1337` |
+| `--direction` | `right`, `left` | Derived from the recipe target |
+
+The seed controls cracks, debris, shards, smoke, rays, and rock fragments. The same seed reproduces the same geometry. Run `./scripts/verify-modular-fx-snapshots.sh --verify` to check the representative preset and isolated-module matrix; use `--accept` only for intentional visual changes.
+
+Output: `debug/snapshots/modular-fx/<preset>-<sample>.png` for existing preset commands, or `debug/snapshots/modular-fx/module-<module>-<sample>-<direction>-seed-<seed>.png` for isolated modules.
 
 ---
 

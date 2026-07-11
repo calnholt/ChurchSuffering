@@ -31,7 +31,13 @@ namespace Crusaders30XX.ECS.Systems
 		public float RedVignetteAlpha { get; set; } = 0.72f;
 
 		[DebugEditable(DisplayName = "Slash Band Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
-		public float SlashBandAlpha { get; set; } = 0.95f;
+		public float SlashBandAlpha { get; set; } = 1.15f;
+
+		[DebugEditable(DisplayName = "Slash Band Length", Step = 10f, Min = 200f, Max = 1600f)]
+		public float SlashBandLength { get; set; } = 760f;
+
+		[DebugEditable(DisplayName = "Slash Band Thickness", Step = 2f, Min = 10f, Max = 220f)]
+		public float SlashBandThickness { get; set; } = 86f;
 
 		[DebugEditable(DisplayName = "Smoke Screen Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float SmokeScreenAlpha { get; set; } = 0.78f;
@@ -40,10 +46,10 @@ namespace Crusaders30XX.ECS.Systems
 		public float ShockwaveRingAlpha { get; set; } = 0.92f;
 
 		[DebugEditable(DisplayName = "Shake Pixels", Step = 1f, Min = 0f, Max = 80f)]
-		public float ShakePixels { get; set; } = 9f;
+		public float ShakePixels { get; set; } = 18f;
 
 		[DebugEditable(DisplayName = "Punch Zoom Amount", Step = 0.01f, Min = 0f, Max = 0.4f)]
-		public float PunchZoomAmount { get; set; } = 0.035f;
+		public float PunchZoomAmount { get; set; } = 0.075f;
 
 		public ModularEffectScreenDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(entityManager)
 		{
@@ -65,14 +71,13 @@ namespace Crusaders30XX.ECS.Systems
 
 			foreach (var effect in GetActiveEffects())
 			{
-				float p = VisualEffectDisplayMath.Progress(effect);
 				if (effect.Recipe.Modules.Contains(VisualEffectModule.Shake))
 				{
-					transform.Offset += ComputeStepShake(p) * ShakePixels * Math.Max(0f, effect.Recipe.Intensity);
+					transform.Offset += ComputeImpactShake(effect) * ShakePixels * Math.Max(0f, effect.Recipe.Intensity);
 				}
 				if (effect.Recipe.Modules.Contains(VisualEffectModule.PunchZoom))
 				{
-					float pulse = ComputePunchScale(p, Math.Max(0f, effect.Recipe.Intensity));
+					float pulse = ComputePunchScale(effect, Math.Max(0f, effect.Recipe.Intensity));
 					transform.Scale = new Vector2(Math.Max(transform.Scale.X, pulse), Math.Max(transform.Scale.Y, pulse));
 				}
 			}
@@ -94,69 +99,72 @@ namespace Crusaders30XX.ECS.Systems
 		private void DrawWhiteWash(ActiveVisualEffect effect)
 		{
 			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = WhiteWashAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.08f, 0.22f, 0.22f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float pulse = recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery);
+			float alpha = WhiteWashAlpha * effect.Recipe.Intensity * pulse;
 			if (alpha <= 0f) return;
-			float scale = MathHelper.Lerp(0.45f, 1.3f, VisualEffectDisplayMath.EaseOutCubic(p));
-			DrawSoftCircle(effect.ImpactAnchor, 920f * scale, Cream, alpha, 0f, 0.44f);
-			DrawSoftCircle(effect.ImpactAnchor, 520f * scale, Color.White, alpha * 0.36f, 0f, 0.28f);
+			float scale = MathHelper.Lerp(0.35f, 1.55f, VisualEffectDisplayMath.EaseOutCubic(p));
+			DrawSoftCircle(effect.ImpactAnchor, 1040f * scale, Cream, alpha * 0.82f, 0f, 0.52f);
+			DrawSoftCircle(effect.ImpactAnchor, 480f * scale, Color.White, alpha * 0.62f, 0f, 0.34f);
 		}
 
 		private void DrawRedVignette(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float window = p <= 0.16f
-				? p / 0.16f
-				: p <= 0.30f
-					? MathHelper.Lerp(1f, 0.53f, (p - 0.16f) / 0.14f)
-					: p <= 0.42f
-						? MathHelper.Lerp(0.53f, 1f, (p - 0.30f) / 0.12f)
-						: MathHelper.Clamp(1f - (p - 0.42f) / 0.58f, 0f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float window = recovery <= 0f ? approach * approach : 1f - recovery;
 			float alpha = RedVignetteAlpha * effect.Recipe.Intensity * window;
 			if (alpha <= 0f) return;
 
-			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Red * (alpha * 0.18f));
-			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * (alpha * 0.18f));
-			DrawSoftCircle(effect.ImpactAnchor, 720f, RedBright, alpha * 0.12f, 0.12f, 1f);
+			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Red * (alpha * 0.28f));
+			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * (alpha * 0.22f));
+			DrawSoftCircle(effect.ImpactAnchor, 860f, RedBright, alpha * 0.22f, 0.08f, 1f);
 		}
 
 		private void DrawShockwave(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = ShockwaveRingAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.14f, 0.24f, 0.24f, 1f);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = ShockwaveRingAlpha * effect.Recipe.Intensity * (1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
-			float scale = MathHelper.Lerp(0.2f, 9.5f, VisualEffectDisplayMath.EaseOutCubic(p));
+			float scale = MathHelper.Lerp(0.32f, 12.5f, VisualEffectDisplayMath.EaseOutCubic(recovery));
 			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 48, 48, 3f);
-			DrawMask(ring, effect.ImpactAnchor, Cream * (alpha * 0.72f), 0f, new Vector2(scale));
-			DrawMask(ring, effect.ImpactAnchor, RedBright * (alpha * 0.18f), 0f, new Vector2(scale * 1.34f));
+			DrawMask(ring, effect.ImpactAnchor, Color.White * (alpha * 0.88f), 0f, new Vector2(scale));
+			DrawMask(ring, effect.ImpactAnchor, RedBright * (alpha * 0.34f), 0f, new Vector2(scale * 1.38f));
 		}
 
 		private void DrawSlashBand(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = SlashBandAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0f, 0.26f, 0.26f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alphaShape = recovery <= 0f ? VisualEffectDisplayMath.EaseOutCubic(approach) : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery);
+			float alpha = SlashBandAlpha * effect.Recipe.Intensity * alphaShape;
 			if (alpha <= 0f) return;
 
 			float sign = Math.Sign(effect.DirectionSign == 0 ? 1 : effect.DirectionSign);
-			float angle = MathHelper.ToRadians(-23f * sign);
-			float start = -0.42f * Game1.VirtualWidth * sign;
-			float end = 0.38f * Game1.VirtualWidth * sign;
-			float travel = MathHelper.Lerp(start, end, VisualEffectDisplayMath.EaseOutCubic(p));
-			float scaleX = MathHelper.Lerp(0.28f, 1f, VisualEffectDisplayMath.EaseOutCubic(p));
-			var center = new Vector2(Game1.VirtualWidth * 0.5f, effect.ImpactAnchor.Y) + Axis(angle) * travel;
-			DrawSlashGradient(center, angle, Game1.VirtualWidth * 1.12f * scaleX, 58f, alpha);
+			var targetDirection = VisualEffectDisplayMath.DirectionToTarget(effect);
+			float angle = MathF.Atan2(targetDirection.Y, targetDirection.X) + MathHelper.ToRadians(-28f * sign);
+			float travel = recovery <= 0f
+				? MathHelper.Lerp(-SlashBandLength * 0.46f, 0f, VisualEffectDisplayMath.EaseOutCubic(approach))
+				: MathHelper.Lerp(0f, SlashBandLength * 0.36f, VisualEffectDisplayMath.EaseOutCubic(recovery));
+			float length = SlashBandLength * MathHelper.Lerp(0.42f, 1f, VisualEffectDisplayMath.EaseOutCubic(approach));
+			var center = effect.ImpactAnchor + Axis(angle) * travel;
+			DrawSlashGradient(center, angle, length, SlashBandThickness, alpha);
+			DrawLine(center - Axis(angle) * length * 0.43f, center + Axis(angle) * length * 0.43f, Color.White * (alpha * 0.72f), SlashBandThickness * 0.13f);
 		}
 
 		private void DrawSmokeScreen(ActiveVisualEffect effect)
 		{
 			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = SmokeScreenAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0f, 0.22f, 0.68f, 1f);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = SmokeScreenAlpha * effect.Recipe.Intensity * (recovery <= 0f ? VisualEffectDisplayMath.ApproachProgress(effect) : 1f - recovery);
 			if (alpha <= 0f) return;
 			float lift = MathHelper.Lerp(14f, -12f, VisualEffectDisplayMath.EaseOutCubic(p));
 			float scale = MathHelper.Lerp(0.88f, 1.16f, p);
 			var center = effect.ImpactAnchor + new Vector2(0f, lift);
-			DrawSoftCircle(center, 520f * scale, SmokeCore, alpha * 0.86f, 0f, 0.35f);
-			DrawSoftCircle(center + new Vector2(110f * effect.DirectionSign, -92f), 410f * scale, new Color(85, 16, 28), alpha * 0.52f, 0f, 0.38f);
-			DrawSoftCircle(center + new Vector2(-85f * effect.DirectionSign, 118f), 380f * scale, BlackSmoke, alpha * 0.54f, 0f, 0.34f);
+			DrawSoftCircle(center, 620f * scale, SmokeCore, alpha * 0.92f, 0f, 0.42f);
+			DrawSoftCircle(center + new Vector2(140f * effect.DirectionSign, -112f), 480f * scale, new Color(85, 16, 28), alpha * 0.62f, 0f, 0.44f);
+			DrawSoftCircle(center + new Vector2(-110f * effect.DirectionSign, 132f), 440f * scale, BlackSmoke, alpha * 0.66f, 0f, 0.40f);
 		}
 
 		private BattlePresentationTransform EnsureBattlePresentationTransform()
@@ -182,28 +190,25 @@ namespace Crusaders30XX.ECS.Systems
 				.Where(e => e != null && e.ElapsedSeconds >= 0f);
 		}
 
-		private static Vector2 ComputeStepShake(float progress)
+		private static Vector2 ComputeImpactShake(ActiveVisualEffect effect)
 		{
-			if (progress >= 0.40f) return Vector2.Zero;
-			float local = MathHelper.Clamp(progress / 0.40f, 0f, 1f);
-			if (local < 0.12f) return Vector2.Zero;
-			if (local < 0.24f) return new Vector2(1f, -0.56f);
-			if (local < 0.36f) return new Vector2(-0.78f, 0.44f);
-			if (local < 0.48f) return new Vector2(0.56f, 0.78f);
-			if (local < 0.60f) return new Vector2(-0.44f, -0.56f);
-			if (local < 0.84f) return new Vector2(0.78f, 0.33f);
-			return Vector2.Zero;
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			if (recovery <= 0f) return approach < 0.82f ? Vector2.Zero : new Vector2(-0.22f, 0.12f) * ((approach - 0.82f) / 0.18f);
+			float envelope = MathF.Pow(1f - recovery, 1.7f);
+			float x = MathF.Sin(recovery * MathHelper.Pi * 13f);
+			float y = MathF.Cos(recovery * MathHelper.Pi * 17f) * 0.68f;
+			return new Vector2(x, y) * envelope;
 		}
 
-		private float ComputePunchScale(float progress, float intensity)
+		private float ComputePunchScale(ActiveVisualEffect effect, float intensity)
 		{
-			if (progress >= 0.52f) return 1f;
-			float t = MathHelper.Clamp(progress / 0.52f, 0f, 1f);
-			float shape = t < 0.20f
-				? MathHelper.Lerp(0f, 1f, t / 0.20f)
-				: t < 0.50f
-					? MathHelper.Lerp(1f, -0.34f, (t - 0.20f) / 0.30f)
-					: MathHelper.Lerp(-0.34f, 0f, (t - 0.50f) / 0.50f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float shape;
+			if (recovery <= 0f) shape = MathHelper.Lerp(-0.18f, 1f, MathF.Pow(approach, 3f));
+			else if (recovery < 0.22f) shape = MathHelper.Lerp(1f, -0.42f, VisualEffectDisplayMath.EaseOutCubic(recovery / 0.22f));
+			else shape = MathHelper.Lerp(-0.42f, 0f, VisualEffectDisplayMath.EaseInOutQuad((recovery - 0.22f) / 0.78f));
 			return 1f + shape * PunchZoomAmount * intensity;
 		}
 

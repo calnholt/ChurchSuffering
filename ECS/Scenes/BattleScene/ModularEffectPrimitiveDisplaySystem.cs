@@ -108,6 +108,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Crack Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float CrackAlpha { get; set; } = 0.94f;
 
+		[DebugEditable(DisplayName = "Crack Reach", Step = 5f, Min = 40f, Max = 500f)]
+		public float CrackReach { get; set; } = 255f;
+
+		[DebugEditable(DisplayName = "Crack Trunks", Step = 1f, Min = 3f, Max = 14f)]
+		public int CrackTrunkCount { get; set; } = 7;
+
 		[DebugEditable(DisplayName = "Hammer Scale", Step = 0.05f, Min = 0.5f, Max = 2f)]
 		public float HammerScale { get; set; } = 1.25f;
 
@@ -161,20 +167,20 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawSwordArc(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.05f, 0.18f, 0.46f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? VisualEffectDisplayMath.EaseOutCubic(approach) : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
 
-			float eased = VisualEffectDisplayMath.EaseOutCubic(p);
-			float travel = MathHelper.Lerp(-118f, 86f, eased);
-			float scaleX = p < 0.46f ? MathHelper.Lerp(0.2f, 1f, MathHelper.Clamp(p / 0.34f, 0f, 1f)) : MathHelper.Lerp(1f, 0.92f, MathHelper.Clamp((p - 0.46f) / 0.54f, 0f, 1f));
+			float travel = recovery <= 0f ? MathHelper.Lerp(-210f, 0f, VisualEffectDisplayMath.EaseOutCubic(approach)) : MathHelper.Lerp(0f, 120f, VisualEffectDisplayMath.EaseOutCubic(recovery));
+			float scaleX = MathHelper.Lerp(0.28f, 1.25f, VisualEffectDisplayMath.EaseOutCubic(approach));
 			float rotation = MathHelper.ToRadians(-28f * Math.Sign(effect.DirectionSign == 0 ? 1 : effect.DirectionSign));
 			var axis = new Vector2(MathF.Cos(rotation), MathF.Sin(rotation));
 			var center = effect.ImpactAnchor + axis * travel;
 			var mask = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 280, 64, "modular_fx_sword_arc", SwordArcMask);
 
-			DrawMask(mask, center, RedBright * (alpha * GlowAlpha), rotation, new Vector2(scaleX * 1.16f, 1.55f));
-			DrawMask(mask, center, Cream * alpha, rotation, new Vector2(scaleX, 1f));
+			DrawMask(mask, center, RedBright * (alpha * GlowAlpha), rotation, new Vector2(scaleX * 1.24f, 2.2f));
+			DrawMask(mask, center, Cream * alpha, rotation, new Vector2(scaleX, 1.28f));
 			DrawGlowLine(
 				center + Axis(rotation) * -72f + Perp(rotation) * 14f,
 				center + Axis(rotation) * 84f - Perp(rotation) * 12f,
@@ -185,72 +191,88 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawCrossSlash(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.06f, 0.16f, 0.56f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
 
-			float aAlpha = alpha * VisualEffectDisplayMath.Window(p, 0.06f, 0.30f, 0.52f, 1f);
-			float bAlpha = alpha * VisualEffectDisplayMath.Window(p, 0.18f, 0.42f, 0.56f, 1f);
-			DrawTravelingSlash(effect.ImpactAnchor, 34f, -70f, 44f, p, aAlpha);
-			DrawTravelingSlash(effect.ImpactAnchor, -34f, 70f, -44f, p, bAlpha);
+			float sign = effect.DirectionSign == 0 ? 1f : effect.DirectionSign;
+			float second = MathHelper.Clamp((approach - 0.20f) / 0.80f, 0f, 1f);
+			float firstTravel = recovery <= 0f ? MathHelper.Lerp(-150f, 0f, VisualEffectDisplayMath.EaseOutCubic(approach)) : MathHelper.Lerp(0f, 85f, recovery);
+			float secondTravel = recovery <= 0f ? MathHelper.Lerp(150f, 0f, VisualEffectDisplayMath.EaseOutCubic(second)) : MathHelper.Lerp(0f, -85f, recovery);
+			float firstAngle = 38f * sign;
+			float secondAngle = -38f * sign;
+			DrawGlowSlash(effect.ImpactAnchor + Axis(MathHelper.ToRadians(firstAngle)) * firstTravel, firstAngle, 390f, 24f * SlashThicknessScale, alpha);
+			DrawGlowSlash(effect.ImpactAnchor + Axis(MathHelper.ToRadians(secondAngle)) * secondTravel, secondAngle, 390f, 24f * SlashThicknessScale, alpha * MathHelper.Clamp(second * 1.8f, 0f, 1f));
 		}
 
 		private void DrawClawSlash(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float groupAlpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.08f, 0.18f, 0.62f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float groupAlpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (groupAlpha <= 0f) return;
 
 			var rows = new[]
 			{
-				(y: -42f, angle: 24f, start: 0.08f, peak: 0.30f, end: 0.54f),
-				(y: 0f, angle: 18f, start: 0.14f, peak: 0.36f, end: 0.58f),
-				(y: 42f, angle: 12f, start: 0.20f, peak: 0.42f, end: 0.62f)
+				(y: -58f, angle: 22f, delay: 0f),
+				(y: 0f, angle: 16f, delay: 0.10f),
+				(y: 58f, angle: 10f, delay: 0.20f)
 			};
 
 			foreach (var row in rows)
 			{
-				float alpha = groupAlpha * VisualEffectDisplayMath.Window(p, row.start, row.peak, row.end, 1f);
+				float stroke = MathHelper.Clamp((approach - row.delay) / (1f - row.delay), 0f, 1f);
+				float alpha = groupAlpha * MathHelper.Clamp(stroke * 2f, 0f, 1f);
 				if (alpha <= 0f) continue;
-				float travel = MathHelper.Lerp(86f, -52f, VisualEffectDisplayMath.EaseOutCubic(p)) * -effect.DirectionSign;
+				float travel = MathHelper.Lerp(170f, recovery <= 0f ? 0f : -90f, VisualEffectDisplayMath.EaseOutCubic(recovery <= 0f ? stroke : recovery)) * -effect.DirectionSign;
 				var center = effect.ImpactAnchor + new Vector2(travel, row.y);
-				DrawGlowSlash(center, row.angle * effect.DirectionSign, 190f, 16f * SlashThicknessScale, alpha);
+				DrawGlowSlash(center, row.angle * effect.DirectionSign, 310f, 20f * SlashThicknessScale, alpha);
 			}
 		}
 
 		private void DrawBite(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.08f, 0.24f, 0.58f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - recovery);
 			if (alpha <= 0f) return;
 
-			float scale = p < 0.24f ? MathHelper.Lerp(1.32f, 0.98f, p / 0.24f) : MathHelper.Lerp(0.98f, 1.08f, MathHelper.Clamp((p - 0.58f) / 0.42f, 0f, 1f));
-			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 210, 170, 4f);
+			float scale = recovery <= 0f ? MathHelper.Lerp(1.48f, 1f, VisualEffectDisplayMath.EaseOutCubic(approach)) : MathHelper.Lerp(1f, 1.24f, recovery);
+			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 310, 270, 7f);
 			DrawMask(ring, effect.ImpactAnchor, RedBright * (alpha * 0.58f), 0f, new Vector2(scale));
 			DrawMask(ring, effect.ImpactAnchor, Color.Black * (alpha * 0.26f), 0f, new Vector2(scale * 0.9f));
 
-			float close = VisualEffectDisplayMath.EaseOutCubic(MathHelper.Clamp((p - 0.08f) / 0.16f, 0f, 1f));
-			float topY = MathHelper.Lerp(-48f, 0f, close);
-			float bottomY = MathHelper.Lerp(48f, 0f, close);
-			DrawToothRow(effect.ImpactAnchor + new Vector2(0f, -40f + topY), true, alpha);
-			DrawToothRow(effect.ImpactAnchor + new Vector2(0f, 40f + bottomY), false, alpha);
+			float jawOpen = recovery <= 0f ? 1f - VisualEffectDisplayMath.EaseOutCubic(approach) : VisualEffectDisplayMath.EaseOutCubic(recovery);
+			float gap = MathHelper.Lerp(34f, 138f, jawOpen);
+			DrawToothRow(effect.ImpactAnchor + new Vector2(0f, -gap), true, alpha);
+			DrawToothRow(effect.ImpactAnchor + new Vector2(0f, gap), false, alpha);
 		}
 
 		private void DrawRockBlast(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.10f, 0.24f, 0.48f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
 
-			float scale = p < 0.24f ? MathHelper.Lerp(0.22f, 1.02f, VisualEffectDisplayMath.EaseOutBack(p / 0.24f)) : MathHelper.Lerp(1.02f, 1.9f, MathHelper.Clamp((p - 0.48f) / 0.52f, 0f, 1f));
-			DrawSoftCircle(effect.ImpactAnchor, 190f * scale, Cream, alpha * 0.72f, 0.0f, 0.20f);
-			DrawSoftCircle(effect.ImpactAnchor, 190f * scale, Gold, alpha * 0.50f, 0.12f, 0.46f);
-			DrawSoftCircle(effect.ImpactAnchor, 190f * scale, RockDark, alpha * 0.44f, 0.26f, 0.80f);
+			float scale = recovery <= 0f ? MathHelper.Lerp(0.16f, 1.12f, VisualEffectDisplayMath.EaseOutBack(approach)) : MathHelper.Lerp(1.12f, 2.5f, recovery);
+			DrawSoftCircle(effect.ImpactAnchor, 270f * scale, RockDark, alpha * 0.72f, 0.0f, 0.86f);
+			DrawSoftCircle(effect.ImpactAnchor, 220f * scale, Gold, alpha * 0.68f, 0.0f, 0.64f);
+			DrawSoftCircle(effect.ImpactAnchor, 130f * scale, Cream, alpha * 0.88f, 0.0f, 0.42f);
 
 			var chunk = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 42, 38, "modular_fx_rock_chunk", JaggedShardMask);
-			float chunkT = VisualEffectDisplayMath.EaseOutCubic(MathHelper.Clamp((p - 0.14f) / 0.86f, 0f, 1f));
-			DrawMask(chunk, effect.ImpactAnchor + new Vector2(-76f, -54f) * chunkT, RockDark * alpha, MathHelper.ToRadians(-96f * chunkT), new Vector2(MathHelper.Lerp(0.5f, 1.08f, chunkT)));
-			DrawMask(chunk, effect.ImpactAnchor + new Vector2(88f, 62f) * chunkT, RockDark * alpha, MathHelper.ToRadians(118f * chunkT), new Vector2(MathHelper.Lerp(0.5f, 1.15f, chunkT)));
+			var variation = new VisualEffectVariation(effect);
+			float chunkT = 0.20f + VisualEffectDisplayMath.EaseOutCubic(recovery) * 0.80f;
+			for (int i = 0; i < 5; i++)
+			{
+				float angle = variation.Range(100 + i * 3, -165f, 165f);
+				float distance = variation.Range(101 + i * 3, 130f, 330f) * chunkT;
+				var offset = Axis(MathHelper.ToRadians(angle)) * distance;
+				float chunkScale = variation.Range(102 + i * 3, 0.82f, 1.75f);
+				DrawMask(chunk, effect.ImpactAnchor + offset, Gold * (alpha * 0.28f), MathHelper.ToRadians(angle + 240f * chunkT), new Vector2(chunkScale * 1.28f));
+				DrawMask(chunk, effect.ImpactAnchor + offset, RockDark * alpha, MathHelper.ToRadians(angle + 240f * chunkT), new Vector2(chunkScale));
+			}
 		}
 
 		private void DrawHammerArc(ActiveVisualEffect effect)
@@ -299,93 +321,121 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawCrossBloom(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.12f, 0.38f, 0.38f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
-			float scale = p < 0.38f ? MathHelper.Lerp(0.22f, 1f, p / 0.38f) : MathHelper.Lerp(1f, 1.65f, MathHelper.Clamp((p - 0.38f) / 0.62f, 0f, 1f));
-			var center = effect.SourceAnchor + (effect.TargetAnchor - effect.SourceAnchor) * 0.16f;
-			DrawGlowRect(center, new Vector2(18f, 112f) * scale, Cream, alpha, 0f);
-			DrawGlowRect(center, new Vector2(94f, 16f) * scale, Cream, alpha, 0f);
+			float scale = recovery <= 0f ? MathHelper.Lerp(0.15f, 1.15f, VisualEffectDisplayMath.EaseOutBack(approach)) : MathHelper.Lerp(1.15f, 2.1f, recovery);
+			var center = effect.ImpactAnchor;
+			DrawGlowRect(center, new Vector2(30f, 230f) * scale, Cream, alpha, 0f);
+			DrawGlowRect(center, new Vector2(190f, 28f) * scale, Cream, alpha, 0f);
+			DrawGlowRect(center, new Vector2(12f, 330f) * scale, Color.White, alpha * 0.62f, 0f);
+			DrawSoftCircle(center, 150f * scale, Cream, alpha * 0.42f, 0f, 0.78f);
 		}
 
 		private void DrawRing(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.08f, 0.20f, 0.20f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
-			float scale = MathHelper.Lerp(0.24f, 4.3f, VisualEffectDisplayMath.EaseOutCubic(p));
+			float scale = recovery <= 0f ? MathHelper.Lerp(0.18f, 1.1f, VisualEffectDisplayMath.EaseOutCubic(approach)) : MathHelper.Lerp(1.1f, 5.8f, VisualEffectDisplayMath.EaseOutCubic(recovery));
 			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 80, 80, RingThickness);
-			DrawMask(ring, effect.ImpactAnchor, Cream * alpha, 0f, new Vector2(scale));
-			DrawMask(ring, effect.ImpactAnchor, Red * (alpha * 0.18f), 0f, new Vector2(scale * 1.12f));
+			DrawMask(ring, effect.ImpactAnchor, Color.White * alpha, 0f, new Vector2(scale));
+			DrawMask(ring, effect.ImpactAnchor, Red * (alpha * 0.32f), 0f, new Vector2(scale * 1.18f));
 		}
 
 		private void DrawHalo(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0f, 0.24f, 0.56f, 1f) * 0.95f;
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - recovery);
 			if (alpha <= 0f) return;
-			float y = MathHelper.Lerp(48f, -58f, VisualEffectDisplayMath.EaseOutCubic(p));
-			float scale = MathHelper.Lerp(0.58f, 1.16f, p);
-			var halo = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 160, 44, 5f);
-			DrawMask(halo, effect.SourceAnchor + new Vector2(0f, -120f + y), Cream * alpha, 0f, new Vector2(scale));
+			float y = MathHelper.Lerp(30f, -70f, VisualEffectDisplayMath.EaseOutCubic(VisualEffectDisplayMath.Progress(effect)));
+			float scale = MathHelper.Lerp(0.65f, 1.4f, VisualEffectDisplayMath.EaseOutBack(approach));
+			var halo = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 230, 58, 7f);
+			var center = effect.ImpactAnchor + new Vector2(0f, -190f + y);
+			DrawMask(halo, center, Gold * (alpha * 0.38f), 0f, new Vector2(scale * 1.22f));
+			DrawMask(halo, center, Cream * alpha, 0f, new Vector2(scale));
 		}
 
 		private void DrawBeam(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = BeamAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0f, 0.28f, 0.60f, 1f);
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = BeamAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
-			float scaleY = MathHelper.Lerp(0.35f, 1.02f, VisualEffectDisplayMath.EaseOutCubic(p));
-			DrawHorizontalGradientBand(effect.ImpactAnchor.X - 60f, effect.ImpactAnchor.Y - 340f * scaleY, 120f, 580f * scaleY, Cream, alpha, 18);
+			float scaleY = MathHelper.Lerp(0.20f, 1.12f, VisualEffectDisplayMath.EaseOutCubic(approach));
+			DrawHorizontalGradientBand(effect.ImpactAnchor.X - 120f, effect.ImpactAnchor.Y - 470f * scaleY, 240f, 820f * scaleY, Cream, alpha, 28);
+			DrawHorizontalGradientBand(effect.ImpactAnchor.X - 38f, effect.ImpactAnchor.Y - 520f * scaleY, 76f, 920f * scaleY, Color.White, alpha * 0.82f, 18);
 		}
 
 		private void DrawRays(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0f, 0.28f, 0.60f, 1f) * 0.58f;
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery)) * 0.82f;
 			if (alpha <= 0f) return;
-			float scale = MathHelper.Lerp(0.4f, 1.5f, VisualEffectDisplayMath.EaseOutCubic(p));
-			float spin = MathHelper.ToRadians(MathHelper.Lerp(-18f, 36f, p));
-			for (int i = 0; i < 12; i++)
+			float scale = MathHelper.Lerp(0.3f, 2.05f, VisualEffectDisplayMath.EaseOutCubic(VisualEffectDisplayMath.Progress(effect)));
+			var variation = new VisualEffectVariation(effect);
+			float spin = MathHelper.ToRadians(MathHelper.Lerp(-28f, 52f, VisualEffectDisplayMath.Progress(effect)) + variation.Range(8, -12f, 12f));
+			int rayCount = variation.Range(9, 14, 19);
+			for (int i = 0; i < rayCount; i++)
 			{
-				float angle = spin + i * MathHelper.TwoPi / 12f;
+				float angle = spin + i * MathHelper.TwoPi / rayCount + MathHelper.ToRadians(variation.Range(20 + i, -5f, 5f));
 				var dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-				float length = 155f * scale * (i % 3 == 0 ? 1f : 0.68f);
-				DrawGlowLine(effect.ImpactAnchor + dir * 18f, effect.ImpactAnchor + dir * length, i % 4 == 0 ? RedBright : Cream, 8f, alpha * (i % 4 == 0 ? 0.45f : 0.72f));
+				float length = variation.Range(60 + i, 125f, 245f) * scale;
+				float width = variation.Range(90 + i, 6f, 14f);
+				DrawGlowLine(effect.ImpactAnchor + dir * 22f, effect.ImpactAnchor + dir * length, i % 4 == 0 ? RedBright : Cream, width, alpha * (i % 4 == 0 ? 0.55f : 0.82f));
 			}
 		}
 
 		private void DrawCracks(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = CrackAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.14f, 0.26f, 0.66f, 1f);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = CrackAlpha * effect.Recipe.Intensity * (1f - MathF.Pow(recovery, 1.5f));
 			if (alpha <= 0f) return;
-			float grow = VisualEffectDisplayMath.EaseOutCubic(MathHelper.Clamp((p - 0.14f) / 0.12f, 0f, 1f));
-			float[] baseAngles = { -46f, -22f, 4f, 28f, 54f };
-			var crack = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 138, 8, "modular_fx_crack_segment", CrackMask);
-			for (int i = 0; i < baseAngles.Length; i++)
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float grow = recovery <= 0f
+				? VisualEffectDisplayMath.EaseOutCubic(MathHelper.Clamp((approach - 0.72f) / 0.28f, 0f, 1f))
+				: 1f;
+			var variation = new VisualEffectVariation(effect);
+			int trunks = Math.Max(3, CrackTrunkCount);
+			for (int i = 0; i < trunks; i++)
 			{
-				float angle = (effect.DirectionSign < 0 ? 180f - baseAngles[i] : baseAngles[i]) + (i - 2) * 3f;
-				float lenScale = MathHelper.Lerp(0.52f, 1f, i / 4f) * grow;
-				var center = effect.ImpactAnchor + new Vector2(0f, 8f) + Axis(MathHelper.ToRadians(angle)) * (34f * lenScale);
-				DrawMask(crack, center, RedBright * alpha, MathHelper.ToRadians(angle), new Vector2(lenScale, 1f));
-				if (i > 0)
+				float angle = i * 360f / trunks + variation.Range(200 + i, -18f, 18f);
+				float reach = CrackReach * variation.Range(220 + i, 0.68f, 1.22f);
+				int segments = variation.Range(240 + i, 3, 6);
+				var start = effect.ImpactAnchor + new Vector2(0f, 8f);
+				for (int segment = 0; segment < segments; segment++)
 				{
-					float branchAngle = angle + (i % 2 == 0 ? 34f : -34f);
-					var branchCenter = center + Axis(MathHelper.ToRadians(angle)) * 18f;
-					DrawMask(crack, branchCenter, RedBright * (alpha * 0.72f), MathHelper.ToRadians(branchAngle), new Vector2(lenScale * 0.42f, 0.68f));
+					float segmentStart = segment / (float)segments;
+					float segmentGrow = MathHelper.Clamp((grow - segmentStart) * segments, 0f, 1f);
+					if (segmentGrow <= 0f) break;
+					float jitter = variation.Range(300 + i * 10 + segment, -16f, 16f);
+					float length = reach / segments * variation.Range(360 + i * 10 + segment, 0.78f, 1.18f);
+					var end = start + Axis(MathHelper.ToRadians(angle + jitter)) * length * segmentGrow;
+					DrawGlowLine(start, end, RedBright, MathHelper.Lerp(9f, 4f, segmentStart), alpha * (1f - segmentStart * 0.28f));
+					if (segment > 0 && variation.Range(420 + i * 10 + segment, 0f, 1f) > 0.42f)
+					{
+						float branchAngle = angle + jitter + variation.Range(480 + i * 10 + segment, -58f, 58f);
+						var branchEnd = start + Axis(MathHelper.ToRadians(branchAngle)) * length * 0.58f * segmentGrow;
+						DrawGlowLine(start, branchEnd, RedBright, 3f, alpha * 0.64f);
+					}
+					start = end;
 				}
 			}
 		}
 
 		private void DrawHitFlash(ActiveVisualEffect effect)
 		{
-			float p = VisualEffectDisplayMath.Progress(effect);
-			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * VisualEffectDisplayMath.Window(p, 0.14f, 0.22f, 0.22f, 1f) * 0.94f;
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? MathF.Pow(approach, 4f) : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery)) * 1.15f;
 			if (alpha <= 0f) return;
-			float scale = MathHelper.Lerp(0.35f, 1.9f, VisualEffectDisplayMath.EaseOutCubic(p));
-			DrawSoftCircle(effect.ImpactAnchor, 130f * scale, Color.White, alpha, 0f, 0.62f);
-			DrawSoftCircle(effect.ImpactAnchor, 130f * scale, Cream, alpha * 0.34f, 0.22f, 1f);
+			float scale = recovery <= 0f ? MathHelper.Lerp(0.18f, 1.15f, VisualEffectDisplayMath.EaseOutCubic(approach)) : MathHelper.Lerp(1.15f, 3.2f, recovery);
+			DrawSoftCircle(effect.ImpactAnchor, 170f * scale, Color.White, alpha, 0f, 0.68f);
+			DrawSoftCircle(effect.ImpactAnchor, 210f * scale, Cream, alpha * 0.48f, 0.16f, 1f);
 		}
 
 		private void DrawTravelingSlash(Vector2 center, float angleDegrees, float startTravel, float endTravel, float progress, float alpha)
@@ -420,16 +470,17 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var tooth = PrimitiveTextureFactory.GetAntialiasedPolygonMask(
 				_graphicsDevice,
-				18,
-				36,
+				26,
+				52,
 				top ? "modular_fx_tooth_top" : "modular_fx_tooth_bottom",
 				top
 					? new[] { new Vector2(0.10f, 0f), new Vector2(0.90f, 0f), new Vector2(0.50f, 1f) }
 					: new[] { new Vector2(0.50f, 0f), new Vector2(0.90f, 1f), new Vector2(0.10f, 1f) });
-			for (int i = 0; i < 6; i++)
+			for (int i = 0; i < 8; i++)
 			{
-				float x = (i - 2.5f) * 23f;
-				DrawMask(tooth, center + new Vector2(x, 0f), Cream * (alpha * 0.95f), 0f, Vector2.One);
+				float x = (i - 3.5f) * 32f;
+				DrawMask(tooth, center + new Vector2(x, 0f), RedBright * (alpha * 0.30f), 0f, new Vector2(1.28f));
+				DrawMask(tooth, center + new Vector2(x, 0f), Cream * alpha, 0f, Vector2.One);
 			}
 		}
 

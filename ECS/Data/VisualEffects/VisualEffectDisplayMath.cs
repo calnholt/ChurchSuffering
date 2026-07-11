@@ -35,6 +35,28 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			return MathHelper.Clamp((elapsed - impact) / duration, 0f, 1f);
 		}
 
+		public static float ContactProgress(ActiveVisualEffect effect)
+		{
+			if (effect == null) return 0f;
+			float duration = Math.Max(0.0001f, effect.Timing.DurationSeconds);
+			float contactSeconds = effect.Timing.HitStopDurationSeconds > 0f
+				? effect.Timing.HitStopStartSeconds
+				: effect.Timing.ImpactTimeSeconds;
+			return MathHelper.Clamp(contactSeconds / duration, 0f, 1f);
+		}
+
+		public static float ApproachProgress(ActiveVisualEffect effect)
+		{
+			float contact = Math.Max(0.0001f, ContactProgress(effect));
+			return MathHelper.Clamp(Progress(effect) / contact, 0f, 1f);
+		}
+
+		public static float RecoveryProgress(ActiveVisualEffect effect)
+		{
+			float contact = ContactProgress(effect);
+			return MathHelper.Clamp((Progress(effect) - contact) / Math.Max(0.0001f, 1f - contact), 0f, 1f);
+		}
+
 		public static float Window(float progress, float start, float peakStart, float peakEnd, float end)
 		{
 			progress = MathHelper.Clamp(progress, 0f, 1f);
