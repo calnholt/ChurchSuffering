@@ -2403,30 +2403,6 @@
 /processorParam:TextureFormat=Color
 /build:CardArt/thaw.png
 
-#---------------------------------- Enemy Attack Splash ---------------------------------#
-
-#begin enemy-attack-splash.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=0,0,0,0
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:TextureFormat=Color
-/build:enemy-attack-splash.png
-
-#begin player-attack-splash.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=0,0,0,0
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:TextureFormat=Color
-/build:player-attack-splash.png
-
 #begin gain-bleed.png
 /importer:TextureImporter
 /processor:TextureProcessor

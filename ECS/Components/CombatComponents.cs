@@ -67,6 +67,8 @@ namespace Crusaders30XX.ECS.Components
 		public int PlayedBlack { get; set; }
 
 		// Derived values for display and resolution previews
+		// Null means no attack-specific modifier has been applied; consumers use AssignedBlockTotal.
+		public int? EffectiveAssignedBlockTotal { get; set; }
 		public bool IsConditionMet { get; set; }
 		public int ActualDamage { get; set; }
 		public int AegisTotal { get; set; }
@@ -84,6 +86,45 @@ namespace Crusaders30XX.ECS.Components
 	public class EnemyAttackBannerAnchor : IComponent
 	{
 		public Entity Owner { get; set; }
+	}
+
+	/// <summary>
+	/// Shared, presentation-only geometry for the enemy attack banner. The display system writes
+	/// logical animation values during Update; the late layout system resolves parallax-adjusted
+	/// screen bounds after all transforms have settled.
+	/// </summary>
+	public class EnemyAttackBannerPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public bool IsVisible { get; set; }
+		public int LogicalWidth { get; set; }
+		public int LogicalHeight { get; set; }
+		public float PanelScaleX { get; set; } = 1f;
+		public float PanelScaleY { get; set; } = 1f;
+		public float Alpha { get; set; } = 1f;
+		public float ContentScale { get; set; } = 1f;
+		public float OrnamentProgress { get; set; } = 1f;
+		public float SkullScale { get; set; } = 1f;
+		public float SkullTint { get; set; }
+		public float TextAlpha { get; set; } = 1f;
+		public float TextOffsetY { get; set; }
+		public float FlashAlpha { get; set; }
+		public float RingOneProgress { get; set; } = 1f;
+		public float RingTwoProgress { get; set; } = 1f;
+		public float ImpactIntensity { get; set; } = 0.25f;
+		public float AbsorbProgress { get; set; }
+		public Vector2 AbsorbStart { get; set; }
+		public Vector2 AbsorbTarget { get; set; }
+		public Vector2 RecoilOffset { get; set; }
+		public Rectangle RenderBounds { get; set; }
+		public Rectangle LocalTextBounds { get; set; }
+		public Rectangle TextBounds { get; set; }
+		public Rectangle ConfirmBounds { get; set; }
+		public bool HasKeywordTooltip { get; set; }
+		public bool ShowConfirm { get; set; }
+		public int ConfirmWidth { get; set; }
+		public int ConfirmHeight { get; set; }
+		public int ConfirmOffsetY { get; set; }
 	}
 
 	/// <summary>

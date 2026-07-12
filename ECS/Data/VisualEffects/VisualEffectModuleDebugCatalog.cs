@@ -11,6 +11,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public VisualEffectTimingProfile Timing { get; init; }
 		public VisualEffectTargetRole TargetRole { get; init; }
 		public VisualEffectSourceKind SourceKind { get; init; }
+		public VisualEffectPalette Palette { get; init; }
 	}
 
 	public static class VisualEffectModuleDebugCatalog
@@ -27,7 +28,8 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			}
 				.WithModules(entry.Module)
 				.WithTiming(entry.Timing)
-				.WithTarget(entry.TargetRole);
+				.WithTarget(entry.TargetRole)
+				.WithPalette(entry.Palette);
 		}
 
 		private static IReadOnlyList<VisualEffectModuleDebugEntry> BuildEntries()
@@ -59,8 +61,25 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				Entry(VisualEffectModule.Cracks, VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
 				Entry(VisualEffectModule.HitFlash, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
 				Entry(VisualEffectModule.Shake, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack),
+				Entry(VisualEffectModule.TargetShake, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
 				Entry(VisualEffectModule.PunchZoom, VisualEffectTimingProfile.DefensiveLock, VisualEffectTargetRole.Player, VisualEffectSourceKind.Medal),
 				Entry(VisualEffectModule.HitStop, VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
+				Entry(VisualEffectModule.ArrowShot, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
+				Entry(VisualEffectModule.ThrownBladeVolley, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
+				Entry(VisualEffectModule.EnergyBolt, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card, VisualEffectPalette.Arcane),
+				Entry(VisualEffectModule.SpinSlash, VisualEffectTimingProfile.FlickerChaos, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
+				Entry(VisualEffectModule.FlameBurst, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card, VisualEffectPalette.Fire),
+				Entry(VisualEffectModule.FrostBurst, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack, VisualEffectPalette.Ice),
+				Entry(VisualEffectModule.ShadowTendrils, VisualEffectTimingProfile.RitualPulse, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack, VisualEffectPalette.Shadow),
+				Entry(VisualEffectModule.PoisonCloud, VisualEffectTimingProfile.RitualPulse, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack, VisualEffectPalette.Poison),
+				Entry(VisualEffectModule.ShieldWard, VisualEffectTimingProfile.DefensiveLock, VisualEffectTargetRole.Player, VisualEffectSourceKind.Medal, VisualEffectPalette.Holy),
+				Entry(VisualEffectModule.ShieldShatter, VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card, VisualEffectPalette.Arcane),
+				Entry(VisualEffectModule.SoulSiphon, VisualEffectTimingProfile.RitualPulse, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card, VisualEffectPalette.Blood),
+				Entry(VisualEffectModule.ResourceMotes, VisualEffectTimingProfile.HolyRise, VisualEffectTargetRole.Player, VisualEffectSourceKind.Medal, VisualEffectPalette.Holy),
+				Entry(VisualEffectModule.SealStamp, VisualEffectTimingProfile.DefensiveLock, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack, VisualEffectPalette.Arcane),
+				Entry(VisualEffectModule.FrostBind, VisualEffectTimingProfile.DefensiveLock, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack, VisualEffectPalette.Ice),
+				Entry(VisualEffectModule.BrittleFracture, VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack, VisualEffectPalette.Earth),
+				Entry(VisualEffectModule.ColorDrain, VisualEffectTimingProfile.RitualPulse, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack, VisualEffectPalette.Shadow),
 			};
 
 			return entries
@@ -75,13 +94,25 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			VisualEffectTargetRole targetRole,
 			VisualEffectSourceKind sourceKind)
 		{
+			return Entry(module, label, timing, targetRole, sourceKind, VisualEffectPalette.Physical);
+		}
+
+		private static VisualEffectModuleDebugEntry Entry(
+			VisualEffectModule module,
+			string label,
+			VisualEffectTimingProfile timing,
+			VisualEffectTargetRole targetRole,
+			VisualEffectSourceKind sourceKind,
+			VisualEffectPalette palette)
+		{
 			return new VisualEffectModuleDebugEntry
 			{
 				Module = module,
 				Label = label,
 				Timing = timing,
 				TargetRole = targetRole,
-				SourceKind = sourceKind
+				SourceKind = sourceKind,
+				Palette = palette
 			};
 		}
 
@@ -92,6 +123,16 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			VisualEffectSourceKind sourceKind)
 		{
 			return Entry(module, module.ToString(), timing, targetRole, sourceKind);
+		}
+
+		private static VisualEffectModuleDebugEntry Entry(
+			VisualEffectModule module,
+			VisualEffectTimingProfile timing,
+			VisualEffectTargetRole targetRole,
+			VisualEffectSourceKind sourceKind,
+			VisualEffectPalette palette)
+		{
+			return Entry(module, module.ToString(), timing, targetRole, sourceKind, palette);
 		}
 
 		private static string ToRecipeId(string label)

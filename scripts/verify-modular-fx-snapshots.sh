@@ -30,3 +30,23 @@ run_snapshot --module cracks --sample impact --seed 1337 --direction right
 run_snapshot --module cracks --sample impact --seed 7331 --direction right
 run_snapshot --module slash-band --sample impact --seed 1337 --direction left
 run_snapshot --module slash-band --sample impact --seed 1337 --direction right
+
+run_snapshot --module arrow-shot --sample impact --seed 1337 --direction right
+run_snapshot --module thrown-blade-volley --sample impact --seed 1337 --direction right
+run_snapshot --module energy-bolt --sample start --seed 1337 --direction right
+run_snapshot --module spin-slash --sample impact --seed 1337 --direction right
+run_snapshot --module flame-burst --sample impact --seed 1337 --direction right
+run_snapshot --module frost-burst --sample impact --seed 1337 --direction left
+run_snapshot --module shadow-tendrils --sample late --seed 1337 --direction left
+run_snapshot --module poison-cloud --sample late --seed 1337 --direction left
+run_snapshot --module shield-ward --sample impact --seed 1337 --direction left
+run_snapshot --module shield-shatter --sample late --seed 1337 --direction right
+run_snapshot --module soul-siphon --sample impact --seed 1337 --direction right
+run_snapshot --module resource-motes --sample late --seed 1337 --direction left
+run_snapshot --module seal-stamp --sample impact --seed 1337 --direction right --target card
+run_snapshot --module frost-bind --sample impact --seed 1337 --direction right --target card
+run_snapshot --module brittle-fracture --sample impact --seed 1337 --direction right --target card
+run_snapshot --module color-drain --sample late --seed 1337 --direction right --target card
+
+run_snapshot --module energy-bolt --sample impact --seed 1337 --direction right --palette fire
+run_snapshot --module energy-bolt --sample impact --seed 1337 --direction right --palette ice

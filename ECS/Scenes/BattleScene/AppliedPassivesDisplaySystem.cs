@@ -19,8 +19,8 @@ namespace Crusaders30XX.ECS.Systems
     {
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly SpriteFont _font = FontSingleton.ContentFont;
-        private readonly System.Collections.Generic.Dictionary<(int ownerId, AppliedPassiveType type), Entity> _tooltipUiByKey = new();
+		private readonly SpriteFont _font = FontSingleton.ChakraPetchFont;
+        private readonly Dictionary<(int ownerId, AppliedPassiveType type), Entity> _tooltipUiByKey = new();
 
         [DebugEditable(DisplayName = "Offset Y", Step = 1, Min = -500, Max = 500)]
         public int OffsetY { get; set; } = 15;
@@ -76,6 +76,18 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Ripple Min Alpha", Step = 0.05f, Min = 0f, Max = 1f)]
         public float RippleMinAlpha { get; set; } = 0f;
 
+        [DebugEditable(DisplayName = "Appear Seconds", Step = 0.01f, Min = 0f, Max = 2f)]
+        public float AppearSeconds { get; set; } = 0.18f;
+
+        [DebugEditable(DisplayName = "Disappear Seconds", Step = 0.01f, Min = 0f, Max = 2f)]
+        public float DisappearSeconds { get; set; } = 0.14f;
+
+        [DebugEditable(DisplayName = "Appear Start Scale", Step = 0.05f, Min = 0f, Max = 2f)]
+        public float AppearStartScale { get; set; } = 0.75f;
+
+        [DebugEditable(DisplayName = "Disappear End Scale", Step = 0.05f, Min = 0f, Max = 2f)]
+        public float DisappearEndScale { get; set; } = 0.8f;
+
         private class Ripple
         {
             public float Elapsed;
@@ -83,7 +95,34 @@ namespace Crusaders30XX.ECS.Systems
         }
 
         // Track a transient ripple per owner+passive key
-        private readonly System.Collections.Generic.Dictionary<(int ownerId, AppliedPassiveType type), Ripple> _ripples = new();
+        private readonly Dictionary<(int ownerId, AppliedPassiveType type), Ripple> _ripples = new();
+
+        private enum ChipAnimationPhase
+        {
+            Entering,
+            Visible,
+            Exiting,
+        }
+
+        private sealed class ChipPresentation
+        {
+            public AppliedPassiveType Type;
+            public int Count;
+            public string Label = string.Empty;
+            public long Order;
+            public ChipAnimationPhase Phase;
+            public float Elapsed;
+            public float Duration;
+            public float StartAlpha;
+            public float TargetAlpha;
+            public float Alpha;
+            public float StartScale;
+            public float TargetScale;
+            public float Scale = 1f;
+        }
+
+        private readonly Dictionary<(int ownerId, AppliedPassiveType type), ChipPresentation> _chipPresentations = new();
+        private readonly Dictionary<int, long> _nextOrderByOwner = new();
 
         private readonly HashSet<AppliedPassiveType> _turnPassives;
         private readonly HashSet<AppliedPassiveType> _battlePassives;
@@ -120,6 +159,8 @@ namespace Crusaders30XX.ECS.Systems
             _tooltipUiByKey.Values.ToList().ForEach(ui => EntityManager.DestroyEntity(ui.Id));
             _tooltipUiByKey.Clear();
             _ripples.Clear();
+            _chipPresentations.Clear();
+            _nextOrderByOwner.Clear();
         }
 
         private void OnLoadSceneEvent(LoadSceneEvent evt)
@@ -140,14 +181,124 @@ namespace Crusaders30XX.ECS.Systems
 
         protected override void UpdateEntity(Entity entity, GameTime gameTime)
         {
-            // Progress ripple animations once per frame (anchor on smallest entity id that matches)
-            var ids = EntityManager.GetEntitiesWithComponent<AppliedPassives>().Select(en => en.Id).ToList();
-            if (ids.Count == 0) return;
-            int anchorId = ids.Min();
-            if (entity.Id != anchorId) return;
+            ReconcileChipPresentations(entity);
+
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (dt < 0f) dt = 0f;
+            AdvanceChipPresentations(entity.Id, dt);
+            AdvanceRipples(entity.Id, dt);
+        }
+
+        private void ReconcileChipPresentations(Entity entity)
+        {
+            var passives = entity.GetComponent<AppliedPassives>()?.Passives;
+            if (passives == null) return;
+
+            foreach (var passive in passives)
+            {
+                var key = (entity.Id, passive.Key);
+                string label = BuildLabel(passive.Key, passive.Value);
+                if (!_chipPresentations.TryGetValue(key, out var chip))
+                {
+                    long nextOrder = _nextOrderByOwner.TryGetValue(entity.Id, out long order) ? order : 0;
+                    _nextOrderByOwner[entity.Id] = nextOrder + 1;
+                    chip = new ChipPresentation
+                    {
+                        Type = passive.Key,
+                        Count = passive.Value,
+                        Label = label,
+                        Order = nextOrder,
+                        Alpha = 0f,
+                        Scale = Math.Max(0f, AppearStartScale),
+                    };
+                    _chipPresentations[key] = chip;
+                    BeginTransition(chip, ChipAnimationPhase.Entering, 1f, 1f, AppearSeconds);
+                    continue;
+                }
+
+                chip.Count = passive.Value;
+                chip.Label = label;
+                if (chip.Phase == ChipAnimationPhase.Exiting)
+                {
+                    BeginTransition(chip, ChipAnimationPhase.Entering, 1f, 1f, AppearSeconds);
+                }
+            }
+
+            foreach (var pair in _chipPresentations.Where(pair => pair.Key.ownerId == entity.Id).ToList())
+            {
+                if (passives.ContainsKey(pair.Key.type) || pair.Value.Phase == ChipAnimationPhase.Exiting) continue;
+                BeginTransition(
+                    pair.Value,
+                    ChipAnimationPhase.Exiting,
+                    0f,
+                    Math.Max(0f, DisappearEndScale),
+                    DisappearSeconds);
+            }
+        }
+
+        private static string BuildLabel(AppliedPassiveType type, int count)
+        {
+            string stacks = ShowStacks(type) ? $"{count} " : string.Empty;
+            return StringUtils.ToTitleCase($"{stacks}{StringUtils.ToSentenceCase(type.ToString())}");
+        }
+
+        private static void BeginTransition(
+            ChipPresentation chip,
+            ChipAnimationPhase phase,
+            float targetAlpha,
+            float targetScale,
+            float duration)
+        {
+            chip.Phase = phase;
+            chip.Elapsed = 0f;
+            chip.Duration = Math.Max(0f, duration);
+            chip.StartAlpha = chip.Alpha;
+            chip.TargetAlpha = targetAlpha;
+            chip.StartScale = chip.Scale;
+            chip.TargetScale = targetScale;
+        }
+
+        private void AdvanceChipPresentations(int ownerId, float dt)
+        {
+            var keys = _chipPresentations.Keys.Where(key => key.ownerId == ownerId).ToList();
+            foreach (var key in keys)
+            {
+                var chip = _chipPresentations[key];
+                if (chip.Phase == ChipAnimationPhase.Visible) continue;
+
+                chip.Elapsed += dt;
+                float progress = chip.Duration <= 0f
+                    ? 1f
+                    : MathHelper.Clamp(chip.Elapsed / chip.Duration, 0f, 1f);
+                float eased = chip.Phase == ChipAnimationPhase.Entering
+                    ? EaseOutCubic(progress)
+                    : EaseInCubic(progress);
+                chip.Alpha = MathHelper.Lerp(chip.StartAlpha, chip.TargetAlpha, eased);
+                chip.Scale = MathHelper.Lerp(chip.StartScale, chip.TargetScale, eased);
+
+                if (progress < 1f) continue;
+                if (chip.Phase == ChipAnimationPhase.Exiting)
+                {
+                    _chipPresentations.Remove(key);
+                }
+                else
+                {
+                    chip.Phase = ChipAnimationPhase.Visible;
+                    chip.Alpha = 1f;
+                    chip.Scale = 1f;
+                }
+            }
+
+            if (_chipPresentations.Keys.All(key => key.ownerId != ownerId))
+            {
+                _nextOrderByOwner.Remove(ownerId);
+            }
+        }
+
+        private void AdvanceRipples(int ownerId, float dt)
+        {
             if (dt <= 0f || _ripples.Count == 0) return;
-            var keys = _ripples.Keys.ToList();
+            var keys = _ripples.Keys.Where(key => key.ownerId == ownerId).ToList();
             foreach (var k in keys)
             {
                 var rp = _ripples[k];
@@ -157,6 +308,18 @@ namespace Crusaders30XX.ECS.Systems
                     _ripples.Remove(k);
                 }
             }
+        }
+
+        private static float EaseOutCubic(float value)
+        {
+            value = MathHelper.Clamp(value, 0f, 1f);
+            return 1f - MathF.Pow(1f - value, 3f);
+        }
+
+        private static float EaseInCubic(float value)
+        {
+            value = MathHelper.Clamp(value, 0f, 1f);
+            return value * value * value;
         }
 
         public void Draw()
@@ -179,19 +342,18 @@ namespace Crusaders30XX.ECS.Systems
                     CleanupTooltipUiForOwner(e.Id, new System.Collections.Generic.HashSet<AppliedPassiveType>());
                     continue;
                 }
-                if (ap.Passives.Count == 0)
-                {
-                    CleanupTooltipUiForOwner(e.Id, new System.Collections.Generic.HashSet<AppliedPassiveType>());
-                    continue;
-                }
 
                 // Anchor baseline at bottom of HP bar if available; else just below entity
                 var passiveAnchor = ResolvePassiveAnchor(e, t, isPlayer);
                 int baseX = passiveAnchor.X;
                 int baseY = passiveAnchor.Y;
 
-                // Render each passive as "<stacks> <Name>" chip, left-to-right centered under entity
-                var items = ap.Passives.Select(kv => new { Type = kv.Key, Count = kv.Value, Label = $"{(ShowStacks(kv.Key) ? $"{kv.Value} " : "")}{StringUtils.ToSentenceCase(kv.Key.ToString())}" }).ToList();
+                // Render live and exiting chips in stable order so the row reflows only after an exit completes.
+                var items = _chipPresentations
+                    .Where(pair => pair.Key.ownerId == e.Id)
+                    .Select(pair => pair.Value)
+                    .OrderBy(item => item.Order)
+                    .ToList();
                 if (items.Count == 0)
                 {
                     CleanupTooltipUiForOwner(e.Id, new System.Collections.Generic.HashSet<AppliedPassiveType>());
@@ -235,6 +397,13 @@ namespace Crusaders30XX.ECS.Systems
                     }
                     // Base chip
                     var chipRect = new Rectangle(x, baseY, w, h);
+                    int animatedWidth = Math.Max(1, (int)Math.Round(w * Math.Max(0f, items[i].Scale)));
+                    int animatedHeight = Math.Max(1, (int)Math.Round(h * Math.Max(0f, items[i].Scale)));
+                    var animatedRect = new Rectangle(
+                        chipRect.Center.X - animatedWidth / 2,
+                        chipRect.Center.Y - animatedHeight / 2,
+                        animatedWidth,
+                        animatedHeight);
 
                     Color chipBg;
                     Color textColor;
@@ -255,10 +424,20 @@ namespace Crusaders30XX.ECS.Systems
                         textColor = Color.White;
                     }
 
-					_spriteBatch.Draw(chipTexture, chipRect, chipBg);
-                    var textPos = new Vector2(x + (w - sizes[i].X) / 2f + TextOffsetX, baseY + (h - sizes[i].Y) / 2f + TextOffsetY);
-                    _spriteBatch.DrawString(_font, StringUtils.ToTitleCase(items[i].Label), textPos, textColor, 0f, Vector2.Zero, TextScale, SpriteEffects.None, 0f);
-                    UpdateTooltipUi(key, chipRect, TooltipTextService.GetPassiveText(items[i].Type, isPlayer, items[i].Count));
+					_spriteBatch.Draw(chipTexture, animatedRect, chipBg * MathHelper.Clamp(items[i].Alpha, 0f, 1f));
+                    Vector2 unscaledTextSize = _font.MeasureString(items[i].Label);
+                    var textCenter = new Vector2(animatedRect.Center.X + TextOffsetX, animatedRect.Center.Y + TextOffsetY);
+                    _spriteBatch.DrawString(
+                        _font,
+                        items[i].Label,
+                        textCenter,
+                        textColor * MathHelper.Clamp(items[i].Alpha, 0f, 1f),
+                        0f,
+                        unscaledTextSize / 2f,
+                        TextScale * Math.Max(0f, items[i].Scale),
+                        SpriteEffects.None,
+                        0f);
+                    UpdateTooltipUi(key, animatedRect, TooltipTextService.GetPassiveText(items[i].Type, isPlayer, items[i].Count));
                     x += w + Spacing;
                 }
                 // Remove any tooltip UI for passives no longer present
@@ -308,7 +487,7 @@ namespace Crusaders30XX.ECS.Systems
                 (int)Math.Round(transform.Position.Y + visualHalfHeight + 20 + OffsetY));
         }
 
-        private Boolean ShowStacks(AppliedPassiveType type)
+        private static bool ShowStacks(AppliedPassiveType type)
         {
             return !(new List<AppliedPassiveType> { AppliedPassiveType.Stealth, AppliedPassiveType.MindFog, AppliedPassiveType.Plunder, AppliedPassiveType.CarpeDiem, AppliedPassiveType.Galvanize }).Contains(type);
         }
@@ -386,6 +565,33 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
         }
+
+        internal bool TryGetChipPresentation(
+            int ownerId,
+            AppliedPassiveType type,
+            out float alpha,
+            out float scale,
+            out bool isExiting)
+        {
+            if (_chipPresentations.TryGetValue((ownerId, type), out var chip))
+            {
+                alpha = chip.Alpha;
+                scale = chip.Scale;
+                isExiting = chip.Phase == ChipAnimationPhase.Exiting;
+                return true;
+            }
+
+            alpha = 0f;
+            scale = 0f;
+            isExiting = false;
+            return false;
+        }
+
+        internal int GetDisplayedChipCount(int ownerId)
+        {
+            return _chipPresentations.Keys.Count(key => key.ownerId == ownerId);
+        }
+
         [DebugAction("Simulate Burn Trigger")]
         public void Debug_SimulateBurnTrigger()
         {

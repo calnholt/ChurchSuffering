@@ -38,7 +38,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (progress == null) return false;
 			if (progress.FullyPreventedBySpecial) return true;
 			if (predictedFinalDamage <= 0) return true;
-			return progress.AssignedBlockTotal >= blockRequired;
+			return DamagePredictionService.GetEffectiveAssignedBlockTotal(progress) >= blockRequired;
 		}
 
 		public static bool Evaluate(ConditionType conditionType, EntityManager entityManager, EnemyAttackProgress progress)
@@ -69,7 +69,7 @@ namespace Crusaders30XX.ECS.Systems
 		private static bool OnHit(EnemyAttackProgress progress)
 		{
 			if (progress == null) return false;
-			return progress.AssignedBlockTotal + progress.AegisTotal >= progress.BaseDamage;
+			return DamagePredictionService.GetEffectiveAssignedBlockTotal(progress) + progress.AegisTotal >= progress.BaseDamage;
 		}
 
 		private static bool OnBlockedByCards(int required, EnemyAttackProgress progress)
@@ -102,5 +102,4 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-
 

@@ -63,7 +63,6 @@ namespace Crusaders30XX.ECS.Events
 	public enum BattlePresentationKind
 	{
 		DamageNumber,
-		DamageSplash,
 	}
 
 	public sealed class BattlePresentationStarted

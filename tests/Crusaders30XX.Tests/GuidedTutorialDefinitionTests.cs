@@ -5,6 +5,7 @@ using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Objects.Equipment;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Systems;
 using Microsoft.Xna.Framework;
@@ -214,6 +215,56 @@ public class GuidedTutorialDefinitionTests
 			Assert.Equal(
 				new Rectangle(420, 530, 300, 36),
 				tutorialManager.GetEntityBounds(PlayerHudLayoutSystem.HealthEntityName));
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Equipment_tutorial_resolves_parent_transformed_equipment_bounds()
+	{
+		EventManager.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			var player = manager.CreateEntity("Player");
+			manager.AddComponent(player, new Player());
+
+			var root = manager.CreateEntity(EquipmentDisplaySystem.RootEntityName);
+			manager.AddComponent(root, new Transform { Position = new Vector2(30, 200) });
+			manager.AddComponent(root, new EquipmentDisplayRoot());
+
+			var equipment = manager.CreateEntity("Equip_Head");
+			var equipmentModel = EquipmentFactory.Create("helm_of_seeing");
+			equipmentModel.Initialize(manager, equipment);
+			manager.AddComponent(equipment, new Transform { Position = Vector2.Zero });
+			manager.AddComponent(equipment, new ParentTransform { Parent = root });
+			manager.AddComponent(equipment, new UIElement { Bounds = new Rectangle(0, 0, 108, 133) });
+			manager.AddComponent(equipment, new EquippedEquipment
+			{
+				EquippedOwner = player,
+				Equipment = equipmentModel,
+			});
+			manager.AddComponent(equipment, new EquipmentZone { Zone = EquipmentZoneType.Default });
+
+			var phaseEntity = manager.CreateEntity("PhaseState");
+			manager.AddComponent(phaseEntity, new PhaseState
+			{
+				Main = MainPhase.PlayerTurn,
+				Sub = SubPhase.Block,
+				TurnNumber = 1,
+			});
+
+			var tutorialManager = new TutorialManager(manager);
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.Block });
+			tutorialManager.Update(new GameTime());
+
+			Assert.Equal("equipment", tutorialManager.ActiveTutorial?.key);
+			Assert.Equal(
+				new Rectangle(30, 200, 108, 133),
+				Assert.Single(tutorialManager.ResolveTargetBounds()));
 		}
 		finally
 		{

@@ -3,8 +3,90 @@ using Microsoft.Xna.Framework;
 
 namespace Crusaders30XX.ECS.Systems
 {
+	internal readonly record struct EnemyAttackEntranceSample(
+		float PanelScaleX,
+		float PanelScaleY,
+		float OrnamentProgress,
+		float SkullScale,
+		float SkullTint,
+		float TextAlpha,
+		float TextOffsetY,
+		float FlashAlpha,
+		float RingOneProgress,
+		float RingTwoProgress);
+
 	internal static class EnemyAttackAnimationService
 	{
+		public const float ImpactMomentSeconds = 0.08f;
+		public const float EntranceCompleteSeconds = 0.36f;
+		public const float PresentationCompleteSeconds = 1.1f;
+
+		public static float ComputeImpactIntensity(int damage)
+		{
+			return 0.25f + 0.75f * MathHelper.Clamp(Math.Max(0, damage) / 20f, 0f, 1f);
+		}
+
+		public static EnemyAttackEntranceSample ComputeEntrance(float elapsed, float intensity)
+		{
+			float safeElapsed = Math.Max(0f, elapsed);
+			float safeIntensity = MathHelper.Clamp(intensity, 0f, 1f);
+			float skullIn = EaseOutBack(WindowProgress(safeElapsed, 0f, 0.11f), 1.35f);
+			float ornament = EaseOutCubic(WindowProgress(safeElapsed, 0f, 0.18f));
+			float open = EaseOutBack(WindowProgress(safeElapsed, 0.06f, 0.18f), 0.7f + safeIntensity * 0.35f);
+			float settle = EaseOutCubic(WindowProgress(safeElapsed, 0.18f, EntranceCompleteSeconds));
+			float panelX = safeElapsed < 0.06f
+				? MathHelper.Lerp(0.15f, 0.22f, ornament)
+				: MathHelper.Lerp(0.15f, 1f, open);
+			panelX = MathHelper.Lerp(panelX, 1f, settle);
+			float panelY = MathHelper.Lerp(0.85f, 1f, EaseOutCubic(WindowProgress(safeElapsed, 0.06f, 0.22f)));
+			float textProgress = EaseOutCubic(WindowProgress(safeElapsed, 0.16f, 0.30f));
+			float flash = 1f - WindowProgress(safeElapsed, ImpactMomentSeconds, 0.16f);
+			if (safeElapsed < ImpactMomentSeconds) flash = 0f;
+
+			return new EnemyAttackEntranceSample(
+				Math.Max(0.01f, panelX),
+				Math.Max(0.01f, panelY),
+				ornament,
+				MathHelper.Lerp(0.65f, 1f, skullIn),
+				1f - WindowProgress(safeElapsed, ImpactMomentSeconds, 0.24f),
+				textProgress,
+				MathHelper.Lerp(10f, 0f, textProgress),
+				MathHelper.Clamp(flash, 0f, 1f),
+				WindowProgress(safeElapsed, ImpactMomentSeconds, 0.45f),
+				WindowProgress(safeElapsed, 0.13f, 0.55f));
+		}
+
+		public static Vector2 ComputeDeterministicRecoil(float elapsed, float duration, float amplitude)
+		{
+			if (duration <= 0f || elapsed < ImpactMomentSeconds || elapsed >= ImpactMomentSeconds + duration || amplitude <= 0f)
+				return Vector2.Zero;
+
+			float t = MathHelper.Clamp((elapsed - ImpactMomentSeconds) / duration, 0f, 1f);
+			float envelope = (1f - t) * (1f - t);
+			float x = MathF.Sin(t * MathHelper.TwoPi * 3.25f) * amplitude * envelope;
+			float y = MathF.Sin(t * MathHelper.TwoPi * 4.5f + 0.7f) * amplitude * 0.3f * envelope;
+			return new Vector2(x, y);
+		}
+
+		public static float ComputeIdlePulse(float elapsed)
+		{
+			return 1f + MathF.Sin(Math.Max(0f, elapsed) * MathHelper.TwoPi * 1.5f) * 0.015f;
+		}
+
+		private static float WindowProgress(float elapsed, float start, float end)
+		{
+			if (end <= start) return elapsed >= end ? 1f : 0f;
+			return MathHelper.Clamp((elapsed - start) / (end - start), 0f, 1f);
+		}
+
+		private static float EaseOutCubic(float t) => 1f - MathF.Pow(1f - MathHelper.Clamp(t, 0f, 1f), 3f);
+
+		private static float EaseOutBack(float t, float overshoot)
+		{
+			float x = MathHelper.Clamp(t, 0f, 1f) - 1f;
+			return 1f + (overshoot + 1f) * x * x * x + overshoot * x * x;
+		}
+
 		/// <summary>
 		/// Computes the absorb tween (panel shrinking toward enemy) during EnemyAttack phase.
 		/// Returns the interpolated position and remaining panel scale (1 -> 0).

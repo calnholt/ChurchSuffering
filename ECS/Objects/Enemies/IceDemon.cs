@@ -24,8 +24,8 @@ namespace Crusaders30XX.ECS.Objects.Enemies
     public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
     {
       var cardsInHandEntities = GetComponentHelper.GetHandOfCards(entityManager);
-      var frozenCardsInHand = cardsInHandEntities.Select(c => c.GetComponent<Frozen>()).ToList();
-      if (frozenCardsInHand.Count > 1 && Random.Shared.Next(0, 100) <= 75)
+      int frozenCardsInHand = cardsInHandEntities?.Count(c => c.HasComponent<Frozen>()) ?? 0;
+      if (frozenCardsInHand > 1 && Random.Shared.Next(0, 100) <= 75)
       {
         return [EnemyAttackId.FrostEater];
       }
@@ -93,16 +93,15 @@ public class FrostEater : EnemyAttackBase
 
     ProgressOverride = (entityManager) =>
     {
-      Console.WriteLine("Frost Eater: ProgressOverride");
-      var p = entityManager.GetEntitiesWithComponent<EnemyAttackProgress>().FirstOrDefault().GetComponent<EnemyAttackProgress>();
+      var p = entityManager.GetEntitiesWithComponent<EnemyAttackProgress>()
+        .FirstOrDefault()?
+        .GetComponent<EnemyAttackProgress>();
+      if (p == null) return false;
+
       var assignedFrozenBlockCards = entityManager.GetEntitiesWithComponent<AssignedBlockCard>()
               .Where(e => !e.GetComponent<AssignedBlockCard>().IsEquipment && e.GetComponent<Frozen>() != null)
               .ToList();
-      if (assignedFrozenBlockCards.Count > 0)
-      {
-        p.AssignedBlockTotal -= 1;
-        return false;
-      }
+      p.EffectiveAssignedBlockTotal = Math.Max(0, p.AssignedBlockTotal - assignedFrozenBlockCards.Count);
       return false;
     };
   }

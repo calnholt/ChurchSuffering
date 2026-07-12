@@ -95,37 +95,37 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
         protected static VisualEffectRecipe PlayerAttackEffect()
         {
-            return new VisualEffectRecipe();
+            return VisualEffectPresets.PlayerAttack();
         }
 
         protected static VisualEffectRecipe PlayerBuffEffect()
         {
-            return new VisualEffectRecipe();
+            return VisualEffectPresets.PlayerBuff();
         }
 
         protected static VisualEffectRecipe LightSlashEffect()
         {
-            return new VisualEffectRecipe();
+            return VisualEffectPresets.LightSlash();
         }
 
         protected static VisualEffectRecipe HeavyHammerEffect()
         {
-            return new VisualEffectRecipe();
+            return VisualEffectPresets.HeavyHammer();
         }
 
         protected static VisualEffectRecipe HolyStrikeEffect()
         {
-            return new VisualEffectRecipe();
+            return VisualEffectPresets.HolyStrike();
         }
 
         protected static VisualEffectRecipe HolySupportEffect()
         {
-            return new VisualEffectRecipe();
+            return VisualEffectPresets.HolySupport();
         }
 
         protected static VisualEffectRecipe DefensiveGuardEffect()
         {
-            return new VisualEffectRecipe();
+            return VisualEffectPresets.DefensiveGuard();
         }
 
         public virtual void Initialize(EntityManager entityManager, Entity cardEntity)

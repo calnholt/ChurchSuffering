@@ -31,8 +31,38 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		Cracks,
 		HitFlash,
 		Shake,
+		TargetShake,
 		PunchZoom,
-		HitStop
+		HitStop,
+		ArrowShot,
+		ThrownBladeVolley,
+		EnergyBolt,
+		SpinSlash,
+		FlameBurst,
+		FrostBurst,
+		ShadowTendrils,
+		PoisonCloud,
+		ShieldWard,
+		ShieldShatter,
+		SoulSiphon,
+		ResourceMotes,
+		SealStamp,
+		FrostBind,
+		BrittleFracture,
+		ColorDrain
+	}
+
+	public enum VisualEffectPalette
+	{
+		Physical,
+		Holy,
+		Blood,
+		Fire,
+		Ice,
+		Shadow,
+		Earth,
+		Poison,
+		Arcane
 	}
 
 	public enum VisualEffectTimingProfile
@@ -74,6 +104,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public VisualEffectTargetRole TargetRole { get; init; } = VisualEffectTargetRole.Enemy;
 		public float Intensity { get; init; } = 1f;
 		public float ParticleMultiplier { get; init; } = 1f;
+		public VisualEffectPalette Palette { get; init; } = VisualEffectPalette.Physical;
 		public IReadOnlyList<VisualEffectModule> Modules => _modules;
 		public SfxTrack StartSfx { get; init; } = SfxTrack.None;
 		public SfxTrack ImpactSfx { get; init; } = SfxTrack.None;
@@ -91,6 +122,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			TargetRole = source.TargetRole;
 			Intensity = source.Intensity;
 			ParticleMultiplier = source.ParticleMultiplier;
+			Palette = source.Palette;
 			StartSfx = source.StartSfx;
 			ImpactSfx = source.ImpactSfx;
 			StartSfxVolume = source.StartSfxVolume;
@@ -113,6 +145,11 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public VisualEffectRecipe WithParticleMultiplier(float particleMultiplier)
 		{
 			return Copy(particleMultiplier: particleMultiplier);
+		}
+
+		public VisualEffectRecipe WithPalette(VisualEffectPalette palette)
+		{
+			return Copy(palette: palette);
 		}
 
 		public VisualEffectRecipe WithTarget(VisualEffectTargetRole targetRole)
@@ -146,6 +183,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			VisualEffectTargetRole? targetRole = null,
 			float? intensity = null,
 			float? particleMultiplier = null,
+			VisualEffectPalette? palette = null,
 			SfxTrack? startSfx = null,
 			SfxTrack? impactSfx = null,
 			float? startSfxVolume = null,
@@ -160,6 +198,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				TargetRole = targetRole ?? TargetRole,
 				Intensity = intensity ?? Intensity,
 				ParticleMultiplier = particleMultiplier ?? ParticleMultiplier,
+				Palette = palette ?? Palette,
 				StartSfx = startSfx ?? StartSfx,
 				ImpactSfx = impactSfx ?? ImpactSfx,
 				StartSfxVolume = startSfxVolume ?? StartSfxVolume,
@@ -195,6 +234,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public float HitStopDurationSeconds { get; init; }
 		public float Intensity { get; init; } = 1f;
 		public float ParticleMultiplier { get; init; } = 1f;
+		public VisualEffectPalette Palette { get; init; } = VisualEffectPalette.Physical;
 		public IReadOnlyList<VisualEffectModule> Modules => _modules;
 		public SfxTrack StartSfx { get; init; } = SfxTrack.None;
 		public SfxTrack ImpactSfx { get; init; } = SfxTrack.None;
@@ -217,6 +257,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				HitStopDurationSeconds = HitStopDurationSeconds,
 				Intensity = Intensity,
 				ParticleMultiplier = ParticleMultiplier,
+				Palette = Palette,
 				StartSfx = StartSfx,
 				ImpactSfx = ImpactSfx,
 				StartSfxVolume = StartSfxVolume,
@@ -237,6 +278,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				TargetRole = TargetRole,
 				Intensity = Intensity,
 				ParticleMultiplier = ParticleMultiplier,
+				Palette = Palette,
 				StartSfx = StartSfx,
 				ImpactSfx = ImpactSfx,
 				StartSfxVolume = StartSfxVolume,

@@ -135,7 +135,7 @@ public class EnemyPhaseFlowSystemTests
 	}
 
 	[Fact]
-	public void Phase_dialogue_waits_for_all_lethal_damage_presentations()
+	public void Phase_dialogue_waits_for_damage_number_presentation()
 	{
 		EventManager.Clear();
 		EventQueue.Clear();
@@ -150,12 +150,6 @@ public class EnemyPhaseFlowSystemTests
 			DialogueSequenceRequested request = null;
 			EventManager.Subscribe<DialogueSequenceRequested>(evt => request = evt);
 
-			EventManager.Publish(new BattlePresentationStarted
-			{
-				PresentationId = presentationId,
-				Target = enemy,
-				Kind = BattlePresentationKind.DamageSplash,
-			});
 			EventManager.Publish(new BattlePresentationStarted
 			{
 				PresentationId = presentationId,
@@ -176,15 +170,7 @@ public class EnemyPhaseFlowSystemTests
 			{
 				PresentationId = Guid.NewGuid(),
 				Target = enemy,
-				Kind = BattlePresentationKind.DamageSplash,
-			});
-			Assert.Null(request);
-
-			EventManager.Publish(new BattlePresentationCompleted
-			{
-				PresentationId = presentationId,
-				Target = enemy,
-				Kind = BattlePresentationKind.DamageSplash,
+				Kind = BattlePresentationKind.DamageNumber,
 			});
 			Assert.Null(request);
 

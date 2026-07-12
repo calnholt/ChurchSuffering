@@ -40,7 +40,7 @@ public class TutorialHordeStrike : EnemyAttackBase
 {
   public TutorialHordeStrike()
   {
-    Id = EnemyAttackId.TutorialHordeStrike9;
+    Id = EnemyAttackId.TutorialHordeStrike;
     Name = "Pounce";
     Damage = 9;
     GuardConversionChance = 0f;

@@ -102,13 +102,14 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var particles = new List<Particle>();
 			var random = new Random(new VisualEffectVariation(effect).Seed);
-			AddJaggedParticles(effect, VisualEffectModule.Shards, ParticleKind.Shard, 16, particles, random);
-			AddJaggedParticles(effect, VisualEffectModule.Debris, ParticleKind.Debris, 18, particles, random);
-			AddSmokeParticles(effect, 11, particles, random);
+			var colors = VisualEffectPaletteResolver.Resolve(effect.Recipe.Palette);
+			AddJaggedParticles(effect, VisualEffectModule.Shards, ParticleKind.Shard, 16, particles, random, colors);
+			AddJaggedParticles(effect, VisualEffectModule.Debris, ParticleKind.Debris, 18, particles, random, colors);
+			AddSmokeParticles(effect, 11, particles, random, colors);
 			return particles;
 		}
 
-		private void AddJaggedParticles(ActiveVisualEffect effect, VisualEffectModule module, ParticleKind kind, int baseCount, List<Particle> particles, Random random)
+		private void AddJaggedParticles(ActiveVisualEffect effect, VisualEffectModule module, ParticleKind kind, int baseCount, List<Particle> particles, Random random, VisualEffectColors colors)
 		{
 			if (!effect.Recipe.Modules.Contains(module)) return;
 			int count = Math.Max(0, (int)Math.Round(baseCount * effect.Recipe.ParticleMultiplier));
@@ -131,12 +132,14 @@ namespace Crusaders30XX.ECS.Systems
 					Offset = offset,
 					Rotation = MathHelper.ToRadians(RandomRange(random, -240f, 240f)),
 					Scale = RandomRange(random, 0.72f, 1.75f),
-					Color = kind == ParticleKind.Shard ? RedBright : DebrisColor
+					Color = kind == ParticleKind.Shard ? colors.Primary : colors.Shadow,
+					Highlight = colors.Highlight,
+					Glow = colors.Glow
 				});
 			}
 		}
 
-		private void AddSmokeParticles(ActiveVisualEffect effect, int baseCount, List<Particle> particles, Random random)
+		private void AddSmokeParticles(ActiveVisualEffect effect, int baseCount, List<Particle> particles, Random random, VisualEffectColors colors)
 		{
 			if (!effect.Recipe.Modules.Contains(VisualEffectModule.SmokeBlobs)) return;
 			int count = Math.Max(0, (int)Math.Round(baseCount * effect.Recipe.ParticleMultiplier));
@@ -152,7 +155,9 @@ namespace Crusaders30XX.ECS.Systems
 						RandomRange(random, -150f, -48f)),
 					Rotation = 0f,
 					Scale = RandomRange(random, 1.0f, 1.72f),
-					Color = SmokeColor
+					Color = colors.Smoke,
+					Highlight = colors.Highlight,
+					Glow = colors.Glow
 				});
 			}
 		}
@@ -169,12 +174,12 @@ namespace Crusaders30XX.ECS.Systems
 			var mask = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 22, 34, "modular_fx_jagged_particle", JaggedParticleMask);
 			if (particle.Kind == ParticleKind.Debris)
 			{
-				DrawMask(mask, pos, Cream * (alpha * 0.14f), rotation, new Vector2(scale * 1.16f));
+				DrawMask(mask, pos, particle.Glow * (alpha * 0.14f), rotation, new Vector2(scale * 1.16f));
 			}
 			DrawMask(mask, pos, particle.Color * alpha, rotation, new Vector2(scale));
 			if (particle.Kind == ParticleKind.Shard)
 			{
-				DrawMask(mask, pos, Cream * (alpha * 0.52f), rotation, new Vector2(scale * 0.48f));
+				DrawMask(mask, pos, particle.Highlight * (alpha * 0.52f), rotation, new Vector2(scale * 0.48f));
 			}
 		}
 
@@ -188,7 +193,7 @@ namespace Crusaders30XX.ECS.Systems
 			int diameter = Math.Max(1, (int)MathF.Round(48f * scale));
 			var smoke = PrimitiveTextureFactory.GetSoftRadialCircle(_graphicsDevice, diameter, 0f, 0.86f);
 			DrawMask(smoke, pos, particle.Color * alpha, 0f, Vector2.One);
-			DrawMask(smoke, pos, new Color(116, 18, 32) * (alpha * 0.28f), 0f, new Vector2(1.18f));
+			DrawMask(smoke, pos, particle.Glow * (alpha * 0.22f), 0f, new Vector2(1.18f));
 		}
 
 		private void DrawMask(Texture2D texture, Vector2 center, Color color, float rotation, Vector2 scale)
@@ -209,6 +214,8 @@ namespace Crusaders30XX.ECS.Systems
 			public float Rotation;
 			public float Scale;
 			public Color Color;
+			public Color Highlight;
+			public Color Glow;
 		}
 	}
 }

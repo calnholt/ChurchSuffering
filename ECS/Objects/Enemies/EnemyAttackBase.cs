@@ -47,22 +47,22 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
 
     protected static VisualEffectRecipe EnemySlashEffect()
     {
-      return new VisualEffectRecipe();
+      return VisualEffectPresets.EnemySlash();
     }
 
     protected static VisualEffectRecipe EnemyClawSlashEffect()
     {
-      return new VisualEffectRecipe();
+      return VisualEffectPresets.EnemyClawSlash();
     }
 
     protected static VisualEffectRecipe EnemyBiteEffect()
     {
-      return new VisualEffectRecipe();
+      return VisualEffectPresets.EnemyBite();
     }
 
     protected static VisualEffectRecipe EnemyRockBlastEffect()
     {
-      return new VisualEffectRecipe();
+      return VisualEffectPresets.EnemyRockBlast();
     }
 
     public virtual int RollGuardConversion(int damage)

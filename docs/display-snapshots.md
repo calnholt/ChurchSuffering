@@ -60,6 +60,7 @@ to the fixture.
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
+| `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
 | `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
@@ -105,6 +106,23 @@ dotnet run -- snapshot enemy-damage-meter absorb --verify
 ```
 
 Approved images are `initial.png`, `transition.png`, `settled.png`, and `absorb.png` under `tests/VisualBaselines/enemy-damage-meter/`. Unknown variants or extra arguments exit with code `1` without producing a PNG.
+
+---
+
+## `enemy-attack-banner`
+
+Renders the production enemy attack banner against the gothic battle background with a fixed damage-15 attack and deterministic attack sequence. Variants cover the entrance anticipation, impact burst, settled state, confirm hover feedback, and absorb exit.
+
+```bash
+dotnet run -- snapshot enemy-attack-banner anticipation --verify
+dotnet run -- snapshot enemy-attack-banner impact --verify
+dotnet run -- snapshot enemy-attack-banner settled --verify
+dotnet run -- snapshot enemy-attack-banner hover --verify
+dotnet run -- snapshot enemy-attack-banner absorb --verify
+./scripts/verify-enemy-attack-banner-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
 
 ---
 
@@ -330,6 +348,8 @@ dotnet run -- snapshot modular-fx enemy-bite impact
 # Isolated module with deterministic organic variation and direction
 dotnet run -- snapshot modular-fx --module cracks --sample impact --seed 1337 --direction right
 dotnet run -- snapshot modular-fx --module slash-band --sample impact --seed 1337 --direction left
+dotnet run -- snapshot modular-fx --module energy-bolt --sample impact --palette fire --direction right
+dotnet run -- snapshot modular-fx --module seal-stamp --sample impact --palette arcane --target card
 ```
 
 Preset tokens: `heavy-hammer`, `holy-strike`, `enemy-rock-blast`, `enemy-bite`, `enemy-slash`, `light-slash`.
@@ -344,10 +364,12 @@ Isolated-module options:
 | `--sample` | `start`, `impact`, `late` | `impact` |
 | `--seed` | Any signed 32-bit integer | `1337` |
 | `--direction` | `right`, `left` | Derived from the recipe target |
+| `--palette` | `physical`, `holy`, `blood`, `fire`, `ice`, `shadow`, `earth`, `poison`, `arcane` | Module debug-catalog palette |
+| `--target` | `actor`, `card` | `actor` |
 
-The seed controls cracks, debris, shards, smoke, rays, and rock fragments. The same seed reproduces the same geometry. Run `./scripts/verify-modular-fx-snapshots.sh --verify` to check the representative preset and isolated-module matrix; use `--accept` only for intentional visual changes.
+The seed controls cracks, debris, shards, smoke, rays, rock fragments, poison clouds, and other organic variation. The same seed reproduces the same geometry. Run `./scripts/verify-modular-fx-snapshots.sh --verify` to check the representative preset, palette, actor-target, and card-target matrix; use `--accept` only for intentional visual changes.
 
-Output: `debug/snapshots/modular-fx/<preset>-<sample>.png` for existing preset commands, or `debug/snapshots/modular-fx/module-<module>-<sample>-<direction>-seed-<seed>.png` for isolated modules.
+Output: `debug/snapshots/modular-fx/<preset>-<sample>.png` for preset commands, or `debug/snapshots/modular-fx/module-<module>-<sample>-<direction>-seed-<seed>[-<palette>][-card].png` for isolated modules.
 
 ---
 
@@ -420,6 +442,8 @@ dotnet run -- snapshot player-hud enemy-health
 
 The `enemy-health` variant renders the enemy full health region in isolation;
 the player HUD is placed outside the capture to avoid cursor-driven parallax.
+Passive-chip animation durations are disabled in this fixture so the approved
+images always capture Chakra Petch labels in their settled layout.
 The verification script is read-only by default. `--accept` explicitly
 replaces all six approved baselines.
 
