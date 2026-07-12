@@ -438,6 +438,8 @@ dotnet run -- snapshot player-hud enemy-health
 
 The `enemy-health` variant renders the enemy full health region in isolation;
 the player HUD is placed outside the capture to avoid cursor-driven parallax.
+Passive-chip animation durations are disabled in this fixture so the approved
+images always capture Chakra Petch labels in their settled layout.
 The verification script is read-only by default. `--accept` explicitly
 replaces all six approved baselines.
 

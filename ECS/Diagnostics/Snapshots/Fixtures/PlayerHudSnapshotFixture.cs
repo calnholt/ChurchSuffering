@@ -242,7 +242,11 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_passivesDisplay = new AppliedPassivesDisplaySystem(
 				ctx.World.EntityManager,
 				ctx.GraphicsDevice,
-				ctx.SpriteBatch);
+				ctx.SpriteBatch)
+			{
+				AppearSeconds = 0f,
+				DisappearSeconds = 0f,
+			};
 
 			ctx.World.AddSystem(layout);
 			ctx.World.AddSystem(feedback);
