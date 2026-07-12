@@ -60,6 +60,7 @@ to the fixture.
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
+| `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
 | `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
@@ -105,6 +106,23 @@ dotnet run -- snapshot enemy-damage-meter absorb --verify
 ```
 
 Approved images are `initial.png`, `transition.png`, `settled.png`, and `absorb.png` under `tests/VisualBaselines/enemy-damage-meter/`. Unknown variants or extra arguments exit with code `1` without producing a PNG.
+
+---
+
+## `enemy-attack-banner`
+
+Renders the production enemy attack banner against the gothic battle background with a fixed damage-15 attack and deterministic attack sequence. Variants cover the entrance anticipation, impact burst, settled state, confirm hover feedback, and absorb exit.
+
+```bash
+dotnet run -- snapshot enemy-attack-banner anticipation --verify
+dotnet run -- snapshot enemy-attack-banner impact --verify
+dotnet run -- snapshot enemy-attack-banner settled --verify
+dotnet run -- snapshot enemy-attack-banner hover --verify
+dotnet run -- snapshot enemy-attack-banner absorb --verify
+./scripts/verify-enemy-attack-banner-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
 
 ---
 

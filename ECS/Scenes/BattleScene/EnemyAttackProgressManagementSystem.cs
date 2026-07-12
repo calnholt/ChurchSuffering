@@ -79,7 +79,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void PrintProgress(EnemyAttackProgress p)
 		{
-			LoggingService.Append("EnemyAttackProgressManagementSystem.PrintProgress", new System.Text.Json.Nodes.JsonObject { ["attackSequence"] = p.AttackSequence, ["playedCards"] = p.PlayedCards, ["playedRed"] = p.PlayedRed, ["playedWhite"] = p.PlayedWhite, ["playedBlack"] = p.PlayedBlack, ["assignedBlockTotal"] = p.AssignedBlockTotal, ["additionalConditionalDamageTotal"] = p.AdditionalConditionalDamageTotal, ["isConditionMet"] = p.IsConditionMet, ["actualDamage"] = p.ActualDamage, ["preventedDamage"] = p.AegisTotal, ["baseDamage"] = p.BaseDamage, ["totalPreventedDamage"] = p.TotalPreventedDamage });
+			LoggingService.Append("EnemyAttackProgressManagementSystem.PrintProgress", new System.Text.Json.Nodes.JsonObject { ["attackSequence"] = p.AttackSequence, ["playedCards"] = p.PlayedCards, ["playedRed"] = p.PlayedRed, ["playedWhite"] = p.PlayedWhite, ["playedBlack"] = p.PlayedBlack, ["assignedBlockTotal"] = p.AssignedBlockTotal, ["effectiveAssignedBlockTotal"] = p.EffectiveAssignedBlockTotal, ["additionalConditionalDamageTotal"] = p.AdditionalConditionalDamageTotal, ["isConditionMet"] = p.IsConditionMet, ["actualDamage"] = p.ActualDamage, ["preventedDamage"] = p.AegisTotal, ["baseDamage"] = p.BaseDamage, ["totalPreventedDamage"] = p.TotalPreventedDamage });
 		}
 
 		[DebugAction("Print Progress")]
@@ -164,6 +164,7 @@ namespace Crusaders30XX.ECS.Systems
 			p.IgnoresAegis = def.IgnoresAegis;
 			int aegis = p.IgnoresAegis ? 0 : Math.Max(0, p.AegisTotal);
 			p.DamageBeforePrevention = full;
+			p.EffectiveAssignedBlockTotal = Math.Max(0, p.AssignedBlockTotal);
 
 			bool specialEffectExecuted = def.ProgressOverride != null ? def.ProgressOverride(EntityManager) : false;
 			if (specialEffectExecuted) return;
@@ -171,7 +172,8 @@ namespace Crusaders30XX.ECS.Systems
 			p.AdditionalConditionalDamageTotal = 0;
 			p.BaseDamage = def.Damage;
 			bool isConditionMet = ConditionService.Evaluate(def.ConditionType, EntityManager, p);
-			int reduced = aegis + p.AssignedBlockTotal;
+			int effectiveAssignedBlock = DamagePredictionService.GetEffectiveAssignedBlockTotal(p);
+			int reduced = aegis + effectiveAssignedBlock;
 			int actual = Math.Max(full - reduced, 0);
 
 			if (def.BlockRequiredToPreventEffect is int blockRequired)
@@ -182,7 +184,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			p.IsConditionMet = isConditionMet;
 			p.ActualDamage = actual;
-			p.TotalPreventedDamage = aegis + p.AssignedBlockTotal;
+			p.TotalPreventedDamage = aegis + effectiveAssignedBlock;
 			p.FullyPreventedBySpecial = false;
 
 			try

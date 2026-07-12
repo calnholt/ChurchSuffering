@@ -26,7 +26,6 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ImageAssetService _imageAssets;
-		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _contentFont = FontSingleton.ContentFont;
 		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
 		private readonly Texture2D _pixel;
@@ -34,6 +33,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly Texture2D _enemyAttackCornerBrTexture;
 		private readonly Texture2D _enemyAttackTopTexture;
 		private readonly Texture2D _enemyAttackSkullTexture;
+		private readonly Texture2D _panelAuraTexture;
 
 		// Confirm button texture cache
 		private Texture2D _cachedConfirmTexture;
@@ -45,13 +45,15 @@ namespace Crusaders30XX.ECS.Systems
 
 		// Animation state
 		private int _lastAttackSequence = -1;
-		private float _shakeElapsedSeconds = 0f;
-
-		// Impact animation flow (spawn centered -> impact)
+		// Impact animation flow (anticipation -> impact -> settle)
 		private bool _impactActive = false;
-		private float _squashElapsedSeconds = 0f;
-		private float _flashElapsedSeconds = 0f;
-		private float _craterElapsedSeconds = 0f;
+		private bool _impactMomentFired = false;
+		private float _impactElapsedSeconds = 0f;
+		private float _impactIntensity = 0.25f;
+		private float _idleElapsedSeconds = 0f;
+		private int _impactDamage = 0;
+		private SubPhase _lastPresentationPhase = SubPhase.StartBattle;
+		private EnemyAttackEntranceSample _entranceSample;
 
 		// Prevent repeated confirm presses for the same attack context
 		private readonly HashSet<int> _confirmedAttackSequences = [];
@@ -154,7 +156,7 @@ namespace Crusaders30XX.ECS.Systems
 		public float FlashDurationSeconds { get; set; } = 0.12f;
 
 		[DebugEditable(DisplayName = "Impact Flash Max Alpha", Step = 5, Min = 0, Max = 255)]
-		public int FlashMaxAlpha { get; set; } = 180;
+		public int FlashMaxAlpha { get; set; } = 110;
 
 		[DebugEditable(DisplayName = "Crater Duration (s)", Step = 0.02f, Min = 0f, Max = 1.5f)]
 		public float CraterDurationSeconds { get; set; } = 0.45f;
@@ -164,6 +166,21 @@ namespace Crusaders30XX.ECS.Systems
 
 		[DebugEditable(DisplayName = "Crater Max Alpha", Step = 5, Min = 0, Max = 255)]
 		public int CraterMaxAlpha { get; set; } = 120;
+
+		[DebugEditable(DisplayName = "Ring Two Delay (s)", Step = 0.01f, Min = 0f, Max = 0.5f)]
+		public float RingTwoDelaySeconds { get; set; } = 0.05f;
+
+		[DebugEditable(DisplayName = "Panel Aura Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float PanelAuraAlpha { get; set; } = 0.22f;
+
+		[DebugEditable(DisplayName = "Ornament Slide (px)", Step = 1, Min = 0, Max = 100)]
+		public int OrnamentSlidePx { get; set; } = 24;
+
+		[DebugEditable(DisplayName = "Confirm Hover Scale", Step = 0.01f, Min = 1f, Max = 1.3f)]
+		public float ConfirmHoverScale { get; set; } = 1.04f;
+
+		[DebugEditable(DisplayName = "Absorb Afterimage Count", Step = 1, Min = 0, Max = 8)]
+		public int AbsorbAfterimageCount { get; set; } = 3;
 
 		// Impact shockwave
 		[DebugEditable(DisplayName = "Impact Shockwave Enabled")]
@@ -223,18 +240,18 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Confirm Button Z", Step = 10, Min = -100000, Max = 100000)]
 		public int ConfirmButtonZ { get; set; } = 20000;
 
-		// Debris
-		[DebugEditable(DisplayName = "Debris Count", Step = 1, Min = 0, Max = 100)]
-		public int DebrisCount { get; set; } = 100;
+		// Impact particles
+		[DebugEditable(DisplayName = "Particle Count Min", Step = 1, Min = 0, Max = 200)]
+		public int ParticleCountMin { get; set; } = 24;
 
-		[DebugEditable(DisplayName = "Debris Speed Min", Step = 5, Min = 0, Max = 600)]
-		public int DebrisSpeedMin { get; set; } = 210;
+		[DebugEditable(DisplayName = "Particle Count Max", Step = 1, Min = 0, Max = 300)]
+		public int ParticleCountMax { get; set; } = 64;
 
-		[DebugEditable(DisplayName = "Debris Speed Max", Step = 5, Min = 0, Max = 800)]
-		public int DebrisSpeedMax { get; set; } = 420;
+		[DebugEditable(DisplayName = "Particle Gravity", Step = 10f, Min = -1000f, Max = 2000f)]
+		public float ParticleGravity { get; set; } = 430f;
 
-		[DebugEditable(DisplayName = "Debris Lifetime (s)", Step = 0.05f, Min = 0f, Max = 2f)]
-		public float DebrisLifetimeSeconds { get; set; } = 0.8f;
+		[DebugEditable(DisplayName = "Particle Drag", Step = 0.01f, Min = 0.8f, Max = 1f)]
+		public float ParticleDrag { get; set; } = 0.985f;
 
 		public EnemyAttackDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(em)
 		{
@@ -246,6 +263,7 @@ namespace Crusaders30XX.ECS.Systems
 			_enemyAttackCornerBrTexture = TryLoadDecorationTexture("enemy_attack_br");
 			_enemyAttackTopTexture = TryLoadDecorationTexture("enemy_attack_top");
 			_enemyAttackSkullTexture = TryLoadDecorationTexture("enemy_attack_skull");
+			_panelAuraTexture = PrimitiveTextureFactory.GetSoftRadialCircle(_graphicsDevice, 512, 0.2f, 1f);
 
 			EventManager.Subscribe<ConfirmBlocksRequested>(_ =>
 			{
@@ -256,6 +274,9 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				ClearAttackDisplayState();
 				HideConfirmButton();
+				_cachedConfirmTexture?.Dispose();
+				_cachedConfirmTexture = null;
+				_cachedConfirmText = null;
 			});
 
 			// Clear any transient visuals when leaving Enemy phases
@@ -295,10 +316,16 @@ namespace Crusaders30XX.ECS.Systems
 			EntityManager.AddComponent(primaryBtn, new Transform{});
 			EntityManager.AddComponent(primaryBtn, new UIElement { IsInteractable = true, EventType = UIElementEventType.ConfirmBlocks });
 			EntityManager.AddComponent(primaryBtn, new HotKey { Button = FaceButton.Y });
-			var parallaxLayer = ParallaxLayer.GetUIParallaxLayer();
-			parallaxLayer.MultiplierX = 0.045f;
-			parallaxLayer.MultiplierY = 0.045f;
-			EntityManager.AddComponent(primaryBtn, parallaxLayer);
+			EnsureConfirmTexture();
+		}
+
+		private void EnsureConfirmTexture()
+		{
+			const string label = "Confirm";
+			if (_cachedConfirmTexture != null && _cachedConfirmText == label) return;
+			_cachedConfirmTexture?.Dispose();
+			_cachedConfirmTexture = ButtonTextureFactory.Create(_graphicsDevice, label, Color.White, Color.DarkRed);
+			_cachedConfirmText = label;
 		}
 
 		private void OnConfirmPressed()
@@ -424,13 +451,19 @@ namespace Crusaders30XX.ECS.Systems
 		private void ClearAttackDisplayState()
 		{
 			_impactActive = false;
+			_impactMomentFired = false;
+			_impactElapsedSeconds = 0f;
 			_absorbElapsedSeconds = 0f;
 			_absorbCompleteFired = false;
 			_lastAttackSequence = -1;
 			_confirmedAttackSequences.Clear();
 			ClearPendingConfirm();
-			_debris.Clear();
+			_particles.Clear();
+			_absorbEmbers.Clear();
 			_showBanner = false;
+			var presentation = EntityManager.GetEntitiesWithComponent<EnemyAttackBannerPresentation>()
+				.FirstOrDefault()?.GetComponent<EnemyAttackBannerPresentation>();
+			if (presentation != null) presentation.IsVisible = false;
 			ResetAnchorBounds();
 			if (_attackTextTooltipEntity != null)
 			{
@@ -470,13 +503,12 @@ namespace Crusaders30XX.ECS.Systems
 		private void StartImpactSequence(int attackDamage)
 		{
 			_impactActive = true;
-			_squashElapsedSeconds = 0f;
-			_flashElapsedSeconds = 0f;
-			_craterElapsedSeconds = 0f;
-			_shakeElapsedSeconds = 0f;
-			_debris.Clear();
-			SpawnDebris();
-			PublishImpactShockwave(Math.Max(0, attackDamage));
+			_impactMomentFired = false;
+			_impactElapsedSeconds = 0f;
+			_impactDamage = Math.Max(0, attackDamage);
+			_impactIntensity = EnemyAttackAnimationService.ComputeImpactIntensity(_impactDamage);
+			_entranceSample = EnemyAttackAnimationService.ComputeEntrance(0f, _impactIntensity);
+			_particles.Clear();
 		}
 
 		private void PublishImpactShockwave(int attackDamage)
@@ -506,18 +538,11 @@ namespace Crusaders30XX.ECS.Systems
 
 		private Vector2 CalculateImpactShockwaveCenter()
 		{
-			EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out var enemy, out _, out var plannedAttack);
-			var phase = GetPhaseState();
-			var def = plannedAttack?.AttackDefinition;
-			if (enemy != null && def != null && phase != null && _contentFont != null && _bodyFont != null)
+			var presentation = EntityManager.GetEntitiesWithComponent<EnemyAttackBannerPresentation>()
+				.FirstOrDefault()?.GetComponent<EnemyAttackBannerPresentation>();
+			if (presentation != null && presentation.RenderBounds.Width > 0 && presentation.RenderBounds.Height > 0)
 			{
-				Rectangle impactRect = CalculateBannerRect(enemy, phase.Sub, def);
-				if (impactRect.Width > 0 && impactRect.Height > 0)
-				{
-					return new Vector2(
-						impactRect.X + impactRect.Width / 2f,
-						impactRect.Y + impactRect.Height / 2f);
-				}
+				return new Vector2(presentation.RenderBounds.Center.X, presentation.RenderBounds.Center.Y);
 			}
 
 			return new Vector2(
@@ -583,7 +608,8 @@ namespace Crusaders30XX.ECS.Systems
 				_impactActive = false;
 				_lastAttackSequence = -1;
 				ClearPendingConfirm();
-				_debris.Clear();
+				_particles.Clear();
+				_absorbEmbers.Clear();
 				// Cleanup tooltip entity when no attack is planned
 				if (_attackTextTooltipEntity != null)
 				{
@@ -610,17 +636,36 @@ namespace Crusaders30XX.ECS.Systems
 			UpdateConfirmAvailability(phaseNow, currentSequence);
 
 			float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+			_idleElapsedSeconds += dt;
 			if (_impactActive)
 			{
-				_squashElapsedSeconds += dt;
-				_flashElapsedSeconds += dt;
-				_craterElapsedSeconds += dt;
-				_shakeElapsedSeconds += dt;
-				UpdateDebris(dt);
+				float previousElapsed = _impactElapsedSeconds;
+				_impactElapsedSeconds += dt;
+				_entranceSample = EnemyAttackAnimationService.ComputeEntrance(_impactElapsedSeconds, _impactIntensity);
+				if (!_impactMomentFired
+					&& previousElapsed < EnemyAttackAnimationService.ImpactMomentSeconds
+					&& _impactElapsedSeconds >= EnemyAttackAnimationService.ImpactMomentSeconds)
+				{
+					_impactMomentFired = true;
+					SpawnImpactParticles(_impactIntensity, currentSequence, Math.Max(1, _bannerRect.Width), Math.Max(1, _bannerRect.Height));
+					PublishImpactShockwave(_impactDamage);
+				}
+				UpdateImpactParticles(dt);
+				if (_impactElapsedSeconds >= EnemyAttackAnimationService.PresentationCompleteSeconds
+					&& _particles.Count == 0)
+				{
+					_impactActive = false;
+				}
 			}
 			// Update absorb tween timer based on battle phase
 			if (phaseNow == SubPhase.EnemyAttack)
 			{
+				if (_lastPresentationPhase != SubPhase.EnemyAttack)
+				{
+					var enemyTransform = entity.GetComponent<Transform>();
+					var target = (enemyTransform?.Position ?? Vector2.Zero) + new Vector2(0f, AbsorbTargetYOffset);
+					SpawnAbsorbEmbers(_bannerRect, target, currentSequence);
+				}
 				_absorbElapsedSeconds += dt;
 				if (_absorbElapsedSeconds >= AbsorbDurationSeconds)
 				{
@@ -629,59 +674,9 @@ namespace Crusaders30XX.ECS.Systems
 					ResetAnchorBounds();
 				}
 			}
+			_lastPresentationPhase = phaseNow;
 
-			// Calculate and store banner rect for TutorialDisplaySystem to query
-			// Note: anchor Bounds are written in Draw (UpdateAnchorEntity) with parallax-adjusted
-			// values — do NOT overwrite them here, or downstream systems lose parallax.
-			if (_showBanner && _contentFont != null && _bodyFont != null)
-			{
-				var pa = intent.Planned[0];
-				var def = pa.AttackDefinition;
-				if (def != null)
-				{
-					_bannerRect = CalculateBannerRect(entity, phaseNow, def);
-				}
-			}
-
-			// Ensure banner anchor entity exists (unconditional so BuildDrawContext finds it)
-			var anchorEntity = EntityManager.GetEntitiesWithComponent<EnemyAttackBannerAnchor>().FirstOrDefault();
-			if (anchorEntity == null)
-			{
-				anchorEntity = EntityManager.CreateEntity("EnemyAttackBannerAnchor");
-				EntityManager.AddComponent(anchorEntity, new EnemyAttackBannerAnchor());
-				EntityManager.AddComponent(anchorEntity, new Transform());
-				var parallaxLayer = ParallaxLayer.GetUIParallaxLayer();
-				parallaxLayer.MultiplierX = 0.045f;
-				parallaxLayer.MultiplierY = 0.045f;
-				EntityManager.AddComponent(anchorEntity, parallaxLayer);
-				EntityManager.AddComponent(anchorEntity, new UIElement { Bounds = new Rectangle(0, 0, 1, 1), IsInteractable = false });
-			}
-
-			// Only write Positions when banner rect is valid (banner is visible)
-			if (_bannerRect != Rectangle.Empty)
-			{
-				var anchorTransform = anchorEntity.GetComponent<Transform>();
-				if (anchorTransform != null)
-				{
-					var centerBase = new Vector2(Game1.VirtualWidth / 2f + OffsetX, Game1.VirtualHeight / 2f + OffsetY);
-					anchorTransform.Position = centerBase;
-				}
-
-				// Write confirm button Position so parallax can adjust it
-				var confirmBtn = EntityManager.GetEntity("UIButton_ConfirmEnemyAttack");
-				if (confirmBtn != null)
-				{
-					var btnTransform = confirmBtn.GetComponent<Transform>();
-					if (btnTransform != null)
-					{
-						btnTransform.Position = new Vector2(
-							_bannerRect.X + _bannerRect.Width / 2f - ConfirmButtonWidth / 2f,
-							_bannerRect.Bottom + ConfirmButtonOffsetY
-						);
-						btnTransform.ZOrder = ConfirmButtonZ;
-					}
-				}
-			}
+			UpdatePresentationState(entity, intent, phaseNow);
 		}
 
 		private void UpdateConfirmAvailability(SubPhase phaseNow, int attackSequence)
@@ -692,7 +687,8 @@ namespace Crusaders30XX.ECS.Systems
 			if (ui == null) return;
 
 			bool pending = _pendingConfirmSequence == attackSequence;
-			bool available = !pending && EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(
+			bool entranceReady = !_impactActive || _impactElapsedSeconds >= 0.30f;
+			bool available = entranceReady && !pending && EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(
 				EntityManager,
 				_confirmedAttackSequences);
 

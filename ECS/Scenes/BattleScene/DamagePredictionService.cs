@@ -29,7 +29,13 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (!EnemyAttackFlowService.TryGetCurrentProgress(entityManager, out var progress))
 				return 0;
-			return progress.AssignedBlockTotal;
+			return GetEffectiveAssignedBlockTotal(progress);
+		}
+
+		public static int GetEffectiveAssignedBlockTotal(EnemyAttackProgress progress)
+		{
+			if (progress == null) return 0;
+			return Math.Max(0, progress.EffectiveAssignedBlockTotal ?? progress.AssignedBlockTotal);
 		}
 
 		public static int ComputeActualDamage(EnemyAttackBase definition, EntityManager entityManager, bool isBlocked)

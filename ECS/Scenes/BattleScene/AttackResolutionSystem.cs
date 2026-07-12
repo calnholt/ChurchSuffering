@@ -95,7 +95,7 @@ namespace Crusaders30XX.ECS.Systems
 				if (def.BlockRequiredToPreventEffect is int blockRequired &&
 					impactProgress?.FullyPreventedBySpecial != true)
 				{
-					int assignedBlock = impactProgress?.AssignedBlockTotal ?? 0;
+					int assignedBlock = DamagePredictionService.GetEffectiveAssignedBlockTotal(impactProgress);
 					if (assignedBlock < blockRequired && evt.FinalDamage > 0)
 					{
 						def.OnDamageThresholdMet?.Invoke(EntityManager);

@@ -48,7 +48,7 @@ namespace Crusaders30XX.ECS.Systems
 
             int assignedBlock = 0;
             EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var prog);
-            if (prog != null) assignedBlock = prog.AssignedBlockTotal;
+            if (prog != null) assignedBlock = DamagePredictionService.GetEffectiveAssignedBlockTotal(prog);
 
             bool willHit = baseDamage > assignedBlock;
 

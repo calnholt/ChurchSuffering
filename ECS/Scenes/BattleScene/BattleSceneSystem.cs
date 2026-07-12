@@ -87,6 +87,7 @@ namespace Crusaders30XX.ECS.Systems
 		private GuardianAngelDisplaySystem _guardianAngelDisplaySystem;
 		private EnemyIntentPipsSystem _enemyIntentPipsSystem;
 		private EnemyAttackDisplaySystem _enemyAttackDisplaySystem;
+		private EnemyAttackBannerLateLayoutSystem _enemyAttackBannerLateLayoutSystem;
 		private EnemyDamageMeterDisplaySystem _enemyDamageMeterDisplaySystem;
 		private AmbushDisplaySystem _ambushDisplaySystem;
 		// private QueuedEventsDisplaySystem _queuedEventsDisplaySystem;
@@ -779,6 +780,7 @@ namespace Crusaders30XX.ECS.Systems
 			_guardianAngelDisplaySystem = new GuardianAngelDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_enemyIntentPipsSystem = new EnemyIntentPipsSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_enemyAttackDisplaySystem = new EnemyAttackDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_enemyAttackBannerLateLayoutSystem = new EnemyAttackBannerLateLayoutSystem(_world.EntityManager);
 			_enemyDamageMeterDisplaySystem = new EnemyDamageMeterDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_ambushDisplaySystem = new AmbushDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			// _queuedEventsDisplaySystem = new QueuedEventsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
@@ -932,6 +934,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_stunnedOverlaySystem);
 			_world.AddSystem(_attackResolutionSystem);
 			_world.AddSystem(_enemyAttackDisplaySystem);
+			_world.AddLateSystem(_enemyAttackBannerLateLayoutSystem);
 			_world.AddSystem(_enemyDamageMeterDisplaySystem);
 			_world.AddSystem(_ambushDisplaySystem);
 			// _world.AddSystem(_queuedEventsDisplaySystem);
