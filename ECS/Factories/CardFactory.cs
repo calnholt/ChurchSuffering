@@ -71,6 +71,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.SuddenThrust, () => new SuddenThrust() },
                 { CardId.StokeTheFurnace, () => new StokeTheFurnace() },
                 { CardId.Sword, () => new Sword() },
+                { CardId.SwordIntoShield, () => new SwordIntoShield() },
                 { CardId.TemperTheBlade, () => new TemperTheBlade() },
                 { CardId.Tempest, () => new Tempest() },
                 { CardId.Thaw, () => new Thaw() },

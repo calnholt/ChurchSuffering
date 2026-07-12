@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using Crusaders30XX.Diagnostics;
 using System;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Services;
 using System.Collections.Generic;
 
@@ -29,6 +30,34 @@ namespace Crusaders30XX.ECS.Systems
 		EventManager.Subscribe<LoadSceneEvent>(OnLoadScene, priority: 1);
             EventManager.Subscribe<RemoveAllPassives>(OnRemoveAllPassives);
             EventManager.Subscribe<EnemyKilledEvent>(OnEnemyKilled);
+            EventManager.Subscribe<CardPlayedEvent>(OnCardPlayed);
+        }
+
+        private void OnCardPlayed(CardPlayedEvent evt)
+        {
+            var playedCard = evt?.Card?.GetComponent<CardData>()?.Card;
+            if (playedCard == null || playedCard.Type != CardType.Attack || playedCard.IsWeapon) return;
+
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            var passives = player?.GetComponent<AppliedPassives>()?.Passives;
+            if (passives == null
+                || !passives.TryGetValue(AppliedPassiveType.SwordIntoShield, out int stacks)
+                || stacks <= 0)
+            {
+                return;
+            }
+
+            AttackDamageValueService.ApplyDelta(evt.Card, stacks, "Sword Into Shield");
+            EventManager.Publish(new RemovePassive
+            {
+                Owner = player,
+                Type = AppliedPassiveType.SwordIntoShield
+            });
+            EventManager.Publish(new PassiveTriggered
+            {
+                Owner = player,
+                Type = AppliedPassiveType.SwordIntoShield
+            });
         }
 
         private void OnApplyEffect(ApplyEffect effect)
@@ -491,6 +520,7 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Sharpen,
                 AppliedPassiveType.Might,
                 AppliedPassiveType.CarpeDiem,
+                AppliedPassiveType.SwordIntoShield,
             };
         }
 

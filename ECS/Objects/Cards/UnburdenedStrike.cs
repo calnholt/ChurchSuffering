@@ -1,15 +1,15 @@
-using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Systems;
 
 namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class UnburdenedStrike : CardBase
     {
-        private int DamageBonus = 3;
-        private int DamageBonusUpgrade = 1;
-        private int BlockUpgrade = 1;
+        private const int DamageBonus = 3;
+        private const int DamageBonusUpgrade = 1;
+        private const int BlockUpgrade = 1;
         public UnburdenedStrike()
         {
             CardId = "unburdened_strike";
@@ -24,22 +24,30 @@ namespace Crusaders30XX.ECS.Objects.Cards
 
             OnPlay = (entityManager, card) =>
             {
-                var bonusDamage = 0;
-                var cacheEntity = entityManager.GetEntitiesWithComponent<LastPaymentCache>().FirstOrDefault();
-                var paymentCards = cacheEntity?.GetComponent<LastPaymentCache>()?.PaymentCards;
-                if (paymentCards == null || paymentCards.Count == 0)
-                {
-                    bonusDamage = GetDamageBonus(IsUpgraded);
-                }
-
                 EventManager.Publish(new ModifyHpRequestEvent
                 {
                     Source = entityManager.GetEntity("Player"),
                     Target = entityManager.GetEntity("Enemy"),
-                    Delta = -GetDerivedDamage(entityManager, card) - bonusDamage,
+                    Delta = -GetDerivedDamage(entityManager, card),
                     AttackCard = card,
                     DamageType = ModifyTypeEnum.Attack
                 });
+            };
+
+            GetConditionalDamage = (entityManager, card) =>
+            {
+                var playContext = card?.GetComponent<CardPlayStatContext>();
+                if (playContext != null)
+                {
+                    return playContext.PaymentCards.Count == 0
+                        ? GetDamageBonus(IsUpgraded)
+                        : 0;
+                }
+
+                int vigorStacks = VigorService.GetPlayerVigorStacks(entityManager);
+                return VigorService.GetEffectiveCost(this, vigorStacks).Count == 0
+                    ? GetDamageBonus(IsUpgraded)
+                    : 0;
             };
 
             OnUpgrade = (entityManager, card) =>

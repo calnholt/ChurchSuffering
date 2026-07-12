@@ -75,13 +75,19 @@ public sealed class HammerStarterCardTests : IDisposable
 		var damageRequests = new List<ModifyHpRequestEvent>();
 		EventManager.Subscribe<ModifyHpRequestEvent>(damageRequests.Add);
 
+		entityManager.AddComponent(cardEntity, new CardPlayStatContext
+		{
+			Owner = cardEntity,
+			PaymentCards = []
+		});
 		card.OnPlay(entityManager, cardEntity);
 		Assert.Equal(-11, Assert.Single(damageRequests).Delta);
 		damageRequests.Clear();
 
-		var cacheEntity = entityManager.CreateEntity("LastPaymentCache");
-		entityManager.AddComponent(cacheEntity, new LastPaymentCache
+		entityManager.RemoveComponent<CardPlayStatContext>(cardEntity);
+		entityManager.AddComponent(cardEntity, new CardPlayStatContext
 		{
+			Owner = cardEntity,
 			PaymentCards = [entityManager.CreateEntity("Payment")]
 		});
 
