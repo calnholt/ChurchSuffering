@@ -86,6 +86,7 @@ namespace Crusaders30XX.ECS.Systems
                 [CardId.SuddenThrust] = ["Quick, through the gap!", "A flash of steel!"],
                 [CardId.StokeTheFurnace] = ["Feed the fire carefully!", "Keep those coals awake!"],
                 [CardId.Sword] = ["Trust the blade you know!", "Steel forward!"],
+                [CardId.SwordIntoShield] = ["Let that edge become your shelter!", "A keen blade can still guard the faithful!"],
                 [CardId.TemperTheBlade] = ["Heat, hammer, patience!", "Make that edge worthy!"],
                 [CardId.Tempest] = ["Ride the storm!", "Let the whole sky answer!"],
                 [CardId.Thaw] = ["Warmth is winning!", "Shake off that frost!"],

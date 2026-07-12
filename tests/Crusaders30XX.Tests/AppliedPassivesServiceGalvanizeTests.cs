@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Systems;
 using Xunit;
@@ -104,9 +106,68 @@ public class AppliedPassivesServiceGalvanizeTests : IDisposable
         Assert.Equal(1, GetPassive(player, AppliedPassiveType.Galvanize));
     }
 
+    [Theory]
+    [InlineData(false, 0, 2, 12)]
+    [InlineData(false, 2, 0, 17)]
+    [InlineData(true, 2, 0, 18)]
+    public void Unburdened_strike_preview_matches_galvanized_resolution(
+        bool isUpgraded,
+        int vigorStacks,
+        int paymentCount,
+        int expectedDamage)
+    {
+        var (entityManager, player, enemy) = BuildCombatWorld();
+        ApplyGalvanize(player);
+        if (vigorStacks > 0)
+        {
+            EventManager.Publish(new ApplyPassiveEvent
+            {
+                Target = player,
+                Type = AppliedPassiveType.Vigor,
+                Delta = vigorStacks,
+            });
+        }
+
+        var card = EntityFactory.CreateCardFromDefinition(
+            entityManager,
+            "unburdened_strike",
+            CardData.CardColor.White,
+            isUpgraded: isUpgraded);
+        int rawPreview = CardStatModifierService.GetCardDamage(entityManager, card).TotalValue;
+        int preview = PreviewAttackDamage(player, enemy, rawPreview, card);
+
+        var paymentCards = new List<Entity>();
+        for (int i = 0; i < paymentCount; i++)
+        {
+            paymentCards.Add(entityManager.CreateEntity($"Payment{i}"));
+        }
+        entityManager.AddComponent(card, new CardPlayStatContext
+        {
+            Owner = card,
+            PaymentCards = paymentCards,
+        });
+
+        int hpBefore = enemy.GetComponent<HP>().Current;
+        card.GetComponent<CardData>().Card.OnPlay(entityManager, card);
+        int resolvedDamage = hpBefore - enemy.GetComponent<HP>().Current;
+
+        Assert.Equal(expectedDamage, preview);
+        Assert.Equal(preview, resolvedDamage);
+        Assert.Equal(0, GetPassive(player, AppliedPassiveType.Galvanize));
+    }
+
     private static int PreviewAttackDamage(EntityManager entityManager, Entity player, Entity enemy, int rawDamage, bool isWeapon)
     {
         var attackCard = CreateAttackCard(entityManager, isWeapon);
+        return PreviewAttackDamage(player, enemy, rawDamage, attackCard);
+    }
+
+    private static int PreviewAttackDamage(
+        Entity player,
+        Entity enemy,
+        int rawDamage,
+        Entity attackCard)
+    {
         var preview = new ModifyHpRequestEvent
         {
             Source = player,

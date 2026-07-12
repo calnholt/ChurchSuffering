@@ -252,6 +252,8 @@ namespace Crusaders30XX.ECS.Services
 					return "At the start of the block phase, steals a card from your deck. Deal enough damage to rescue it.";
 				case AppliedPassiveType.CarpeDiem:
 					return "At the end of the turn, lose all courage.";
+				case AppliedPassiveType.SwordIntoShield:
+					return $"Your next non-weapon attack card this turn gains +{stacks} damage this climb.";
 				default:
 					return StringUtils.ToSentenceCase(type.ToString());
 			}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Medals;
 
 namespace Crusaders30XX.ECS.Systems
@@ -176,10 +177,20 @@ namespace Crusaders30XX.ECS.Systems
             var sourcePassives = query.Source?.GetComponent<AppliedPassives>()?.Passives
                 ?? new Dictionary<AppliedPassiveType, int>();
             bool isWeaponAttack = query.Card?.GetComponent<CardData>()?.Card?.IsWeapon == true;
+            bool isNonWeaponAttackCard = !isWeaponAttack
+                && query.Card?.GetComponent<CardData>()?.Card?.Type == CardType.Attack;
             int flatSourceBonus = 0;
 
             AddPassiveFlatModifier(query, result, sourcePassives, AppliedPassiveType.Power, ref flatSourceBonus);
             AddPassiveFlatModifier(query, result, sourcePassives, AppliedPassiveType.Might, ref flatSourceBonus);
+
+            if (isNonWeaponAttackCard
+                && sourcePassives.TryGetValue(AppliedPassiveType.SwordIntoShield, out int swordIntoShield)
+                && swordIntoShield > 0)
+            {
+                AddPassiveModifier(result, AppliedPassiveType.SwordIntoShield, swordIntoShield);
+                flatSourceBonus += swordIntoShield;
+            }
 
             if (!isWeaponAttack && sourcePassives.TryGetValue(AppliedPassiveType.Aggression, out int aggression) && aggression > 0)
             {

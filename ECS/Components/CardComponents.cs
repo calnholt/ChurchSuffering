@@ -1197,7 +1197,8 @@ namespace Crusaders30XX.ECS.Components
         Might,
         Vigor,
         CarpeDiem,
-        Galvanize
+        Galvanize,
+        SwordIntoShield
     }
 
     public class PassiveMeterComponent : IComponent
