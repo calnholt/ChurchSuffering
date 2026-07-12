@@ -18,7 +18,20 @@ namespace Crusaders30XX.ECS.Core
             public int Priority { get; set; }
         }
 
-        private static readonly Dictionary<Type, List<PrioritizedHandler>> _eventHandlers = new();
+        private sealed class HandlerCollection
+        {
+            public List<PrioritizedHandler> Handlers { get; } = new();
+            public PrioritizedHandler[] OrderedSnapshot { get; private set; } = Array.Empty<PrioritizedHandler>();
+
+            public void RebuildSnapshot()
+            {
+                OrderedSnapshot = Handlers
+                    .OrderByDescending(handler => handler.Priority)
+                    .ToArray();
+            }
+        }
+
+        private static readonly Dictionary<Type, HandlerCollection> _eventHandlers = new();
         
         /// <summary>
         /// Subscribe to an event type with optional priority.
@@ -31,13 +44,15 @@ namespace Crusaders30XX.ECS.Core
             var eventType = typeof(T);
             if (!_eventHandlers.ContainsKey(eventType))
             {
-                _eventHandlers[eventType] = new List<PrioritizedHandler>();
+                _eventHandlers[eventType] = new HandlerCollection();
             }
-            _eventHandlers[eventType].Add(new PrioritizedHandler 
+            HandlerCollection collection = _eventHandlers[eventType];
+            collection.Handlers.Add(new PrioritizedHandler
             { 
                 Handler = handler, 
                 Priority = priority 
             });
+            collection.RebuildSnapshot();
         }
         
         /// <summary>
@@ -48,7 +63,9 @@ namespace Crusaders30XX.ECS.Core
             var eventType = typeof(T);
             if (_eventHandlers.ContainsKey(eventType))
             {
-                _eventHandlers[eventType].RemoveAll(ph => ph.Handler.Equals(handler));
+                HandlerCollection collection = _eventHandlers[eventType];
+                collection.Handlers.RemoveAll(ph => ph.Handler.Equals(handler));
+                collection.RebuildSnapshot();
             }
         }
         
@@ -60,12 +77,8 @@ namespace Crusaders30XX.ECS.Core
             var eventType = typeof(T);
             if (_eventHandlers.ContainsKey(eventType))
             {
-                // Sort by priority descending (highest priority first)
-                var sortedHandlers = _eventHandlers[eventType]
-                    .OrderByDescending(ph => ph.Priority)
-                    .ToList();
-
-                foreach (var prioritizedHandler in sortedHandlers)
+                PrioritizedHandler[] handlers = _eventHandlers[eventType].OrderedSnapshot;
+                foreach (var prioritizedHandler in handlers)
                 {
                     try
                     {
@@ -92,7 +105,7 @@ namespace Crusaders30XX.ECS.Core
         /// </summary>
         public static int GetEventHandlerCount()
         {
-            return _eventHandlers.Values.Sum(handlers => handlers.Count);
+            return _eventHandlers.Values.Sum(collection => collection.Handlers.Count);
         }
     }
-} 
+}

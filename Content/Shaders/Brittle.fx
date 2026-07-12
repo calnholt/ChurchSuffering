@@ -49,14 +49,6 @@ sampler2D TextureSampler : register(s0) = sampler_state
     AddressU = Clamp; AddressV = Clamp;
 };
 
-texture BackgroundTexture;
-sampler2D BackgroundSampler = sampler_state
-{
-    Texture = <BackgroundTexture>;
-    MinFilter = Linear; MagFilter = Linear; MipFilter = Linear;
-    AddressU = Clamp; AddressV = Clamp;
-};
-
 struct VSInput
 {
     float4 Position : POSITION0;
@@ -153,17 +145,10 @@ float3 SampleCurrent(float2 textureUV)
     return tex2Dlod(TextureSampler, float4(textureUV, 0.0, 0.0)).rgb;
 }
 
-float3 SampleBackground(float2 textureUV)
-{
-    return tex2Dlod(BackgroundSampler, float4(textureUV, 0.0, 0.0)).rgb;
-}
-
 float ChangedMask(float2 textureUV)
 {
-    float3 current = SampleCurrent(textureUV);
-    float3 background = SampleBackground(textureUV);
-    float delta = max(max(abs(current.r - background.r), abs(current.g - background.g)), abs(current.b - background.b));
-    return smoothstep(MASK_THRESHOLD, MASK_THRESHOLD * 2.0, delta);
+    float alpha = tex2Dlod(TextureSampler, float4(textureUV, 0.0, 0.0)).a;
+    return smoothstep(MASK_THRESHOLD, MASK_THRESHOLD * 2.0, alpha);
 }
 
 float CellInterior(float distanceToEdge)
@@ -241,7 +226,9 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
     float2 uv = input.TexCoord;
     float2 screenPosition = uv * resolution;
     float chunkSize = max(CHUNK_SIZE_PX * max(CARD_SCALE, 0.001), 1.0);
-    float3 col = SampleCurrent(uv);
+    float4 source = tex2Dlod(TextureSampler, float4(uv, 0.0, 0.0));
+    float3 col = source.rgb;
+    float outputAlpha = source.a;
 
     float gRand = frac(sin(GRID_SEED * 12.9898 + 78.233) * 43758.5453);
     float gridJitter = lerp(GRID_MIN, GRID_MAX, gRand) / max(GRID_MIN, 1.0);
@@ -256,10 +243,10 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
         float2 homeC = Voro(p, hd1, hd2);
         Chunk life = ChunkLife(homeC);
         float3 card = SampleCard(uv);
-        float3 background = SampleBackground(uv) * HOLE_DARKEN;
         float seam = CellInterior(hd2 - hd1);
         float show = life.home * seam;
-        col = lerp(background, card, show * localMask);
+        col = lerp(float3(0.0, 0.0, 0.0), card, show * localMask);
+        outputAlpha = lerp(0.0, source.a, show * localMask);
     }
 
     int fallSearchCells = min(MAX_SEARCH_CELLS, (int)ceil(max(MAX_FALL, 0.0)));
@@ -331,10 +318,11 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
             float edge = 1.0 - smoothstep(0.0, SEAM_WIDTH + 0.15, qd2 - qd1);
             chunkColor += EDGE_GLOW * EDGE_GLOW_AMT * edge * life.alpha;
             col = lerp(col, chunkColor, life.alpha * seam * srcMask);
+            outputAlpha = max(outputAlpha, life.alpha * seam * srcMask);
         }
     }
 
-    return float4(saturate(col), 1.0) * input.Color;
+    return float4(saturate(col), saturate(outputAlpha)) * input.Color;
 }
 
 technique SpriteDrawing

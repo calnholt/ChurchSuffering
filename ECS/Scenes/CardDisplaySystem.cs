@@ -460,14 +460,20 @@ namespace Crusaders30XX.ECS.Systems
                 Scale = scale,
                 Rotation = rotation
             });
-            DrawCard(card, position);
-            EventManager.Publish(new CardBaseRenderCompletedEvent
+            try
             {
-                Card = card,
-                Position = position,
-                Scale = scale,
-                Rotation = rotation
-            });
+                DrawCard(card, position);
+            }
+            finally
+            {
+                EventManager.Publish(new CardBaseRenderCompletedEvent
+                {
+                    Card = card,
+                    Position = position,
+                    Scale = scale,
+                    Rotation = rotation
+                });
+            }
         }
 
         public void DrawCard(Entity entity, Vector2 position)

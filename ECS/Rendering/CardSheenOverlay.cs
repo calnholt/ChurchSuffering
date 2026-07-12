@@ -6,10 +6,12 @@ namespace Crusaders30XX.ECS.Rendering;
 public sealed class CardSheenOverlay
 {
 	private readonly Effect _effect;
+	private readonly EffectParameterCache _parameters;
 
 	public CardSheenOverlay(Effect effect)
 	{
 		_effect = effect;
+		_parameters = new EffectParameterCache(effect);
 	}
 
 	public bool IsAvailable => _effect != null;
@@ -25,6 +27,9 @@ public sealed class CardSheenOverlay
 	public Vector3 GoldFringeColor { get; set; }
 	public Vector3 BlueFringeColor { get; set; }
 	public Vector3 CoreColor { get; set; }
+	public Vector2 Resolution { get; set; } = new(Game1.VirtualWidth, Game1.VirtualHeight);
+	public Vector2 CardCenter { get; set; }
+	public float CardRotation { get; set; }
 
 	public void Begin(SpriteBatch spriteBatch)
 	{
@@ -62,6 +67,46 @@ public sealed class CardSheenOverlay
 			_effect);
 	}
 
+	public void BeginComposite(SpriteBatch spriteBatch)
+	{
+		if (_effect == null) return;
+		_effect.CurrentTechnique = _effect.Techniques["CompositeDrawing"];
+		Viewport viewport = spriteBatch.GraphicsDevice.Viewport;
+		Matrix projection = Matrix.CreateOrthographicOffCenter(0, viewport.Width, viewport.Height, 0, 0, 1);
+
+		Set("MatrixTransform", projection);
+		Set("TimeSeconds", TimeSeconds);
+		Set("SheenDurationSeconds", SheenDurationSeconds);
+		Set("RepeatDelaySeconds", RepeatDelaySeconds);
+		Set("AngleRadians", AngleRadians);
+		Set("BandWidthNormalized", BandWidthNormalized);
+		Set("FeatherNormalized", FeatherNormalized);
+		Set("CoreWidthNormalized", CoreWidthNormalized);
+		Set("CornerRadiusPx", CornerRadiusPx);
+		Set("Intensity", Intensity);
+		Set("GoldFringeColor", GoldFringeColor);
+		Set("BlueFringeColor", BlueFringeColor);
+		Set("CoreColor", CoreColor);
+		Set("Resolution", Resolution);
+		Set("CardCenter", CardCenter);
+		Set("CardRotation", CardRotation);
+
+		spriteBatch.Begin(
+			SpriteSortMode.Immediate,
+			BlendState.Opaque,
+			SamplerState.LinearClamp,
+			DepthStencilState.None,
+			RasterizerState.CullNone,
+			_effect);
+	}
+
+	public void DrawComposite(SpriteBatch spriteBatch, Texture2D source, Vector2 cardSize)
+	{
+		if (_effect == null || source == null) return;
+		Set("CardSizePx", cardSize);
+		spriteBatch.Draw(source, spriteBatch.GraphicsDevice.Viewport.Bounds, Color.White);
+	}
+
 	public void Draw(
 		SpriteBatch spriteBatch,
 		Texture2D pixel,
@@ -89,10 +134,10 @@ public sealed class CardSheenOverlay
 		spriteBatch.End();
 	}
 
-	private void Set(string name, float value) => _effect.Parameters[name]?.SetValue(value);
-	private void Set(string name, Vector2 value) => _effect.Parameters[name]?.SetValue(value);
-	private void Set(string name, Vector3 value) => _effect.Parameters[name]?.SetValue(value);
-	private void Set(string name, Matrix value) => _effect.Parameters[name]?.SetValue(value);
+	private void Set(string name, float value) => _parameters.Set(name, value);
+	private void Set(string name, Vector2 value) => _parameters.Set(name, value);
+	private void Set(string name, Vector3 value) => _parameters.Set(name, value);
+	private void Set(string name, Matrix value) => _parameters.Set(name, value);
 
 	private static readonly BlendState CardSheenBlendState = new()
 	{

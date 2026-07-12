@@ -287,6 +287,7 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
     float2 aspectPosition = EffectAspectPosition(uv);
     float4 source = tex2Dlod(TextureSampler, float4(textureUV, 0.0, 0.0));
     float3 color = source.rgb;
+    float outputAlpha = source.a;
 
     // Ice block over the card.
     float signedDistance = CardSdf(uv);
@@ -377,9 +378,11 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
         float pulse = 1.0 - BREATH_PUFF * (0.5 + 0.5 * sin(iTime * 1.6));
         float breath = mist * xFalloff * yFalloff * BREATH_STR * pulse;
         color = lerp(color, BREATH_COLOR, saturate(breath));
+        outputAlpha = max(outputAlpha, saturate(breath));
     }
 
-    return float4(saturate(color), source.a) * input.Color;
+    color *= outputAlpha;
+    return float4(saturate(color), outputAlpha) * input.Color;
 }
 
 technique SpriteDrawing

@@ -30,6 +30,7 @@ public class Game1 : Game
     private EntityListOverlaySystem _entityListOverlaySystem;
     private TransitionDisplaySystem _transitionDisplaySystem;
     private CardDisplaySystem _cardDisplaySystem;
+    private CardShaderCompositorSystem _cardShaderCompositorSystem;
     private FrozenDisplaySystem _frozenDisplaySystem;
     private ThornedDisplaySystem _thornedDisplaySystem;
     private BrittleDisplaySystem _brittleDisplaySystem;
@@ -201,6 +202,7 @@ public class Game1 : Game
         _entityListOverlaySystem = new EntityListOverlaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _transitionDisplaySystem = new TransitionDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _cardDisplaySystem = new CardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _cardShaderCompositorSystem = new CardShaderCompositorSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _frozenDisplaySystem = new FrozenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _thornedDisplaySystem = new ThornedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
@@ -267,6 +269,7 @@ public class Game1 : Game
         _world.AddSystem(_entityListOverlaySystem);
         _world.AddSystem(_transitionDisplaySystem);
         _world.AddSystem(_cardDisplaySystem);
+        _world.AddSystem(_cardShaderCompositorSystem);
         _world.AddSystem(_frozenDisplaySystem);
         _world.AddSystem(_thornedDisplaySystem);
         _world.AddSystem(_brittleDisplaySystem);
@@ -676,7 +679,8 @@ public class Game1 : Game
 #endif
 		LoggingService.Flush();
 		try { _imageAssets?.Dispose(); } catch { }
-		try { FullScreenRenderTargetPool.DisposeAll(GraphicsDevice); } catch { }
+	try { FullScreenRenderTargetPool.DisposeAll(GraphicsDevice); } catch { }
+	try { CardShaderSurfacePool.DisposeAll(GraphicsDevice); } catch { }
 		base.UnloadContent();
 	}
 
@@ -721,6 +725,7 @@ public class Game1 : Game
         if (Display.RenderWidth != nextDisplay.RenderWidth || Display.RenderHeight != nextDisplay.RenderHeight)
         {
             FullScreenRenderTargetPool.DisposeAll(GraphicsDevice);
+            CardShaderSurfacePool.DisposeAll(GraphicsDevice);
         }
         Display = nextDisplay;
         Console.WriteLine(

@@ -16,7 +16,7 @@ namespace Crusaders30XX.ECS.Systems;
 [DebugTab("Thorned Display")]
 public sealed class ThornedDisplaySystem : Core.System
 {
-    private const int RenderPriority = -55;
+    private const int PassPriority = 80;
     private const float MaxThornsPerVine = 16f;
 
     private readonly GraphicsDevice _graphicsDevice;
@@ -177,19 +177,7 @@ public sealed class ThornedDisplaySystem : Core.System
         _spriteBatch = spriteBatch;
         _content = content;
 
-        EventManager.Subscribe<CardRenderEvent>(
-            evt => FrameProfiler.Measure("ThornedDisplaySystem.OnCardRenderEvent", () => Render(evt.Card, evt.Position, GetScale(evt.Card), GetRotation(evt.Card))),
-            RenderPriority);
-        EventManager.Subscribe<CardRenderScaledEvent>(
-            evt => FrameProfiler.Measure("ThornedDisplaySystem.OnCardRenderScaledEvent", () =>
-            {
-                using var clip = CardRenderClipScope.Apply(_graphicsDevice, evt.ClipRect);
-                Render(evt.Card, evt.Position, evt.Scale, evt.Rotation);
-            }),
-            RenderPriority);
-        EventManager.Subscribe<CardRenderScaledRotatedEvent>(
-            evt => FrameProfiler.Measure("ThornedDisplaySystem.OnCardRenderScaledRotatedEvent", () => Render(evt.Card, evt.Position, evt.Scale, GetRotation(evt.Card))),
-            RenderPriority);
+        EventManager.Subscribe<CardShaderPassEvent>(OnShaderPass, PassPriority);
     }
 
     protected override IEnumerable<Entity> GetRelevantEntities()
@@ -209,46 +197,33 @@ public sealed class ThornedDisplaySystem : Core.System
     {
     }
 
-    private void Render(Entity card, Vector2 position, float scale, float rotation)
+    private void OnShaderPass(CardShaderPassEvent evt)
     {
-        if (!ShouldRender(card) || !EnsureLoaded()) return;
-        if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
-                _graphicsDevice,
-                out var currentTargets,
-                out var currentTarget)) return;
-
-        using var sourceLease = FullScreenRenderTargetPool.Acquire(
-            _graphicsDevice,
-            currentTarget.Width,
-            currentTarget.Height);
-        RenderTarget2D sourceTarget = sourceLease.Target;
-
-        var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
-        _spriteBatch.End();
-        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, sourceTarget);
-
-        ConfigureOverlay(card, position, scale, rotation);
-        SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, currentTargets);
-        _graphicsDevice.Clear(Color.Transparent);
-        _overlay.Begin(_spriteBatch);
-        _overlay.Draw(_spriteBatch, sourceTarget);
-        _overlay.End(_spriteBatch);
-        SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
+        CardShaderPassContext context = evt?.Context;
+        if (context == null || !ShouldRender(context.Card) || !EnsureLoaded()) return;
+        ConfigureOverlay(context);
+        context.Apply("Thorned", (spriteBatch, source) =>
+        {
+            _overlay.Begin(spriteBatch);
+            _overlay.Draw(spriteBatch, source);
+            _overlay.End(spriteBatch);
+        });
     }
 
-    private void ConfigureOverlay(Entity card, Vector2 position, float scale, float rotation)
+    private void ConfigureOverlay(CardShaderPassContext context)
     {
         CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
             EntityManager,
-            card,
-            position,
-            Math.Max(0.001f, scale),
-            rotation);
+            context.Card,
+            context.Position,
+            Math.Max(0.001f, context.Scale),
+            context.Rotation);
 
+        _overlay.Resolution = context.LogicalSize;
         _overlay.Time = _timeSeconds;
-        _overlay.CardCenter = geometry.Center;
+        _overlay.CardCenter = context.ToSurface(geometry.Center);
         _overlay.CardSize = new Vector2(Math.Max(1f, geometry.Bounds.Width), Math.Max(1f, geometry.Bounds.Height));
-        _overlay.CardRotation = rotation;
+        _overlay.CardRotation = context.Rotation;
         _overlay.CardRadius = Math.Max(0f, CardRadius);
         _overlay.CurseTintStrength = MathHelper.Clamp(CurseTintStrength, 0f, 1f);
         _overlay.CurseTint = new Vector3(CurseTintR, CurseTintG, CurseTintB);
@@ -322,6 +297,4 @@ public sealed class ThornedDisplaySystem : Core.System
         return _overlay.IsAvailable;
     }
 
-    private static float GetScale(Entity card) => card?.GetComponent<Transform>()?.Scale.X ?? 1f;
-    private static float GetRotation(Entity card) => card?.GetComponent<Transform>()?.Rotation ?? 0f;
 }
