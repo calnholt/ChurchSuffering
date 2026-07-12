@@ -27,6 +27,7 @@ namespace Crusaders30XX.ECS.Systems
 		private bool _skipHold = false;
 		private bool _endRunOnLoad = false;
         private SceneId _nextScene;
+		private Guid _preparationId;
 
         [DebugEditable(DisplayName = "Wipe Duration (s)", Step = 0.05f, Min = 0.05f, Max = 3f)]
 		public float WipeDurationSeconds { get; set; } = 0.55f;
@@ -80,6 +81,12 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						if (_skipHold)
 						{
+							if (!_suppressLoadScene && !IsPreparationReady())
+							{
+								_phase = Phase.Hold;
+								_t = HoldSeconds;
+								break;
+							}
 							// Skip hold phase — fire scene load immediately and go straight to wipe out
 							if (!_suppressLoadScene)
 							{
@@ -102,6 +109,7 @@ namespace Crusaders30XX.ECS.Systems
 				case Phase.Hold:
 					if (_t >= HoldSeconds)
 					{
+						if (!_suppressLoadScene && !IsPreparationReady()) break;
 						if (!_suppressLoadScene)
 						{
 							LoggingService.Append("TransitionDisplaySystem.Update.Phase.Hold", new System.Text.Json.Nodes.JsonObject { ["nextScene"] = _nextScene.ToString() });
@@ -173,7 +181,18 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			if (_phase == Phase.Hold) coveredAtCenter = true;
 
-			if (coveredAtCenter && !_skipHold && _font != null)
+			if (_phase == Phase.Hold && !_suppressLoadScene && !IsPreparationReady() && _font != null)
+			{
+				var preparation = GetPreparationState();
+				string text = preparation?.Status == ScenePreparationStatus.Failed
+					? "Loading failed"
+					: "Loading...";
+				float scale = 0.35f;
+				var size = _font.MeasureString(text) * scale;
+				var pos = new Vector2((vw - size.X) * 0.5f, (vh - size.Y) * 0.5f);
+				_spriteBatch.DrawString(_font, text, pos, Color.White, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+			}
+			else if (coveredAtCenter && !_skipHold && _font != null)
 			{
 				string text = "Deus Vult!";
 				float scale = TextScale;
@@ -195,6 +214,18 @@ namespace Crusaders30XX.ECS.Systems
 			_skipHold = transition.SkipHold;
 			_endRunOnLoad = transition.EndRunOnLoad;
 			_nextScene = transition.Scene;
+			_preparationId = Guid.NewGuid();
+			var sceneEntity = EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault();
+			var previous = sceneEntity?.GetComponent<SceneState>()?.Current ?? SceneId.None;
+			if (!_suppressLoadScene)
+			{
+				EventManager.Publish(new SceneTransitionRequested
+				{
+					PreparationId = _preparationId,
+					From = previous,
+					To = _nextScene,
+				});
+			}
 
 			if (transition.SkipWipe)
 			{
@@ -223,9 +254,23 @@ namespace Crusaders30XX.ECS.Systems
 
 			var sceneEntity = EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault();
 			var previous = sceneEntity?.GetComponent<SceneState>()?.Current ?? SceneId.None;
-			EventManager.Publish(new DeleteCachesEvent { Scene = nextScene });
-			DeleteEntities(nextScene);
-			EventManager.Publish(new LoadSceneEvent { Scene = nextScene, PreviousScene = previous });
+			FrameProfiler.Measure("SceneTransition.Deactivate", () =>
+			{
+				EventManager.Publish(new SceneDeactivating { From = previous, To = nextScene });
+				EventManager.Publish(new DeleteCachesEvent { Scene = nextScene });
+			});
+			FrameProfiler.Measure("SceneTransition.DestroyEntities", () => DeleteEntities(nextScene));
+			FrameProfiler.Measure("SceneTransition.Activate", () =>
+			{
+				EventManager.Publish(new SceneActivating
+				{
+					PreparationId = _preparationId,
+					From = previous,
+					To = nextScene,
+				});
+				EventManager.Publish(new LoadSceneEvent { Scene = nextScene, PreviousScene = previous });
+				EventManager.Publish(new SceneActivated { PreparationId = _preparationId, Scene = nextScene });
+			});
 			if (publishComplete)
 				EventManager.Publish(new TransitionCompleteEvent { Scene = nextScene });
 		}
@@ -240,20 +285,34 @@ namespace Crusaders30XX.ECS.Systems
 			// Destroy previous scene's entities except those marked DontDestroyOnLoad
 			var isReload = previous == nextScene;
 			LoggingService.Append("TransitionDisplaySystem.DeleteEntities.isReload", new System.Text.Json.Nodes.JsonObject { ["isReload"] = isReload });
-			var toDestroy = EntityManager.GetAllEntities()
-				.Where(e =>
+			int destroyed = EntityManager.DestroyEntities(e =>
 					e.HasComponent<OwnedByScene>() &&
 					e.GetComponent<OwnedByScene>().Scene == previous &&
 					!isReload &&
 					!e.HasComponent<DontDestroyOnLoad>()                   // never destroy if DontDestroyOnLoad is present
 					// (!isReload || !e.HasComponent<DontDestroyOnReload>())     // during reload, also keep DontDestroyOnReload
-				)
-				.ToList();
-			foreach (var e in toDestroy)
+				);
+			LoggingService.Append("TransitionDisplaySystem.DeleteEntities.complete", new System.Text.Json.Nodes.JsonObject
 			{
-				LoggingService.Append("TransitionDisplaySystem.DeleteEntities.destroying", new System.Text.Json.Nodes.JsonObject { ["entityId"] = e.Id, ["entityName"] = e.Name });
-				EntityManager.DestroyEntity(e.Id);
-			}
+				["from"] = previous.ToString(),
+				["to"] = nextScene.ToString(),
+				["destroyed"] = destroyed,
+			});
+		}
+
+		private ScenePreparationState GetPreparationState()
+		{
+			return EntityManager.GetEntitiesWithComponent<ScenePreparationState>()
+				.FirstOrDefault()?.GetComponent<ScenePreparationState>();
+		}
+
+		private bool IsPreparationReady()
+		{
+			var state = GetPreparationState();
+			return state != null
+				&& state.PreparationId == _preparationId
+				&& state.TargetScene == _nextScene
+				&& state.Status == ScenePreparationStatus.Ready;
 		}
 
 		private void EnsureTransitionFlag(bool active)
@@ -291,4 +350,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-

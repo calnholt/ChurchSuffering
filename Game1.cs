@@ -29,6 +29,7 @@ public class Game1 : Game
     private DebugMenuSystem _debugMenuSystem;
     private EntityListOverlaySystem _entityListOverlaySystem;
     private TransitionDisplaySystem _transitionDisplaySystem;
+    private SceneLoadingCoordinatorSystem _sceneLoadingCoordinatorSystem;
     private CardDisplaySystem _cardDisplaySystem;
     private CardShaderCompositorSystem _cardShaderCompositorSystem;
     private FrozenDisplaySystem _frozenDisplaySystem;
@@ -198,6 +199,7 @@ public class Game1 : Game
         _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _achievementSceneSystem = new AchievementSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
+		_sceneLoadingCoordinatorSystem = new SceneLoadingCoordinatorSystem(_world.EntityManager, Content, _imageAssets);
         _debugMenuSystem = new DebugMenuSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _world.SystemManager);
         _entityListOverlaySystem = new EntityListOverlaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _transitionDisplaySystem = new TransitionDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
@@ -255,6 +257,7 @@ public class Game1 : Game
         _world.AddSystem(_battleSceneSystem);
         _world.AddSystem(_climbSceneSystem);
         _world.AddSystem(_achievementSceneSystem);
+		_world.AddSystem(_sceneLoadingCoordinatorSystem);
         _world.AddSystem(new TimerSchedulerSystem(_world.EntityManager));
         if (CardUsageTelemetryRuntime.Store != null)
         {

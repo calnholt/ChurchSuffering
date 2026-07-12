@@ -45,34 +45,7 @@ namespace Crusaders30XX.ECS.Core
             if (!_entities.TryGetValue(entityId, out var entity))
                 return;
 
-            // Dispose the entity if it implements IDisposable
-            if (entity is IDisposable disposable)
-            {
-                try
-                {
-                    disposable.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[EntityManager] Dispose failed for entity '{entityId}': {ex}");
-                }
-            }
-
-            // Dispose any disposable components (if they exist separately from the entity)
-            foreach (var component in entity.GetAllComponents())
-            {
-                if (component is IDisposable compDisposable)
-                {
-                    try
-                    {
-                        compDisposable.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[EntityManager] Dispose failed for component '{component.GetType().Name}': {ex}");
-                    }
-                }
-            }
+            DisposeEntity(entity);
 
             // Remove entity from component lookup tables
             foreach (var componentType in entity.GetComponentTypes())
@@ -85,6 +58,53 @@ namespace Crusaders30XX.ECS.Core
 
             _entities.Remove(entityId);
         }
+
+		/// <summary>
+		/// Removes a group of entities in linear passes over the entity and component
+		/// indexes. Scene transitions should prefer this over repeated DestroyEntity calls.
+		/// </summary>
+		public int DestroyEntities(Func<Entity, bool> predicate)
+		{
+			if (predicate == null) return 0;
+			var matches = _entities.Values.Where(predicate).ToList();
+			if (matches.Count == 0) return 0;
+
+			var matchSet = new HashSet<Entity>(matches);
+			foreach (var entity in matches)
+			{
+				DisposeEntity(entity);
+				_entities.Remove(entity.Id);
+			}
+
+			foreach (var entities in _componentToEntities.Values)
+			{
+				entities.RemoveAll(matchSet.Contains);
+			}
+
+			return matches.Count;
+		}
+
+		private static void DisposeEntity(Entity entity)
+		{
+			if (entity is IDisposable disposable)
+			{
+				try { disposable.Dispose(); }
+				catch (Exception ex)
+				{
+					Console.WriteLine($"[EntityManager] Dispose failed for entity '{entity.Id}': {ex}");
+				}
+			}
+
+			foreach (var component in entity.GetAllComponents())
+			{
+				if (component is not IDisposable compDisposable) continue;
+				try { compDisposable.Dispose(); }
+				catch (Exception ex)
+				{
+					Console.WriteLine($"[EntityManager] Dispose failed for component '{component.GetType().Name}': {ex}");
+				}
+			}
+		}
 
 
         public void DestroyEntity(string identifier)

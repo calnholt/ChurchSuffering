@@ -42,7 +42,16 @@ namespace Crusaders30XX.ECS.Systems
 			_imageAssets = imageAssets;
 
 			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
-			EventManager.Subscribe<DeleteCachesEvent>(_ => RemoveClimbSystems());
+			EventManager.Subscribe<PrepareSceneEvent>(evt =>
+			{
+				if (evt.Scene != SceneId.Climb) return;
+				AddClimbSystems();
+				SetClimbSystemsActive(false);
+			});
+			EventManager.Subscribe<DeleteCachesEvent>(evt =>
+			{
+				if (evt.Scene != SceneId.Climb) RemoveClimbSystems();
+			});
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -74,6 +83,8 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Climb });
 			EventManager.Publish(new HideLocationNameEvent());
 			AddClimbSystems();
+			SetClimbSystemsActive(true);
+			EnsureEquipmentTooltipEntity();
 		}
 
 		private void AddClimbSystems()
@@ -104,24 +115,19 @@ namespace Crusaders30XX.ECS.Systems
 		private void RemoveClimbSystems()
 		{
 			DeactivateClimbUiEntities(EntityManager);
-			_world.RemoveSystem(_backgroundDisplaySystem);
-			_world.RemoveSystem(_headerLayoutSystem);
-			_headerDisplaySystem?.Shutdown();
-			_world.RemoveSystem(_headerDisplaySystem);
-			_world.RemoveSystem(_columnLayoutSystem);
-			_world.RemoveSystem(_columnDisplaySystem);
-			_medalTooltipDisplaySystem?.Shutdown();
-			_world.RemoveSystem(_medalTooltipDisplaySystem);
-			_medalTooltipDisplaySystem = null;
-			_world.RemoveSystem(_cardUpgradeDisplaySystem);
-			_cardUpgradeDisplaySystem = null;
-			_resourceAcquisitionDisplaySystem?.Shutdown();
-			_world.RemoveSystem(_resourceAcquisitionDisplaySystem);
-			_resourceAcquisitionDisplaySystem = null;
-			var tooltip = EntityManager.GetEntity(EquipmentTooltipEntityName);
-			if (tooltip != null) EntityManager.DestroyEntity(tooltip.Id);
-			_equipmentTooltipDisplaySystem = null;
-			_firstLoad = true;
+			SetClimbSystemsActive(false);
+		}
+
+		private void SetClimbSystemsActive(bool active)
+		{
+			_backgroundDisplaySystem?.SetActive(active);
+			_headerLayoutSystem?.SetActive(active);
+			_headerDisplaySystem?.SetActive(active);
+			_columnLayoutSystem?.SetActive(active);
+			_columnDisplaySystem?.SetActive(active);
+			_medalTooltipDisplaySystem?.SetActive(active);
+			_cardUpgradeDisplaySystem?.SetActive(active);
+			_resourceAcquisitionDisplaySystem?.SetActive(active);
 		}
 
 		public void Draw()

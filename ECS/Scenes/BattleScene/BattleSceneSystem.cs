@@ -15,6 +15,7 @@ using Crusaders30XX.ECS.Scenes.BattleScene;
 using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Tutorials;
+using System.Collections.Generic;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -29,6 +30,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly ImageAssetService _imageAssets;
 		private bool _loadedSystems = false;
 		private bool _loadedEntities = false;
+		private readonly List<Core.System> _battleSystems = new();
 
 		// Battle systems (logic and draw). Only present while in Battle
 	
@@ -188,6 +190,10 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch = spriteBatch;
 			_content = content;
 			_imageAssets = imageAssets;
+			EventManager.Subscribe<PrepareSceneEvent>(evt =>
+			{
+				if (evt.Scene == SceneId.Battle) PrepareBattleSystems();
+			});
 			EventManager.Subscribe<StartBattleRequested>(_ =>
 			{
 				LoggingService.Append("BattleSceneSystem.OnStartBattleRequested", new System.Text.Json.Nodes.JsonObject { ["event"] = "StartBattleRequested" });
@@ -212,10 +218,8 @@ namespace Crusaders30XX.ECS.Systems
 					musicTrack = def?.pointsOfInterest[queued.QuestIndex].musicTrack ?? MusicTrack.DesertBattle;
 				}
 				EventManager.Publish(new ChangeMusicTrack { Track = musicTrack });
-				if (!_loadedSystems)
-				{
-					AddBattleSystems();
-				}
+				PrepareBattleSystems();
+				SetBattleSystemsActive(true);
 				EventManager.Publish(new ChangeBattleLocationEvent
 				{
 					Location = ResolveBattleLocationForLoad(queued, guidedTutorial),
@@ -272,6 +276,7 @@ namespace Crusaders30XX.ECS.Systems
 				if (_.Scene == SceneId.Battle) return;
 				LoggingService.Append("BattleSceneSystem.OnDeleteCachesEvent", new System.Text.Json.Nodes.JsonObject { ["event"] = "DeleteCachesEvent", ["scene"] = _.Scene.ToString() });
 				_loadedEntities = false;
+				SetBattleSystemsActive(false);
 				// EventQueue.Clear();
 				// RemoveBattleSystems();
 			});
@@ -1013,6 +1018,23 @@ namespace Crusaders30XX.ECS.Systems
 			// Pledge system
 			_pledgeDisplaySystem = new PledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_pledgeDisplaySystem);
+		}
+
+		private void PrepareBattleSystems()
+		{
+			if (_loadedSystems) return;
+			var existing = new HashSet<Core.System>(_systemManager.GetAllSystems());
+			AddBattleSystems();
+			_battleSystems.AddRange(_systemManager.GetAllSystems().Where(system => !existing.Contains(system)));
+			SetBattleSystemsActive(false);
+		}
+
+		private void SetBattleSystemsActive(bool active)
+		{
+			foreach (var system in _battleSystems)
+			{
+				system.SetActive(active);
+			}
 		}
 
 		private void EnsureBackgroundTargets()
