@@ -74,6 +74,24 @@ public class AppliedPassivesDisplaySystemAnimationTests : IDisposable
 	}
 
 	[Fact]
+	public void Positive_stack_gain_restarts_chip_ripple()
+	{
+		var (system, owner, passives) = CreateSystem();
+		passives.Passives[AppliedPassiveType.Burn] = 1;
+		Update(system, system.AppearSeconds);
+
+		EventManager.Publish(new ApplyPassiveEvent
+		{
+			Target = owner,
+			Type = AppliedPassiveType.Burn,
+			Delta = 2,
+		});
+
+		Assert.True(system.TryGetRipple(owner.Id, AppliedPassiveType.Burn, out float elapsed));
+		Assert.Equal(0f, elapsed);
+	}
+
+	[Fact]
 	public void Reappearing_passive_reverses_from_current_presentation()
 	{
 		var (system, owner, passives) = CreateSystem();

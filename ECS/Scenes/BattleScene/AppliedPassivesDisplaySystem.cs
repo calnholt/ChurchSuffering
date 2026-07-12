@@ -512,14 +512,9 @@ namespace Crusaders30XX.ECS.Systems
                 ["targetId"] = e.Target?.Id ?? -1
             });
             if (e?.Target == null) return;
-            var ap = e.Target.GetComponent<AppliedPassives>();
-            // If the passive is not currently present, trigger the ripple animation when it's added
-            if (ap == null || !ap.Passives.ContainsKey(e.Type))
+            if (e.Delta > 0)
             {
-                if (e.Delta > 0)
-                {
-                    _ripples[(e.Target.Id, e.Type)] = new Ripple { Elapsed = 0f, Duration = Math.Max(0.05f, RippleSeconds) };
-                }
+                _ripples[(e.Target.Id, e.Type)] = new Ripple { Elapsed = 0f, Duration = Math.Max(0.05f, RippleSeconds) };
             }
         }
 
@@ -591,6 +586,17 @@ namespace Crusaders30XX.ECS.Systems
         {
             return _chipPresentations.Keys.Count(key => key.ownerId == ownerId);
         }
+
+		internal bool TryGetRipple(int ownerId, AppliedPassiveType type, out float elapsed)
+		{
+			if (_ripples.TryGetValue((ownerId, type), out var ripple))
+			{
+				elapsed = ripple.Elapsed;
+				return true;
+			}
+			elapsed = 0f;
+			return false;
+		}
 
         [DebugAction("Simulate Burn Trigger")]
         public void Debug_SimulateBurnTrigger()
