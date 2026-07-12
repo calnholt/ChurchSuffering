@@ -25,6 +25,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		CharacterDialog,
 		ActiveEvents,
 		HoverPreview,
+		MedalTooltipHover,
 		SoldShopSlot,
 		EncounterRewardModal,
 		ReplacementModal,
@@ -38,6 +39,8 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private ClimbSceneSystem _climbScene;
 		private ClimbHeaderLayoutSystem _headerLayout;
 		private ClimbColumnLayoutSystem _columnLayout;
+		private MedalTooltipDisplaySystem _medalTooltip;
+		private TooltipTextDisplaySystem _textTooltip;
 		private RewardModalDisplaySystem _rewardModal;
 		private CardListModalSystem _cardListModal;
 		private NarrativeEventModalDisplaySystem _narrativeModal;
@@ -62,6 +65,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			ClimbSnapshotVariant.CharacterDialog => "climb-character-dialog",
 			ClimbSnapshotVariant.ActiveEvents => "climb-active-events",
 			ClimbSnapshotVariant.HoverPreview => "climb-hover-preview",
+			ClimbSnapshotVariant.MedalTooltipHover => "climb-medal-tooltip-hover",
 			ClimbSnapshotVariant.SoldShopSlot => "climb-sold-shop-slot",
 			ClimbSnapshotVariant.EncounterRewardModal => "climb-encounter-reward-modal",
 			ClimbSnapshotVariant.ReplacementModal => "climb-replacement-modal",
@@ -69,7 +73,12 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_ => "climb",
 		};
 
-		public int WarmupFrames => _variant is ClimbSnapshotVariant.ReplacementModal or ClimbSnapshotVariant.InventoryOverlay ? 4 : 3;
+		public int WarmupFrames => _variant switch
+		{
+			ClimbSnapshotVariant.MedalTooltipHover => 8,
+			ClimbSnapshotVariant.ReplacementModal or ClimbSnapshotVariant.InventoryOverlay => 4,
+			_ => 3,
+		};
 		public string OutputFileName => _variant == ClimbSnapshotVariant.CharacterDialog
 			? _dialogSample
 			: Id;
@@ -101,6 +110,8 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_climbScene = ctx.World.GetSystem<ClimbSceneSystem>();
 			_headerLayout = ctx.World.GetSystem<ClimbHeaderLayoutSystem>();
 			_columnLayout = ctx.World.GetSystem<ClimbColumnLayoutSystem>();
+			_medalTooltip = ctx.World.GetSystem<MedalTooltipDisplaySystem>();
+			_textTooltip = ctx.World.GetSystem<TooltipTextDisplaySystem>();
 			_rewardModal = ctx.World.GetSystem<RewardModalDisplaySystem>();
 			_cardListModal = ctx.World.GetSystem<CardListModalSystem>();
 			_narrativeModal = ctx.World.GetSystem<NarrativeEventModalDisplaySystem>();
@@ -121,15 +132,27 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				throw new DisplaySnapshotSetupException("Climb scene systems were not registered.");
 			}
+			if (_variant == ClimbSnapshotVariant.MedalTooltipHover
+				&& (_medalTooltip == null || _textTooltip == null))
+			{
+				throw new DisplaySnapshotSetupException("Medal tooltip systems were not registered.");
+			}
 		}
 
 		public void Draw(DisplaySnapshotContext ctx)
 		{
 			if (_variant is ClimbSnapshotVariant.HoverPreview
 				or ClimbSnapshotVariant.HazardHoverPreview
-				or ClimbSnapshotVariant.CharacterHoverPreview)
+				or ClimbSnapshotVariant.CharacterHoverPreview
+				or ClimbSnapshotVariant.MedalTooltipHover)
 			{
 				ForceHoverPreview(ctx.World.EntityManager);
+				if (_variant == ClimbSnapshotVariant.MedalTooltipHover)
+				{
+					_medalTooltip.Update(new GameTime(
+						TimeSpan.FromSeconds(1d),
+						TimeSpan.FromSeconds(_medalTooltip.FadeSeconds)));
+				}
 			}
 
 			if (_variant == ClimbSnapshotVariant.EncounterRewardModal)
@@ -167,6 +190,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			}
 
 			_climbScene.Draw();
+			if (_variant == ClimbSnapshotVariant.MedalTooltipHover)
+			{
+				_textTooltip.Draw();
+			}
 
 			if (_variant == ClimbSnapshotVariant.EncounterRewardModal)
 			{
@@ -450,6 +477,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				ClimbSnapshotVariant.HazardHoverPreview => "event_0",
 				ClimbSnapshotVariant.CharacterHoverPreview => "event_1",
+				ClimbSnapshotVariant.MedalTooltipHover => "shop_medal",
 				_ => "encounter_0",
 			};
 			var target = entityManager.GetEntitiesWithComponent<ClimbSlotPresentation>()

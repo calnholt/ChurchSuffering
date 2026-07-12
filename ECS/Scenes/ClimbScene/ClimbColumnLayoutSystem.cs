@@ -415,7 +415,8 @@ namespace Crusaders30XX.ECS.Systems
 				|| entity.GetComponent<ClimbLoadoutButton>() != null
 				|| entity.GetComponent<ClimbColumnPresentation>() != null
 				|| entity.GetComponent<ClimbSlotPresentation>() != null
-				|| entity.GetComponent<ClimbShopTooltipSource>() != null;
+				|| entity.GetComponent<ClimbShopTooltipSource>() != null
+				|| entity.GetComponent<ClimbMedalTooltipSource>() != null;
 		}
 
 		private void SyncSlots(ClimbSaveState climb, ClimbColumnsLayout columns, bool showEvents, IReadOnlyList<ClimbEventSlotSave> visibleEvents, float eventOpacity)
@@ -1008,12 +1009,14 @@ namespace Crusaders30XX.ECS.Systems
 				var medal = MedalFactory.Create(slot.itemId);
 				ui.Tooltip = medal == null ? string.Empty : $"{medal.Name}\n\n{medal.Text}";
 				ui.TooltipType = TooltipType.Text;
+				SyncMedalTooltip(entity, medal?.Id);
 				return;
 			}
 
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase))
 			{
 				RemoveCardTooltip(entity);
+				RemoveMedalTooltip(entity);
 				SyncEquipmentTooltip(entity, slot.itemId, ui);
 				return;
 			}
@@ -1023,6 +1026,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				RemoveCardTooltip(entity);
 				RemoveEquipmentTooltip(entity);
+				RemoveMedalTooltip(entity);
 				if (!RunDeckService.TryParseCardKey(slot.cardKey, out var cardId, out var color, out bool isUpgraded)) return;
 				bool isUpgrade = string.Equals(slot.kind, ClimbShopSlotKinds.Upgrade, StringComparison.OrdinalIgnoreCase);
 				var card = CardFactory.Create(cardId);
@@ -1071,6 +1075,31 @@ namespace Crusaders30XX.ECS.Systems
 			ui.TooltipType = TooltipType.Equipment;
 		}
 
+		private void SyncMedalTooltip(Entity entity, string medalId)
+		{
+			if (string.IsNullOrWhiteSpace(medalId))
+			{
+				RemoveMedalTooltip(entity);
+				return;
+			}
+
+			var source = entity.GetComponent<ClimbMedalTooltipSource>();
+			if (source == null)
+			{
+				EntityManager.AddComponent(entity, new ClimbMedalTooltipSource { MedalId = medalId });
+				return;
+			}
+
+			if (!string.Equals(source.MedalId, medalId, StringComparison.OrdinalIgnoreCase))
+			{
+				source.MedalId = medalId;
+				if (entity.GetComponent<ClimbMedalTooltipAnchor>() != null)
+				{
+					EntityManager.RemoveComponent<ClimbMedalTooltipAnchor>(entity);
+				}
+			}
+		}
+
 		private void ClearShopTooltip(Entity entity, UIElement ui)
 		{
 			ui.Tooltip = string.Empty;
@@ -1079,6 +1108,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			RemoveCardTooltip(entity);
 			RemoveEquipmentTooltip(entity);
+			RemoveMedalTooltip(entity);
 		}
 
 		private void SyncEncounterTooltip(Entity entity, ClimbEncounterSlotSave slot, ClimbSlotPresentation presentation)
@@ -1106,6 +1136,12 @@ namespace Crusaders30XX.ECS.Systems
 			if (equipped != null) EntityManager.RemoveComponent<EquippedEquipment>(entity);
 			if (entity.GetComponent<EquipmentZone>() != null) EntityManager.RemoveComponent<EquipmentZone>(entity);
 			if (entity.GetComponent<ClimbShopTooltipSource>() != null) EntityManager.RemoveComponent<ClimbShopTooltipSource>(entity);
+		}
+
+		private void RemoveMedalTooltip(Entity entity)
+		{
+			if (entity.GetComponent<ClimbMedalTooltipAnchor>() != null) EntityManager.RemoveComponent<ClimbMedalTooltipAnchor>(entity);
+			if (entity.GetComponent<ClimbMedalTooltipSource>() != null) EntityManager.RemoveComponent<ClimbMedalTooltipSource>(entity);
 		}
 
 		private ClimbSlotPresentation EnsureSlotPresentation(Entity entity)

@@ -69,6 +69,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
 | `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
 | `enemy-defeat-burst` | Enemy defeat pixel burst | Assembled portrait pixels, peak jitter buildup, and released explosion |
+| `guardian-angel` | Guardian Angel battle companion | Idle, speech, and reactive flight gesture samples |
 | `pause-menu` | Pause menu | Persisted rumble toggle in enabled and disabled states |
 | `hotkey-hints` | Shared hotkey glyph renderer | Keyboard, Xbox, and PlayStation hint treatments and placement |
 | `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
@@ -84,10 +85,28 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `climb-character-dialog` | Climb background + dialogue | Background-only Character exchange |
 | `climb-active-events` | Climb scene | Three columns with active event slots at T5 |
 | `climb-hover-preview` | Climb scene | Hover preview on first encounter slot |
+| `climb-medal-tooltip-hover` | Climb scene | Medal shop hover with icon followed by text tooltip |
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
+| `climb-header` | Climb scene | Compact resources, preview badges, pulse, and Run Overview control |
 | `climb-resource-acquisition` | Climb scene | Gem fall, pouch catch, and earned-resource pulse |
+
+---
+
+## `climb-header`
+
+Renders the production Climb header with fixed resource cells and the Run Overview control. The variants cover mixed-width resource values, simultaneous positive and negative preview badges, earned-resource pulse, and overview hover feedback.
+
+```bash
+dotnet run -- snapshot climb-header normal --verify
+dotnet run -- snapshot climb-header preview-delta --verify
+dotnet run -- snapshot climb-header pulse --verify
+dotnet run -- snapshot climb-header overview-hover --verify
+./scripts/verify-climb-header-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/climb-header/`.
 
 ---
 
@@ -166,6 +185,23 @@ dotnet run -- snapshot enemy-defeat-burst exploding --verify
 ```
 
 Approved images are `assembled.png`, `peak-jitter.png`, and `exploding.png` under `tests/VisualBaselines/enemy-defeat-burst/`.
+
+---
+
+## `guardian-angel`
+
+Renders the Guardian Angel at a fixed player-side anchor with deterministic idle placement and representative speech gestures.
+
+```bash
+dotnet run -- snapshot guardian-angel idle --verify
+dotnet run -- snapshot guardian-angel message --verify
+dotnet run -- snapshot guardian-angel card-hop --verify
+dotnet run -- snapshot guardian-angel medal-loop --verify
+dotnet run -- snapshot guardian-angel enemy-recoil --verify
+./scripts/verify-guardian-angel-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/guardian-angel/`.
 
 ---
 
@@ -556,6 +592,7 @@ dotnet run -- snapshot climb-character-dialog intro
 dotnet run -- snapshot climb-character-dialog settled
 dotnet run -- snapshot climb-active-events
 dotnet run -- snapshot climb-hover-preview
+dotnet run -- snapshot climb-medal-tooltip-hover
 dotnet run -- snapshot climb-sold-shop-slot
 dotnet run -- snapshot climb-encounter-reward-modal
 dotnet run -- snapshot climb-replacement-modal

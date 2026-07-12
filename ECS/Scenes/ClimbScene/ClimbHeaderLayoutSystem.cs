@@ -71,11 +71,12 @@ namespace Crusaders30XX.ECS.Systems
 
 			int contentX = ClimbHeaderDisplaySystem.HeaderPaddingXValue;
 			int contentY = ClimbHeaderDisplaySystem.HeaderPaddingTopValue;
-			int contentH = ClimbHeaderDisplaySystem.WeaponButtonSizeValue;
-			int weaponSize = ClimbHeaderDisplaySystem.WeaponButtonSizeValue;
+			int contentH = ClimbHeaderDisplaySystem.HeaderControlHeightValue;
+			int controlHeight = ClimbHeaderDisplaySystem.HeaderControlHeightValue;
+			int overviewWidth = ClimbHeaderDisplaySystem.OverviewButtonWidthValue;
 			int gap = ClimbHeaderDisplaySystem.HeaderGapValue;
-			int weaponX = Game1.VirtualWidth - ClimbHeaderDisplaySystem.HeaderPaddingXValue - weaponSize;
-			var loadoutRect = new Rectangle(weaponX, contentY, weaponSize, weaponSize);
+			int weaponX = Game1.VirtualWidth - ClimbHeaderDisplaySystem.HeaderPaddingXValue - overviewWidth;
+			var loadoutRect = new Rectangle(weaponX, contentY, overviewWidth, controlHeight);
 			SetTransformAndBounds(LoadoutButtonName, loadoutRect, zOrder: 2100, interactable: true, UIElementEventType.OpenLoadout);
 
 			int resourceW = ClimbHeaderDisplaySystem.ResourceBarWidthValue;

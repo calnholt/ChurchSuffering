@@ -3,7 +3,6 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Systems;
 
 namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
@@ -11,7 +10,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 	public sealed class ClimbResourceAcquisitionSnapshotFixture : IDisplaySnapshotFixture
 	{
 		private readonly ClimbResourceSave _resources = new() { red = 2, white = 1, black = 1 };
-		private ClimbSceneSystem _climbScene;
 		private ClimbResourceAcquisitionDisplaySystem _animation;
 		private ClimbHeaderDisplaySystem _header;
 		private string _variant = "fall";
@@ -44,10 +42,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				columns.PortraitParallaxMultiplierX = 0f;
 				columns.PortraitParallaxMultiplierY = 0f;
 			}
-			_climbScene = ctx.World.GetSystem<ClimbSceneSystem>();
 			_animation = ctx.World.GetSystem<ClimbResourceAcquisitionDisplaySystem>();
 			_header = ctx.World.GetSystem<ClimbHeaderDisplaySystem>();
-			if (_climbScene == null || _animation == null || _header == null)
+			if (_animation == null || _header == null)
 			{
 				throw new DisplaySnapshotSetupException("Climb resource acquisition systems were not registered.");
 			}
@@ -61,21 +58,21 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				_header.SetResourcePulseForSnapshot(_resources, 0.5f);
 			}
-			_climbScene.Draw();
+			_header.Draw();
+			_animation.Draw();
 		}
 
 		private void ConfigureSave()
 		{
-			const int seed = 30030;
 			SaveCache.StartNewRun();
-			var save = SaveCache.GetAll();
-			save.isRunActive = true;
-			save.runMapSeed = seed;
-			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
-			var climb = ClimbRuleService.CreateInitialState(seed, loadout);
-			climb.time = 5;
-			climb.resources = new ClimbResourceSave { red = 2, white = 1, black = 1 };
-			climb.eventSlots = new List<ClimbEventSlotSave>();
+			var climb = new ClimbSaveState
+			{
+				time = 5,
+				resources = new ClimbResourceSave { red = 2, white = 1, black = 1 },
+				shopSlots = new List<ClimbShopSlotSave>(),
+				encounterSlots = new List<ClimbEncounterSlotSave>(),
+				eventSlots = new List<ClimbEventSlotSave>(),
+			};
 			SaveCache.SaveClimbState(climb);
 		}
 

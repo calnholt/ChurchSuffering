@@ -133,10 +133,12 @@ namespace Crusaders30XX.ECS.Systems
 					top.UI.TooltipKeywordSource);
 				if (blocks.Count > 0)
 				{
-					Rectangle anchorBounds = TransformResolverService.ResolveUIBounds(
-						EntityManager,
-						top.E,
-						top.UI);
+					var medalAnchor = top.E.GetComponent<ClimbMedalTooltipAnchor>();
+					Rectangle anchorBounds = medalAnchor?.IconBounds
+						?? TransformResolverService.ResolveUIBounds(
+							EntityManager,
+							top.E,
+							top.UI);
 
 					var measured = MeasureBlocks(blocks);
 
