@@ -211,25 +211,10 @@ public class WeaponManagementSystemTests : IDisposable
             PlayerButtonMask.None);
     }
 
-    private sealed class FakeInputSource : IPlayerInputSource
+    private sealed class FakeInputSource : MixedRumbleFakeInputSource
     {
-        private readonly Queue<PlayerInputFrame> _frames;
-
         public FakeInputSource(params PlayerInputFrame[] frames)
-        {
-            _frames = new Queue<PlayerInputFrame>(frames);
-        }
-
-        public PlayerInputFrame Capture(
-            bool isWindowActive,
-            Rectangle renderDestination,
-            int virtualWidth,
-            int virtualHeight)
-        {
-            return _frames.Dequeue();
-        }
-
-        public void SetVibration(float lowFrequency, float highFrequency)
+            : base(frames)
         {
         }
     }

@@ -68,7 +68,7 @@ public class PlayerInputArchitectureTests
 
         Entity lower = CreateUi(entityManager, "Lower", 10, new Rectangle(0, 0, 100, 100));
         Entity upper = CreateUi(entityManager, "Upper", 20, new Rectangle(0, 0, 100, 100));
-        var source = new FakeInputSource(
+        var source = new MixedRumbleFakeInputSource(
             Frame(sequence: 1, pointer: new Vector2(50, 50)),
             Frame(
                 sequence: 2,
@@ -102,7 +102,7 @@ public class PlayerInputArchitectureTests
         var entityManager = new EntityManager();
         Entity scene = entityManager.CreateEntity("Scene");
         entityManager.AddComponent(scene, new SceneState());
-        var source = new FakeInputSource(
+        var source = new MixedRumbleFakeInputSource(
             Frame(sequence: 1),
             Frame(sequence: 2));
         var system = new PlayerInputSystem(entityManager, source);
@@ -283,7 +283,7 @@ public class PlayerInputArchitectureTests
             "Control",
             10,
             new Rectangle(0, 0, 100, 100));
-        var source = new FakeInputSource(
+        var source = new MixedRumbleFakeInputSource(
             Frame(sequence: 1, pointer: new Vector2(50, 50)),
             Frame(sequence: 2, pointer: new Vector2(50, 50)),
             Frame(sequence: 3, pointer: new Vector2(150, 50)));
@@ -327,7 +327,7 @@ public class PlayerInputArchitectureTests
         UIElement ui = tooltip.GetComponent<UIElement>();
         ui.IsInteractable = false;
         ui.Tooltip = "Passive description";
-        var source = new FakeInputSource(
+        var source = new MixedRumbleFakeInputSource(
             Frame(sequence: 1, pointer: new Vector2(50, 50)));
         var input = new PlayerInputSystem(entityManager, source);
         var interaction = new UIInteractionSystem(entityManager);
@@ -860,7 +860,7 @@ public class PlayerInputArchitectureTests
             "Control",
             10,
             new Rectangle(0, 0, 200, 200));
-        var source = new FakeInputSource(
+        var source = new MixedRumbleFakeInputSource(
             Frame(sequence: 1, pointer: new Vector2(300, 100)),
             Frame(
                 sequence: 2,
@@ -898,7 +898,7 @@ public class PlayerInputArchitectureTests
         UIElement ui = tooltip.GetComponent<UIElement>();
         ui.IsInteractable = false;
         ui.Tooltip = "Passive description";
-        var source = new FakeInputSource(
+        var source = new MixedRumbleFakeInputSource(
             Frame(sequence: 1, pointer: new Vector2(300, 100)),
             Frame(
                 sequence: 2,
@@ -917,7 +917,9 @@ public class PlayerInputArchitectureTests
         rumble.Update(TenthSecondGameTime());
         interaction.Update(TenthSecondGameTime());
 
-        Assert.Empty(source.VibrationCalls);
+        Assert.DoesNotContain(
+            source.VibrationCalls,
+            call => call.Low > 0f || call.High > 0f);
         EventManager.Clear();
     }
 
@@ -931,7 +933,7 @@ public class PlayerInputArchitectureTests
             "Control",
             10,
             new Rectangle(0, 0, 200, 200));
-        var source = new FakeInputSource(
+        var source = new MixedRumbleFakeInputSource(
             Frame(sequence: 1, pointer: new Vector2(300, 100)),
             Frame(
                 sequence: 2,
@@ -964,6 +966,53 @@ public class PlayerInputArchitectureTests
         Assert.Contains(
             source.VibrationCalls,
             call => call.Low == 0f && call.High == 0f);
+        EventManager.Clear();
+    }
+
+    [Fact]
+    public void Keyboard_mouse_clears_only_ui_hover_rumble()
+    {
+        EventManager.Clear();
+        var entityManager = CreateSceneEntityManager();
+        CreateUi(
+            entityManager,
+            "Control",
+            10,
+            new Rectangle(0, 0, 200, 200));
+        var source = new MixedRumbleFakeInputSource(
+            Frame(sequence: 1, pointer: new Vector2(300, 100)),
+            Frame(
+                sequence: 2,
+                device: PlayerInputDevice.Gamepad,
+                previousDevice: PlayerInputDevice.KeyboardMouse,
+                gamepadConnected: true,
+                leftStick: new Vector2(-1f, 0f)),
+            Frame(
+                sequence: 3,
+                pointer: new Vector2(155, 100),
+                device: PlayerInputDevice.KeyboardMouse,
+                previousDevice: PlayerInputDevice.Gamepad));
+        source.SetRumbleChannel("booster-pack-opening", 0.35f, 0.55f);
+        var input = new PlayerInputSystem(entityManager, source);
+        var rumble = new ControllerRumbleSystem(entityManager, source);
+        var interaction = new UIInteractionSystem(entityManager);
+
+        input.Update(new GameTime());
+        rumble.Update(new GameTime());
+        interaction.Update(new GameTime());
+        input.Update(TenthSecondGameTime());
+        rumble.Update(TenthSecondGameTime());
+        interaction.Update(TenthSecondGameTime());
+        input.Update(new GameTime());
+        rumble.Update(new GameTime());
+        interaction.Update(new GameTime());
+
+        Assert.Contains(
+            source.VibrationCalls,
+            call => call.Low == 0.65f && call.High == 0.75f);
+        Assert.Contains(
+            source.VibrationCalls,
+            call => call.Low == 0.35f && call.High == 0.55f);
         EventManager.Clear();
     }
 
@@ -1086,29 +1135,11 @@ public class PlayerInputArchitectureTests
         throw new DirectoryNotFoundException("Could not locate repository root.");
     }
 
-    private sealed class FakeInputSource : IPlayerInputSource
+    private sealed class FakeInputSource : MixedRumbleFakeInputSource
     {
-        private readonly Queue<PlayerInputFrame> _frames;
-
-        public List<(float Low, float High)> VibrationCalls { get; } = new();
-
         public FakeInputSource(params PlayerInputFrame[] frames)
+            : base(frames)
         {
-            _frames = new Queue<PlayerInputFrame>(frames);
-        }
-
-        public PlayerInputFrame Capture(
-            bool isWindowActive,
-            Rectangle renderDestination,
-            int virtualWidth,
-            int virtualHeight)
-        {
-            return _frames.Dequeue();
-        }
-
-        public void SetVibration(float lowFrequency, float highFrequency)
-        {
-            VibrationCalls.Add((lowFrequency, highFrequency));
         }
     }
 

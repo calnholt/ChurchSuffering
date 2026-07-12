@@ -166,6 +166,13 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe PoisonImpact() => Showcase("poison_impact", VisualEffectPalette.Poison, VisualEffectModule.PoisonCloud, VisualEffectModule.SmokeBlobs);
 		public static VisualEffectRecipe ShieldGain() => Showcase("shield_gain", VisualEffectPalette.Holy, VisualEffectModule.ShieldWard, VisualEffectModule.ResourceMotes);
 		public static VisualEffectRecipe ShieldBreak() => Showcase("shield_break", VisualEffectPalette.Arcane, VisualEffectModule.ShieldShatter, VisualEffectModule.Shards);
+		public static VisualEffectRecipe BlockedAttack()
+		{
+			return Base("blocked_attack", VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Player)
+				.WithPalette(VisualEffectPalette.Holy)
+				.WithModules(VisualEffectModule.ShieldWard)
+				.WithStartSfx(SfxTrack.ShieldBlock);
+		}
 		public static VisualEffectRecipe LifeDrain() => Showcase("life_drain", VisualEffectPalette.Blood, VisualEffectModule.SoulSiphon, VisualEffectModule.ResourceMotes);
 		public static VisualEffectRecipe Whirlwind() => Showcase("whirlwind", VisualEffectPalette.Physical, VisualEffectModule.SpinSlash, VisualEffectModule.Shake, VisualEffectModule.TargetShake);
 

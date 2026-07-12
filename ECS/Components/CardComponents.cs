@@ -712,6 +712,14 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
+    /// Hides a card from hand/pile zone rendering while a mutation cutscene plays.
+    /// </summary>
+    public class SuppressCardZoneRender : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
+    /// <summary>
     /// Temporarily hides readability-blocking card overlays while inspecting a hovered card.
     /// </summary>
     public class SuppressCardVisualEffects : IComponent

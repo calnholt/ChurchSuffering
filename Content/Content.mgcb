@@ -2654,6 +2654,11 @@
 /processor:SoundEffectProcessor
 /build:SFX/SFX_Bash_Shield_01.ogg
 
+#begin SFX/shield-block.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/shield-block.wav
+
 #begin SFX/SFX_Equip_01.ogg
 /importer:OggImporter
 /processor:SoundEffectProcessor

@@ -64,6 +64,22 @@ public readonly record struct BoosterPackLootAnimationSample(
 	float Progress,
 	bool IsSettled);
 
+public readonly record struct BoosterPackRumbleSample(float LowFrequency, float HighFrequency)
+{
+	public static BoosterPackRumbleSample Zero => new(0f, 0f);
+	public bool IsActive => LowFrequency > 0f || HighFrequency > 0f;
+}
+
+public readonly record struct BoosterPackRumbleSettings(
+	float MaxBuildupLow,
+	float MaxBuildupHigh,
+	float LootPulseLow,
+	float LootPulseHigh,
+	float LootPulseDurationSeconds)
+{
+	public static BoosterPackRumbleSettings Default { get; } = new(0.35f, 0.55f, 0.08f, 0.12f, 0.06f);
+}
+
 public static class BoosterPackOpeningAnimationService
 {
 	private const float BoundaryEpsilon = 0.00001f;
@@ -211,6 +227,70 @@ public static class BoosterPackOpeningAnimationService
 	public static bool CanDismiss(float elapsedSeconds, BoosterPackOpeningTiming timing)
 	{
 		return AtOrAfter(ClampElapsed(elapsedSeconds), timing.ReadyStart);
+	}
+
+	public static float GetLootRevealStartSeconds(int slotIndex, BoosterPackOpeningTiming timing)
+	{
+		return timing.ShowcaseStart + Math.Max(0, slotIndex) * Math.Max(0f, timing.RevealStagger);
+	}
+
+	public static BoosterPackRumbleSample SampleBuildupRumble(
+		float elapsedSeconds,
+		BoosterPackOpeningTiming timing,
+		BoosterPackRumbleSettings settings)
+	{
+		float elapsed = ClampElapsed(elapsedSeconds);
+		if (elapsed < timing.ChargeStart || AtOrAfter(elapsed, timing.RuptureStart))
+		{
+			return BoosterPackRumbleSample.Zero;
+		}
+
+		float duration = timing.RuptureStart - timing.ChargeStart;
+		if (duration <= 0f) return BoosterPackRumbleSample.Zero;
+		float progress = MathHelper.Clamp((elapsed - timing.ChargeStart) / duration, 0f, 1f);
+		float intensity = progress * progress;
+		return new BoosterPackRumbleSample(
+			settings.MaxBuildupLow * intensity,
+			settings.MaxBuildupHigh * intensity);
+	}
+
+	public static BoosterPackRumbleSample SampleLootRevealRumble(
+		float elapsedSeconds,
+		int lootCount,
+		BoosterPackOpeningTiming timing,
+		BoosterPackRumbleSettings settings)
+	{
+		float elapsed = ClampElapsed(elapsedSeconds);
+		float duration = Math.Max(0.001f, settings.LootPulseDurationSeconds);
+		float bestLow = 0f;
+		float bestHigh = 0f;
+		for (int slotIndex = 0; slotIndex < Math.Max(0, lootCount); slotIndex++)
+		{
+			float local = elapsed - GetLootRevealStartSeconds(slotIndex, timing);
+			if (local < 0f || local >= duration) continue;
+			float envelope = 1f - local / duration;
+			bestLow = Math.Max(bestLow, settings.LootPulseLow * envelope);
+			bestHigh = Math.Max(bestHigh, settings.LootPulseHigh * envelope);
+		}
+
+		return bestLow <= 0f && bestHigh <= 0f
+			? BoosterPackRumbleSample.Zero
+			: new BoosterPackRumbleSample(bestLow, bestHigh);
+	}
+
+	public static BoosterPackRumbleSample SampleRumble(
+		float elapsedSeconds,
+		int lootCount,
+		BoosterPackOpeningTiming timing,
+		BoosterPackRumbleSettings settings)
+	{
+		float elapsed = ClampElapsed(elapsedSeconds);
+		if (elapsed < timing.RuptureStart)
+		{
+			return SampleBuildupRumble(elapsed, timing, settings);
+		}
+
+		return SampleLootRevealRumble(elapsed, lootCount, timing, settings);
 	}
 
 	private static float ClampElapsed(float elapsedSeconds)

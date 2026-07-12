@@ -141,6 +141,7 @@ namespace Crusaders30XX.ECS.Systems
 		private BattleStateInfoManagementSystem _battleStateInfoManagementSystem;
 		private DiscardSpecificCardHighlightSystem _discardSpecificCardHighlightSystem;
 		private MillCardSystem _millCardSystem;
+		private BattleCardMutationDisplaySystem _battleCardMutationDisplaySystem;
 		private IntimidateManagementSystem _intimidateManagementSystem;
 		private ShackleManagementSystem _shackleManagementSystem;
 		private IntimidateDisplaySystem _intimidateDisplaySystem;
@@ -451,6 +452,7 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("ShuffleDeckDisplaySystem.Draw", _shuffleDeckDisplaySystem.Draw);
 			if (showDiscardPile) FrameProfiler.Measure("DiscardPileDisplaySystem.Draw", _discardPileDisplaySystem.Draw);
 			FrameProfiler.Measure("MillCardSystem.Draw", _millCardSystem.Draw);
+			FrameProfiler.Measure("BattleCardMutationDisplaySystem.Draw", _battleCardMutationDisplaySystem.Draw);
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawForeground", _payCostOverlaySystem.DrawForeground);
 			FrameProfiler.Measure("CantPlayCardMessageSystem.Draw", _cantPlayCardMessageSystem.Draw);
 			FrameProfiler.Measure("DiscardSpecificCardHighlightSystem.Draw", _discardSpecificCardHighlightSystem.Draw);
@@ -730,6 +732,7 @@ namespace Crusaders30XX.ECS.Systems
 			_battlePileGamepadInputSystem = new BattlePileGamepadInputSystem(_world.EntityManager);
 			_pileColorCountDisplaySystem = new PileColorCountDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_millCardSystem = new MillCardSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_battleCardMutationDisplaySystem = new BattleCardMutationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_playerDisplaySystem = new PlayerDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_cathedralLightingSystem = new CathedralLightingSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_desertBackgroundEffectSystem = new DesertBackgroundEffectSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -880,6 +883,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_battlePileGamepadInputSystem);
 			_world.AddSystem(_pileColorCountDisplaySystem);
 			_world.AddSystem(_millCardSystem);
+			_world.AddSystem(_battleCardMutationDisplaySystem);
 			_world.AddSystem(_playerDisplaySystem);
 			_world.AddSystem(_guardianAngelDisplaySystem);
 			_world.AddSystem(_cathedralLightingSystem);

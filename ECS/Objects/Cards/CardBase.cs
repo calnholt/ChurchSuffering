@@ -35,6 +35,40 @@ namespace Crusaders30XX.ECS.Objects.Cards
         public int Damage { get; set; } = 0;
         public int Block { get; set; } = 0;
         public List<string> Cost { get; set; } = [];
+
+        private int _multiHitCount = 1;
+        private float _firstHitDelaySeconds;
+        private float _hitIntervalSeconds = 0.5f;
+
+        public int MultiHitCount
+        {
+            get => _multiHitCount;
+            set
+            {
+                _multiHitCount = Math.Max(1, value);
+                _visualEffectSequence = null;
+            }
+        }
+
+        public float FirstHitDelaySeconds
+        {
+            get => _firstHitDelaySeconds;
+            set
+            {
+                _firstHitDelaySeconds = Math.Max(0f, value);
+                _visualEffectSequence = null;
+            }
+        }
+
+        public float HitIntervalSeconds
+        {
+            get => _hitIntervalSeconds;
+            set
+            {
+                _hitIntervalSeconds = Math.Max(0f, value);
+                _visualEffectSequence = null;
+            }
+        }
         
         public string Text { get; set; } = "";
         public bool IsUpgraded { get; set; } = false;

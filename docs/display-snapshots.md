@@ -112,13 +112,14 @@ Approved images are `initial.png`, `transition.png`, `settled.png`, and `absorb.
 
 ## `enemy-attack-banner`
 
-Renders the production enemy attack banner against the gothic battle background with a fixed damage-15 attack and deterministic attack sequence. Variants cover the entrance anticipation, impact burst, settled state, confirm hover feedback, and absorb exit.
+Renders the production enemy attack banner against the gothic battle background with a fixed damage-15 attack and deterministic attack sequence. Variants cover the entrance anticipation, impact burst, settled state, confirm hover feedback, repeating outline echo, and absorb exit.
 
 ```bash
 dotnet run -- snapshot enemy-attack-banner anticipation --verify
 dotnet run -- snapshot enemy-attack-banner impact --verify
 dotnet run -- snapshot enemy-attack-banner settled --verify
 dotnet run -- snapshot enemy-attack-banner hover --verify
+dotnet run -- snapshot enemy-attack-banner pulse --verify
 dotnet run -- snapshot enemy-attack-banner absorb --verify
 ./scripts/verify-enemy-attack-banner-snapshots.sh
 ```

@@ -424,6 +424,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private static bool ShouldDrawInHand(Entity entity)
         {
+            if (entity.HasComponent<SuppressCardZoneRender>()) return false;
             var assigned = entity.GetComponent<AssignedBlockCard>();
             return assigned == null || (!assigned.IsEquipment && assigned.Phase == AssignedBlockCard.PhaseState.Returning);
         }

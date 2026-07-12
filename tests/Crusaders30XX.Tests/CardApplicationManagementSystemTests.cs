@@ -37,7 +37,7 @@ public class CardApplicationManagementSystemTests
 			var drawCard = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
 			var discardCard = AddCard(entityManager, deck, deck.DiscardPile, new Tempest());
 			var exhaustCard = AddCard(entityManager, deck, deck.ExhaustPile, new Tempest());
-			_ = new CardApplicationManagementSystem(entityManager);
+			var mutationSystem = SetupApplyPipeline(entityManager);
 
 			EventManager.Publish(new ApplyCardApplicationEvent
 			{
@@ -45,6 +45,7 @@ public class CardApplicationManagementSystemTests
 				Type = CardApplicationType.Frozen,
 				Target = target,
 			});
+			BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 			Assert.Equal(appliesToHand, handCard.HasComponent<Frozen>());
 			Assert.Equal(appliesToDrawPile, drawCard.HasComponent<Frozen>());
@@ -54,6 +55,7 @@ public class CardApplicationManagementSystemTests
 		finally
 		{
 			EventManager.Clear();
+			BattleMutationTestSupport.ResetSettings();
 		}
 	}
 
@@ -66,13 +68,13 @@ public class CardApplicationManagementSystemTests
 			var entityManager = new EntityManager();
 			var deck = CreateDeck(entityManager);
 			var card = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
-			_ = new CardApplicationManagementSystem(entityManager);
+			var mutationSystem = SetupApplyPipeline(entityManager);
 
-			Apply(CardApplicationType.Frozen);
-			Apply(CardApplicationType.Brittle);
-			Apply(CardApplicationType.Scorched);
-			Apply(CardApplicationType.Thorned);
-			Apply(CardApplicationType.Colorless);
+			Apply(entityManager, mutationSystem, CardApplicationType.Frozen);
+			Apply(entityManager, mutationSystem, CardApplicationType.Brittle);
+			Apply(entityManager, mutationSystem, CardApplicationType.Scorched);
+			Apply(entityManager, mutationSystem, CardApplicationType.Thorned);
+			Apply(entityManager, mutationSystem, CardApplicationType.Colorless);
 
 			Assert.True(card.HasComponent<Frozen>());
 			Assert.True(card.HasComponent<Brittle>());
@@ -83,6 +85,7 @@ public class CardApplicationManagementSystemTests
 		finally
 		{
 			EventManager.Clear();
+			BattleMutationTestSupport.ResetSettings();
 		}
 	}
 
@@ -119,7 +122,7 @@ public class CardApplicationManagementSystemTests
 				EntryId = entry.entryId,
 				CardKey = entry.cardKey,
 			});
-			_ = new CardApplicationManagementSystem(entityManager);
+			var mutationSystem = SetupApplyPipeline(entityManager);
 
 			EventManager.Publish(new ApplyCardApplicationEvent
 			{
@@ -128,6 +131,7 @@ public class CardApplicationManagementSystemTests
 				Type = type,
 				Target = CardApplicationTarget.Deck,
 			});
+			BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 			Assert.True(HasApplication(card, type));
 			Assert.Contains(
@@ -149,6 +153,7 @@ public class CardApplicationManagementSystemTests
 		{
 			EventManager.Clear();
 			SaveCache.DeleteSaveFilesIfPresent();
+			BattleMutationTestSupport.ResetSettings();
 		}
 	}
 
@@ -232,6 +237,7 @@ public class CardApplicationManagementSystemTests
 			entityManager.AddComponent(alreadyFrozenCard, new Frozen());
 			entityManager.AddComponent(pledgedCard, new Pledge());
 			_ = new CardApplicationManagementSystem(entityManager);
+			var mutationSystem = SetupApplyPipeline(entityManager);
 
 			EventManager.Publish(new ApplyCardApplicationEvent
 			{
@@ -239,6 +245,7 @@ public class CardApplicationManagementSystemTests
 				Type = CardApplicationType.Frozen,
 				Target = CardApplicationTarget.Hand,
 			});
+			BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 			Assert.True(eligibleCard.HasComponent<Frozen>());
 			Assert.True(alreadyFrozenCard.HasComponent<Frozen>());
@@ -293,7 +300,17 @@ public class CardApplicationManagementSystemTests
 		}
 	}
 
-	private static void Apply(CardApplicationType type)
+	private static BattleCardMutationDisplaySystem SetupApplyPipeline(EntityManager entityManager)
+	{
+		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
+		_ = new CardApplicationManagementSystem(entityManager);
+		return mutationSystem;
+	}
+
+	private static void Apply(
+		EntityManager entityManager,
+		BattleCardMutationDisplaySystem mutationSystem,
+		CardApplicationType type)
 	{
 		EventManager.Publish(new ApplyCardApplicationEvent
 		{
@@ -301,6 +318,7 @@ public class CardApplicationManagementSystemTests
 			Type = type,
 			Target = CardApplicationTarget.DrawPile,
 		});
+		BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 	}
 
 	private static bool HasApplication(Entity card, CardApplicationType type)

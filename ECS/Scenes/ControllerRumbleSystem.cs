@@ -12,7 +12,6 @@ namespace Crusaders30XX.ECS.Systems
     public class ControllerRumbleSystem : Core.System
     {
         private readonly IPlayerInputSource _inputSource;
-        private float _rumbleTimeRemaining;
 
         [DebugEditable(DisplayName = "Rumble Duration (s)", Step = 0.01f, Min = 0f, Max = 1f)]
         public float RumbleDurationSeconds { get; set; } = 0.04f;
@@ -38,37 +37,27 @@ namespace Crusaders30XX.ECS.Systems
 
         protected override void UpdateEntity(Entity entity, GameTime gameTime)
         {
-            if (_rumbleTimeRemaining <= 0f) return;
-
-            _rumbleTimeRemaining -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_rumbleTimeRemaining <= 0f)
-            {
-                _inputSource.SetVibration(0f, 0f);
-            }
         }
 
         private void OnUIElementHoverEntered(UIElementHoverEnteredEvent e)
         {
             if (e.Source != PlayerInputDevice.Gamepad) return;
+            if (EntityManager.GetEntity("BoosterPackOpeningOverlay")
+                ?.GetComponent<BoosterPackOpeningOverlayState>()?.IsOpen == true) return;
             if (e.Entity?.GetComponent<UIElement>()?.IsInteractable != true) return;
 
-            _rumbleTimeRemaining = RumbleDurationSeconds;
-            _inputSource.SetVibration(RumbleLow, RumbleHigh);
+            _inputSource.PlayRumblePulse(
+                RumbleLow,
+                RumbleHigh,
+                RumbleDurationSeconds,
+                RumbleGroup.UiHover);
         }
 
         private void OnPlayerInput(PlayerInputEvent e)
         {
             if (e.Frame.Device == PlayerInputDevice.Gamepad && e.Frame.IsWindowActive) return;
 
-            StopRumble();
-        }
-
-        private void StopRumble()
-        {
-            if (_rumbleTimeRemaining <= 0f) return;
-
-            _rumbleTimeRemaining = 0f;
-            _inputSource.SetVibration(0f, 0f);
+            _inputSource.ClearRumbleGroup(RumbleGroup.UiHover);
         }
     }
 }

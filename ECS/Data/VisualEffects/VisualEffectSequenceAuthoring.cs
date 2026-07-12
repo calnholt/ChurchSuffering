@@ -24,8 +24,49 @@ public static class VisualEffectSequenceAuthoring
 	public static VisualEffectSequence ForCard(CardBase card)
 	{
 		if (card == null) return new VisualEffectSequence().WithBeats();
-		if (!GameIdExtensions.TryParseCardId(card.CardId, out var id)) return CreateStructuredCardFallback(card);
-		return CreateCardSequence(id, CardDirectionFor(id));
+		var sequence = !GameIdExtensions.TryParseCardId(card.CardId, out var id)
+			? CreateStructuredCardFallback(card)
+			: CreateCardSequence(id, CardDirectionFor(id));
+		return RepeatPrimaryBeatForMultiHitCard(card, sequence);
+	}
+
+	private static VisualEffectSequence RepeatPrimaryBeatForMultiHitCard(CardBase card, VisualEffectSequence sequence)
+	{
+		if (card.MultiHitCount <= 1
+			|| sequence?.Beats.Count != 1
+			|| sequence.Beats[0].TargetRole != VisualEffectTargetRole.Enemy)
+		{
+			return sequence;
+		}
+
+		var primary = sequence.Beats[0];
+		var beats = new VisualEffectBeat[card.MultiHitCount];
+		for (int hitIndex = 0; hitIndex < beats.Length; hitIndex++)
+		{
+			float desiredImpact = card.FirstHitDelaySeconds + hitIndex * card.HitIntervalSeconds;
+			beats[hitIndex] = new VisualEffectBeat
+			{
+				Id = $"{primary.Id}_hit_{hitIndex + 1}",
+				TargetRole = primary.TargetRole,
+				DelaySeconds = Math.Max(0f, desiredImpact - primary.ImpactTimeSeconds),
+				DurationSeconds = primary.DurationSeconds,
+				ImpactTimeSeconds = primary.ImpactTimeSeconds,
+				HitStopStartSeconds = primary.HitStopStartSeconds,
+				HitStopDurationSeconds = primary.HitStopDurationSeconds,
+				Intensity = primary.Intensity,
+				ParticleMultiplier = primary.ParticleMultiplier,
+				Palette = primary.Palette,
+				StartSfx = primary.StartSfx,
+				ImpactSfx = primary.ImpactSfx,
+				StartSfxVolume = primary.StartSfxVolume,
+				ImpactSfxVolume = primary.ImpactSfxVolume,
+				StartSfxPitch = primary.StartSfxPitch,
+				ImpactSfxPitch = primary.ImpactSfxPitch,
+				DrivesGameplayImpact = primary.DrivesGameplayImpact
+			}.WithModules(primary.Modules.ToArray());
+		}
+
+		return new VisualEffectSequence().WithBeats(beats);
 	}
 
 	public static VisualEffectSequence ForEnemyAttack(EnemyAttackBase attack)

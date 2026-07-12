@@ -552,6 +552,7 @@ namespace Crusaders30XX.ECS.Events
         UpgradeCard = 40,
         BoosterPackReveal = 41,
         DeckShuffle = 42,
+        ShieldBlock = 43,
     }
 
     /// <summary>
@@ -677,6 +678,12 @@ namespace Crusaders30XX.ECS.Events
         public int Amount { get; set; }
         public CardApplicationType Type { get; set; }
         public CardApplicationTarget Target { get; set; }
+    }
+
+    public class CardRestrictionMutationAnimationRequested
+    {
+        public Entity TargetCard { get; set; }
+        public CardApplicationType Type { get; set; }
     }
 
     public class RemoveCardApplication

@@ -37,6 +37,7 @@ public class CursedManagementSystemTests
 				EntryId = entry.entryId,
 				CardKey = entry.cardKey,
 			});
+			var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 			_ = new CursedManagementSystem(entityManager);
 
 			EventManager.Publish(new ApplyCardApplicationEvent
@@ -46,6 +47,7 @@ public class CursedManagementSystemTests
 				Type = type,
 				Target = CardApplicationTarget.Deck,
 			});
+			BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 			Assert.True(card.HasComponent<Cursed>());
 			Assert.Contains(
@@ -67,6 +69,7 @@ public class CursedManagementSystemTests
 		{
 			EventManager.Clear();
 			SaveCache.DeleteSaveFilesIfPresent();
+			BattleMutationTestSupport.ResetSettings();
 		}
 	}
 
@@ -109,6 +112,7 @@ public class CursedManagementSystemTests
 			var entityManager = new EntityManager();
 			var deck = CreateDeck(entityManager);
 			var card = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
+			var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 			_ = new CursedManagementSystem(entityManager);
 
 			EventManager.Publish(new ApplyCardApplicationEvent
@@ -117,6 +121,7 @@ public class CursedManagementSystemTests
 				Type = CardApplicationType.Cursed,
 				Target = CardApplicationTarget.DrawPile,
 			});
+			BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 			Assert.True(card.HasComponent<Cursed>());
 			Assert.True(card.HasComponent<CursedOriginalCard>());
@@ -126,6 +131,7 @@ public class CursedManagementSystemTests
 		finally
 		{
 			EventManager.Clear();
+			BattleMutationTestSupport.ResetSettings();
 		}
 	}
 
@@ -143,6 +149,7 @@ public class CursedManagementSystemTests
 				index: 0,
 				isUpgraded: true);
 			entityManager.AddComponent(card, new Brittle());
+			var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 			_ = new CursedManagementSystem(entityManager);
 
 			EventManager.Publish(new ApplyCardApplicationEvent
@@ -152,6 +159,7 @@ public class CursedManagementSystemTests
 				Type = CardApplicationType.Cursed,
 				Target = CardApplicationTarget.Deck,
 			});
+			BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 			Assert.True(card.HasComponent<Cursed>());
 			Assert.Equal(Curse.CardIdValue, card.GetComponent<CardData>()?.Card?.CardId);
@@ -181,6 +189,7 @@ public class CursedManagementSystemTests
 		finally
 		{
 			EventManager.Clear();
+			BattleMutationTestSupport.ResetSettings();
 		}
 	}
 

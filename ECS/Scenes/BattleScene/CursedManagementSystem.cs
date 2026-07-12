@@ -71,8 +71,11 @@ namespace Crusaders30XX.ECS.Systems
 
 			foreach (var card in cards)
 			{
-				ApplyCursedRuntime(EntityManager, card);
-				RunScopedStateService.SyncCardRestrictionsFromComponents(card);
+				EventManager.Publish(new CardRestrictionMutationAnimationRequested
+				{
+					TargetCard = card,
+					Type = CardApplicationType.Cursed,
+				});
 				LoggingService.Append(
 					"CursedManagementSystem.Apply.card",
 					new JsonObject

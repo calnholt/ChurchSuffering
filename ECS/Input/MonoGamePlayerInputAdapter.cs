@@ -6,6 +6,7 @@ namespace Crusaders30XX.ECS.Input
 {
     public sealed class MonoGamePlayerInputAdapter : IPlayerInputSource
     {
+        private readonly GamepadRumbleMixer _rumbleMixer = new();
         private KeyboardState _previousKeyboard;
         private MouseState _previousMouse;
         private GamePadState _previousGamepad;
@@ -83,12 +84,44 @@ namespace Crusaders30XX.ECS.Input
             return frame;
         }
 
-        public void SetVibration(float lowFrequency, float highFrequency)
+        public void SetRumbleChannel(string channelId, float lowFrequency, float highFrequency)
         {
-            GamePad.SetVibration(
-                PlayerIndex.One,
-                MathHelper.Clamp(lowFrequency, 0f, 1f),
-                MathHelper.Clamp(highFrequency, 0f, 1f));
+            _rumbleMixer.SetChannel(channelId, lowFrequency, highFrequency);
+            ApplyMixedRumble();
+        }
+
+        public void ClearRumbleChannel(string channelId)
+        {
+            _rumbleMixer.ClearChannel(channelId);
+            ApplyMixedRumble();
+        }
+
+        public void PlayRumblePulse(
+            float lowFrequency,
+            float highFrequency,
+            float durationSeconds,
+            RumbleGroup group = RumbleGroup.Default)
+        {
+            _rumbleMixer.PlayPulse(lowFrequency, highFrequency, durationSeconds, group);
+            ApplyMixedRumble();
+        }
+
+        public void ClearRumbleGroup(RumbleGroup group)
+        {
+            _rumbleMixer.ClearGroup(group);
+            ApplyMixedRumble();
+        }
+
+        public void TickRumble(float deltaSeconds)
+        {
+            _rumbleMixer.Tick(deltaSeconds);
+            ApplyMixedRumble();
+        }
+
+        private void ApplyMixedRumble()
+        {
+            (float low, float high) = _rumbleMixer.Combine();
+            GamePad.SetVibration(PlayerIndex.One, low, high);
         }
 
         private bool HasKeyboardActivity(KeyboardState keyboard)

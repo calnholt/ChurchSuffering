@@ -6,6 +6,7 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Systems;
+using Crusaders30XX.ECS.Services;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -22,6 +23,7 @@ public sealed class MaleficRiteTests : IDisposable
 	{
 		EventManager.Clear();
 		EventQueue.Clear();
+		BattleMutationTestSupport.ResetSettings();
 	}
 
 	[Fact]
@@ -101,6 +103,7 @@ public sealed class MaleficRiteTests : IDisposable
 	{
 		var (entityManager, maleficRiteEntity) = BuildWorldWithMaleficRite();
 		var original = GetMaleficRite(maleficRiteEntity);
+		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 		_ = new CardApplicationManagementSystem(entityManager);
 		_ = new CursedManagementSystem(entityManager);
 
@@ -111,6 +114,7 @@ public sealed class MaleficRiteTests : IDisposable
 			Type = CardApplicationType.Cursed,
 			Target = CardApplicationTarget.Deck,
 		});
+		BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 		Assert.Equal(Curse.CardIdValue, maleficRiteEntity.GetComponent<CardData>()?.Card?.CardId);
 

@@ -12,6 +12,7 @@ variants=(
   impact
   settled
   hover
+  pulse
   absorb
 )
 

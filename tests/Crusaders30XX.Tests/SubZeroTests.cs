@@ -4,6 +4,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Systems;
+using Crusaders30XX.ECS.Services;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -18,6 +19,7 @@ public class SubZeroTests : System.IDisposable
 	public void Dispose()
 	{
 		EventManager.Clear();
+		BattleMutationTestSupport.ResetSettings();
 	}
 
 	[Fact]
@@ -26,6 +28,7 @@ public class SubZeroTests : System.IDisposable
 		var entityManager = BuildWorld(hasSubZero: true, out var player, out var deck);
 		var eligibleCard = AddCard(entityManager, deck, deck.Hand, new Tempest());
 		var otherCard = AddCard(entityManager, deck, deck.Hand, new Tempest());
+		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 		_ = new AppliedPassivesManagementSystem(entityManager);
 		_ = new CardApplicationManagementSystem(entityManager);
 
@@ -39,6 +42,7 @@ public class SubZeroTests : System.IDisposable
 		});
 
 		EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.PreBlock });
+		BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 		Assert.Equal(1, passiveTriggeredCount);
 		Assert.Equal(1, new[] { eligibleCard, otherCard }.Count(card => card.HasComponent<Frozen>()));
@@ -67,10 +71,12 @@ public class SubZeroTests : System.IDisposable
 		var weaponCard = AddCard(entityManager, deck, deck.Hand, new Dagger());
 		entityManager.AddComponent(alreadyFrozenCard, new Frozen());
 		entityManager.AddComponent(pledgedCard, new Pledge());
+		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 		_ = new AppliedPassivesManagementSystem(entityManager);
 		_ = new CardApplicationManagementSystem(entityManager);
 
 		EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.PreBlock });
+		BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
 		Assert.True(eligibleCard.HasComponent<Frozen>());
 		Assert.True(alreadyFrozenCard.HasComponent<Frozen>());

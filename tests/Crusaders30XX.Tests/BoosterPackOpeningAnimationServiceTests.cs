@@ -159,4 +159,93 @@ public sealed class BoosterPackOpeningAnimationServiceTests
 				Timing,
 				13f));
 	}
+
+	[Fact]
+	public void Buildup_rumble_is_zero_before_charge_and_at_rupture()
+	{
+		var settings = BoosterPackRumbleSettings.Default;
+
+		Assert.Equal(
+			BoosterPackRumbleSample.Zero,
+			BoosterPackOpeningAnimationService.SampleBuildupRumble(Timing.ChargeStart - 0.01f, Timing, settings));
+		Assert.Equal(
+			BoosterPackRumbleSample.Zero,
+			BoosterPackOpeningAnimationService.SampleBuildupRumble(Timing.RuptureStart, Timing, settings));
+	}
+
+	[Fact]
+	public void Buildup_rumble_increases_monotonically_during_charge_and_crack()
+	{
+		var settings = BoosterPackRumbleSettings.Default;
+		float early = BoosterPackOpeningAnimationService.SampleBuildupRumble(
+			Timing.ChargeStart + 0.20f,
+			Timing,
+			settings).LowFrequency;
+		float late = BoosterPackOpeningAnimationService.SampleBuildupRumble(
+			Timing.RuptureStart - 0.01f,
+			Timing,
+			settings).LowFrequency;
+
+		Assert.True(early > 0f);
+		Assert.True(late > early);
+	}
+
+	[Fact]
+	public void Loot_reveal_rumble_pulses_at_each_slot_and_fades_out()
+	{
+		var settings = BoosterPackRumbleSettings.Default;
+		float slot0Start = BoosterPackOpeningAnimationService.GetLootRevealStartSeconds(0, Timing);
+		float slot1Start = BoosterPackOpeningAnimationService.GetLootRevealStartSeconds(1, Timing);
+
+		Assert.Equal(
+			BoosterPackRumbleSample.Zero,
+			BoosterPackOpeningAnimationService.SampleLootRevealRumble(slot0Start - 0.01f, 3, Timing, settings));
+
+		float slot0Peak = BoosterPackOpeningAnimationService.SampleLootRevealRumble(
+			slot0Start,
+			3,
+			Timing,
+			settings).LowFrequency;
+		Assert.Equal(settings.LootPulseLow, slot0Peak, 5);
+
+		Assert.Equal(
+			BoosterPackRumbleSample.Zero,
+			BoosterPackOpeningAnimationService.SampleLootRevealRumble(
+				slot0Start + settings.LootPulseDurationSeconds,
+				3,
+				Timing,
+				settings));
+
+		float slot1Peak = BoosterPackOpeningAnimationService.SampleLootRevealRumble(
+			slot1Start,
+			3,
+			Timing,
+			settings).LowFrequency;
+		Assert.Equal(settings.LootPulseLow, slot1Peak, 5);
+	}
+
+	[Fact]
+	public void SampleRumble_uses_buildup_before_rupture_and_loot_pulses_after()
+	{
+		var settings = BoosterPackRumbleSettings.Default;
+		float buildup = BoosterPackOpeningAnimationService.SampleRumble(
+			Timing.CrackStart + 0.10f,
+			3,
+			Timing,
+			settings).LowFrequency;
+		float lootPulse = BoosterPackOpeningAnimationService.SampleRumble(
+			Timing.ShowcaseStart,
+			3,
+			Timing,
+			settings).LowFrequency;
+		float ruptureSilence = BoosterPackOpeningAnimationService.SampleRumble(
+			Timing.RuptureStart + 0.10f,
+			3,
+			Timing,
+			settings).LowFrequency;
+
+		Assert.True(buildup > 0f);
+		Assert.Equal(settings.LootPulseLow, lootPulse, 5);
+		Assert.Equal(0f, ruptureSilence);
+	}
 }
