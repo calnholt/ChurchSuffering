@@ -168,7 +168,9 @@ public sealed class DrippingBloodDisplaySystem : Core.System
             savedBlend,
             savedSampler,
             savedDepth,
-            savedRasterizer);
+            savedRasterizer,
+            null,
+            Game1.Display.SpriteBatchTransform);
     }
 
     private bool EnsureOverlayLoaded()

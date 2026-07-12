@@ -48,7 +48,7 @@ public class PurpleZapsOverlay
         );
 
         Set("MatrixTransform", projection);
-        Set("ViewportSize", new Vector2(viewport.Width, viewport.Height));
+        Set("ViewportSize", new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         Set("Time", Time);
         Set("UseSourceTexture", UseSourceTexture);
         Set("Zoom", Zoom);

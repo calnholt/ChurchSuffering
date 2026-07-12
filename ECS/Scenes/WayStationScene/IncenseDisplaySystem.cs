@@ -200,7 +200,9 @@ namespace Crusaders30XX.ECS.Systems
                         savedBlend,
                         savedSampler,
                         savedDepth,
-                        savedRasterizer);
+                        savedRasterizer,
+                        null,
+                        Game1.Display.SpriteBatchTransform);
                 }
             }
         }

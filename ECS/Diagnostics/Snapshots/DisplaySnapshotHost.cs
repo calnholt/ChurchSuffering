@@ -107,7 +107,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             var paths = DisplaySnapshotBaselineComparer.BuildPaths(
                 _repositoryRoot,
                 _fixture.Id,
-                _fixture.OutputFileName);
+                GetOutputFileName());
 
             switch (_options.BaselineMode)
             {
@@ -125,6 +125,21 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             _graphicsDevice.SetRenderTarget(null);
             _game.Exit();
             return true;
+        }
+
+        private string GetOutputFileName()
+        {
+            if (!_options.RenderScaleOverride.HasValue || _options.RenderScaleOverride.Value == 1f)
+            {
+                return _fixture.OutputFileName;
+            }
+
+            string extension = Path.GetExtension(_fixture.OutputFileName);
+            string stem = Path.GetFileNameWithoutExtension(_fixture.OutputFileName);
+            string scale = _options.RenderScaleOverride.Value.ToString(
+                "0.###",
+                System.Globalization.CultureInfo.InvariantCulture);
+            return $"{stem}@{scale}x{extension}";
         }
 
         private static void Capture(Texture2D scene, string path)

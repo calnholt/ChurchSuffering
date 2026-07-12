@@ -68,7 +68,7 @@ public sealed class FrozenOverlay
         Matrix projection = Matrix.CreateOrthographicOffCenter(0, viewport.Width, viewport.Height, 0, 0, 1);
 
         Set("MatrixTransform", projection);
-        Set("iResolution", new Vector2(viewport.Width, viewport.Height));
+        Set("iResolution", new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         Set("iTime", Time);
         Set("CARD_CENTER", CardCenter);
         Set("CARD_SIZE", CardSize);

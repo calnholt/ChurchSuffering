@@ -33,7 +33,7 @@ public class ShockwaveOverlay
         Matrix projection = Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, 1);
 
         var pMatrix = _effect.Parameters["MatrixTransform"]; if (pMatrix != null) pMatrix.SetValue(projection);
-        var pViewport = _effect.Parameters["ViewportSize"]; if (pViewport != null) pViewport.SetValue(new Vector2(vp.Width, vp.Height));
+        var pViewport = _effect.Parameters["ViewportSize"]; if (pViewport != null) pViewport.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         var pCenter = _effect.Parameters["CenterPx"]; if (pCenter != null) pCenter.SetValue(CenterPx);
         var pT = _effect.Parameters["t"]; if (pT != null) pT.SetValue(TimeNorm);
         var pMaxR = _effect.Parameters["MaxRadiusPx"]; if (pMaxR != null) pMaxR.SetValue(MaxRadiusPx);
@@ -66,5 +66,4 @@ public class ShockwaveOverlay
         spriteBatch.End();
     }
 }
-
 

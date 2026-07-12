@@ -279,8 +279,7 @@ namespace Crusaders30XX.ECS.Systems
 			var root = EntityManager.GetEntity("UI_DrawPileRoot");
 			var t = root?.GetComponent<Transform>();
 			if (t != null) return t.Position;
-			var vp = _graphicsDevice.Viewport;
-			return new Vector2(vp.Width - 60, vp.Height - 60);
+			return new Vector2(Game1.VirtualWidth - 60, Game1.VirtualHeight - 60);
 		}
 
 		private Vector2 ResolveDiscardPileAnchor()
@@ -288,14 +287,12 @@ namespace Crusaders30XX.ECS.Systems
 			var root = EntityManager.GetEntity("UI_DiscardPileRoot");
 			var t = root?.GetComponent<Transform>();
 			if (t != null) return t.Position;
-			var vp = _graphicsDevice.Viewport;
-			return new Vector2(60, vp.Height - 60);
+			return new Vector2(60, Game1.VirtualHeight - 60);
 		}
 
 		private Vector2 ResolveCenterAnchor()
 		{
-			var vp = _graphicsDevice.Viewport;
-			return new Vector2(vp.Width / 2f + CenterOffsetX, vp.Height / 2f + CenterOffsetY);
+			return new Vector2(Game1.VirtualWidth / 2f + CenterOffsetX, Game1.VirtualHeight / 2f + CenterOffsetY);
 		}
 
 		private static float Clamp01(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
@@ -321,5 +318,4 @@ namespace Crusaders30XX.ECS.Systems
     }
 	}
 }
-
 

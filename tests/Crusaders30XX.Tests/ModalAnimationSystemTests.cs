@@ -13,8 +13,6 @@ public sealed class ModalAnimationSystemTests
 	[Fact]
 	public void Hidden_modal_clears_stale_root_overlay_input()
 	{
-		Game1.VirtualWidth = 1920;
-		Game1.VirtualHeight = 1080;
 		var entityManager = new EntityManager();
 		var modal = CreateModalRoot(entityManager, ModalAnimationPhase.Hidden);
 		var system = new ModalAnimationSystem(entityManager);
@@ -38,8 +36,6 @@ public sealed class ModalAnimationSystemTests
 	[Fact]
 	public void Completed_exit_restores_members_and_clears_root_overlay_input()
 	{
-		Game1.VirtualWidth = 1920;
-		Game1.VirtualHeight = 1080;
 		var entityManager = new EntityManager();
 		var modal = CreateModalRoot(entityManager, ModalAnimationPhase.Exiting);
 		var animation = modal.GetComponent<ModalAnimation>();

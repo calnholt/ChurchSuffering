@@ -15,6 +15,7 @@ using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Data.Achievements;
 using System.IO;
 using Crusaders30XX.ECS.Input;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Data.Save;
 
 namespace Crusaders30XX;
@@ -110,9 +111,10 @@ public class Game1 : Game
 	};
 
     public static bool WindowIsActive { get; private set; } = true;
-    public static int VirtualWidth = 1920;
-    public static int VirtualHeight = 1080;
-    public static Rectangle RenderDestination { get; private set; }
+    public const int VirtualWidth = DisplayMetrics.LogicalWidth;
+    public const int VirtualHeight = DisplayMetrics.LogicalHeight;
+    public static DisplayMetrics Display { get; private set; } = DisplayMetrics.Calculate(VirtualWidth, VirtualHeight);
+    public static Rectangle RenderDestination => Display.RenderDestination;
     
     public Game1(
         DisplaySnapshotLaunchOptions snapshotOptions = null,
@@ -482,6 +484,7 @@ public class Game1 : Game
 
         if (ShaderRuntimeOptions.ShadersEnabled && (hasPoison || hasCircularWaves || hasRectangularWaves))
         {
+            EnsurePostProcessTargets();
             if (hasPoison)
             {
                 RenderTarget2D next = (hasCircularWaves || hasRectangularWaves) ? _ppB : _ppA;
@@ -533,7 +536,7 @@ public class Game1 : Game
 
     private void DrawScene()
     {
-        _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer);
+        _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer, null, Display.SpriteBatchTransform);
 
         if (_snapshotHost?.IsActive == true)
         {
@@ -581,11 +584,11 @@ public class Game1 : Game
                 MeasureInclusiveSceneDraw("BattleSceneSystem.Draw", _battleSceneSystem.Draw);
                 // Additive trail pass for card move trails
                 _spriteBatch.End();
-				_spriteBatch.Begin(SpriteSortMode.Immediate, AdditiveAlphaOne, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer);
+				_spriteBatch.Begin(SpriteSortMode.Immediate, AdditiveAlphaOne, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer, null, Display.SpriteBatchTransform);
                 _battleSceneSystem.DrawAdditive();
                 _spriteBatch.End();
                 // Resume normal alpha-blend UI drawing state
-                _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer);
+                _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer, null, Display.SpriteBatchTransform);
                 break;
             }
             case SceneId.Climb:
@@ -648,7 +651,7 @@ public class Game1 : Game
             _cursorTrailDisplaySystem.DrawTrail(_sceneRt);
         }
 
-        _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer);
+        _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _spriteRasterizer, null, Display.SpriteBatchTransform);
         FrameProfiler.Measure("CursorDisplaySystem.Draw", _cursorDisplaySystem.Draw);
         _spriteBatch.End();
     }
@@ -673,20 +676,33 @@ public class Game1 : Game
 #endif
 		LoggingService.Flush();
 		try { _imageAssets?.Dispose(); } catch { }
+		try { FullScreenRenderTargetPool.DisposeAll(GraphicsDevice); } catch { }
 		base.UnloadContent();
 	}
 
     private void AllocateRenderTargets()
     {
-        _sceneRt = new RenderTarget2D(GraphicsDevice, VirtualWidth, VirtualHeight, false,
+        _sceneRt = new RenderTarget2D(GraphicsDevice, Display.RenderWidth, Display.RenderHeight, false,
             SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-        _ppA = new RenderTarget2D(GraphicsDevice, VirtualWidth, VirtualHeight, false, SurfaceFormat.Color, DepthFormat.None);
-        _ppB = new RenderTarget2D(GraphicsDevice, VirtualWidth, VirtualHeight, false, SurfaceFormat.Color, DepthFormat.None);
+    }
+
+    private void EnsurePostProcessTargets()
+    {
+        if (_ppA != null && _ppA.Width == Display.RenderWidth && _ppA.Height == Display.RenderHeight &&
+            _ppB != null && _ppB.Width == Display.RenderWidth && _ppB.Height == Display.RenderHeight)
+        {
+            return;
+        }
+
+        _ppA?.Dispose();
+        _ppB?.Dispose();
+        _ppA = new RenderTarget2D(GraphicsDevice, Display.RenderWidth, Display.RenderHeight, false, SurfaceFormat.Color, DepthFormat.None);
+        _ppB = new RenderTarget2D(GraphicsDevice, Display.RenderWidth, Display.RenderHeight, false, SurfaceFormat.Color, DepthFormat.None);
     }
 
     private void EnsureRenderTargetsMatchVirtual()
     {
-        if (_sceneRt == null || _sceneRt.Width != VirtualWidth || _sceneRt.Height != VirtualHeight)
+        if (_sceneRt == null || _sceneRt.Width != Display.RenderWidth || _sceneRt.Height != Display.RenderHeight)
         {
             _sceneRt?.Dispose();
             _ppA?.Dispose();
@@ -697,27 +713,22 @@ public class Game1 : Game
     
     private void CalculateRenderDestination()
     {
-        Point screenSize = new Point(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight);
-        float screenAspect = (float)screenSize.X / screenSize.Y;
-        float virtualAspect = (float)VirtualWidth / VirtualHeight;
-
-        int width, height;
-        if (screenAspect > virtualAspect)
+        var presentation = GraphicsDevice.PresentationParameters;
+        DisplayMetrics nextDisplay = DisplayMetrics.Calculate(
+            presentation.BackBufferWidth,
+            presentation.BackBufferHeight,
+            _snapshotOptions == null ? null : _snapshotOptions.RenderScaleOverride ?? 1f);
+        if (Display.RenderWidth != nextDisplay.RenderWidth || Display.RenderHeight != nextDisplay.RenderHeight)
         {
-            // Screen is wider than virtual: pillarbox
-            height = screenSize.Y;
-            width = (int)(height * virtualAspect);
+            FullScreenRenderTargetPool.DisposeAll(GraphicsDevice);
         }
-        else
-        {
-            // Screen is taller than virtual (or equal): letterbox
-            width = screenSize.X;
-            height = (int)(width / virtualAspect);
-        }
-
-        int x = (screenSize.X - width) / 2;
-        int y = (screenSize.Y - height) / 2;
-        RenderDestination = new Rectangle(x, y, width, height);
+        Display = nextDisplay;
+        Console.WriteLine(
+            $"[Display] client={Window.ClientBounds.Width}x{Window.ClientBounds.Height} " +
+            $"backbuffer={Display.BackBufferWidth}x{Display.BackBufferHeight} " +
+            $"render={Display.RenderWidth}x{Display.RenderHeight} " +
+            $"destination={Display.RenderDestination} " +
+            $"scale={Display.RenderScaleX:0.###}x{Display.RenderScaleY:0.###}");
     }
 
     private void ToggleFullScreen()

@@ -22,11 +22,17 @@ Add `--verify` to compare against the approved image, or `--accept` to
 explicitly replace it. These flags are mutually exclusive and are not passed
 to the fixture.
 
+Add `--render-scale 2` to capture the fixture at 3840x2160 while preserving
+the normal 1920x1080 logical layout. High-resolution captures are debug-only,
+use an `@2x` filename suffix, and cannot be combined with `--verify` or
+`--accept`. The accepted baseline workflow always remains at scale `1`.
+
 | Part | Description |
 |------|-------------|
 | `snapshot` | Required first argument (replaces the removed `card-debug` command) |
 | `<fixture-id>` | Registered fixture name (see table below) |
 | `[fixture-args...]` | Fixture-specific flags and positional args |
+| `--render-scale <value>` | Global debug capture scale greater than `0` and no greater than `2` |
 
 ### Output
 
@@ -37,7 +43,7 @@ to the fixture.
 
 ### Behavior (all fixtures)
 
-- Virtual resolution 1920×1080; no profiler, tooltips, debug menu, or cursor in the PNG
+- Logical resolution 1920×1080; default captures are 1920×1080 and `--render-scale 2` captures are 3840×2160
 - Card snapshots use the canonical card renderer
 - Does not publish `LoadSceneEvent` — uses `SceneId.Snapshot` only
 - Optional launch flag `no-shaders` (e.g. `dotnet run -- snapshot card no-shaders`) disables GPU screen effects; PNGs are not comparable to full-effect baselines

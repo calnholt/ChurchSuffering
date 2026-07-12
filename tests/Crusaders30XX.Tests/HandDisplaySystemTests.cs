@@ -17,15 +17,11 @@ public sealed class HandDisplaySystemTests : IDisposable
     public HandDisplaySystemTests()
     {
         EventManager.Clear();
-        Game1.VirtualWidth = 1920;
-        Game1.VirtualHeight = 1080;
     }
 
     public void Dispose()
     {
         EventManager.Clear();
-        Game1.VirtualWidth = 1920;
-        Game1.VirtualHeight = 1080;
     }
 
     [Fact]

@@ -104,7 +104,7 @@ public class SnowstormOverlay
         );
 
         _effect.Parameters["MatrixTransform"]?.SetValue(projection);
-        _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(viewport.Width, viewport.Height));
+        _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         _effect.Parameters["Time"]?.SetValue(Time);
         _effect.Parameters["UseSourceTexture"]?.SetValue(UseSourceTexture);
         _effect.Parameters["TimeScale"]?.SetValue(TimeScale);

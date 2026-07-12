@@ -33,8 +33,8 @@ public sealed class CardSheenOverlay
 		Viewport viewport = spriteBatch.GraphicsDevice.Viewport;
 		Matrix projection = Matrix.CreateOrthographicOffCenter(
 			0,
-			viewport.Width,
-			viewport.Height,
+			Game1.VirtualWidth,
+			Game1.VirtualHeight,
 			0,
 			0,
 			1);

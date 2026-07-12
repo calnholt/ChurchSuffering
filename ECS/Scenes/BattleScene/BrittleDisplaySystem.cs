@@ -24,8 +24,8 @@ public class BrittleDisplaySystem : Core.System
 
     private Effect _effect;
     private BrittleOverlay _overlay;
-    private RenderTarget2D _beforeCardTarget;
-    private RenderTarget2D _afterCardTarget;
+    private FullScreenRenderTargetPool.Lease _beforeCardLease;
+    private FullScreenRenderTargetPool.Lease _afterCardLease;
     private bool _failed;
     private bool _hasCapture;
     private Entity _capturedCard;
@@ -91,6 +91,7 @@ public class BrittleDisplaySystem : Core.System
     {
         _hasCapture = false;
         _capturedCard = null;
+        ReleaseCaptureTargets();
     }
 
     private void OnCardBaseRenderStarted(CardBaseRenderStartedEvent evt)
@@ -111,20 +112,29 @@ public class BrittleDisplaySystem : Core.System
     {
         _hasCapture = false;
         _capturedCard = null;
+        ReleaseCaptureTargets();
 
         if (!ShouldRender(card)) return;
         if (!EnsureLoaded()) return;
-        if (!EnsureTargets()) return;
 
         if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
                 _graphicsDevice,
                 out var currentTargets,
                 out var currentTarget)) return;
 
+        _beforeCardLease = FullScreenRenderTargetPool.Acquire(
+            _graphicsDevice,
+            currentTarget.Width,
+            currentTarget.Height);
+        _afterCardLease = FullScreenRenderTargetPool.Acquire(
+            _graphicsDevice,
+            currentTarget.Width,
+            currentTarget.Height);
+
         var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
         _spriteBatch.End();
 
-        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, _beforeCardTarget);
+        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, _beforeCardLease.Target);
         SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, currentTargets);
         SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
 
@@ -150,23 +160,28 @@ public class BrittleDisplaySystem : Core.System
         _hasCapture = false;
         _capturedCard = null;
 
-        if (!ShouldRender(card) || _overlay == null || _beforeCardTarget == null || _afterCardTarget == null)
+        if (!ShouldRender(card) || _overlay == null || _beforeCardLease?.Target == null || _afterCardLease?.Target == null)
         {
+            ReleaseCaptureTargets();
             return;
         }
 
         if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
                 _graphicsDevice,
                 out var currentTargets,
-                out var currentTarget)) return;
+                out var currentTarget))
+        {
+            ReleaseCaptureTargets();
+            return;
+        }
 
         var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
         _spriteBatch.End();
 
-        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, _afterCardTarget);
+        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, _afterCardLease.Target);
 
         _overlay.Time = _timeSeconds;
-        _overlay.BackgroundTexture = _beforeCardTarget;
+        _overlay.BackgroundTexture = _beforeCardLease.Target;
         _overlay.CardCenter = _capturedCardCenter;
         _overlay.CardScale = _capturedCardScale;
         _overlay.CardRotation = _capturedCardRotation;
@@ -182,10 +197,11 @@ public class BrittleDisplaySystem : Core.System
         _graphicsDevice.Clear(Color.Transparent);
 
         _overlay.Begin(_spriteBatch);
-        _overlay.Draw(_spriteBatch, _afterCardTarget);
+        _overlay.Draw(_spriteBatch, _afterCardLease.Target);
         _overlay.End(_spriteBatch);
 
         SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
+        ReleaseCaptureTargets();
     }
 
     private bool ShouldRender(Entity card)
@@ -233,26 +249,12 @@ public class BrittleDisplaySystem : Core.System
         return _overlay.IsAvailable;
     }
 
-    private bool EnsureTargets()
+    private void ReleaseCaptureTargets()
     {
-        var bounds = _graphicsDevice.Viewport.Bounds;
-        if (bounds.Width <= 0 || bounds.Height <= 0) return false;
-
-        if (_beforeCardTarget != null &&
-            _beforeCardTarget.Width == bounds.Width &&
-            _beforeCardTarget.Height == bounds.Height &&
-            _afterCardTarget != null &&
-            _afterCardTarget.Width == bounds.Width &&
-            _afterCardTarget.Height == bounds.Height)
-        {
-            return true;
-        }
-
-        _beforeCardTarget?.Dispose();
-        _afterCardTarget?.Dispose();
-        _beforeCardTarget = new RenderTarget2D(_graphicsDevice, bounds.Width, bounds.Height, false, SurfaceFormat.Color, DepthFormat.None);
-        _afterCardTarget = new RenderTarget2D(_graphicsDevice, bounds.Width, bounds.Height, false, SurfaceFormat.Color, DepthFormat.None);
-        return true;
+        _beforeCardLease?.Dispose();
+        _afterCardLease?.Dispose();
+        _beforeCardLease = null;
+        _afterCardLease = null;
     }
 
 }

@@ -51,7 +51,7 @@ public class BrittleOverlay
         Matrix projection = Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, 1);
 
         _effect.Parameters["MatrixTransform"]?.SetValue(projection);
-        _effect.Parameters["iResolution"]?.SetValue(new Vector2(vp.Width, vp.Height));
+        _effect.Parameters["iResolution"]?.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         _effect.Parameters["iTime"]?.SetValue(Time);
         _effect.Parameters["BackgroundTexture"]?.SetValue(BackgroundTexture);
         _effect.Parameters["CARD_CENTER"]?.SetValue(CardCenter);

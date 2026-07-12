@@ -67,12 +67,11 @@ namespace Crusaders30XX.ECS.Systems
 				if (_settings == null) return;
 			}
 
-			var vp = _graphicsDevice.Viewport;
 			if (!CardTooltipLayoutService.TryGetTopHoveredLayout(
 				EntityManager,
 				_settings,
-				vp.Width,
-				vp.Height,
+				Game1.VirtualWidth,
+				Game1.VirtualHeight,
 				GapOverride,
 				ScreenPadding,
 				out var layout))

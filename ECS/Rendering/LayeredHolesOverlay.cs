@@ -58,7 +58,7 @@ public sealed class LayeredHolesOverlay
 			1);
 
 		Set("MatrixTransform", projection);
-		Set("ViewportSize", new Vector2(viewport.Width, viewport.Height));
+		Set("ViewportSize", new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
 		Set("Time", Time);
 		Set("HoleCount", Math.Clamp(HoleCount, 0, MaxHoles));
 		Set("HoleFeather", HoleFeather);

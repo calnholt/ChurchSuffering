@@ -25,7 +25,6 @@ public sealed class ThornedDisplaySystem : Core.System
 
     private Effect _effect;
     private ThornedOverlay _overlay;
-    private RenderTarget2D _sourceTarget;
     private bool _failed;
     private float _timeSeconds;
 
@@ -212,21 +211,27 @@ public sealed class ThornedDisplaySystem : Core.System
 
     private void Render(Entity card, Vector2 position, float scale, float rotation)
     {
-        if (!ShouldRender(card) || !EnsureLoaded() || !EnsureTarget()) return;
+        if (!ShouldRender(card) || !EnsureLoaded()) return;
         if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
                 _graphicsDevice,
                 out var currentTargets,
                 out var currentTarget)) return;
 
+        using var sourceLease = FullScreenRenderTargetPool.Acquire(
+            _graphicsDevice,
+            currentTarget.Width,
+            currentTarget.Height);
+        RenderTarget2D sourceTarget = sourceLease.Target;
+
         var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
         _spriteBatch.End();
-        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, _sourceTarget);
+        SpriteBatchRenderTargetCompositor.Copy(_graphicsDevice, _spriteBatch, currentTarget, sourceTarget);
 
         ConfigureOverlay(card, position, scale, rotation);
         SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, currentTargets);
         _graphicsDevice.Clear(Color.Transparent);
         _overlay.Begin(_spriteBatch);
-        _overlay.Draw(_spriteBatch, _sourceTarget);
+        _overlay.Draw(_spriteBatch, sourceTarget);
         _overlay.End(_spriteBatch);
         SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
     }
@@ -315,26 +320,6 @@ public sealed class ThornedDisplaySystem : Core.System
 
         _overlay ??= new ThornedOverlay(_effect);
         return _overlay.IsAvailable;
-    }
-
-    private bool EnsureTarget()
-    {
-        Rectangle bounds = _graphicsDevice.Viewport.Bounds;
-        if (bounds.Width <= 0 || bounds.Height <= 0) return false;
-        if (_sourceTarget != null && _sourceTarget.Width == bounds.Width && _sourceTarget.Height == bounds.Height)
-        {
-            return true;
-        }
-
-        _sourceTarget?.Dispose();
-        _sourceTarget = new RenderTarget2D(
-            _graphicsDevice,
-            bounds.Width,
-            bounds.Height,
-            false,
-            SurfaceFormat.Color,
-            DepthFormat.None);
-        return true;
     }
 
     private static float GetScale(Entity card) => card?.GetComponent<Transform>()?.Scale.X ?? 1f;

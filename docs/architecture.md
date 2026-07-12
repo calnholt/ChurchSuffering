@@ -47,6 +47,14 @@ Layout systems may write `Position` every frame to assert the entity's base. The
 
 Do not reference `ParallaxLayer.Anchor`, `AnchorInitialized`, `LastWrittenPosition`, or other internal parallax state from other systems.
 
+## Display resolution
+
+Display and input coordinates use a fixed 1920x1080 logical canvas. `DisplayMetrics`
+maps that canvas to a native internal render target matching the letterboxed 16:9
+content area, capped at 3840x2160. Layout systems must use `Game1.VirtualWidth` and
+`Game1.VirtualHeight`; physical viewport dimensions are reserved for render-target
+allocation and fullscreen compositing.
+
 ## Related domain docs
 
 - `docs/GAME_RULES.md` - current gameplay rules

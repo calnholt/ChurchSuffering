@@ -25,7 +25,7 @@ namespace Crusaders30XX.ECS.Rendering
             }
 
             Rectangle previous = graphicsDevice.ScissorRectangle;
-            Rectangle next = Rectangle.Intersect(previous, clipRect.Value);
+            Rectangle next = Rectangle.Intersect(previous, Game1.Display.LogicalToRender(clipRect.Value));
             if (next.Width <= 0 || next.Height <= 0)
             {
                 next = Rectangle.Empty;

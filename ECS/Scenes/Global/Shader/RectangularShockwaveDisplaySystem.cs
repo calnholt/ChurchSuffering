@@ -207,15 +207,14 @@ public class RectangularShockwaveDisplaySystem : Core.System
     [DebugAction("Trigger Rectangular Shockwave")]
     public void Debug_TriggerRectangularShockwave()
     {
-        var vp = _gd.Viewport;
-        var center = new Vector2(vp.Width * 0.5f, vp.Height * 0.5f);
+        var center = new Vector2(Game1.VirtualWidth * 0.5f, Game1.VirtualHeight * 0.5f);
         var size = new Vector2(200f, 150f);
         var e = new RectangularShockwaveEvent
         {
             BoundsCenterPx = center,
             BoundsSizePx = size,
             DurationSec = 0.6f,
-            MaxRadiusPx = Math.Min(vp.Width, vp.Height) * 0.6f,
+            MaxRadiusPx = Math.Min(Game1.VirtualWidth, Game1.VirtualHeight) * 0.6f,
             RippleWidthPx = 18f,
             Strength = 1.0f,
             ChromaticAberrationAmp = 0.05f,
@@ -225,4 +224,3 @@ public class RectangularShockwaveDisplaySystem : Core.System
         EventManager.Publish(e);
     }
 }
-

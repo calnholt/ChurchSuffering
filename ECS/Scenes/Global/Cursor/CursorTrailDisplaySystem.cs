@@ -171,7 +171,7 @@ public class CursorTrailDisplaySystem : Core.System
         int outerRadius = Math.Max(1, StampRadius);
         var stampTex = PrimitiveTextureFactory.GetAntiAliasedCircle(_gd, outerRadius);
         Color stampColor = new Color(OuterR, OuterG, OuterB, 1f);
-        _sb.Begin(SpriteSortMode.Immediate, BlendState.Additive, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
+        _sb.Begin(SpriteSortMode.Immediate, BlendState.Additive, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone, null, Game1.Display.SpriteBatchTransform);
         foreach (Vector2 position in _stampPositions)
         {
             _sb.Draw(stampTex, position, null, stampColor, 0f, new Vector2(outerRadius, outerRadius), 1f, SpriteEffects.None, 0f);
@@ -181,7 +181,7 @@ public class CursorTrailDisplaySystem : Core.System
         int coreRadius = Math.Max(1, Math.Min(CoreRadius, outerRadius));
         var coreTex = PrimitiveTextureFactory.GetAntiAliasedCircle(_gd, coreRadius);
         Color coreColor = new Color(CoreR, CoreG, CoreB, 1f);
-        _sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
+        _sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone, null, Game1.Display.SpriteBatchTransform);
         foreach (Vector2 position in _stampPositions)
         {
             _sb.Draw(coreTex, position, null, coreColor, 0f, new Vector2(coreRadius, coreRadius), 1f, SpriteEffects.None, 0f);
@@ -233,7 +233,7 @@ public class CursorTrailDisplaySystem : Core.System
 
         // Erase a soft circle at current cursor position so the trail doesn't show under the cursor sprite
         var cutoutTex = PrimitiveTextureFactory.GetAntiAliasedCircle(_gd, CutoutRadius);
-        _sb.Begin(SpriteSortMode.Immediate, EraseBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
+        _sb.Begin(SpriteSortMode.Immediate, EraseBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone, null, Game1.Display.SpriteBatchTransform);
         _sb.Draw(cutoutTex, _cursorPos, null, Color.White, 0f, new Vector2(CutoutRadius, CutoutRadius), 1f, SpriteEffects.None, 0f);
         _sb.End();
 
@@ -263,8 +263,8 @@ public class CursorTrailDisplaySystem : Core.System
 
     private void EnsureTargets()
     {
-        int w = Game1.VirtualWidth;
-        int h = Game1.VirtualHeight;
+        int w = Game1.Display.RenderWidth;
+        int h = Game1.Display.RenderHeight;
         if (_trailRt != null && _trailRt.Width == w && _trailRt.Height == h) return;
 
         DisposeTargets();

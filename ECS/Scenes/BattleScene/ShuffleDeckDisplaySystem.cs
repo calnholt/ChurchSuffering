@@ -364,8 +364,7 @@ namespace Crusaders30XX.ECS.Systems
 			var root = EntityManager.GetEntity(_targetEntityName);
 			var tr = root?.GetComponent<Transform>();
 			if (tr != null) return tr.Position;
-			var viewport = _graphicsDevice.Viewport;
-			return new Vector2(viewport.Width - 60f, viewport.Height - 60f);
+			return new Vector2(Game1.VirtualWidth - 60f, Game1.VirtualHeight - 60f);
 		}
 
 		private (Vector2 Position, float Rotation) GetCornerStart(StartCorner corner)

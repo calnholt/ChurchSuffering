@@ -211,12 +211,11 @@ namespace Crusaders30XX.ECS.Systems
 				if (_cardTooltipSettings == null) return;
 			}
 
-			var vp = _graphicsDevice.Viewport;
 			if (!CardTooltipLayoutService.TryGetTopHoveredLayout(
 				EntityManager,
 				_cardTooltipSettings,
-				vp.Width,
-				vp.Height,
+				Game1.VirtualWidth,
+				Game1.VirtualHeight,
 				gapOverride: 0,
 				screenPadding: 8,
 				out var layout))
@@ -235,7 +234,7 @@ namespace Crusaders30XX.ECS.Systems
 			bool placeLeft = layout.TooltipRect.X < layout.AnchorBounds.X;
 			int availableWidth = placeLeft
 				? layout.TooltipRect.X - gap
-				: vp.Width - layout.TooltipRect.Right - gap;
+				: Game1.VirtualWidth - layout.TooltipRect.Right - gap;
 			var measured = MeasureBlocks(blocks, System.Math.Max(50, System.Math.Min(MaxWidth, availableWidth)));
 
 			int rx = placeLeft
@@ -243,8 +242,8 @@ namespace Crusaders30XX.ECS.Systems
 				: layout.TooltipRect.Right + gap;
 			int ry = layout.TooltipRect.Y;
 			var rect = new Rectangle(rx, ry, measured.Size.X, measured.Size.Y);
-			rect.X = System.Math.Max(0, System.Math.Min(rect.X, vp.Width - rect.Width));
-			rect.Y = System.Math.Max(0, System.Math.Min(rect.Y, vp.Height - rect.Height));
+			rect.X = System.Math.Max(0, System.Math.Min(rect.X, Game1.VirtualWidth - rect.Width));
+			rect.Y = System.Math.Max(0, System.Math.Min(rect.Y, Game1.VirtualHeight - rect.Height));
 			var renderBlocks = BuildRenderBlocks(measured.Blocks, rect.Location);
 			SetVisibleFadeState(layout.Entity.Id, rect, renderBlocks);
 		}

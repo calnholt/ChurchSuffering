@@ -489,7 +489,14 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			// Restart SpriteBatch for text rendering
-			_spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+			_spriteBatch.Begin(
+				SpriteSortMode.Deferred,
+				BlendState.AlphaBlend,
+				SamplerState.PointClamp,
+				null,
+				null,
+				null,
+				Game1.Display.SpriteBatchTransform);
 
 			// Draw text on segments (using display values for text)
 			currentX = startX;

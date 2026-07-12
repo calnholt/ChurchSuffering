@@ -71,7 +71,9 @@ internal static class SpriteBatchRenderTargetCompositor
             state.BlendState,
             state.SamplerState,
             state.DepthStencilState,
-            state.RasterizerState);
+            state.RasterizerState,
+            null,
+            Game1.Display.SpriteBatchTransform);
     }
 
     internal readonly struct SpriteBatchState

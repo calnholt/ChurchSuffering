@@ -69,6 +69,39 @@ public sealed class DisplaySnapshotFrameworkTests
             options.Args);
     }
 
+    [Fact]
+    public void TryParse_renderScale_setsOverrideAndExcludesItFromFixtureArgs()
+    {
+        bool parsed = DisplaySnapshotLaunchOptions.TryParse(
+            new[] { "snapshot", "card", "strike", "--render-scale", "2" },
+            out var options);
+
+        Assert.True(parsed);
+        Assert.Equal(2f, options.RenderScaleOverride);
+        Assert.Equal(new[] { "strike" }, options.Args);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("2.1")]
+    [InlineData("invalid")]
+    public void TryParse_invalidRenderScale_throws(string value)
+    {
+        Assert.Throws<DisplaySnapshotSetupException>(() =>
+            DisplaySnapshotLaunchOptions.TryParse(
+                new[] { "snapshot", "card", "--render-scale", value },
+                out _));
+    }
+
+    [Fact]
+    public void TryParse_highResolutionVerify_throws()
+    {
+        Assert.Throws<DisplaySnapshotSetupException>(() =>
+            DisplaySnapshotLaunchOptions.TryParse(
+                new[] { "snapshot", "card", "--render-scale", "2", "--verify" },
+                out _));
+    }
+
     [Theory]
     [InlineData("card", "strike", "card", "strike.png")]
     [InlineData("brittle-card", "strike.png", "brittle-card", "strike.png")]

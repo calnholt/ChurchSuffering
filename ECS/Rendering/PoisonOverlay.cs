@@ -48,7 +48,7 @@ public class PoisonOverlay
         Matrix projection = Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, 1);
 
         var pMatrix = _effect.Parameters["MatrixTransform"]; if (pMatrix != null) pMatrix.SetValue(projection);
-        var pViewport = _effect.Parameters["ViewportSize"]; if (pViewport != null) pViewport.SetValue(new Vector2(vp.Width, vp.Height));
+        var pViewport = _effect.Parameters["ViewportSize"]; if (pViewport != null) pViewport.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         var pT = _effect.Parameters["t"]; if (pT != null) pT.SetValue(TimeNorm);
         var pAttack = _effect.Parameters["AttackDuration"]; if (pAttack != null) pAttack.SetValue(AttackDuration);
         var pDecay = _effect.Parameters["DecayRate"]; if (pDecay != null) pDecay.SetValue(DecayRate);
@@ -86,4 +86,3 @@ public class PoisonOverlay
         spriteBatch.End();
     }
 }
-

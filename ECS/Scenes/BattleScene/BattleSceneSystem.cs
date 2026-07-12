@@ -305,6 +305,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void Draw()
 		{
+			EnsureBackgroundTargets();
 			// End the current SpriteBatch to draw backgrounds to a separate render target
 			_spriteBatch.End();
 			
@@ -315,7 +316,7 @@ namespace Crusaders30XX.ECS.Systems
 			// Draw backgrounds to _bgRt
 			_graphicsDevice.SetRenderTarget(_bgRt);
 			_graphicsDevice.Clear(Color.Transparent);
-			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _rasterizerState);
+			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _rasterizerState, null, Game1.Display.SpriteBatchTransform);
 			FrameProfiler.Measure("BattleBackgroundSystem.Draw", _battleBackgroundSystem.Draw);
 			FrameProfiler.Measure("CathedralLightingSystem.Draw", _cathedralLightingSystem.Draw);
 			bool hasDesertStorm = _desertStormDisplaySystem?.CanComposite == true;
@@ -391,7 +392,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 			
 			// Resume SpriteBatch for remaining UI drawing
-			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _rasterizerState);
+			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _rasterizerState, null, Game1.Display.SpriteBatchTransform);
 			
 			// If there will be dialog to show for the quest, skip drawing battle UI (overlay is drawn globally)
 			bool willShowDialog = EntityManager.GetEntitiesWithComponent<QueuedEvents>().FirstOrDefault()?.GetComponent<PendingQuestDialog>()?.WillShowDialog ?? false;
@@ -865,8 +866,6 @@ namespace Crusaders30XX.ECS.Systems
 
 			// Bloodshot effect system and render targets for background compositing
 			_bloodshotDisplaySystem = new BloodshotDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
-			_bgRt = new RenderTarget2D(_graphicsDevice, Game1.VirtualWidth, Game1.VirtualHeight, false, SurfaceFormat.Color, DepthFormat.None);
-			_bgTemp = new RenderTarget2D(_graphicsDevice, Game1.VirtualWidth, Game1.VirtualHeight, false, SurfaceFormat.Color, DepthFormat.None);
 			_rasterizerState = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
 			
 		// Register
@@ -1014,6 +1013,22 @@ namespace Crusaders30XX.ECS.Systems
 			// Pledge system
 			_pledgeDisplaySystem = new PledgeDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_pledgeDisplaySystem);
+		}
+
+		private void EnsureBackgroundTargets()
+		{
+			int width = Game1.Display.RenderWidth;
+			int height = Game1.Display.RenderHeight;
+			if (_bgRt != null && _bgRt.Width == width && _bgRt.Height == height &&
+				_bgTemp != null && _bgTemp.Width == width && _bgTemp.Height == height)
+			{
+				return;
+			}
+
+			_bgRt?.Dispose();
+			_bgTemp?.Dispose();
+			_bgRt = new RenderTarget2D(_graphicsDevice, width, height, false, SurfaceFormat.Color, DepthFormat.None);
+			_bgTemp = new RenderTarget2D(_graphicsDevice, width, height, false, SurfaceFormat.Color, DepthFormat.None);
 		}
 
 		public void DrawAdditive()

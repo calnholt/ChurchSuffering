@@ -373,8 +373,8 @@ namespace Crusaders30XX.ECS.Systems
 
             var prevScissor = _graphicsDevice.ScissorRectangle;
             _spriteBatch.End();
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer);
-            _graphicsDevice.ScissorRectangle = IntersectWithScreen(clip);
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
+            _graphicsDevice.ScissorRectangle = Game1.Display.LogicalToRender(IntersectWithScreen(clip));
 
             int cardW = GridCellW;
             int cardH = GridCellH;
@@ -403,7 +403,7 @@ namespace Crusaders30XX.ECS.Systems
 
             _spriteBatch.End();
             _graphicsDevice.ScissorRectangle = prevScissor;
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null);
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
         }
 
         private Rectangle IntersectWithScreen(Rectangle rect)
@@ -416,8 +416,8 @@ namespace Crusaders30XX.ECS.Systems
         {
             var prevScissor = _graphicsDevice.ScissorRectangle;
             _spriteBatch.End();
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer);
-            _graphicsDevice.ScissorRectangle = IntersectWithScreen(layout.BuildClip);
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
+            _graphicsDevice.ScissorRectangle = Game1.Display.LogicalToRender(IntersectWithScreen(layout.BuildClip));
 
             var player = GetPlayer();
             int y = layout.BuildClip.Y - modal.BuildScrollOffset;
@@ -430,7 +430,7 @@ namespace Crusaders30XX.ECS.Systems
 
             _spriteBatch.End();
             _graphicsDevice.ScissorRectangle = prevScissor;
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null);
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
         }
 
         private void DrawHealthSection(Entity player, int x, ref int y)

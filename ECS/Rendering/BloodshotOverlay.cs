@@ -68,7 +68,7 @@ namespace Crusaders30XX.ECS.Rendering
             Matrix projection = Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, 1);
 
             _effect.Parameters["MatrixTransform"]?.SetValue(projection);
-            _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(vp.Width, vp.Height));
+            _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
             _effect.Parameters["Time"]?.SetValue(Time);
 
             // Oval shape
