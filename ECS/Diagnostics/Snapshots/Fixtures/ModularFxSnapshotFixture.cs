@@ -14,7 +14,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		public string Id => "modular-fx";
 		public int WarmupFrames => 2;
 		public string OutputFileName => _moduleSlug != null
-			? $"module-{_moduleSlug}-{_sampleSlug}-{_directionSlug}-seed-{_seed}"
+			? $"module-{_moduleSlug}-{_sampleSlug}-{_directionSlug}-seed-{_seed}{(_explicitPalette ? $"-{_paletteSlug}" : string.Empty)}{(_targetSlug == "card" ? "-card" : string.Empty)}"
 			: $"{_presetSlug}-{_sampleSlug}{(_explicitSeed ? $"-seed-{_seed}" : string.Empty)}{(_explicitDirection ? $"-{_directionSlug}" : string.Empty)}";
 
 		private static readonly Vector2 PlayerAnchor = new(520f, 575f);
@@ -24,9 +24,13 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private string _sampleSlug = "impact";
 		private string _moduleSlug;
 		private string _directionSlug = "auto";
+		private string _paletteSlug = "physical";
+		private string _targetSlug = "actor";
+		private VisualEffectPalette _palette = VisualEffectPalette.Physical;
 		private int _seed = 1337;
 		private bool _explicitSeed;
 		private bool _explicitDirection;
+		private bool _explicitPalette;
 		private Texture2D _pixel;
 		private Texture2D _playerTexture;
 		private Texture2D _enemyTexture;
@@ -37,11 +41,13 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private BattlePresentationTransform _battleTransform;
 		private Entity _player;
 		private Entity _enemy;
+		private Entity _cardTarget;
 
 		public void Setup(DisplaySnapshotContext ctx, string[] args)
 		{
 			ParseArgs(args ?? Array.Empty<string>());
 			var recipe = _moduleSlug != null ? ResolveModuleRecipe(_moduleSlug) : ResolveRecipe(_presetSlug);
+			if (_explicitPalette) recipe = recipe.WithPalette(_palette);
 			var timing = VisualEffectTimingProfileResolver.Resolve(recipe.Timing);
 
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
@@ -51,6 +57,11 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 			_player = CreateActor(ctx, "SnapshotPlayer", PlayerAnchor, isPlayer: true, _playerTexture, 0.36f);
 			_enemy = CreateActor(ctx, "Enemy", EnemyAnchor, isPlayer: false, _enemyTexture, 0.62f);
+			if (_targetSlug == "card")
+			{
+				_cardTarget = ctx.World.CreateEntity("SnapshotCardTarget");
+				ctx.World.AddComponent(_cardTarget, new Transform { Position = EnemyAnchor, Scale = Vector2.One });
+			}
 
 			var source = recipe.TargetRole == VisualEffectTargetRole.Player ? _enemy : _player;
 			var target = recipe.TargetRole == VisualEffectTargetRole.Player ? _player : _enemy;
@@ -67,6 +78,12 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			else
 			{
 				_directionSlug = ReferenceEquals(target, _enemy) ? "right" : "left";
+			}
+			if (_cardTarget != null)
+			{
+				source = _player;
+				target = _cardTarget;
+				_directionSlug = "right";
 			}
 			var activeEntity = ctx.World.CreateEntity("SnapshotActiveVisualEffect");
 			ctx.World.AddComponent(activeEntity, new ActiveVisualEffect
@@ -102,7 +119,8 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		{
 			DrawBackdrop(ctx);
 			DrawActor(ctx.SpriteBatch, _player, _playerTexture, 0.36f);
-			DrawActor(ctx.SpriteBatch, _enemy, _enemyTexture, 0.62f);
+			if (_cardTarget == null) DrawActor(ctx.SpriteBatch, _enemy, _enemyTexture, 0.62f);
+			else DrawCardTarget(ctx.SpriteBatch, _cardTarget.GetComponent<Transform>().Position);
 			_screenDisplay.Draw();
 			_primitiveDisplay.Draw();
 			_particleDisplay.Draw();
@@ -150,6 +168,16 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				0f);
 		}
 
+		private void DrawCardTarget(SpriteBatch spriteBatch, Vector2 center)
+		{
+			var outer = new Rectangle((int)center.X - 145, (int)center.Y - 210, 290, 420);
+			var inner = new Rectangle(outer.X + 8, outer.Y + 8, outer.Width - 16, outer.Height - 16);
+			_spriteDraw(spriteBatch, outer, new Color(235, 220, 184));
+			_spriteDraw(spriteBatch, inner, new Color(45, 37, 41));
+			_spriteDraw(spriteBatch, new Rectangle(inner.X + 20, inner.Y + 28, inner.Width - 40, 190), new Color(78, 61, 66));
+			_spriteDraw(spriteBatch, new Rectangle(inner.X + 32, inner.Bottom - 120, inner.Width - 64, 5), new Color(235, 220, 184) * 0.62f);
+		}
+
 		private void DrawBand(SpriteBatch spriteBatch, int x, int y, int height, Color top, Color bottom)
 		{
 			const int strips = 48;
@@ -178,6 +206,16 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				"enemy-bite" => VisualEffectPresets.EnemyBite(),
 				"enemy-slash" => VisualEffectPresets.EnemySlash(),
 				"light-slash" => VisualEffectPresets.LightSlash(),
+				"arrow-volley" => VisualEffectPresets.ArrowVolley(),
+				"kunai-volley" => VisualEffectPresets.KunaiVolley(),
+				"fire-impact" => VisualEffectPresets.FireImpact(),
+				"frost-impact" => VisualEffectPresets.FrostImpact(),
+				"shadow-hex" => VisualEffectPresets.ShadowHex(),
+				"poison-impact" => VisualEffectPresets.PoisonImpact(),
+				"shield-gain" => VisualEffectPresets.ShieldGain(),
+				"shield-break" => VisualEffectPresets.ShieldBreak(),
+				"life-drain" => VisualEffectPresets.LifeDrain(),
+				"whirlwind" => VisualEffectPresets.Whirlwind(),
 				_ => throw new DisplaySnapshotSetupException(
 					$"Unknown modular-fx preset '{slug}'. Expected heavy-hammer, holy-strike, enemy-rock-blast, enemy-bite, enemy-slash, or light-slash.")
 			};
@@ -223,6 +261,18 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					_directionSlug = RequireValue(args, ref i, arg).ToLowerInvariant();
 					if (_directionSlug is not ("left" or "right")) throw new DisplaySnapshotSetupException("Modular-fx direction must be left or right.");
 					_explicitDirection = true;
+				}
+				else if (arg == "--palette")
+				{
+					_paletteSlug = RequireValue(args, ref i, arg).ToLowerInvariant();
+					string token = _paletteSlug.Replace("-", string.Empty, StringComparison.Ordinal);
+					if (!Enum.TryParse(token, true, out _palette)) throw new DisplaySnapshotSetupException($"Unknown modular-fx palette '{_paletteSlug}'.");
+					_explicitPalette = true;
+				}
+				else if (arg == "--target")
+				{
+					_targetSlug = RequireValue(args, ref i, arg).ToLowerInvariant();
+					if (_targetSlug is not ("actor" or "card")) throw new DisplaySnapshotSetupException("Modular-fx target must be actor or card.");
 				}
 				else if (arg.StartsWith("--", StringComparison.Ordinal))
 				{

@@ -8,6 +8,7 @@ using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Objects.Cards;
+using Crusaders30XX.ECS.Objects.Equipment;
 using Crusaders30XX.ECS.Factories;
 using Microsoft.Xna.Framework;
 using Crusaders30XX.ECS.Data.Locations;
@@ -458,17 +459,25 @@ namespace Crusaders30XX.ECS.Systems
 
         private Rectangle GetEquipmentBounds()
         {
-            var equipmentEntity = EntityManager.GetEntitiesWithComponent<EquippedEquipment>().FirstOrDefault();
-            if (equipmentEntity == null)
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            if (player == null)
             {
-                LoggingService.Append("TutorialManager.GetEquipmentBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "entity not found" });
+                LoggingService.Append("TutorialManager.GetEquipmentBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "player not found" });
                 return Rectangle.Empty;
             }
 
-            var ui = equipmentEntity.GetComponent<UIElement>();
-            if (ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
+            foreach (var equipmentEntity in EntityManager.GetEntitiesWithComponent<EquippedEquipment>()
+                .Where(entity => entity.GetComponent<EquippedEquipment>()?.EquippedOwner == player)
+                .OrderBy(entity => EquipmentSlotOrder(entity.GetComponent<EquippedEquipment>().Equipment.Slot))
+                .ThenBy(entity => entity.Id))
             {
-                return new Rectangle(ui.Bounds.X, ui.Bounds.Y, ui.Bounds.Width, ui.Bounds.Height);
+                var zone = equipmentEntity.GetComponent<EquipmentZone>();
+                if ((zone?.Zone ?? EquipmentZoneType.Default) != EquipmentZoneType.Default)
+                    continue;
+
+                var bounds = ResolveEntityUIWorldBounds(equipmentEntity);
+                if (bounds.Width > 0 && bounds.Height > 0)
+                    return bounds;
             }
 
             LoggingService.Append("TutorialManager.GetEquipmentBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "bounds not found" });
@@ -477,35 +486,55 @@ namespace Crusaders30XX.ECS.Systems
 
         private Rectangle GetMedalBounds()
         {
-            var medalEntity = EntityManager.GetEntitiesWithComponent<EquippedMedal>().FirstOrDefault();
-            if (medalEntity == null)
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            foreach (var medalEntity in EntityManager.GetEntitiesWithComponent<EquippedMedal>()
+                .Where(entity => player == null || entity.GetComponent<EquippedMedal>()?.EquippedOwner == player)
+                .OrderBy(entity => entity.Id))
             {
-                LoggingService.Append("TutorialManager.GetMedalBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "entity not found" });
-                return Rectangle.Empty;
-            }
-            var ui = medalEntity.GetComponent<UIElement>();
-            if (ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
-            {
-                return new Rectangle(ui.Bounds.X, ui.Bounds.Y, ui.Bounds.Width, ui.Bounds.Height);
+                var bounds = ResolveEntityUIWorldBounds(medalEntity);
+                if (bounds.Width > 0 && bounds.Height > 0)
+                    return bounds;
             }
 
             LoggingService.Append("TutorialManager.GetMedalBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "bounds not found" });
             return Rectangle.Empty;
         }
+
         private Rectangle GetTribulationBounds()
         {
-            var tribulationEntity = EntityManager.GetEntitiesWithComponent<Tribulation>().FirstOrDefault();
-            if (tribulationEntity == null)
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            foreach (var tribulationEntity in EntityManager.GetEntitiesWithComponent<Tribulation>()
+                .Where(entity => player == null || entity.GetComponent<Tribulation>()?.PlayerOwner == player)
+                .OrderBy(entity => entity.Id))
             {
-                return Rectangle.Empty;
+                var bounds = ResolveEntityUIWorldBounds(tribulationEntity);
+                if (bounds.Width > 0 && bounds.Height > 0)
+                    return bounds;
             }
-            var ui = tribulationEntity.GetComponent<UIElement>();
-            if (ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
-            {
-                return new Rectangle(ui.Bounds.X, ui.Bounds.Y, ui.Bounds.Width, ui.Bounds.Height);
-            }
+
             LoggingService.Append("TutorialManager.GetTribulationBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "bounds not found" });
             return Rectangle.Empty;
+        }
+
+        private Rectangle ResolveEntityUIWorldBounds(Entity entity)
+        {
+            var ui = entity?.GetComponent<UIElement>();
+            if (ui == null || ui.Bounds.Width <= 0 || ui.Bounds.Height <= 0)
+                return Rectangle.Empty;
+
+            return TransformResolverService.ResolveUIBounds(EntityManager, entity, ui);
+        }
+
+        private static int EquipmentSlotOrder(EquipmentSlot slot)
+        {
+            return slot switch
+            {
+                EquipmentSlot.Head => 0,
+                EquipmentSlot.Chest => 1,
+                EquipmentSlot.Arms => 2,
+                EquipmentSlot.Legs => 3,
+                _ => 4,
+            };
         }
         private Rectangle GetUIRegionBounds(string regionId)
         {

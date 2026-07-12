@@ -35,6 +35,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe HeavyHammer()
 		{
 			return Base("heavy_hammer", VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Enemy)
+				.WithPalette(VisualEffectPalette.Earth)
 				.WithModules(
 					VisualEffectModule.ActorLunge,
 					VisualEffectModule.HammerArc,
@@ -53,6 +54,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe HolyStrike()
 		{
 			return Base("holy_strike", VisualEffectTimingProfile.HolyRise, VisualEffectTargetRole.Enemy)
+				.WithPalette(VisualEffectPalette.Holy)
 				.WithModules(
 					VisualEffectModule.ActorLunge,
 					VisualEffectModule.CrossBloom,
@@ -68,6 +70,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe HolySupport()
 		{
 			return Base("holy_support", VisualEffectTimingProfile.HolyRise, VisualEffectTargetRole.Player)
+				.WithPalette(VisualEffectPalette.Holy)
 				.WithModules(
 					VisualEffectModule.ActorSquashStretch,
 					VisualEffectModule.CrossBloom,
@@ -81,6 +84,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe DefensiveGuard()
 		{
 			return Base("defensive_guard", VisualEffectTimingProfile.DefensiveLock, VisualEffectTargetRole.Player)
+				.WithPalette(VisualEffectPalette.Holy)
 				.WithModules(VisualEffectModule.Ring, VisualEffectModule.Halo, VisualEffectModule.WhiteWash, VisualEffectModule.PunchZoom)
 				.WithStartSfx(SfxTrack.GainAegis);
 		}
@@ -88,6 +92,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe BloodRitual()
 		{
 			return Base("blood_ritual", VisualEffectTimingProfile.RitualPulse, VisualEffectTargetRole.Self)
+				.WithPalette(VisualEffectPalette.Blood)
 				.WithModules(VisualEffectModule.RedVignette, VisualEffectModule.Ring, VisualEffectModule.SmokeBlobs, VisualEffectModule.Rays);
 		}
 
@@ -136,6 +141,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe EnemyRockBlast()
 		{
 			return Base("enemy_rock_blast", VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Player)
+				.WithPalette(VisualEffectPalette.Earth)
 				.WithModules(
 					VisualEffectModule.ActorLunge,
 					VisualEffectModule.RockBlast,
@@ -148,6 +154,24 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 					VisualEffectModule.PunchZoom,
 					VisualEffectModule.HitStop)
 				.WithImpactSfx(SfxTrack.SwordImpact);
+		}
+
+		public static VisualEffectRecipe ArrowVolley() => Showcase("arrow_volley", VisualEffectPalette.Physical, VisualEffectModule.ArrowShot, VisualEffectModule.HitFlash);
+		public static VisualEffectRecipe KunaiVolley() => Showcase("kunai_volley", VisualEffectPalette.Physical, VisualEffectModule.ThrownBladeVolley, VisualEffectModule.HitFlash);
+		public static VisualEffectRecipe FireImpact() => Showcase("fire_impact", VisualEffectPalette.Fire, VisualEffectModule.EnergyBolt, VisualEffectModule.FlameBurst, VisualEffectModule.HitFlash);
+		public static VisualEffectRecipe FrostImpact() => Showcase("frost_impact", VisualEffectPalette.Ice, VisualEffectModule.EnergyBolt, VisualEffectModule.FrostBurst, VisualEffectModule.Shards);
+		public static VisualEffectRecipe ShadowHex() => Showcase("shadow_hex", VisualEffectPalette.Shadow, VisualEffectModule.ShadowTendrils, VisualEffectModule.ColorDrain);
+		public static VisualEffectRecipe PoisonImpact() => Showcase("poison_impact", VisualEffectPalette.Poison, VisualEffectModule.PoisonCloud, VisualEffectModule.SmokeBlobs);
+		public static VisualEffectRecipe ShieldGain() => Showcase("shield_gain", VisualEffectPalette.Holy, VisualEffectModule.ShieldWard, VisualEffectModule.ResourceMotes);
+		public static VisualEffectRecipe ShieldBreak() => Showcase("shield_break", VisualEffectPalette.Arcane, VisualEffectModule.ShieldShatter, VisualEffectModule.Shards);
+		public static VisualEffectRecipe LifeDrain() => Showcase("life_drain", VisualEffectPalette.Blood, VisualEffectModule.SoulSiphon, VisualEffectModule.ResourceMotes);
+		public static VisualEffectRecipe Whirlwind() => Showcase("whirlwind", VisualEffectPalette.Physical, VisualEffectModule.SpinSlash, VisualEffectModule.Shake);
+
+		private static VisualEffectRecipe Showcase(string id, VisualEffectPalette palette, params VisualEffectModule[] modules)
+		{
+			return Base(id, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy)
+				.WithPalette(palette)
+				.WithModules(modules);
 		}
 
 		private static VisualEffectRecipe Base(string id, VisualEffectTimingProfile timing, VisualEffectTargetRole target)

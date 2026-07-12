@@ -55,6 +55,16 @@ public sealed class VisualEffectModuleDebugCatalogTests
 		Assert.Equal(SfxTrack.None, recipe.ImpactSfx);
 		Assert.Equal(entry.Timing, recipe.Timing);
 		Assert.Equal(entry.TargetRole, recipe.TargetRole);
+		Assert.Equal(entry.Palette, recipe.Palette);
+	}
+
+	[Fact]
+	public void Elemental_modules_use_semantic_preview_palettes()
+	{
+		Assert.Equal(VisualEffectPalette.Fire, VisualEffectModuleDebugCatalog.All.Single(e => e.Module == VisualEffectModule.FlameBurst).Palette);
+		Assert.Equal(VisualEffectPalette.Ice, VisualEffectModuleDebugCatalog.All.Single(e => e.Module == VisualEffectModule.FrostBurst).Palette);
+		Assert.Equal(VisualEffectPalette.Shadow, VisualEffectModuleDebugCatalog.All.Single(e => e.Module == VisualEffectModule.ShadowTendrils).Palette);
+		Assert.Equal(VisualEffectPalette.Poison, VisualEffectModuleDebugCatalog.All.Single(e => e.Module == VisualEffectModule.PoisonCloud).Palette);
 	}
 
 	[Fact]

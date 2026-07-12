@@ -348,6 +348,8 @@ dotnet run -- snapshot modular-fx enemy-bite impact
 # Isolated module with deterministic organic variation and direction
 dotnet run -- snapshot modular-fx --module cracks --sample impact --seed 1337 --direction right
 dotnet run -- snapshot modular-fx --module slash-band --sample impact --seed 1337 --direction left
+dotnet run -- snapshot modular-fx --module energy-bolt --sample impact --palette fire --direction right
+dotnet run -- snapshot modular-fx --module seal-stamp --sample impact --palette arcane --target card
 ```
 
 Preset tokens: `heavy-hammer`, `holy-strike`, `enemy-rock-blast`, `enemy-bite`, `enemy-slash`, `light-slash`.
@@ -362,10 +364,12 @@ Isolated-module options:
 | `--sample` | `start`, `impact`, `late` | `impact` |
 | `--seed` | Any signed 32-bit integer | `1337` |
 | `--direction` | `right`, `left` | Derived from the recipe target |
+| `--palette` | `physical`, `holy`, `blood`, `fire`, `ice`, `shadow`, `earth`, `poison`, `arcane` | Module debug-catalog palette |
+| `--target` | `actor`, `card` | `actor` |
 
-The seed controls cracks, debris, shards, smoke, rays, and rock fragments. The same seed reproduces the same geometry. Run `./scripts/verify-modular-fx-snapshots.sh --verify` to check the representative preset and isolated-module matrix; use `--accept` only for intentional visual changes.
+The seed controls cracks, debris, shards, smoke, rays, rock fragments, poison clouds, and other organic variation. The same seed reproduces the same geometry. Run `./scripts/verify-modular-fx-snapshots.sh --verify` to check the representative preset, palette, actor-target, and card-target matrix; use `--accept` only for intentional visual changes.
 
-Output: `debug/snapshots/modular-fx/<preset>-<sample>.png` for existing preset commands, or `debug/snapshots/modular-fx/module-<module>-<sample>-<direction>-seed-<seed>.png` for isolated modules.
+Output: `debug/snapshots/modular-fx/<preset>-<sample>.png` for preset commands, or `debug/snapshots/modular-fx/module-<module>-<sample>-<direction>-seed-<seed>[-<palette>][-card].png` for isolated modules.
 
 ---
 

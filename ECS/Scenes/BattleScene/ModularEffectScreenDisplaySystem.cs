@@ -98,6 +98,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawWhiteWash(ActiveVisualEffect effect)
 		{
+			var colors = Colors(effect);
 			float p = VisualEffectDisplayMath.Progress(effect);
 			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
@@ -105,36 +106,39 @@ namespace Crusaders30XX.ECS.Systems
 			float alpha = WhiteWashAlpha * effect.Recipe.Intensity * pulse;
 			if (alpha <= 0f) return;
 			float scale = MathHelper.Lerp(0.35f, 1.55f, VisualEffectDisplayMath.EaseOutCubic(p));
-			DrawSoftCircle(effect.ImpactAnchor, 1040f * scale, Cream, alpha * 0.82f, 0f, 0.52f);
+			DrawSoftCircle(effect.ImpactAnchor, 1040f * scale, colors.Primary, alpha * 0.82f, 0f, 0.52f);
 			DrawSoftCircle(effect.ImpactAnchor, 480f * scale, Color.White, alpha * 0.62f, 0f, 0.34f);
 		}
 
 		private void DrawRedVignette(ActiveVisualEffect effect)
 		{
+			var colors = Colors(effect);
 			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
 			float window = recovery <= 0f ? approach * approach : 1f - recovery;
 			float alpha = RedVignetteAlpha * effect.Recipe.Intensity * window;
 			if (alpha <= 0f) return;
 
-			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Red * (alpha * 0.28f));
+			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), colors.Primary * (alpha * 0.28f));
 			_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * (alpha * 0.22f));
-			DrawSoftCircle(effect.ImpactAnchor, 860f, RedBright, alpha * 0.22f, 0.08f, 1f);
+			DrawSoftCircle(effect.ImpactAnchor, 860f, colors.Glow, alpha * 0.22f, 0.08f, 1f);
 		}
 
 		private void DrawShockwave(ActiveVisualEffect effect)
 		{
+			var colors = Colors(effect);
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
 			float alpha = ShockwaveRingAlpha * effect.Recipe.Intensity * (1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
 			float scale = MathHelper.Lerp(0.32f, 12.5f, VisualEffectDisplayMath.EaseOutCubic(recovery));
 			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 48, 48, 3f);
 			DrawMask(ring, effect.ImpactAnchor, Color.White * (alpha * 0.88f), 0f, new Vector2(scale));
-			DrawMask(ring, effect.ImpactAnchor, RedBright * (alpha * 0.34f), 0f, new Vector2(scale * 1.38f));
+			DrawMask(ring, effect.ImpactAnchor, colors.Glow * (alpha * 0.34f), 0f, new Vector2(scale * 1.38f));
 		}
 
 		private void DrawSlashBand(ActiveVisualEffect effect)
 		{
+			var colors = Colors(effect);
 			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
 			float alphaShape = recovery <= 0f ? VisualEffectDisplayMath.EaseOutCubic(approach) : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery);
@@ -149,22 +153,24 @@ namespace Crusaders30XX.ECS.Systems
 				: MathHelper.Lerp(0f, SlashBandLength * 0.36f, VisualEffectDisplayMath.EaseOutCubic(recovery));
 			float length = SlashBandLength * MathHelper.Lerp(0.42f, 1f, VisualEffectDisplayMath.EaseOutCubic(approach));
 			var center = effect.ImpactAnchor + Axis(angle) * travel;
-			DrawSlashGradient(center, angle, length, SlashBandThickness, alpha);
+			DrawSlashGradient(center, angle, length, SlashBandThickness, alpha, colors);
 			DrawLine(center - Axis(angle) * length * 0.43f, center + Axis(angle) * length * 0.43f, Color.White * (alpha * 0.72f), SlashBandThickness * 0.13f);
 		}
 
 		private void DrawSmokeScreen(ActiveVisualEffect effect)
 		{
+			var colors = Colors(effect);
 			float p = VisualEffectDisplayMath.Progress(effect);
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
-			float alpha = SmokeScreenAlpha * effect.Recipe.Intensity * (recovery <= 0f ? VisualEffectDisplayMath.ApproachProgress(effect) : 1f - recovery);
+			float alpha = Math.Min(0.68f, SmokeScreenAlpha * effect.Recipe.Intensity) * (recovery <= 0f ? VisualEffectDisplayMath.ApproachProgress(effect) : 1f - recovery);
 			if (alpha <= 0f) return;
 			float lift = MathHelper.Lerp(14f, -12f, VisualEffectDisplayMath.EaseOutCubic(p));
 			float scale = MathHelper.Lerp(0.88f, 1.16f, p);
 			var center = effect.ImpactAnchor + new Vector2(0f, lift);
-			DrawSoftCircle(center, 620f * scale, SmokeCore, alpha * 0.92f, 0f, 0.42f);
-			DrawSoftCircle(center + new Vector2(140f * effect.DirectionSign, -112f), 480f * scale, new Color(85, 16, 28), alpha * 0.62f, 0f, 0.44f);
-			DrawSoftCircle(center + new Vector2(-110f * effect.DirectionSign, 132f), 440f * scale, BlackSmoke, alpha * 0.66f, 0f, 0.40f);
+			DrawSoftCircle(center, 620f * scale, colors.Smoke, alpha * 0.66f, 0f, 0.52f);
+			DrawSoftCircle(center + new Vector2(140f * effect.DirectionSign, -112f), 480f * scale, colors.Primary, alpha * 0.34f, 0f, 0.56f);
+			DrawSoftCircle(center + new Vector2(-110f * effect.DirectionSign, 132f), 440f * scale, colors.Shadow, alpha * 0.44f, 0f, 0.52f);
+			DrawSoftCircle(center + new Vector2(0f, -80f), 370f * scale, colors.Glow, alpha * 0.13f, 0.22f, 0.82f);
 		}
 
 		private BattlePresentationTransform EnsureBattlePresentationTransform()
@@ -212,7 +218,7 @@ namespace Crusaders30XX.ECS.Systems
 			return 1f + shape * PunchZoomAmount * intensity;
 		}
 
-		private void DrawSlashGradient(Vector2 center, float rotation, float length, float thickness, float alpha)
+		private void DrawSlashGradient(Vector2 center, float rotation, float length, float thickness, float alpha, VisualEffectColors colors)
 		{
 			int strips = 24;
 			var axis = Axis(rotation);
@@ -223,7 +229,7 @@ namespace Crusaders30XX.ECS.Systems
 				float mid = (t0 + t1) * 0.5f;
 				float stripAlpha = mid < 0.5f ? mid / 0.5f : (1f - mid) / 0.5f;
 				stripAlpha *= stripAlpha;
-				Color color = mid > 0.62f ? RedBright : Cream;
+				Color color = mid > 0.62f ? colors.Primary : colors.Highlight;
 				var start = center + axis * ((t0 - 0.5f) * length);
 				var end = center + axis * ((t1 - 0.5f) * length);
 				DrawLine(start, end, color * (alpha * stripAlpha), thickness);
@@ -254,6 +260,11 @@ namespace Crusaders30XX.ECS.Systems
 		private static Vector2 Axis(float rotation)
 		{
 			return new Vector2(MathF.Cos(rotation), MathF.Sin(rotation));
+		}
+
+		private static VisualEffectColors Colors(ActiveVisualEffect effect)
+		{
+			return VisualEffectPaletteResolver.Resolve(effect?.Recipe?.Palette ?? VisualEffectPalette.Physical);
 		}
 	}
 }
