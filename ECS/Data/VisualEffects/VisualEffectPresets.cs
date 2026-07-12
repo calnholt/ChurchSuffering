@@ -7,7 +7,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe PlayerAttack()
 		{
 			return Base("player_attack", VisualEffectTimingProfile.PlayerAttack, VisualEffectTargetRole.Enemy)
-				.WithModules(VisualEffectModule.ActorLunge)
+				.WithModules(VisualEffectModule.ActorLunge, VisualEffectModule.TargetShake)
 				.WithStartSfx(SfxTrack.SwordAttack);
 		}
 
@@ -28,7 +28,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe LightSlash()
 		{
 			return Base("light_slash", VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy)
-				.WithModules(VisualEffectModule.ActorLunge, VisualEffectModule.SwordArc, VisualEffectModule.HitFlash, VisualEffectModule.Debris)
+				.WithModules(VisualEffectModule.ActorLunge, VisualEffectModule.SwordArc, VisualEffectModule.HitFlash, VisualEffectModule.Debris, VisualEffectModule.TargetShake)
 				.WithStartSfx(SfxTrack.SwordAttack);
 		}
 
@@ -45,6 +45,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 					VisualEffectModule.HitFlash,
 					VisualEffectModule.Shockwave,
 					VisualEffectModule.Shake,
+					VisualEffectModule.TargetShake,
 					VisualEffectModule.PunchZoom,
 					VisualEffectModule.HitStop)
 				.WithStartSfx(SfxTrack.SwordAttack)
@@ -62,7 +63,8 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 					VisualEffectModule.Rays,
 					VisualEffectModule.Ring,
 					VisualEffectModule.WhiteWash,
-					VisualEffectModule.HitFlash)
+					VisualEffectModule.HitFlash,
+					VisualEffectModule.TargetShake)
 				.WithStartSfx(SfxTrack.Prayer)
 				.WithImpactSfx(SfxTrack.SwordImpact);
 		}
@@ -165,7 +167,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public static VisualEffectRecipe ShieldGain() => Showcase("shield_gain", VisualEffectPalette.Holy, VisualEffectModule.ShieldWard, VisualEffectModule.ResourceMotes);
 		public static VisualEffectRecipe ShieldBreak() => Showcase("shield_break", VisualEffectPalette.Arcane, VisualEffectModule.ShieldShatter, VisualEffectModule.Shards);
 		public static VisualEffectRecipe LifeDrain() => Showcase("life_drain", VisualEffectPalette.Blood, VisualEffectModule.SoulSiphon, VisualEffectModule.ResourceMotes);
-		public static VisualEffectRecipe Whirlwind() => Showcase("whirlwind", VisualEffectPalette.Physical, VisualEffectModule.SpinSlash, VisualEffectModule.Shake);
+		public static VisualEffectRecipe Whirlwind() => Showcase("whirlwind", VisualEffectPalette.Physical, VisualEffectModule.SpinSlash, VisualEffectModule.Shake, VisualEffectModule.TargetShake);
 
 		private static VisualEffectRecipe Showcase(string id, VisualEffectPalette palette, params VisualEffectModule[] modules)
 		{

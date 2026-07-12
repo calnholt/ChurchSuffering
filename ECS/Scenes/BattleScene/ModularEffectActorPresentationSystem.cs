@@ -25,6 +25,9 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Lunge Recoil", Step = 1f, Min = 0f, Max = 80f)]
 		public float LungeRecoilDistance { get; set; } = 14f;
 
+		[DebugEditable(DisplayName = "Target Shake Pixels", Step = 1f, Min = 0f, Max = 80f)]
+		public float TargetShakePixels { get; set; } = 18f;
+
 		[DebugEditable(DisplayName = "Damage Flash Duration (s)", Step = 0.05f, Min = 0.05f, Max = 2f)]
 		public float DamageFlashDurationSec { get; set; } = 0.3f;
 
@@ -97,6 +100,34 @@ namespace Crusaders30XX.ECS.Systems
 					state.ScaleMultiplier.X * scale.X,
 					state.ScaleMultiplier.Y * scale.Y);
 			}
+
+			if (effect.Recipe.Modules.Contains(VisualEffectModule.TargetShake))
+			{
+				var state = EnsureState(effect.Target);
+				if (state != null)
+				{
+					state.DrawOffset += ComputeTargetShake(effect)
+						* TargetShakePixels
+						* Math.Max(0f, effect.Recipe.Intensity);
+				}
+			}
+		}
+
+		private static Vector2 ComputeTargetShake(ActiveVisualEffect effect)
+		{
+			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
+			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
+			if (recovery <= 0f)
+			{
+				return approach < 0.82f
+					? Vector2.Zero
+					: new Vector2(-0.22f, 0.12f) * ((approach - 0.82f) / 0.18f);
+			}
+
+			float envelope = MathF.Pow(1f - recovery, 1.7f);
+			float x = MathF.Sin(recovery * MathHelper.Pi * 13f);
+			float y = MathF.Cos(recovery * MathHelper.Pi * 17f) * 0.68f;
+			return new Vector2(x, y) * envelope;
 		}
 
 		private Vector2 ComputeLungeOffset(ActiveVisualEffect effect)

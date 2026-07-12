@@ -31,6 +31,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		Cracks,
 		HitFlash,
 		Shake,
+		TargetShake,
 		PunchZoom,
 		HitStop,
 		ArrowShot,

@@ -13,10 +13,8 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Crusaders30XX.ECS.Systems
 {
     /// <summary>
-    /// Displays attack splash images over targets when HP damage occurs.
-    /// Subscribes to ModifyHpEvent; shows enemy-attack-splash.png when player is attacked,
-    /// player-attack-splash.png when player attacks.
-    /// Also displays gain-aegis.png when aegis is applied via ApplyPassiveEvent.
+    /// Displays passive gain splash images over targets when passives are applied.
+    /// Subscribes to ApplyPassiveEvent; shows gain-*.png textures for supported passive types.
     /// </summary>
     [DebugTab("Splash Effect Animation")]
     public class SplashEffectAnimationDisplaySystem : Core.System
@@ -30,7 +28,6 @@ namespace Crusaders30XX.ECS.Systems
         {
             public int TargetEntityId;
             public Entity Target;
-            public Guid PresentationId;
             public Texture2D Texture;
             public float AgeSeconds;
             public float FadeInDurationSeconds;
@@ -76,23 +73,20 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch = spriteBatch;
             _imageAssets = imageAssets;
             LoadTextures();
-            EventManager.Subscribe<ModifyHpEvent>(OnModifyHp);
             EventManager.Subscribe<ApplyPassiveEvent>(OnApplyPassive);
         }
 
         private void LoadTextures()
         {
-            string[] textureKeys = { 
-                "enemy-attack-splash", 
-                "player-attack-splash", 
-                "gain-aegis", 
-                "gain-burn", 
-                "gain-armor", 
-                "gain-aggression", 
-                "gain-power", 
-                "gain-bleed", 
-                "gain-frostbite", 
-                "gain-slow", 
+            string[] textureKeys = {
+                "gain-aegis",
+                "gain-burn",
+                "gain-armor",
+                "gain-aggression",
+                "gain-power",
+                "gain-bleed",
+                "gain-frostbite",
+                "gain-slow",
                 "gain-sub-zero",
                 "gain-windchill",
                 "gain-wounded",
@@ -120,11 +114,10 @@ namespace Crusaders30XX.ECS.Systems
             {
                 var anim = _animations[i];
                 anim.AgeSeconds += dt;
-                
+
                 bool expired = anim.AgeSeconds >= anim.TotalDurationSeconds;
                 if (expired)
                 {
-                    PublishCompletion(anim);
                     _animations.RemoveAt(i);
                     continue;
                 }
@@ -133,87 +126,8 @@ namespace Crusaders30XX.ECS.Systems
             base.Update(gameTime);
         }
 
-        private void OnModifyHp(ModifyHpEvent e)
-        {
-            // Only show for damage. Player self-damage effects still get damage text,
-            // but not an attack splash.
-            if (e.Delta >= 0)
-                return;
-
-            var target = ResolveTarget(e.Target);
-            if (target == null) return;
-
-            // Determine which texture to use
-            Texture2D textureToUse = null;
-            bool isPlayerTarget = target.HasComponent<Player>();
-            bool isPlayerSource = e.Source != null && e.Source.HasComponent<Player>();
-            bool isEnemyTarget = target.HasComponent<Enemy>();
-
-            if (isPlayerTarget && e.DamageType == ModifyTypeEnum.Attack)
-            {
-                // Player is being attacked - use enemy attack splash
-                _textures.TryGetValue("enemy-attack-splash", out textureToUse);
-            }
-            else if (isEnemyTarget && (isPlayerSource || e.DamageType == ModifyTypeEnum.Effect))
-            {
-                // Player attacks and enemy-facing effect damage use the enemy hit splash.
-                _textures.TryGetValue("player-attack-splash", out textureToUse);
-            }
-            else
-            {
-                // Neither player target nor source, skip
-                return;
-            }
-
-            if (textureToUse == null) return;
-
-            if (_animations.Count >= MaxConcurrent)
-            {
-                // Drop oldest
-                PublishCompletion(_animations[0]);
-                _animations.RemoveAt(0);
-            }
-
-            float totalDuration = FadeInDurationSeconds + HoldDurationSeconds + FadeOutDurationSeconds;
-
-            if (e.PresentationId != Guid.Empty)
-            {
-                EventManager.Publish(new BattlePresentationStarted
-                {
-                    PresentationId = e.PresentationId,
-                    Target = target,
-                    Kind = BattlePresentationKind.DamageSplash
-                });
-            }
-
-            _animations.Add(new AnimationInstance
-            {
-                TargetEntityId = target.Id,
-                Target = target,
-                PresentationId = e.PresentationId,
-                Texture = textureToUse,
-                AgeSeconds = 0f,
-                FadeInDurationSeconds = FadeInDurationSeconds,
-                HoldDurationSeconds = HoldDurationSeconds,
-                FadeOutDurationSeconds = FadeOutDurationSeconds,
-                TotalDurationSeconds = totalDuration
-            });
-        }
-
-        private static void PublishCompletion(AnimationInstance anim)
-        {
-            if (anim == null || anim.PresentationId == Guid.Empty) return;
-            EventManager.Publish(new BattlePresentationCompleted
-            {
-                PresentationId = anim.PresentationId,
-                Target = anim.Target,
-                Kind = BattlePresentationKind.DamageSplash
-            });
-        }
-
         private void OnApplyPassive(ApplyPassiveEvent e)
         {
-            // Only show for aegis gains (positive delta)
             LoggingService.Append("SplashEffectAnimationDisplaySystem.OnApplyPassive", new System.Text.Json.Nodes.JsonObject { ["passiveType"] = e.Type.ToString(), ["delta"] = e.Delta });
             if (e.Delta <= 0)
                 return;
@@ -244,7 +158,6 @@ namespace Crusaders30XX.ECS.Systems
             if (!_textures.TryGetValue(textureKey, out var textureToUse) || textureToUse == null) return;
             if (_animations.Count >= MaxConcurrent)
             {
-                // Drop oldest
                 _animations.RemoveAt(0);
             }
 
@@ -262,14 +175,6 @@ namespace Crusaders30XX.ECS.Systems
             });
         }
 
-        private Entity ResolveTarget(Entity explicitTarget)
-        {
-            if (explicitTarget != null) return explicitTarget;
-            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-            if (player != null) return player;
-            return EntityManager.GetEntitiesWithComponent<HP>().FirstOrDefault();
-        }
-
         private Vector2 ComputeBodyCenter(Entity entity)
         {
             var t = entity.GetComponent<Transform>();
@@ -277,7 +182,6 @@ namespace Crusaders30XX.ECS.Systems
             var portrait = entity.GetComponent<PortraitInfo>();
             if (portrait != null && portrait.TextureWidth > 0 && portrait.TextureHeight > 0)
             {
-                // Use portrait center
                 return t.Position;
             }
             return t.Position;
@@ -291,11 +195,9 @@ namespace Crusaders30XX.ECS.Systems
             {
                 if (anim.Texture == null) continue;
 
-                // Compute current position (follows target)
                 var currentCenter = ComputeBodyCenter(anim.Target);
                 var pos = new Vector2(currentCenter.X, currentCenter.Y);
 
-                // Apply percentage offsets relative to target visual bounds if available
                 float px = 0f, py = 0f;
                 var pInfo = anim.Target?.GetComponent<PortraitInfo>();
                 if (pInfo != null && pInfo.TextureWidth > 0 && pInfo.TextureHeight > 0)
@@ -308,22 +210,17 @@ namespace Crusaders30XX.ECS.Systems
                 }
                 else
                 {
-                    // Fallback: use viewport half-size to interpret percents
                     px = OffsetPercentX * (Game1.VirtualWidth / 2f);
                     py = OffsetPercentY * (Game1.VirtualHeight / 2f);
                 }
                 pos.X += px + OffsetX;
                 pos.Y += py + OffsetY;
 
-                // Compute alpha based on phase
                 float alpha = ComputeAlpha(anim);
 
-                // Draw texture centered at position
                 var origin = new Vector2(anim.Texture.Width / 2f, anim.Texture.Height / 2f);
                 var color = Color.White * alpha;
 
-                // Scale in accordance with viewport width rather than texture size
-                // ImageScale now represents fraction of VirtualWidth the image should occupy
                 float finalScale = (ImageScale * Game1.VirtualWidth) / anim.Texture.Width;
 
                 _spriteBatch.Draw(
@@ -343,34 +240,30 @@ namespace Crusaders30XX.ECS.Systems
         private float ComputeAlpha(AnimationInstance anim)
         {
             float age = anim.AgeSeconds;
-            
-            // Phase 1: Fade In
+
             if (age < anim.FadeInDurationSeconds)
             {
                 float t = anim.FadeInDurationSeconds > 0f ? age / anim.FadeInDurationSeconds : 1f;
                 return MathHelper.Clamp(t, 0f, 1f);
             }
-            
-            // Phase 2: Hold at 100%
+
             float holdStart = anim.FadeInDurationSeconds;
             float holdEnd = holdStart + anim.HoldDurationSeconds;
             if (age < holdEnd)
             {
                 return 1f;
             }
-            
-            // Phase 3: Fade Out
+
             float fadeOutStart = holdEnd;
             float fadeOutEnd = fadeOutStart + anim.FadeOutDurationSeconds;
             if (age < fadeOutEnd)
             {
-                float t = anim.FadeOutDurationSeconds > 0f 
-                    ? (age - fadeOutStart) / anim.FadeOutDurationSeconds 
+                float t = anim.FadeOutDurationSeconds > 0f
+                    ? (age - fadeOutStart) / anim.FadeOutDurationSeconds
                     : 1f;
                 return MathHelper.Clamp(1f - t, 0f, 1f);
             }
-            
-            // Past all phases, should be removed but return 0 just in case
+
             return 0f;
         }
 
@@ -382,32 +275,6 @@ namespace Crusaders30XX.ECS.Systems
                 TargetEntityId = 0,
                 Target = EntityManager.GetEntity("Player"),
                 Texture = _textures["gain-aegis"],
-                AgeSeconds = 0f,
-                FadeInDurationSeconds = FadeInDurationSeconds,
-                HoldDurationSeconds = HoldDurationSeconds,
-                FadeOutDurationSeconds = FadeOutDurationSeconds,
-                TotalDurationSeconds = FadeInDurationSeconds + HoldDurationSeconds + FadeOutDurationSeconds
-            });
-        }
-        [DebugAction("Test Attack Animations")]
-        public void Debug_TestPlayerAttackAnimation()
-        {
-            _animations.Add(new AnimationInstance
-            {
-                TargetEntityId = 0,
-                Target = EntityManager.GetEntity("Player"),
-                Texture = _textures["enemy-attack-splash"],
-                AgeSeconds = 0f,
-                FadeInDurationSeconds = FadeInDurationSeconds,
-                HoldDurationSeconds = HoldDurationSeconds,
-                FadeOutDurationSeconds = FadeOutDurationSeconds,
-                TotalDurationSeconds = FadeInDurationSeconds + HoldDurationSeconds + FadeOutDurationSeconds
-            });
-            _animations.Add(new AnimationInstance
-            {
-                TargetEntityId = 0,
-                Target = EntityManager.GetEntity("Enemy"),
-                Texture = _textures["player-attack-splash"],
                 AgeSeconds = 0f,
                 FadeInDurationSeconds = FadeInDurationSeconds,
                 HoldDurationSeconds = HoldDurationSeconds,

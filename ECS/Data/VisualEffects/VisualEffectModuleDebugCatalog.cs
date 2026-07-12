@@ -61,6 +61,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				Entry(VisualEffectModule.Cracks, VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
 				Entry(VisualEffectModule.HitFlash, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
 				Entry(VisualEffectModule.Shake, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Player, VisualEffectSourceKind.EnemyAttack),
+				Entry(VisualEffectModule.TargetShake, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
 				Entry(VisualEffectModule.PunchZoom, VisualEffectTimingProfile.DefensiveLock, VisualEffectTargetRole.Player, VisualEffectSourceKind.Medal),
 				Entry(VisualEffectModule.HitStop, VisualEffectTimingProfile.HeavyImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
 				Entry(VisualEffectModule.ArrowShot, VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Enemy, VisualEffectSourceKind.Card),
