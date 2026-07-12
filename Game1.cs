@@ -302,7 +302,7 @@ public class Game1 : Game
         _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_cardListModalSystem);
         _world.AddSystem(new CollectionProgressionSystem(_world.EntityManager));
-        _boosterPackOpeningDisplaySystem = new BoosterPackOpeningDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _boosterPackOpeningDisplaySystem = new BoosterPackOpeningDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets, playerInputAdapter);
         _world.AddSystem(_boosterPackOpeningDisplaySystem);
         _world.AddSystem(new RunDeckLifecycleSystem(_world.EntityManager));
         _world.AddSystem(new ClimbEventSystem(_world.EntityManager));

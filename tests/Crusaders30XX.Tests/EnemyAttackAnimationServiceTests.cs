@@ -55,6 +55,36 @@ public sealed class EnemyAttackAnimationServiceTests
 	}
 
 	[Fact]
+	public void OutlineEcho_waits_then_expands_and_fades_on_each_interval()
+	{
+		var waiting = EnemyAttackAnimationService.ComputeOutlineEcho(0.99f, 1f, 0.35f);
+		var started = EnemyAttackAnimationService.ComputeOutlineEcho(1f, 1f, 0.35f);
+		var midway = EnemyAttackAnimationService.ComputeOutlineEcho(1.175f, 1f, 0.35f);
+		var resting = EnemyAttackAnimationService.ComputeOutlineEcho(1.5f, 1f, 0.35f);
+		var repeated = EnemyAttackAnimationService.ComputeOutlineEcho(2f, 1f, 0.35f);
+
+		Assert.False(waiting.IsActive);
+		Assert.True(started.IsActive);
+		Assert.Equal(0f, started.ExpansionProgress, 3);
+		Assert.Equal(1f, started.Alpha, 3);
+		Assert.True(midway.IsActive);
+		Assert.InRange(midway.ExpansionProgress, 0.8f, 0.9f);
+		Assert.Equal(0.5f, midway.Alpha, 3);
+		Assert.False(resting.IsActive);
+		Assert.True(repeated.IsActive);
+	}
+
+	[Fact]
+	public void OutlineEcho_clamps_invalid_timing_values()
+	{
+		var sample = EnemyAttackAnimationService.ComputeOutlineEcho(0.011f, 0f, 0f);
+
+		Assert.True(sample.IsActive);
+		Assert.InRange(sample.ExpansionProgress, 0f, 1f);
+		Assert.InRange(sample.Alpha, 0f, 1f);
+	}
+
+	[Fact]
 	public void AbsorbTween_handles_zero_duration_and_reaches_target()
 	{
 		var start = new Vector2(10f, 20f);

@@ -12,36 +12,6 @@ namespace Crusaders30XX.ECS.Systems
 {
 	public class CardApplicationManagementSystem : Core.System
 	{
-		private sealed record ApplicationDefinition(
-			Func<Entity, bool> IsApplied,
-			Action<EntityManager, Entity> Apply,
-			Action<EntityManager, Entity> Remove);
-
-		private static readonly IReadOnlyDictionary<CardApplicationType, ApplicationDefinition> ApplicationDefinitions =
-			new Dictionary<CardApplicationType, ApplicationDefinition>
-			{
-				[CardApplicationType.Frozen] = new(
-					card => card.HasComponent<Frozen>(),
-					(entityManager, card) => entityManager.AddComponent(card, new Frozen { Owner = card }),
-					(entityManager, card) => entityManager.RemoveComponent<Frozen>(card)),
-				[CardApplicationType.Brittle] = new(
-					card => card.HasComponent<Brittle>(),
-					(entityManager, card) => entityManager.AddComponent(card, new Brittle { Owner = card }),
-					(entityManager, card) => entityManager.RemoveComponent<Brittle>(card)),
-				[CardApplicationType.Scorched] = new(
-					card => card.HasComponent<Scorched>(),
-					(entityManager, card) => entityManager.AddComponent(card, new Scorched { Owner = card }),
-					(entityManager, card) => entityManager.RemoveComponent<Scorched>(card)),
-				[CardApplicationType.Thorned] = new(
-					card => card.HasComponent<Thorned>(),
-					(entityManager, card) => entityManager.AddComponent(card, new Thorned { Owner = card }),
-					(entityManager, card) => entityManager.RemoveComponent<Thorned>(card)),
-				[CardApplicationType.Colorless] = new(
-					card => card.HasComponent<Colorless>(),
-					(entityManager, card) => entityManager.AddComponent(card, new Colorless { Owner = card }),
-					(entityManager, card) => entityManager.RemoveComponent<Colorless>(card)),
-			};
-
 		public CardApplicationManagementSystem(EntityManager entityManager) : base(entityManager)
 		{
 			EventManager.Subscribe<ApplyCardApplicationEvent>(OnApplyCardApplication);
@@ -60,10 +30,9 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (evt.Type == CardApplicationType.Cursed || evt.Amount <= 0) return;
 
-			var definition = GetDefinition(evt.Type);
 			var cards = CardApplicationTargetingService.ResolveCandidates(EntityManager, evt.Card, evt.Target)
 				.Where(CardApplicationTargetingService.IsEligibleForApplication)
-				.Where(card => !definition.IsApplied(card))
+				.Where(card => !CardApplicationService.IsApplied(card, evt.Type))
 				.Distinct()
 				.OrderBy(_ => Random.Shared.Next())
 				.Take(evt.Amount)
@@ -84,8 +53,11 @@ namespace Crusaders30XX.ECS.Systems
 
 			foreach (var card in cards)
 			{
-				definition.Apply(EntityManager, card);
-				RunScopedStateService.SyncCardRestrictionsFromComponents(card);
+				EventManager.Publish(new CardRestrictionMutationAnimationRequested
+				{
+					TargetCard = card,
+					Type = evt.Type,
+				});
 				LoggingService.Append(
 					"CardApplicationManagementSystem.Apply.card",
 					new JsonObject
@@ -100,17 +72,16 @@ namespace Crusaders30XX.ECS.Systems
 		private void OnRemoveCardApplication(RemoveCardApplication evt)
 		{
 			if (evt?.Card == null || evt.Type == CardApplicationType.Cursed) return;
-			RemoveApplication(evt.Card, evt.Type);
+			CardApplicationService.RemoveRestriction(EntityManager, evt.Card, evt.Type);
 		}
 
 		private void OnRemoveCardApplications(RemoveCardApplications evt)
 		{
 			if (evt == null || evt.Type == CardApplicationType.Cursed || evt.Amount <= 0) return;
 
-			var definition = GetDefinition(evt.Type);
 			var cards = CardApplicationTargetingService.ResolveCandidates(EntityManager, null, evt.Target)
 				.Where(CardApplicationTargetingService.IsNonWeaponCard)
-				.Where(definition.IsApplied)
+				.Where(card => CardApplicationService.IsApplied(card, evt.Type))
 				.Distinct()
 				.OrderBy(_ => Random.Shared.Next())
 				.Take(evt.Amount)
@@ -118,23 +89,8 @@ namespace Crusaders30XX.ECS.Systems
 
 			foreach (var card in cards)
 			{
-				RemoveApplication(card, evt.Type);
+				CardApplicationService.RemoveRestriction(EntityManager, card, evt.Type);
 			}
-		}
-
-		private void RemoveApplication(Entity card, CardApplicationType type)
-		{
-			var definition = GetDefinition(type);
-			if (!definition.IsApplied(card)) return;
-
-			definition.Remove(EntityManager, card);
-			RunScopedStateService.SyncCardRestrictionsFromComponents(card);
-		}
-
-		private ApplicationDefinition GetDefinition(CardApplicationType type)
-		{
-			if (ApplicationDefinitions.TryGetValue(type, out var definition)) return definition;
-			throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported card application type.");
 		}
 	}
 }

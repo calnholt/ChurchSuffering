@@ -260,8 +260,27 @@ namespace Crusaders30XX.ECS.Systems
 				var color = Color.Lerp(new Color(31, 25, 27), new Color(10, 9, 11), shade) * (BackgroundAlpha / 255f * p.Alpha);
 				_spriteBatch.Draw(_pixel, new Rectangle(rect.X, y0, rect.Width, Math.Max(1, y1 - y0)), color);
 			}
+			DrawOutlineEcho(rect, p.Alpha);
 			DrawRect(rect, new Color(143, 22, 31) * (0.72f * p.Alpha), Math.Max(1, BorderThickness));
 			DrawRect(new Rectangle(rect.X + 3, rect.Y + 3, Math.Max(1, rect.Width - 6), Math.Max(1, rect.Height - 6)), new Color(215, 50, 56) * (0.18f * p.Alpha), 1);
+		}
+
+		private void DrawOutlineEcho(Rectangle bounds, float panelAlpha)
+		{
+			var sample = EnemyAttackAnimationService.ComputeOutlineEcho(
+				_outlineEchoElapsedSeconds,
+				OutlineEchoIntervalSeconds,
+				OutlineEchoDurationSeconds);
+			if (!sample.IsActive || OutlineEchoExpansionPx <= 0 || OutlineEchoAlpha <= 0f) return;
+
+			int expansion = (int)MathF.Round(OutlineEchoExpansionPx * sample.ExpansionProgress);
+			var echoBounds = new Rectangle(
+				bounds.X - expansion,
+				bounds.Y - expansion,
+				bounds.Width + expansion * 2,
+				bounds.Height + expansion * 2);
+			float alpha = MathHelper.Clamp(OutlineEchoAlpha * sample.Alpha * panelAlpha, 0f, 1f);
+			DrawRect(echoBounds, new Color(143, 22, 31) * alpha, Math.Max(1, BorderThickness));
 		}
 
 		private void DrawImpactFlash(EnemyAttackBannerPresentation p)

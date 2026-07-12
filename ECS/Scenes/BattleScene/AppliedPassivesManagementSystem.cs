@@ -42,12 +42,6 @@ namespace Crusaders30XX.ECS.Systems
             var typeName = effect.EffectType ?? string.Empty;
             if (!Enum.TryParse<AppliedPassiveType>(typeName, true, out var passiveType)) return;
             EventManager.Publish(new ApplyPassiveEvent { Delta = effect.Amount, Target = effect.Target, Type = passiveType });
-            switch (passiveType)
-            {
-                case AppliedPassiveType.Aegis:
-                    EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.GainAegis, Volume = 0.5f });
-                    break;
-            }
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()

@@ -5,16 +5,16 @@ namespace Crusaders30XX.ECS.Objects.Cards;
 
 public class RazorStorm : CardBase
 {
-  private int NumOfHits = 2;
-
-  private int NumOfHitsUpgrade = 1;
   public RazorStorm()
   {
     CardId = "razor_storm";
     Rarity = Rarity.Uncommon;
     Name = "Razor Storm";
     Target = "Enemy";
-    Text = $"Attacks {GetNumOfHits(IsUpgraded)} times.";
+    MultiHitCount = 2;
+    FirstHitDelaySeconds = 0.5f;
+    HitIntervalSeconds = 0.5f;
+    Text = $"Attacks {MultiHitCount} times.";
     VisualEffectRecipe = PlayerAttackEffect();
     Damage = 1;
     Block = 2;
@@ -22,16 +22,15 @@ public class RazorStorm : CardBase
 
     OnPlay = (entityManager, card) =>
     {
-      var time = 0.5f;
-      var numOfHits = GetNumOfHits(IsUpgraded);
       EventManager.Publish(new EndTurnDisplayEvent { ShowButton = false });
-      TimerScheduler.Schedule(time * numOfHits, () =>
+      float finalHitTime = FirstHitDelaySeconds + (MultiHitCount - 1) * HitIntervalSeconds;
+      TimerScheduler.Schedule(finalHitTime, () =>
       {
         EventManager.Publish(new EndTurnDisplayEvent { ShowButton = true });
       });
-      for (int j = 0; j < numOfHits; j++)
+      for (int hitIndex = 0; hitIndex < MultiHitCount; hitIndex++)
       {
-        TimerScheduler.Schedule(time + (j * time), () =>
+        TimerScheduler.Schedule(FirstHitDelaySeconds + hitIndex * HitIntervalSeconds, () =>
         {
           EventManager.Publish(new ModifyHpRequestEvent
           {
@@ -48,12 +47,8 @@ public class RazorStorm : CardBase
 
     OnUpgrade = (entityManager, card) =>
     {
-      Text = $"Attacks {GetNumOfHits(IsUpgraded)} times.";
+      MultiHitCount = 3;
+      Text = $"Attacks {MultiHitCount} times.";
     };
-  }
-
-  private int GetNumOfHits(bool isUpgraded)
-  {
-    return isUpgraded ? NumOfHits + NumOfHitsUpgrade : NumOfHits;
   }
 }

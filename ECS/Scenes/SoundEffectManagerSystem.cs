@@ -202,6 +202,7 @@ namespace Crusaders30XX.ECS.Systems
                 SfxTrack.UpgradeCard => "SFX/upgrade-card",
                 SfxTrack.BoosterPackReveal => "SFX/booster-pack-reveal",
                 SfxTrack.DeckShuffle => "SFX/deck-shuffle",
+                SfxTrack.ShieldBlock => "SFX/shield-block",
                 _ => null
             };
 

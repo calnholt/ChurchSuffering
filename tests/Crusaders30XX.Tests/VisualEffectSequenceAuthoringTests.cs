@@ -80,11 +80,66 @@ public sealed class VisualEffectSequenceAuthoringTests
 		Assert.True(MaxParticles(new ShieldOfFaith()) > MaxParticles(new DivineProtection()));
 	}
 
+	[Theory]
+	[InlineData(false, 2)]
+	[InlineData(true, 3)]
+	public void Multi_hit_card_metadata_repeats_the_authored_beat_at_gameplay_hit_times(bool upgraded, int expectedHits)
+	{
+		var entityManager = new Crusaders30XX.ECS.Core.EntityManager();
+		var cardEntity = entityManager.CreateEntity("RazorStorm");
+		var card = new RazorStorm { IsUpgraded = upgraded };
+		card.Initialize(entityManager, cardEntity);
+
+		Assert.Equal(expectedHits, card.MultiHitCount);
+		Assert.Equal(expectedHits, card.VisualEffectSequence.Beats.Count);
+		for (int hitIndex = 0; hitIndex < expectedHits; hitIndex++)
+		{
+			var beat = card.VisualEffectSequence.Beats[hitIndex];
+			float actualImpact = beat.DelaySeconds + beat.ImpactTimeSeconds;
+			float expectedImpact = card.FirstHitDelaySeconds + hitIndex * card.HitIntervalSeconds;
+			Assert.Equal(expectedImpact, actualImpact, 3);
+		}
+	}
+
+	[Fact]
+	public void Changing_multi_hit_metadata_invalidates_cached_choreography()
+	{
+		var card = new Whirlwind();
+		Assert.Equal(2, card.VisualEffectSequence.Beats.Count);
+
+		card.MultiHitCount = 4;
+
+		Assert.Equal(4, card.VisualEffectSequence.Beats.Count);
+	}
+
+	[Fact]
+	public void Unregistered_future_multi_hit_attack_automatically_receives_repeated_choreography()
+	{
+		var card = new FutureMultiHitCard();
+
+		Assert.Equal(3, card.VisualEffectSequence.Beats.Count);
+		Assert.All(card.VisualEffectSequence.Beats, beat =>
+			Assert.Equal(VisualEffectTargetRole.Enemy, beat.TargetRole));
+	}
+
 	private static float MaxIntensity(CardBase card) => card.VisualEffectSequence.Beats.Max(beat => beat.Intensity);
 	private static float MaxParticles(CardBase card) => card.VisualEffectSequence.Beats.Max(beat => beat.ParticleMultiplier);
 	private static string VisualSignature(CardBase card) => VisualSignature(card.VisualEffectSequence.Beats);
 	private static string VisualSignature(System.Collections.Generic.IReadOnlyList<Crusaders30XX.ECS.Data.VisualEffects.VisualEffectBeat> beats)
 	{
 		return string.Join("|", beats.Select(beat => $"{beat.TargetRole}:{beat.DelaySeconds:F3}:{beat.DurationSeconds:F3}:{beat.ImpactTimeSeconds:F3}:{beat.Intensity:F3}:{beat.ParticleMultiplier:F3}:{beat.Palette}:{beat.StartSfxPitch:F3}:{beat.ImpactSfxPitch:F3}:{string.Join(',', beat.Modules)}"));
+	}
+
+	private sealed class FutureMultiHitCard : CardBase
+	{
+		public FutureMultiHitCard()
+		{
+			CardId = "future_multi_hit_card";
+			Target = "Enemy";
+			Damage = 2;
+			MultiHitCount = 3;
+			FirstHitDelaySeconds = 0.4f;
+			HitIntervalSeconds = 0.3f;
+		}
 	}
 }

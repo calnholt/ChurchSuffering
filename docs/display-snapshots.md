@@ -56,6 +56,7 @@ to the fixture.
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
 | `booster-pack-opening` | Booster pack opening display | Phase-driven pack summon, rupture, reward travel, sheen, and ready states |
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
+| `passive-application` | Passive application animation | Status seals at fixed player/enemy anchors, including stagger and concurrent attack variants |
 | `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
@@ -111,13 +112,14 @@ Approved images are `initial.png`, `transition.png`, `settled.png`, and `absorb.
 
 ## `enemy-attack-banner`
 
-Renders the production enemy attack banner against the gothic battle background with a fixed damage-15 attack and deterministic attack sequence. Variants cover the entrance anticipation, impact burst, settled state, confirm hover feedback, and absorb exit.
+Renders the production enemy attack banner against the gothic battle background with a fixed damage-15 attack and deterministic attack sequence. Variants cover the entrance anticipation, impact burst, settled state, confirm hover feedback, repeating outline echo, and absorb exit.
 
 ```bash
 dotnet run -- snapshot enemy-attack-banner anticipation --verify
 dotnet run -- snapshot enemy-attack-banner impact --verify
 dotnet run -- snapshot enemy-attack-banner settled --verify
 dotnet run -- snapshot enemy-attack-banner hover --verify
+dotnet run -- snapshot enemy-attack-banner pulse --verify
 dotnet run -- snapshot enemy-attack-banner absorb --verify
 ./scripts/verify-enemy-attack-banner-snapshots.sh
 ```
@@ -370,6 +372,24 @@ Isolated-module options:
 The seed controls cracks, debris, shards, smoke, rays, rock fragments, poison clouds, and other organic variation. The same seed reproduces the same geometry. Run `./scripts/verify-modular-fx-snapshots.sh --verify` to check the representative preset, palette, actor-target, and card-target matrix; use `--accept` only for intentional visual changes.
 
 Output: `debug/snapshots/modular-fx/<preset>-<sample>.png` for preset commands, or `debug/snapshots/modular-fx/module-<module>-<sample>-<direction>-seed-<seed>[-<palette>][-card].png` for isolated modules.
+
+---
+
+## `passive-application`
+
+Renders the production passive-application seal beside a fixed player or enemy portrait. The optional mode covers staggered status groups and overlap with modular attack FX.
+
+```bash
+dotnet run -- snapshot passive-application burn hold player single --verify
+dotnet run -- snapshot passive-application aegis entry player single --verify
+dotnet run -- snapshot passive-application fear hold enemy single --verify
+dotnet run -- snapshot passive-application frostbite exit player single --verify
+dotnet run -- snapshot passive-application burn hold enemy multi --verify
+dotnet run -- snapshot passive-application wounded hold player attack --verify
+./scripts/verify-passive-application-snapshots.sh
+```
+
+Arguments are `[passive-type] [entry|hold|exit] [player|enemy] [single|multi|attack]`. Passive names accept enum names or kebab-case slugs. Output is stored under `debug/snapshots/passive-application/` and approved baselines under `tests/VisualBaselines/passive-application/`.
 
 ---
 

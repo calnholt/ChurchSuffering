@@ -1,7 +1,5 @@
 UX
 - improve applied passive animations
-- improve climb resources preview animation when hovering over buttons
-- enemy attack
 - improve remiel in battle text
 - make fixed buttons used throughout (just a fex styles used consistently)
 - make climb column buttons more thematic
@@ -10,10 +8,6 @@ UX
 
 bugs
 - curse need to apply before brittle
-
-art
-- card art
-- 
 
 Gameplay
 - maybe remove istoken/isweapon and make as components?
@@ -24,11 +18,9 @@ Gameplay
 cards
 - if you have dealt 10 or more damage this turn...
 - gain galvanize
-- when this is in your hand, if you pledge a card, it loses all its mods
 
 medals
 - on acquire, X cards gain GOOD card modification
-- whenever you mill 2 cards, resurrect 1
 
 equipment
 - 
@@ -58,56 +50,9 @@ bugs:
 - 
 
 
-  Hole Feather: 0.04 - 0.08
-  Open Frac: 0.45 - 0.65
-  Close Frac: 0.45 - 0.70
-
-
 git checkout main && git pull origin main && git merge development && git push origin main
 
 MUST FOLLOW - Style: Anime. Solid flat color fills, 2-tone cel-shading at most (base + one shadow). Bold clean outlines. Low detail, strong silhouette. Read him at a glance, not up close. No glow effects, no rendering, no texture noise. White background color for easy cropping. 
 
 Create a physical description for the following characer so we can create an art brief
 
-loot chest // booster pack animation for acruing points from level up
-
-
-
-core card set:
-
-- consecrate
-- crimson rite
-- crusade
-- divine protection
-- douse with holy water
-- fury
-- impale
-- lacerate
-- pierce through
-- pouch of kunai
-- quick wit
-- ravage
-- reap
-- shield of faith
-- strike
-- sudden thrust
-- temper the blade
-- tempest
-- zealous vow
-
-core medal set:
-
-- st_augustine
-- st_bartholomew
-- st_clare
-- st_francis_de_sales
-- st_homobonus
-- st_joan_of_arc
-- st_luke
-- st_michael
-- st_sebastian
-
-core equipment set:
-- scarlet
-- ivory
-- knightly

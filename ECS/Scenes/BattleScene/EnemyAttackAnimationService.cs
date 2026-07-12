@@ -15,6 +15,11 @@ namespace Crusaders30XX.ECS.Systems
 		float RingOneProgress,
 		float RingTwoProgress);
 
+	internal readonly record struct EnemyAttackOutlineEchoSample(
+		bool IsActive,
+		float ExpansionProgress,
+		float Alpha);
+
 	internal static class EnemyAttackAnimationService
 	{
 		public const float ImpactMomentSeconds = 0.08f;
@@ -71,6 +76,25 @@ namespace Crusaders30XX.ECS.Systems
 		public static float ComputeIdlePulse(float elapsed)
 		{
 			return 1f + MathF.Sin(Math.Max(0f, elapsed) * MathHelper.TwoPi * 1.5f) * 0.015f;
+		}
+
+		public static EnemyAttackOutlineEchoSample ComputeOutlineEcho(float elapsed, float interval, float duration)
+		{
+			float safeElapsed = Math.Max(0f, elapsed);
+			float safeInterval = Math.Max(0.01f, interval);
+			float safeDuration = Math.Min(Math.Max(0.01f, duration), safeInterval);
+			if (safeElapsed < safeInterval)
+				return new EnemyAttackOutlineEchoSample(false, 0f, 0f);
+
+			float cycleElapsed = (safeElapsed - safeInterval) % safeInterval;
+			if (cycleElapsed >= safeDuration)
+				return new EnemyAttackOutlineEchoSample(false, 0f, 0f);
+
+			float progress = MathHelper.Clamp(cycleElapsed / safeDuration, 0f, 1f);
+			return new EnemyAttackOutlineEchoSample(
+				true,
+				EaseOutCubic(progress),
+				1f - progress);
 		}
 
 		private static float WindowProgress(float elapsed, float start, float end)

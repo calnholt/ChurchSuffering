@@ -24,7 +24,7 @@ public sealed class BoosterPackOpeningSnapshotFixture : IDisplaySnapshotFixture
 			ctx.GraphicsDevice,
 			ctx.SpriteBatch,
 			ctx.ImageAssets,
-			new Random(_variant.Seed));
+			random: new Random(_variant.Seed));
 		_display.OpenForSnapshot(_variant.TimeSeconds, new BoosterPackSave
 		{
 			rewards =

@@ -29,6 +29,7 @@ namespace Crusaders30XX.ECS.Systems
 		public ModularEffectCoordinatorSystem(EntityManager entityManager) : base(entityManager)
 		{
 			EventManager.Subscribe<VisualEffectRequested>(OnVisualEffectRequested);
+			EventManager.Subscribe<EnemyDamageAppliedEvent>(OnEnemyDamageApplied);
 			EventManager.Subscribe<LoadSceneEvent>(_ => ClearActiveEffects());
 		}
 
@@ -156,7 +157,15 @@ namespace Crusaders30XX.ECS.Systems
 		private void PublishImpact(ActiveVisualEffect active)
 		{
 			active.ImpactPublished = true;
-			if (active.Recipe.ImpactSfx != SfxTrack.None)
+			bool drivesEnemyDamage = !active.IsPreview
+				&& active.SourceKind == VisualEffectSourceKind.EnemyAttack
+				&& active.DrivesGameplayImpact;
+			if (drivesEnemyDamage)
+			{
+				EventManager.Publish(new EnemyAttackImpactNow());
+			}
+
+			if (!active.SuppressImpactSfx && active.Recipe.ImpactSfx != SfxTrack.None)
 			{
 				EventManager.Publish(new PlaySfxEvent
 				{
@@ -187,12 +196,36 @@ namespace Crusaders30XX.ECS.Systems
 				IsPreview = active.IsPreview
 			});
 
-			if (!active.IsPreview
-				&& active.SourceKind == VisualEffectSourceKind.EnemyAttack
-				&& active.DrivesGameplayImpact)
+		}
+
+		private void OnEnemyDamageApplied(EnemyDamageAppliedEvent evt)
+		{
+			if (evt == null || evt.TotalDamage <= 0 || evt.FinalDamage > 0) return;
+			var active = GetRelevantEntities()
+				.Select(entity => entity.GetComponent<ActiveVisualEffect>())
+				.Where(effect => effect != null
+					&& effect.SourceKind == VisualEffectSourceKind.EnemyAttack
+					&& effect.DrivesGameplayImpact
+					&& effect.ImpactPublished
+					&& !effect.CompletionPublished)
+				.OrderByDescending(effect => effect.ElapsedSeconds)
+				.FirstOrDefault();
+			if (active == null) return;
+
+			active.SuppressImpactSfx = true;
+			active.Recipe = active.Recipe.WithModules(
+				active.Recipe.Modules.Where(module => module != VisualEffectModule.Shake).ToArray());
+
+			EventManager.Publish(new VisualEffectRequested
 			{
-				EventManager.Publish(new EnemyAttackImpactNow());
-			}
+				Recipe = VisualEffectPresets.BlockedAttack(),
+				Source = active.Source,
+				Target = active.Target,
+				SourceKind = VisualEffectSourceKind.EnemyAttack,
+				SourceId = $"{active.SourceId}_blocked",
+				DisplayName = active.DisplayName,
+				DrivesGameplayImpact = false
+			});
 		}
 
 		private void PublishCompletion(ActiveVisualEffect active)

@@ -57,6 +57,12 @@ namespace Crusaders30XX.ECS.Systems
 
         protected override void UpdateEntity(Entity entity, GameTime gameTime)
         {
+            float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (delta > 0f)
+            {
+                _inputSource.TickRumble(delta);
+            }
+
             EnsureState();
             EnsureCursorPosition();
 

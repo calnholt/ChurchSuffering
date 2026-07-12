@@ -24,6 +24,7 @@ namespace Crusaders30XX.ECS.Components
 		public Guid SequenceId { get; set; }
 		public int BeatIndex { get; set; }
 		public bool ImpactPublished { get; set; }
+		public bool SuppressImpactSfx { get; set; }
 		public bool CompletionPublished { get; set; }
 		public bool IsPreview { get; set; }
 		public VisualEffectSourceKind SourceKind { get; set; }

@@ -85,6 +85,13 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 		public void Draw(DisplaySnapshotContext ctx)
 		{
+			var confirmUi = ctx.World.EntityManager.GetEntity("UIButton_ConfirmEnemyAttack")?.GetComponent<UIElement>();
+			if (_variant == "pulse" && confirmUi != null)
+			{
+				confirmUi.IsInteractable = false;
+				confirmUi.IsHovered = false;
+			}
+
 			ctx.SpriteBatch.Draw(_background, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.White);
 			ctx.SpriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), new Color(9, 5, 8, 86));
 			ctx.SpriteBatch.Draw(_enemyTexture, _enemy.GetComponent<Transform>().Position, null, Color.White * 0.9f, 0f,
@@ -119,17 +126,18 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			"impact" => 0.11f,
 			"settled" => 0.40f,
 			"hover" => 0.40f,
+			"pulse" => 2.30f,
 			_ => 0.40f,
 		};
 
 		private static string ParseVariant(string[] args)
 		{
 			if (args.Length == 0) return "settled";
-			if (args.Length == 1 && args[0] is "anticipation" or "impact" or "settled" or "hover" or "absorb")
+			if (args.Length == 1 && args[0] is "anticipation" or "impact" or "settled" or "hover" or "pulse" or "absorb")
 				return args[0];
 
 			throw new DisplaySnapshotSetupException(
-				"enemy-attack-banner expects one variant: anticipation, impact, settled, hover, or absorb");
+				"enemy-attack-banner expects one variant: anticipation, impact, settled, hover, pulse, or absorb");
 		}
 	}
 }

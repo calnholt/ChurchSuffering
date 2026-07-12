@@ -8,6 +8,7 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Objects.Equipment;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
@@ -24,6 +25,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	private const string BlockerEntityName = "BoosterPackOpeningBlocker";
 	private const string EquipmentTooltipEntityName = "BoosterPack_EquipmentTooltip";
 	private const string ContextId = "overlay.booster-pack-opening";
+	private const string RumbleChannelId = "booster-pack-opening";
 	private const int FixedMaskDiameter = 512;
 	private const int ParticleCoreDiameter = 24;
 	private const int ShardMaskWidth = 32;
@@ -32,6 +34,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	private readonly GraphicsDevice _graphicsDevice;
 	private readonly SpriteBatch _spriteBatch;
 	private readonly ImageAssetService _imageAssets;
+	private readonly IPlayerInputSource _inputSource;
 	private readonly Texture2D _pixel;
 	private readonly SpriteFont _titleFont;
 	private readonly SpriteFont _bodyFont;
@@ -268,17 +271,34 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	[DebugEditable(DisplayName = "Reward Headline Scale", Step = 0.01f, Min = 0.1f, Max = 2f)]
 	public float RewardHeadlineScale { get; set; } = 0.58f;
 
+	[DebugEditable(DisplayName = "Rumble Buildup Low", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleBuildupLow { get; set; } = 0.35f;
+
+	[DebugEditable(DisplayName = "Rumble Buildup High", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleBuildupHigh { get; set; } = 0.55f;
+
+	[DebugEditable(DisplayName = "Rumble Loot Pulse Low", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleLootPulseLow { get; set; } = 0.08f;
+
+	[DebugEditable(DisplayName = "Rumble Loot Pulse High", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleLootPulseHigh { get; set; } = 0.12f;
+
+	[DebugEditable(DisplayName = "Rumble Loot Pulse Duration (s)", Step = 0.01f, Min = 0.01f, Max = 1f)]
+	public float RumbleLootPulseDurationSeconds { get; set; } = 0.06f;
+
 	public BoosterPackOpeningDisplaySystem(
 		EntityManager entityManager,
 		GraphicsDevice graphicsDevice,
 		SpriteBatch spriteBatch,
 		ImageAssetService imageAssets,
+		IPlayerInputSource inputSource = null,
 		Random random = null)
 		: base(entityManager)
 	{
 		_graphicsDevice = graphicsDevice;
 		_spriteBatch = spriteBatch;
 		_imageAssets = imageAssets;
+		_inputSource = inputSource;
 		_rng = random ?? new Random();
 		_pixel = _imageAssets.GetPixel(Color.White);
 		_titleFont = FontSingleton.TitleFont;
@@ -310,6 +330,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		var state = GetOverlay()?.GetComponent<BoosterPackOpeningOverlayState>();
 		if (state?.IsOpen != true)
 		{
+			StopRumble();
 			SetBlockerActive(false);
 			SetPreviewEntitiesInactive(state);
 			return;
@@ -331,6 +352,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		SetDismissEnabled(
 			state,
 			BoosterPackOpeningAnimationService.CanDismiss(state.ElapsedSeconds, timing));
+		UpdateRumble(state, timing);
 		_equipmentTooltipDisplaySystem?.Update(gameTime);
 	}
 
@@ -391,6 +413,42 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			RuptureShakeDurationSeconds);
 	}
 
+	private BoosterPackRumbleSettings BuildRumbleSettings()
+	{
+		return new BoosterPackRumbleSettings(
+			RumbleBuildupLow,
+			RumbleBuildupHigh,
+			RumbleLootPulseLow,
+			RumbleLootPulseHigh,
+			RumbleLootPulseDurationSeconds);
+	}
+
+	private void UpdateRumble(BoosterPackOpeningOverlayState state, BoosterPackOpeningTiming timing)
+	{
+		if (_inputSource == null) return;
+		PlayerInputFrame frame = PlayerInputService.GetFrame(EntityManager);
+		if (!frame.IsGamepadConnected || !frame.IsWindowActive)
+		{
+			StopRumble();
+			return;
+		}
+
+		var sample = BoosterPackOpeningAnimationService.SampleRumble(
+			state.ElapsedSeconds,
+			state.Loot.Count,
+			timing,
+			BuildRumbleSettings());
+		_inputSource.SetRumbleChannel(
+			RumbleChannelId,
+			sample.LowFrequency,
+			sample.HighFrequency);
+	}
+
+	private void StopRumble()
+	{
+		_inputSource?.ClearRumbleChannel(RumbleChannelId);
+	}
+
 	private void OpenOverlay(BoosterPackSave pack = null)
 	{
 		_snapshotTimeFrozen = false;
@@ -422,6 +480,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		var state = GetOverlay()?.GetComponent<BoosterPackOpeningOverlayState>();
 		if (state == null)
 		{
+			StopRumble();
 			SetBlockerActive(false);
 			return;
 		}
@@ -437,6 +496,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		_lootTextures.Clear();
 		SetDismissEnabled(state, false);
 		SetBlockerActive(false);
+		StopRumble();
 		ResetEquipmentTooltipState();
 		EventManager.Publish(new BoosterPackOpeningDismissedEvent { WasAuthoritativePack = wasAuthoritativePack });
 	}

@@ -62,16 +62,23 @@ namespace Crusaders30XX.ECS.Systems
             int extraDamage = _pendingDamage;
             _pendingDamage = 0;
             int totalDamage = baseDamage + extraDamage;
+            int attemptedDamage = totalDamage;
+            if (attemptedDamage == 0
+                && prog?.FullyPreventedBySpecial == true
+                && EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out _, out _, out var planned))
+            {
+                attemptedDamage = Math.Max(0, planned?.AttackDefinition?.Damage ?? 0);
+            }
             int damageAfterBlock = totalDamage;
-            int finalDamage = totalDamage;
-            bool wasHit = false;
+            int finalDamage = 0;
 
             var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
             if (player != null && totalDamage > 0)
             {
+                var hp = player.GetComponent<HP>();
+                int? hpBefore = hp?.Current;
                 int useAssigned = Math.Min(assignedBlock, totalDamage);
                 damageAfterBlock -= useAssigned;
-                finalDamage = damageAfterBlock;
 
                 if (damageAfterBlock > 0)
                 {
@@ -79,8 +86,6 @@ namespace Crusaders30XX.ECS.Systems
                     bool ignoresAegis = prog?.IgnoresAegis ?? false;
                     int effectiveAegis = ignoresAegis ? 0 : prog?.AegisTotal ?? 0;
                     finalDamage = Math.Max(0, damageAfterBlock - effectiveAegis);
-                    wasHit = finalDamage > 0;
-                    LoggingService.Append("EnemyDamageManagerSystem.OnImpactNow.modifyHp", new System.Text.Json.Nodes.JsonObject { ["finalDamage"] = finalDamage, ["aegisTotal"] = prog?.AegisTotal, ["ignoresAegis"] = ignoresAegis, ["wasHit"] = wasHit });
                     EventManager.Publish(new ModifyHpRequestEvent
                     {
                         Source = enemy,
@@ -88,14 +93,27 @@ namespace Crusaders30XX.ECS.Systems
                         Delta = -damageAfterBlock,
                         IgnoresAegis = ignoresAegis
                     });
+
+                    if (hpBefore.HasValue && hp != null)
+                    {
+                        finalDamage = Math.Max(0, hpBefore.Value - hp.Current);
+                    }
+
+                    LoggingService.Append("EnemyDamageManagerSystem.OnImpactNow.modifyHp", new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["finalDamage"] = finalDamage,
+                        ["aegisTotal"] = prog?.AegisTotal,
+                        ["ignoresAegis"] = ignoresAegis,
+                        ["wasHit"] = finalDamage > 0
+                    });
                 }
             }
 
             EventManager.Publish(new EnemyDamageAppliedEvent
             {
                 FinalDamage = finalDamage,
-                TotalDamage = totalDamage,
-                WasHit = wasHit
+                TotalDamage = attemptedDamage,
+                WasHit = finalDamage > 0
             });
         }
     }

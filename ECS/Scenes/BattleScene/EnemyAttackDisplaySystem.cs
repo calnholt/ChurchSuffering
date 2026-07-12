@@ -51,6 +51,7 @@ namespace Crusaders30XX.ECS.Systems
 		private float _impactElapsedSeconds = 0f;
 		private float _impactIntensity = 0.25f;
 		private float _idleElapsedSeconds = 0f;
+		private float _outlineEchoElapsedSeconds = 0f;
 		private int _impactDamage = 0;
 		private SubPhase _lastPresentationPhase = SubPhase.StartBattle;
 		private EnemyAttackEntranceSample _entranceSample;
@@ -84,6 +85,18 @@ namespace Crusaders30XX.ECS.Systems
 
 		[DebugEditable(DisplayName = "Background Alpha", Step = 5, Min = 0, Max = 255)]
 		public int BackgroundAlpha { get; set; } = 160;
+
+		[DebugEditable(DisplayName = "Outline Echo Interval (s)", Step = 0.05f, Min = 0.1f, Max = 5f)]
+		public float OutlineEchoIntervalSeconds { get; set; } = 1f;
+
+		[DebugEditable(DisplayName = "Outline Echo Duration (s)", Step = 0.05f, Min = 0.05f, Max = 1f)]
+		public float OutlineEchoDurationSeconds { get; set; } = 0.35f;
+
+		[DebugEditable(DisplayName = "Outline Echo Expansion (px)", Step = 1, Min = 0, Max = 40)]
+		public int OutlineEchoExpansionPx { get; set; } = 8;
+
+		[DebugEditable(DisplayName = "Outline Echo Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float OutlineEchoAlpha { get; set; } = 0.22f;
 
 		// Text
 		[DebugEditable(DisplayName = "Title Scale", Step = 0.05f, Min = 0.05f, Max = 2.5f)]
@@ -453,6 +466,7 @@ namespace Crusaders30XX.ECS.Systems
 			_impactActive = false;
 			_impactMomentFired = false;
 			_impactElapsedSeconds = 0f;
+			_outlineEchoElapsedSeconds = 0f;
 			_absorbElapsedSeconds = 0f;
 			_absorbCompleteFired = false;
 			_lastAttackSequence = -1;
@@ -505,6 +519,7 @@ namespace Crusaders30XX.ECS.Systems
 			_impactActive = true;
 			_impactMomentFired = false;
 			_impactElapsedSeconds = 0f;
+			_outlineEchoElapsedSeconds = 0f;
 			_impactDamage = Math.Max(0, attackDamage);
 			_impactIntensity = EnemyAttackAnimationService.ComputeImpactIntensity(_impactDamage);
 			_entranceSample = EnemyAttackAnimationService.ComputeEntrance(0f, _impactIntensity);
@@ -656,6 +671,14 @@ namespace Crusaders30XX.ECS.Systems
 				{
 					_impactActive = false;
 				}
+			}
+			if (!_impactActive && phaseNow == SubPhase.Block)
+			{
+				_outlineEchoElapsedSeconds += dt;
+			}
+			else
+			{
+				_outlineEchoElapsedSeconds = 0f;
 			}
 			// Update absorb tween timer based on battle phase
 			if (phaseNow == SubPhase.EnemyAttack)
