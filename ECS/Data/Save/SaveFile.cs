@@ -8,7 +8,7 @@ namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 20;
+		public const int CURRENT_VERSION = 21;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -16,6 +16,7 @@ namespace Crusaders30XX.ECS.Data.Save
         public int gold { get; set; } = 0;
 		public int musicVolumeLevel { get; set; } = DEFAULT_AUDIO_VOLUME_LEVEL;
 		public int sfxVolumeLevel { get; set; } = DEFAULT_AUDIO_VOLUME_LEVEL;
+		public bool rumbleEnabled { get; set; } = true;
 		public int runMapSeed { get; set; }
 		public List<SaveItem> items { get; set; } = new List<SaveItem>();
 		public string lastLocation { get; set; } = string.Empty;

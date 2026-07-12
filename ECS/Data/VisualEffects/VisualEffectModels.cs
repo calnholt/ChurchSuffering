@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Data.VisualEffects
 {
@@ -112,6 +113,8 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public float ImpactSfxVolume { get; init; } = 0.5f;
 		public float StartSfxPitch { get; init; } = 0f;
 		public float ImpactSfxPitch { get; init; } = 0f;
+		public RumbleProfile ImpactRumbleProfile { get; init; } = RumbleProfile.None;
+		public float ImpactRumbleScale { get; init; } = 1f;
 
 		public VisualEffectRecipe() { }
 
@@ -129,6 +132,8 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			ImpactSfxVolume = source.ImpactSfxVolume;
 			StartSfxPitch = source.StartSfxPitch;
 			ImpactSfxPitch = source.ImpactSfxPitch;
+			ImpactRumbleProfile = source.ImpactRumbleProfile;
+			ImpactRumbleScale = source.ImpactRumbleScale;
 			_modules = NormalizeModules(modules);
 		}
 
@@ -177,6 +182,11 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			return Copy(impactSfx: track, impactSfxVolume: volume, impactSfxPitch: pitch);
 		}
 
+		public VisualEffectRecipe WithImpactRumble(RumbleProfile profile, float scale = 1f)
+		{
+			return Copy(impactRumbleProfile: profile, impactRumbleScale: scale);
+		}
+
 		internal VisualEffectRecipe Copy(
 			string id = null,
 			VisualEffectTimingProfile? timing = null,
@@ -189,7 +199,9 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			float? startSfxVolume = null,
 			float? impactSfxVolume = null,
 			float? startSfxPitch = null,
-			float? impactSfxPitch = null)
+			float? impactSfxPitch = null,
+			RumbleProfile? impactRumbleProfile = null,
+			float? impactRumbleScale = null)
 		{
 			return new VisualEffectRecipe
 			{
@@ -205,6 +217,8 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				ImpactSfxVolume = impactSfxVolume ?? ImpactSfxVolume,
 				StartSfxPitch = startSfxPitch ?? StartSfxPitch,
 				ImpactSfxPitch = impactSfxPitch ?? ImpactSfxPitch,
+				ImpactRumbleProfile = impactRumbleProfile ?? ImpactRumbleProfile,
+				ImpactRumbleScale = impactRumbleScale ?? ImpactRumbleScale,
 				_modules = NormalizeModules(_modules)
 			};
 		}
@@ -243,6 +257,8 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		public float StartSfxPitch { get; init; }
 		public float ImpactSfxPitch { get; init; }
 		public bool DrivesGameplayImpact { get; init; }
+		public RumbleProfile ImpactRumbleProfile { get; init; } = RumbleProfile.None;
+		public float ImpactRumbleScale { get; init; } = 1f;
 
 		public VisualEffectBeat WithModules(params VisualEffectModule[] modules)
 		{
@@ -265,6 +281,8 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				StartSfxPitch = StartSfxPitch,
 				ImpactSfxPitch = ImpactSfxPitch,
 				DrivesGameplayImpact = DrivesGameplayImpact,
+				ImpactRumbleProfile = ImpactRumbleProfile,
+				ImpactRumbleScale = ImpactRumbleScale,
 				_modules = (modules ?? Array.Empty<VisualEffectModule>()).Distinct().ToArray()
 			};
 		}
@@ -284,7 +302,9 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				StartSfxVolume = StartSfxVolume,
 				ImpactSfxVolume = ImpactSfxVolume,
 				StartSfxPitch = StartSfxPitch,
-				ImpactSfxPitch = ImpactSfxPitch
+				ImpactSfxPitch = ImpactSfxPitch,
+				ImpactRumbleProfile = ImpactRumbleProfile,
+				ImpactRumbleScale = ImpactRumbleScale,
 			}.WithModules(_modules);
 		}
 

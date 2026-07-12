@@ -12,6 +12,7 @@ namespace Crusaders30XX.ECS.Input
         private GamePadState _previousGamepad;
         private PlayerInputDevice _device = PlayerInputDevice.KeyboardMouse;
         private long _sequence;
+		private bool _rumbleEnabled = true;
 
         public MonoGamePlayerInputAdapter()
         {
@@ -84,9 +85,10 @@ namespace Crusaders30XX.ECS.Input
             return frame;
         }
 
-        public void SetRumbleChannel(string channelId, float lowFrequency, float highFrequency)
+        public void SetRumbleChannel(string channelId, RumbleMotorState motors)
         {
-            _rumbleMixer.SetChannel(channelId, lowFrequency, highFrequency);
+            if (!_rumbleEnabled) return;
+            _rumbleMixer.SetChannel(channelId, motors);
             ApplyMixedRumble();
         }
 
@@ -96,13 +98,10 @@ namespace Crusaders30XX.ECS.Input
             ApplyMixedRumble();
         }
 
-        public void PlayRumblePulse(
-            float lowFrequency,
-            float highFrequency,
-            float durationSeconds,
-            RumbleGroup group = RumbleGroup.Default)
+        public void PlayRumblePattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default)
         {
-            _rumbleMixer.PlayPulse(lowFrequency, highFrequency, durationSeconds, group);
+            if (!_rumbleEnabled) return;
+            _rumbleMixer.PlayPattern(pattern, group);
             ApplyMixedRumble();
         }
 
@@ -112,6 +111,20 @@ namespace Crusaders30XX.ECS.Input
             ApplyMixedRumble();
         }
 
+		public void ClearAllRumble()
+		{
+			_rumbleMixer.ClearAll();
+			ApplyMixedRumble();
+		}
+
+		public void SetRumbleEnabled(bool enabled)
+		{
+			if (_rumbleEnabled == enabled) return;
+			_rumbleEnabled = enabled;
+			if (!enabled) _rumbleMixer.ClearAll();
+			ApplyMixedRumble();
+		}
+
         public void TickRumble(float deltaSeconds)
         {
             _rumbleMixer.Tick(deltaSeconds);
@@ -120,8 +133,15 @@ namespace Crusaders30XX.ECS.Input
 
         private void ApplyMixedRumble()
         {
-            (float low, float high) = _rumbleMixer.Combine();
-            GamePad.SetVibration(PlayerIndex.One, low, high);
+			RumbleMotorState motors = _rumbleEnabled
+				? _rumbleMixer.Combine()
+				: RumbleMotorState.Zero;
+            GamePad.SetVibration(
+				PlayerIndex.One,
+				motors.LowFrequency,
+				motors.HighFrequency,
+				motors.LeftTrigger,
+				motors.RightTrigger);
         }
 
         private bool HasKeyboardActivity(KeyboardState keyboard)

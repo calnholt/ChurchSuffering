@@ -12,6 +12,7 @@ using System;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -664,6 +665,12 @@ namespace Crusaders30XX.ECS.Systems
 					_impactMomentFired = true;
 					SpawnImpactParticles(_impactIntensity, currentSequence, Math.Max(1, _bannerRect.Width), Math.Max(1, _bannerRect.Height));
 					PublishImpactShockwave(_impactDamage);
+					EventManager.Publish(new RumbleRequested
+					{
+						Profile = RumbleProfile.EnemyIntentImpact,
+						Scale = _impactIntensity,
+						Group = RumbleGroup.Gameplay,
+					});
 				}
 				UpdateImpactParticles(dt);
 				if (_impactElapsedSeconds >= EnemyAttackAnimationService.PresentationCompleteSeconds

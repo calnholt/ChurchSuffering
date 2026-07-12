@@ -62,6 +62,8 @@ to the fixture.
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
 | `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
+| `enemy-defeat-burst` | Enemy defeat pixel burst | Assembled portrait pixels, peak jitter buildup, and released explosion |
+| `pause-menu` | Pause menu | Persisted rumble toggle in enabled and disabled states |
 | `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
@@ -125,6 +127,35 @@ dotnet run -- snapshot enemy-attack-banner absorb --verify
 ```
 
 Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
+
+---
+
+## `enemy-defeat-burst`
+
+Renders the production enemy defeat pixel burst with a fixed Skeleton portrait and deterministic particle seed. The variants cover the reconstructed portrait, the end of the accelerating jitter buildup, and the released explosion.
+
+```bash
+dotnet run -- snapshot enemy-defeat-burst assembled --verify
+dotnet run -- snapshot enemy-defeat-burst peak-jitter --verify
+dotnet run -- snapshot enemy-defeat-burst exploding --verify
+./scripts/verify-enemy-defeat-burst-snapshots.sh
+```
+
+Approved images are `assembled.png`, `peak-jitter.png`, and `exploding.png` under `tests/VisualBaselines/enemy-defeat-burst/`.
+
+---
+
+## `pause-menu`
+
+Renders the production pause rail with the persisted rumble toggle enabled or disabled.
+
+```bash
+dotnet run -- snapshot pause-menu rumble-on --verify
+dotnet run -- snapshot pause-menu rumble-off --verify
+./scripts/verify-pause-menu-snapshots.sh
+```
+
+Approved images are `rumble-on.png` and `rumble-off.png` under `tests/VisualBaselines/pause-menu/`.
 
 ---
 

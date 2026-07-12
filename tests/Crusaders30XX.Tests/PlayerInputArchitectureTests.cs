@@ -861,7 +861,7 @@ public class PlayerInputArchitectureTests
             10,
             new Rectangle(0, 0, 200, 200));
         var source = new MixedRumbleFakeInputSource(
-            Frame(sequence: 1, pointer: new Vector2(300, 100)),
+			Frame(sequence: 1, pointer: new Vector2(300, 100), gamepadConnected: true),
             Frame(
                 sequence: 2,
                 device: PlayerInputDevice.Gamepad,
@@ -945,7 +945,8 @@ public class PlayerInputArchitectureTests
                 sequence: 3,
                 pointer: new Vector2(155, 100),
                 device: PlayerInputDevice.KeyboardMouse,
-                previousDevice: PlayerInputDevice.Gamepad));
+				previousDevice: PlayerInputDevice.Gamepad,
+				gamepadConnected: true));
         var input = new PlayerInputSystem(entityManager, source);
         var rumble = new ControllerRumbleSystem(entityManager, source);
         var interaction = new UIInteractionSystem(entityManager);
@@ -980,7 +981,7 @@ public class PlayerInputArchitectureTests
             10,
             new Rectangle(0, 0, 200, 200));
         var source = new MixedRumbleFakeInputSource(
-            Frame(sequence: 1, pointer: new Vector2(300, 100)),
+			Frame(sequence: 1, pointer: new Vector2(300, 100), gamepadConnected: true),
             Frame(
                 sequence: 2,
                 device: PlayerInputDevice.Gamepad,
@@ -991,8 +992,9 @@ public class PlayerInputArchitectureTests
                 sequence: 3,
                 pointer: new Vector2(155, 100),
                 device: PlayerInputDevice.KeyboardMouse,
-                previousDevice: PlayerInputDevice.Gamepad));
-        source.SetRumbleChannel("booster-pack-opening", 0.35f, 0.55f);
+				previousDevice: PlayerInputDevice.Gamepad,
+				gamepadConnected: true));
+		source.SetRumbleChannel("booster-pack-opening", new RumbleMotorState(0.35f, 0.55f));
         var input = new PlayerInputSystem(entityManager, source);
         var rumble = new ControllerRumbleSystem(entityManager, source);
         var interaction = new UIInteractionSystem(entityManager);

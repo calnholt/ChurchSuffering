@@ -408,6 +408,7 @@ namespace Crusaders30XX.ECS.Components
         WayStationDialoguePoiSelect,
         SkipDialog,
         BoosterPackOpeningClose,
+		ToggleRumble,
     }
 
     public sealed class CardSheen : IComponent

@@ -14,7 +14,9 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
         _frames = new Queue<PlayerInputFrame>(frames);
     }
 
-    public List<(float Low, float High)> VibrationCalls { get; } = new();
+	private bool _rumbleEnabled = true;
+
+    public List<(float Low, float High, float LeftTrigger, float RightTrigger)> VibrationCalls { get; } = new();
 
     public PlayerInputFrame Capture(
         bool isWindowActive,
@@ -25,9 +27,10 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
         return _frames.Dequeue();
     }
 
-    public void SetRumbleChannel(string channelId, float lowFrequency, float highFrequency)
+    public void SetRumbleChannel(string channelId, RumbleMotorState motors)
     {
-        _mixer.SetChannel(channelId, lowFrequency, highFrequency);
+		if (!_rumbleEnabled) return;
+        _mixer.SetChannel(channelId, motors);
         ApplyMixedRumble();
     }
 
@@ -37,15 +40,25 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
         ApplyMixedRumble();
     }
 
-    public void PlayRumblePulse(
-        float lowFrequency,
-        float highFrequency,
-        float durationSeconds,
-        RumbleGroup group = RumbleGroup.Default)
+    public void PlayRumblePattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default)
     {
-        _mixer.PlayPulse(lowFrequency, highFrequency, durationSeconds, group);
+		if (!_rumbleEnabled) return;
+        _mixer.PlayPattern(pattern, group);
         ApplyMixedRumble();
     }
+
+	public void ClearAllRumble()
+	{
+		_mixer.ClearAll();
+		ApplyMixedRumble();
+	}
+
+	public void SetRumbleEnabled(bool enabled)
+	{
+		_rumbleEnabled = enabled;
+		if (!enabled) _mixer.ClearAll();
+		ApplyMixedRumble();
+	}
 
     public void ClearRumbleGroup(RumbleGroup group)
     {
@@ -61,7 +74,7 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
 
     private void ApplyMixedRumble()
     {
-        (float low, float high) = _mixer.Combine();
-        VibrationCalls.Add((low, high));
+		RumbleMotorState motors = _rumbleEnabled ? _mixer.Combine() : RumbleMotorState.Zero;
+        VibrationCalls.Add((motors.LowFrequency, motors.HighFrequency, motors.LeftTrigger, motors.RightTrigger));
     }
 }

@@ -15,6 +15,7 @@ using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Data.Achievements;
 using System.IO;
 using Crusaders30XX.ECS.Input;
+using Crusaders30XX.ECS.Data.Save;
 
 namespace Crusaders30XX;
 
@@ -213,7 +214,8 @@ public class Game1 : Game
             playerInputAdapter);
         _controllerRumbleSystem = new ControllerRumbleSystem(
             _world.EntityManager,
-            playerInputAdapter);
+			playerInputAdapter,
+			SaveCache.GetRumbleEnabled());
         _uiInteractionSystem = new UIInteractionSystem(_world.EntityManager);
         _pauseMenuDisplaySystem = new PauseMenuDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _pauseMenuSliderDisplaySystem = new PauseMenuSliderDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);

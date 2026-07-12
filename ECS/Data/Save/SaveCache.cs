@@ -105,6 +105,33 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
+		public static bool GetRumbleEnabled()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				return _save?.rumbleEnabled ?? true;
+			}
+		}
+
+		public static void SetRumbleEnabled(bool enabled)
+		{
+			bool changed;
+			lock (_lock)
+			{
+				EnsureLoaded();
+				_save ??= new SaveFile();
+				if (_save.rumbleEnabled == enabled) return;
+				_save.rumbleEnabled = enabled;
+				changed = Persist();
+			}
+
+			if (changed)
+			{
+				EventManager.Publish(new RumbleSettingsChangedEvent { Enabled = enabled });
+			}
+		}
+
 		public static void SetMusicVolumeLevel(int value)
 		{
 			SetAudioVolumeLevels(musicVolumeLevel: value, sfxVolumeLevel: null);
@@ -594,6 +621,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			var seenTutorials = prior?.seenTutorials;
 			int musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
 			int sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
+			bool rumbleEnabled = prior?.rumbleEnabled ?? true;
 			var save = CreateDefaultRunSave();
 			save.achievements = achievements ?? new Dictionary<string, AchievementProgress>();
 			save.seenTutorials = seenTutorials ?? new List<string>();
@@ -602,6 +630,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			save.collection = CloneCollection(prior?.collection) ?? CreateInitialCollection();
 			save.musicVolumeLevel = musicVolumeLevel;
 			save.sfxVolumeLevel = sfxVolumeLevel;
+			save.rumbleEnabled = rumbleEnabled;
 			return save;
 		}
 
@@ -613,7 +642,8 @@ namespace Crusaders30XX.ECS.Data.Save
 				isRunActive = false,
 				gold = 0,
 				musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
-				sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
+					sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
+					rumbleEnabled = prior?.rumbleEnabled ?? true,
 				runMapSeed = 0,
 				items = new List<SaveItem>(),
 				lastLocation = string.Empty,

@@ -65,6 +65,21 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Velocity Jitter", Step = 0.05f, Min = 0f, Max = 1f)]
 		public float VelocityJitter { get; set; } = 0.25f;
 
+		[DebugEditable(DisplayName = "Buildup Duration (s)", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float BuildupDurationSeconds { get; set; } = 0.20f;
+
+		[DebugEditable(DisplayName = "Jitter Max Offset (px)", Step = 0.5f, Min = 0f, Max = 30f)]
+		public float JitterMaxOffset { get; set; } = 6f;
+
+		[DebugEditable(DisplayName = "Jitter Frequency Min", Step = 1f, Min = 0f, Max = 60f)]
+		public float JitterFrequencyMin { get; set; } = 14f;
+
+		[DebugEditable(DisplayName = "Jitter Frequency Max", Step = 1f, Min = 0f, Max = 60f)]
+		public float JitterFrequencyMax { get; set; } = 24f;
+
+		[DebugEditable(DisplayName = "Jitter Ramp Power", Step = 0.1f, Min = 0.1f, Max = 5f)]
+		public float JitterRampPower { get; set; } = 2f;
+
 		private struct Particle
 		{
 			public Vector2 Position;
@@ -75,6 +90,10 @@ namespace Crusaders30XX.ECS.Systems
 			public Color Color;
 			public Vector2 SpawnPosition;
 			public float BlastRadiusLimit;
+			public float JitterPhaseX;
+			public float JitterPhaseY;
+			public float JitterFrequencyX;
+			public float JitterFrequencyY;
 		}
 
 		private class ActiveBurst
@@ -83,19 +102,26 @@ namespace Crusaders30XX.ECS.Systems
 			public int SourceEntityId;
 			public bool IsPreview;
 			public float Age;
+			public bool Released;
 			public readonly List<Particle> Particles = new();
 		}
 
 		private readonly List<ActiveBurst> _bursts = new();
 		private Texture2D _pixel;
-		private static readonly Random _rng = new();
+		private readonly Random _rng;
 		private static readonly Vector2 PixelOrigin = new(0.5f, 0.5f);
 
 		public PixelBurstDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+			: this(entityManager, graphicsDevice, spriteBatch, new Random())
+		{
+		}
+
+		internal PixelBurstDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, Random rng)
 			: base(entityManager)
 		{
 			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
+			_rng = rng ?? new Random();
 			EventManager.Subscribe<PixelBurstAnimationRequested>(OnPixelBurstRequested);
 			EventManager.Subscribe<DeleteCachesEvent>(_ => ClearAll());
 		}
@@ -116,21 +142,38 @@ namespace Crusaders30XX.ECS.Systems
 			for (int b = _bursts.Count - 1; b >= 0; b--)
 			{
 				var burst = _bursts[b];
+				float previousBurstAge = burst.Age;
 				burst.Age += dt;
-				bool timedOut = burst.Age >= MaxBurstDurationSeconds;
+				float flightDt = PortraitPixelBurstMotion.ResolveFlightDelta(
+					previousBurstAge,
+					burst.Age,
+					BuildupDurationSeconds);
+				bool timedOut = PortraitPixelBurstMotion.ResolveFlightAge(
+					burst.Age,
+					BuildupDurationSeconds) >= MaxBurstDurationSeconds;
 
 				var particles = burst.Particles;
+				if (!burst.Released && burst.Age >= Math.Max(0f, BuildupDurationSeconds))
+				{
+					for (int i = 0; i < particles.Count; i++)
+					{
+						var p = particles[i];
+						p.Position += ComputeJitterOffset(p, BuildupDurationSeconds);
+						particles[i] = p;
+					}
+					burst.Released = true;
+				}
+
 				int writeIndex = 0;
 				for (int readIndex = 0; readIndex < particles.Count; readIndex++)
 				{
 					var p = particles[readIndex];
-					bool integrate = PortraitPixelBurstLayout.ShouldIntegrateParticle(p.Age);
-					p.Age += dt;
-					if (integrate)
+					p.Age += flightDt;
+					if (flightDt > 0f)
 					{
-						p.Velocity.Y += GravityY * dt;
+						p.Velocity.Y += GravityY * flightDt;
 						p.Velocity *= Drag;
-						p.Position += p.Velocity * dt;
+						p.Position += p.Velocity * flightDt;
 						ClampTravelFromSpawn(ref p);
 					}
 
@@ -169,12 +212,15 @@ namespace Crusaders30XX.ECS.Systems
 				for (int i = 0; i < burst.Particles.Count; i++)
 				{
 					var p = burst.Particles[i];
+					var drawPosition = burst.Released
+						? p.Position
+						: p.Position + ComputeJitterOffset(p, burst.Age);
 					float t = MathHelper.Clamp(p.Age / Math.Max(0.0001f, p.Lifetime), 0f, 1f);
 					float alpha = MathF.Pow(1f - t, FadePower);
 					var color = p.Color * alpha;
 					_spriteBatch.Draw(
 						_pixel,
-						p.Position,
+						drawPosition,
 						null,
 						color,
 						0f,
@@ -214,7 +260,8 @@ namespace Crusaders30XX.ECS.Systems
 				BurstId = evt.BurstId == Guid.Empty ? Guid.NewGuid() : evt.BurstId,
 				SourceEntityId = evt.SourceEntityId,
 				IsPreview = evt.IsPreview,
-				Age = 0f
+				Age = 0f,
+				Released = BuildupDurationSeconds <= 0f
 			};
 			burst.Particles.Capacity = spawns.Count;
 
@@ -230,7 +277,11 @@ namespace Crusaders30XX.ECS.Systems
 					Size = s.Size,
 					Color = s.Color,
 					SpawnPosition = s.Position,
-					BlastRadiusLimit = s.BlastRadius
+					BlastRadiusLimit = s.BlastRadius,
+					JitterPhaseX = NextRange(0f, MathHelper.TwoPi),
+					JitterPhaseY = NextRange(0f, MathHelper.TwoPi),
+					JitterFrequencyX = NextRange(JitterFrequencyMin, JitterFrequencyMax),
+					JitterFrequencyY = NextRange(JitterFrequencyMin, JitterFrequencyMax)
 				});
 			}
 
@@ -255,6 +306,26 @@ namespace Crusaders30XX.ECS.Systems
 				p.Position,
 				p.SpawnPosition,
 				p.BlastRadiusLimit);
+		}
+
+		private Vector2 ComputeJitterOffset(Particle particle, float elapsedSeconds)
+		{
+			return PortraitPixelBurstMotion.ComputeJitterOffset(
+				elapsedSeconds,
+				BuildupDurationSeconds,
+				JitterMaxOffset,
+				JitterRampPower,
+				particle.JitterPhaseX,
+				particle.JitterPhaseY,
+				particle.JitterFrequencyX,
+				particle.JitterFrequencyY);
+		}
+
+		private float NextRange(float min, float max)
+		{
+			float low = Math.Min(min, max);
+			float high = Math.Max(min, max);
+			return MathHelper.Lerp(low, high, (float)_rng.NextDouble());
 		}
 
 		private static void LogBurstSpawnSample(PixelBurstAnimationRequested evt, ActiveBurst burst)

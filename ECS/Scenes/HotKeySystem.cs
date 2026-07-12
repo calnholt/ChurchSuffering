@@ -21,6 +21,8 @@ namespace Crusaders30XX.ECS.Systems
         private readonly SpriteFont _font;
         private Texture2D _circleTexSmall;
         private readonly HotKeyHoldTracker _holdTracker = new();
+		private readonly Dictionary<Entity, int> _holdTickIndices = new();
+		private readonly HashSet<Entity> _gamepadHolds = new();
 
         public IReadOnlyDictionary<Entity, float> HoldProgress => _holdTracker.Progress;
 
@@ -101,6 +103,7 @@ namespace Crusaders30XX.ECS.Systems
                 foreach (Entity heldEntity in _holdTracker.Progress.Keys.ToList())
                 {
                     _holdTracker.Cancel(heldEntity);
+					ClearHoldHaptics(heldEntity, clearActivePattern: true);
                 }
                 return;
             }
@@ -118,6 +121,8 @@ namespace Crusaders30XX.ECS.Systems
                     if (target.GetComponent<HotKey>().RequiresHold)
                     {
                         _holdTracker.Start(target, pressed.Value);
+						_holdTickIndices[target] = 0;
+						if (frame.Device == PlayerInputDevice.Gamepad) _gamepadHolds.Add(target);
                     }
                     else
                     {
@@ -160,16 +165,63 @@ namespace Crusaders30XX.ECS.Systems
                 bool eligible = hotKey != null
                     && IsHotKeyEligible(heldEntity, hotKey, ui, contextId, gameplayBlocked)
                     && IsButtonDown(frame, _holdTracker.GetButton(heldEntity));
-                if (_holdTracker.Advance(
-                    heldEntity,
-                    elapsed,
-                    hotKey?.HoldDurationSeconds ?? 0f,
-                    eligible))
+				float duration = Math.Max(0.001f, hotKey?.HoldDurationSeconds ?? 0f);
+				float previousElapsed = _holdTracker.Progress.TryGetValue(heldEntity, out float current)
+					? current
+					: 0f;
+				bool completed = eligible && previousElapsed + Math.Max(0f, elapsed) >= duration;
+				if (_holdTracker.Advance(heldEntity, elapsed, duration, eligible))
                 {
+					if (_gamepadHolds.Contains(heldEntity))
+					{
+						PublishHoldRumble(RumbleProfile.HotKeyComplete);
+					}
+					ClearHoldHaptics(heldEntity, clearActivePattern: false);
                     EventManager.Publish(new HotKeyHoldCompletedEvent { Entity = heldEntity });
                 }
+				else if (!eligible)
+				{
+					ClearHoldHaptics(heldEntity, clearActivePattern: true);
+				}
+				else if (!completed && _gamepadHolds.Contains(heldEntity))
+				{
+					PublishCrossedHoldTick(heldEntity, (previousElapsed + Math.Max(0f, elapsed)) / duration);
+				}
             }
         }
+
+		private void PublishCrossedHoldTick(Entity entity, float progress)
+		{
+			int crossed = progress >= 0.75f ? 3 : progress >= 0.50f ? 2 : progress >= 0.25f ? 1 : 0;
+			int previous = _holdTickIndices.TryGetValue(entity, out int value) ? value : 0;
+			if (crossed <= previous) return;
+			_holdTickIndices[entity] = crossed;
+			PublishHoldRumble(crossed switch
+			{
+				1 => RumbleProfile.HotKeyTick25,
+				2 => RumbleProfile.HotKeyTick50,
+				_ => RumbleProfile.HotKeyTick75,
+			});
+		}
+
+		private static void PublishHoldRumble(RumbleProfile profile)
+		{
+			EventManager.Publish(new RumbleRequested
+			{
+				Profile = profile,
+				Group = RumbleGroup.HotKeyHold,
+			});
+		}
+
+		private void ClearHoldHaptics(Entity entity, bool clearActivePattern)
+		{
+			_holdTickIndices.Remove(entity);
+			_gamepadHolds.Remove(entity);
+			if (clearActivePattern)
+			{
+				EventManager.Publish(new RumbleGroupCleared { Group = RumbleGroup.HotKeyHold });
+			}
+		}
 
         internal static bool IsHotKeyEligible(Entity entity, HotKey hotKey, UIElement ui, string contextId, bool gameplayBlocked)
         {

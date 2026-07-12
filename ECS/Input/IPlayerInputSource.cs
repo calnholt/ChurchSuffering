@@ -10,14 +10,12 @@ namespace Crusaders30XX.ECS.Input
             int virtualWidth,
             int virtualHeight);
 
-        void SetRumbleChannel(string channelId, float lowFrequency, float highFrequency);
+        void SetRumbleChannel(string channelId, RumbleMotorState motors);
         void ClearRumbleChannel(string channelId);
-        void PlayRumblePulse(
-            float lowFrequency,
-            float highFrequency,
-            float durationSeconds,
-            RumbleGroup group = RumbleGroup.Default);
+        void PlayRumblePattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default);
         void ClearRumbleGroup(RumbleGroup group);
+		void ClearAllRumble();
+		void SetRumbleEnabled(bool enabled);
         void TickRumble(float deltaSeconds);
     }
 }
