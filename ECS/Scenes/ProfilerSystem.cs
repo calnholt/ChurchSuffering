@@ -130,11 +130,10 @@ namespace Crusaders30XX.ECS.Systems
 
             EnsureWhiteTexture();
 
-            var viewport = _graphicsDevice.Viewport;
             int panelX = _overlayMargin;
             int panelY = _overlayMargin;
-            int panelW = Math.Max(0, viewport.Width - _overlayMargin * 2);
-            int panelH = Math.Max(0, viewport.Height - _overlayMargin * 2);
+            int panelW = Math.Max(0, Game1.VirtualWidth - _overlayMargin * 2);
+            int panelH = Math.Max(0, Game1.VirtualHeight - _overlayMargin * 2);
 
             // Background overlay (semi-transparent)
             DrawRect(new Rectangle(panelX, panelY, panelW, panelH), new Color(0, 0, 0, 160));

@@ -53,7 +53,7 @@ public sealed class DrippingBloodOverlay
             1);
 
         _effect.Parameters["MatrixTransform"]?.SetValue(projection);
-        _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(viewport.Width, viewport.Height));
+        _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         _effect.Parameters["Time"]?.SetValue(Time);
         _effect.Parameters["DripCount"]?.SetValue(DripCount);
         _effect.Parameters["LayerCount"]?.SetValue(LayerCount);

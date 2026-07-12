@@ -22,11 +22,17 @@ Add `--verify` to compare against the approved image, or `--accept` to
 explicitly replace it. These flags are mutually exclusive and are not passed
 to the fixture.
 
+Add `--render-scale 2` to capture the fixture at 3840x2160 while preserving
+the normal 1920x1080 logical layout. High-resolution captures are debug-only,
+use an `@2x` filename suffix, and cannot be combined with `--verify` or
+`--accept`. The accepted baseline workflow always remains at scale `1`.
+
 | Part | Description |
 |------|-------------|
 | `snapshot` | Required first argument (replaces the removed `card-debug` command) |
 | `<fixture-id>` | Registered fixture name (see table below) |
 | `[fixture-args...]` | Fixture-specific flags and positional args |
+| `--render-scale <value>` | Global debug capture scale greater than `0` and no greater than `2` |
 
 ### Output
 
@@ -37,7 +43,7 @@ to the fixture.
 
 ### Behavior (all fixtures)
 
-- Virtual resolution 1920×1080; no profiler, tooltips, debug menu, or cursor in the PNG
+- Logical resolution 1920×1080; default captures are 1920×1080 and `--render-scale 2` captures are 3840×2160
 - Card snapshots use the canonical card renderer
 - Does not publish `LoadSceneEvent` — uses `SceneId.Snapshot` only
 - Optional launch flag `no-shaders` (e.g. `dotnet run -- snapshot card no-shaders`) disables GPU screen effects; PNGs are not comparable to full-effect baselines
@@ -62,6 +68,10 @@ to the fixture.
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
 | `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
+| `enemy-defeat-burst` | Enemy defeat pixel burst | Assembled portrait pixels, peak jitter buildup, and released explosion |
+| `guardian-angel` | Guardian Angel battle companion | Idle, speech, and reactive flight gesture samples |
+| `pause-menu` | Pause menu | Persisted rumble toggle in enabled and disabled states |
+| `hotkey-hints` | Shared hotkey glyph renderer | Keyboard, Xbox, and PlayStation hint treatments and placement |
 | `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
@@ -75,9 +85,44 @@ to the fixture.
 | `climb-character-dialog` | Climb background + dialogue | Background-only Character exchange |
 | `climb-active-events` | Climb scene | Three columns with active event slots at T5 |
 | `climb-hover-preview` | Climb scene | Hover preview on first encounter slot |
+| `climb-medal-tooltip-hover` | Climb scene | Medal shop hover with icon followed by text tooltip |
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
+| `climb-header` | Climb scene | Compact resources, preview badges, pulse, and Run Overview control |
+| `climb-resource-acquisition` | Climb scene | Gem fall, pouch catch, and earned-resource pulse |
+
+---
+
+## `climb-header`
+
+Renders the production Climb header with fixed resource cells and the Run Overview control. The variants cover mixed-width resource values, simultaneous positive and negative preview badges, earned-resource pulse, and overview hover feedback.
+
+```bash
+dotnet run -- snapshot climb-header normal --verify
+dotnet run -- snapshot climb-header preview-delta --verify
+dotnet run -- snapshot climb-header pulse --verify
+dotnet run -- snapshot climb-header overview-hover --verify
+./scripts/verify-climb-header-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/climb-header/`.
+
+---
+
+## `climb-resource-acquisition`
+
+Renders the production Climb resource acquisition overlay with a fixed reward of two red, one white, and one black gem. The variants sample the pouch entrance, weighted gem fall, first catch, and earned-color header pulse.
+
+```bash
+dotnet run -- snapshot climb-resource-acquisition entry --verify
+dotnet run -- snapshot climb-resource-acquisition fall --verify
+dotnet run -- snapshot climb-resource-acquisition catch --verify
+dotnet run -- snapshot climb-resource-acquisition pulse --verify
+./scripts/verify-climb-resource-acquisition-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/climb-resource-acquisition/`.
 
 ---
 
@@ -125,6 +170,67 @@ dotnet run -- snapshot enemy-attack-banner absorb --verify
 ```
 
 Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
+
+---
+
+## `enemy-defeat-burst`
+
+Renders the production enemy defeat pixel burst with a fixed Skeleton portrait and deterministic particle seed. The variants cover the reconstructed portrait, the end of the accelerating jitter buildup, and the released explosion.
+
+```bash
+dotnet run -- snapshot enemy-defeat-burst assembled --verify
+dotnet run -- snapshot enemy-defeat-burst peak-jitter --verify
+dotnet run -- snapshot enemy-defeat-burst exploding --verify
+./scripts/verify-enemy-defeat-burst-snapshots.sh
+```
+
+Approved images are `assembled.png`, `peak-jitter.png`, and `exploding.png` under `tests/VisualBaselines/enemy-defeat-burst/`.
+
+---
+
+## `guardian-angel`
+
+Renders the Guardian Angel at a fixed player-side anchor with deterministic idle placement and representative speech gestures.
+
+```bash
+dotnet run -- snapshot guardian-angel idle --verify
+dotnet run -- snapshot guardian-angel message --verify
+dotnet run -- snapshot guardian-angel card-hop --verify
+dotnet run -- snapshot guardian-angel medal-loop --verify
+dotnet run -- snapshot guardian-angel enemy-recoil --verify
+./scripts/verify-guardian-angel-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/guardian-angel/`.
+
+---
+
+## `pause-menu`
+
+Renders the production pause rail with the persisted rumble toggle enabled or disabled.
+
+```bash
+dotnet run -- snapshot pause-menu rumble-on --verify
+dotnet run -- snapshot pause-menu rumble-off --verify
+./scripts/verify-pause-menu-snapshots.sh
+```
+
+Approved images are `rumble-on.png` and `rumble-off.png` under `tests/VisualBaselines/pause-menu/`.
+
+---
+
+## `hotkey-hints`
+
+Renders the shared keyboard, Xbox, and PlayStation hotkey glyph treatments plus top, right, left, and below placement around a sample action.
+
+```bash
+dotnet run -- snapshot hotkey-hints keyboard --verify
+dotnet run -- snapshot hotkey-hints xbox --verify
+dotnet run -- snapshot hotkey-hints playstation --verify
+./scripts/verify-hotkey-hint-snapshots.sh
+```
+
+Approved images are `keyboard.png`, `xbox.png`, and `playstation.png` under `tests/VisualBaselines/hotkey-hints/`.
 
 ---
 
@@ -482,9 +588,11 @@ dotnet run -- snapshot climb-hazard-hover-preview
 dotnet run -- snapshot climb-character-hover-preview
 dotnet run -- snapshot climb-hazard-confirmation
 dotnet run -- snapshot climb-character-summary
-dotnet run -- snapshot climb-character-dialog
+dotnet run -- snapshot climb-character-dialog intro
+dotnet run -- snapshot climb-character-dialog settled
 dotnet run -- snapshot climb-active-events
 dotnet run -- snapshot climb-hover-preview
+dotnet run -- snapshot climb-medal-tooltip-hover
 dotnet run -- snapshot climb-sold-shop-slot
 dotnet run -- snapshot climb-encounter-reward-modal
 dotnet run -- snapshot climb-replacement-modal
@@ -492,6 +600,16 @@ dotnet run -- snapshot climb-replacement-modal
 
 Modal variants draw the Climb scene plus the open modal overlay. The Character
 dialogue variant draws only the undimmed desert background and dialogue overlay.
+It accepts `intro` and `settled` samples, defaulting to `settled`; outputs are
+`intro.png` and `settled.png`. Both samples validate that every authored catalog
+line fits the production dialogue body area before rendering.
+
+Approved dialogue images are under
+`tests/VisualBaselines/climb-character-dialog/`. Verify both with:
+
+```bash
+./scripts/verify-climb-character-dialog-snapshots.sh
+```
 
 ---
 

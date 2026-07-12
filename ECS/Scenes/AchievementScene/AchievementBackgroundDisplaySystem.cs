@@ -158,7 +158,9 @@ namespace Crusaders30XX.ECS.Systems
                 savedBlend,
                 savedSampler,
                 savedDepth,
-                savedRasterizer
+                savedRasterizer,
+                null,
+                Game1.Display.SpriteBatchTransform
             );
 
             _spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * UiDarkenAlpha);

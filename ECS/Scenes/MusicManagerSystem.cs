@@ -44,6 +44,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<ChangeMusicTrack>(OnChangeMusicTrack);
             EventManager.Subscribe<StopMusic>(OnStopMusic);
             EventManager.Subscribe<AudioSettingsChangedEvent>(OnAudioSettingsChanged);
+            EventManager.Subscribe<PrepareMusicTrackEvent>(OnPrepareMusicTrack);
             MediaPlayer.IsRepeating = true;
             MediaPlayer.Volume = _targetVolume;
             _expectedVolume = _targetVolume;
@@ -226,6 +227,12 @@ namespace Crusaders30XX.ECS.Systems
                 return null;
             }
         }
+
+		private void OnPrepareMusicTrack(PrepareMusicTrackEvent evt)
+		{
+			if (evt == null || evt.Track == MusicTrack.None) return;
+			ResolveSong(evt.Track);
+		}
 
         private void OnStopMusic(StopMusic evt)
         {

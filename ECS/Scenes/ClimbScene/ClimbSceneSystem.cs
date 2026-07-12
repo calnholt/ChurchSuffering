@@ -26,7 +26,9 @@ namespace Crusaders30XX.ECS.Systems
 		private ClimbHeaderDisplaySystem _headerDisplaySystem;
 		private ClimbColumnLayoutSystem _columnLayoutSystem;
 		private ClimbColumnDisplaySystem _columnDisplaySystem;
+		private MedalTooltipDisplaySystem _medalTooltipDisplaySystem;
 		private ClimbCardUpgradeDisplaySystem _cardUpgradeDisplaySystem;
+		private ClimbResourceAcquisitionDisplaySystem _resourceAcquisitionDisplaySystem;
 		private EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
 		private const string EquipmentTooltipEntityName = "Climb_EquipmentTooltip";
 
@@ -40,7 +42,16 @@ namespace Crusaders30XX.ECS.Systems
 			_imageAssets = imageAssets;
 
 			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
-			EventManager.Subscribe<DeleteCachesEvent>(_ => RemoveClimbSystems());
+			EventManager.Subscribe<PrepareSceneEvent>(evt =>
+			{
+				if (evt.Scene != SceneId.Climb) return;
+				AddClimbSystems();
+				SetClimbSystemsActive(false);
+			});
+			EventManager.Subscribe<DeleteCachesEvent>(evt =>
+			{
+				if (evt.Scene != SceneId.Climb) RemoveClimbSystems();
+			});
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -72,6 +83,8 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Climb });
 			EventManager.Publish(new HideLocationNameEvent());
 			AddClimbSystems();
+			SetClimbSystemsActive(true);
+			EnsureEquipmentTooltipEntity();
 		}
 
 		private void AddClimbSystems()
@@ -89,8 +102,12 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_columnDisplaySystem);
 			_columnLayoutSystem = new ClimbColumnLayoutSystem(EntityManager);
 			_world.AddSystem(_columnLayoutSystem);
+			_medalTooltipDisplaySystem = new MedalTooltipDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_world.AddSystem(_medalTooltipDisplaySystem);
 			_cardUpgradeDisplaySystem = new ClimbCardUpgradeDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch);
 			_world.AddSystem(_cardUpgradeDisplaySystem);
+			_resourceAcquisitionDisplaySystem = new ClimbResourceAcquisitionDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			_world.AddSystem(_resourceAcquisitionDisplaySystem);
 			EnsureEquipmentTooltipEntity();
 			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets, EquipmentTooltipEntityName);
 		}
@@ -98,17 +115,19 @@ namespace Crusaders30XX.ECS.Systems
 		private void RemoveClimbSystems()
 		{
 			DeactivateClimbUiEntities(EntityManager);
-			_world.RemoveSystem(_backgroundDisplaySystem);
-			_world.RemoveSystem(_headerLayoutSystem);
-			_world.RemoveSystem(_headerDisplaySystem);
-			_world.RemoveSystem(_columnLayoutSystem);
-			_world.RemoveSystem(_columnDisplaySystem);
-			_world.RemoveSystem(_cardUpgradeDisplaySystem);
-			_cardUpgradeDisplaySystem = null;
-			var tooltip = EntityManager.GetEntity(EquipmentTooltipEntityName);
-			if (tooltip != null) EntityManager.DestroyEntity(tooltip.Id);
-			_equipmentTooltipDisplaySystem = null;
-			_firstLoad = true;
+			SetClimbSystemsActive(false);
+		}
+
+		private void SetClimbSystemsActive(bool active)
+		{
+			_backgroundDisplaySystem?.SetActive(active);
+			_headerLayoutSystem?.SetActive(active);
+			_headerDisplaySystem?.SetActive(active);
+			_columnLayoutSystem?.SetActive(active);
+			_columnDisplaySystem?.SetActive(active);
+			_medalTooltipDisplaySystem?.SetActive(active);
+			_cardUpgradeDisplaySystem?.SetActive(active);
+			_resourceAcquisitionDisplaySystem?.SetActive(active);
 		}
 
 		public void Draw()
@@ -116,7 +135,9 @@ namespace Crusaders30XX.ECS.Systems
 			if (_backgroundDisplaySystem != null) FrameProfiler.Measure("ClimbBackgroundDisplaySystem.Draw", _backgroundDisplaySystem.Draw);
 			if (_headerDisplaySystem != null) FrameProfiler.Measure("ClimbHeaderDisplaySystem.Draw", _headerDisplaySystem.Draw);
 			if (_columnDisplaySystem != null) FrameProfiler.Measure("ClimbColumnDisplaySystem.Draw", _columnDisplaySystem.Draw);
+			if (_medalTooltipDisplaySystem != null) FrameProfiler.Measure("MedalTooltipDisplaySystem.Draw", _medalTooltipDisplaySystem.Draw);
 			if (_cardUpgradeDisplaySystem != null) FrameProfiler.Measure("ClimbCardUpgradeDisplaySystem.Draw", _cardUpgradeDisplaySystem.Draw);
+			if (_resourceAcquisitionDisplaySystem != null) FrameProfiler.Measure("ClimbResourceAcquisitionDisplaySystem.Draw", _resourceAcquisitionDisplaySystem.Draw);
 			if (_equipmentTooltipDisplaySystem != null) FrameProfiler.Measure("ClimbEquipmentTooltipDisplaySystem.Draw", _equipmentTooltipDisplaySystem.Draw);
 		}
 
@@ -178,6 +199,8 @@ namespace Crusaders30XX.ECS.Systems
 					|| entity.GetComponent<ClimbSlotPresentation>() != null
 					|| entity.GetComponent<ClimbColumnTransitionInputSuppression>() != null
 					|| entity.GetComponent<ClimbShopTooltipSource>() != null
+					|| entity.GetComponent<ClimbMedalTooltipSource>() != null
+					|| entity.GetComponent<ClimbMedalTooltipAnchor>() != null
 					|| string.Equals(entity.Name, EquipmentTooltipEntityName, System.StringComparison.OrdinalIgnoreCase))
 				.ToList();
 

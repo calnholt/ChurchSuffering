@@ -114,7 +114,5 @@ namespace Crusaders30XX.ECS.Services
 
 			return position;
 		}
-
-		public static bool ShouldIntegrateParticle(float ageSeconds) => ageSeconds > 0f;
 	}
 }

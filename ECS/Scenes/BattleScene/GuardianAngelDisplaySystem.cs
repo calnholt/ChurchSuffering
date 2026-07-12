@@ -11,6 +11,7 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Data.Ids;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -27,6 +28,7 @@ namespace Crusaders30XX.ECS.Systems
         private float _t;
 		private Vector2 _pos;
 		private Vector2 _lastMotionVelocity;
+		private float _renderScaleMultiplier = 1f;
 		private int _loopIndex = int.MinValue;
 		private FlightLoopPreset _currentLoopPreset;
 		private FlightLoopPreset _nextLoopPreset;
@@ -43,6 +45,7 @@ namespace Crusaders30XX.ECS.Systems
 			public float WobbleY;
 			public float WobbleSpeed;
 			public float WobblePhase;
+			public float PathMix;
 		}
 		private struct SparkleParticle
 		{
@@ -64,10 +67,18 @@ namespace Crusaders30XX.ECS.Systems
 		// Speech bubble state
 		private bool _bubbleActive;
 		private float _bubbleElapsed;
+		private float _activeBubbleDuration;
+		private float _speechGapRemaining;
 		private string _bubbleText = "";
 		private Texture2D _bubbleTexture;
 		private int _bubbleTexW;
 		private int _bubbleTexH;
+		private readonly GuardianAngelSpeechQueue _speechQueue = new();
+		private GuardianSpeechRequest _activeSpeech;
+		private GuardianFlightGesture _flightGesture;
+		private float _gestureElapsed;
+		private float _gestureDuration;
+		internal Vector2? DebugMotionOffsetOverride { get; set; }
 
         // Placement relative to player
         [DebugEditable(DisplayName = "Offset X", Step = 5, Min = -2000, Max = 2000)]
@@ -156,8 +167,10 @@ namespace Crusaders30XX.ECS.Systems
 		public int BubbleOffsetX { get; set; } = 0;
 		[DebugEditable(DisplayName = "Bubble Offset Y", Step = 1, Min = -1000, Max = 1000)]
 		public int BubbleOffsetY { get; set; } = 0;
-		[DebugEditable(DisplayName = "Bubble Duration (s)", Step = 0.05f, Min = 0.05f, Max = 10f)]
-		public float BubbleDuration { get; set; } = 3f;
+		[DebugEditable(DisplayName = "Bubble Max Duration (s)", Step = 0.05f, Min = 1.6f, Max = 10f)]
+		public float BubbleDuration { get; set; } = 3.2f;
+		[DebugEditable(DisplayName = "Speech Gap (s)", Step = 0.01f, Min = 0f, Max = 2f)]
+		public float SpeechGapSeconds { get; set; } = 0.15f;
 		[DebugEditable(DisplayName = "Bubble BG Alpha", Step = 0.05f, Min = 0f, Max = 1f)]
 		public float BubbleBgAlpha { get; set; } = 0.82f;
 		[DebugEditable(DisplayName = "Bubble Fade In (s)", Step = 0.01f, Min = 0f, Max = 2f)]
@@ -178,6 +191,8 @@ namespace Crusaders30XX.ECS.Systems
             // Listen for phase changes to show speech bubbles
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
             EventManager.Subscribe<TriggerTemperance>(OnTriggerTemperance);
+			EventManager.Subscribe<CardPlayedEvent>(OnCardPlayed);
+			EventManager.Subscribe<MedalTriggered>(OnMedalTriggered);
             EventManager.Subscribe<LoadSceneEvent>(OnLoadSceneEvent);
         }
 
@@ -192,6 +207,8 @@ namespace Crusaders30XX.ECS.Systems
         {
 			float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 			_t += dt;
+			UpdateSpeech(dt);
+			UpdateFlightGesture(dt);
 
 			// Ensure guardian entity exists with Transform + Parallax
 			EnsureGuardianEntity();
@@ -205,7 +222,10 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				Vector2 oldPos = _pos;
 				Vector2 baseRight = pt.Position + new Vector2(OffsetX, OffsetY);
-				Vector2 motion = GetBoundedMotionOffset();
+				Vector2 motion = GuardianAngelFlightService.ClampToPlayerSideBounds(
+					(DebugMotionOffsetOverride ?? GetBoundedMotionOffset()) + GetFlightGestureSample().Offset,
+					MotionBoundsX,
+					MotionBoundsY);
 				_pos = baseRight + motion;
 				_lastMotionVelocity = dt > 0.0001f ? (_pos - oldPos) / dt : Vector2.Zero;
 
@@ -224,7 +244,8 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			// Spawn sparkles based on accumulator
-			_spawnAccumulator += SparkleSpawnRate * dt;
+			float gestureSparkleBoost = GetFlightGestureSample().SparkleMultiplier;
+			_spawnAccumulator += SparkleSpawnRate * gestureSparkleBoost * dt;
 			while (_spawnAccumulator >= 1f)
 			{
 				_spawnAccumulator -= 1f;
@@ -251,15 +272,6 @@ namespace Crusaders30XX.ECS.Systems
 				_sparkles[i] = p;
 			}
 
-			// Update bubble timer
-			if (_bubbleActive)
-			{
-				_bubbleElapsed += dt;
-				if (_bubbleElapsed >= BubbleDuration)
-				{
-					_bubbleActive = false;
-				}
-			}
             base.Update(gameTime);
         }
 
@@ -287,12 +299,13 @@ namespace Crusaders30XX.ECS.Systems
 			FlightLoopPreset preset = Blend(_currentLoopPreset, _nextLoopPreset, blendT);
 			float variedAng = ang + preset.PhaseOffset;
 
+			float pathMix = MathHelper.Clamp(preset.PathMix, 0f, 1f);
 			float xEllipse = MathF.Cos(ang);
 			float yEllipse = MathF.Sin(ang);
 			float xEight = MathF.Sin(variedAng);
 			float yEight = MathF.Sin(2f * variedAng);
-			float x = xEllipse * (1f - FigureEightMix) + xEight * FigureEightMix;
-			float y = yEllipse * (1f - FigureEightMix) + yEight * FigureEightMix;
+			float x = xEllipse * (1f - pathMix) + xEight * pathMix;
+			float y = yEllipse * (1f - pathMix) + yEight * pathMix;
 			Vector2 motion = new Vector2(x * RadiusX * preset.RadiusXScale, y * RadiusY * preset.RadiusYScale);
 			float bob = MathF.Sin(_t * VerticalBobSpeed + preset.BobPhase) * VerticalBob * preset.BobScale;
 			float wobbleAng = _t * preset.WobbleSpeed + preset.WobblePhase;
@@ -321,7 +334,8 @@ namespace Crusaders30XX.ECS.Systems
 				WobbleX = Lerp(-wobble, wobble, NextFloat()),
 				WobbleY = Lerp(-wobble * 0.65f, wobble * 0.65f, NextFloat()),
 				WobbleSpeed = Lerp(0.7f, 1.6f, NextFloat()) * MathF.Max(0.05f, AngularSpeed),
-				WobblePhase = Lerp(0f, MathF.Tau, NextFloat())
+				WobblePhase = Lerp(0f, MathF.Tau, NextFloat()),
+				PathMix = MathHelper.Clamp(FigureEightMix + Lerp(-0.45f, 0.27f, NextFloat()) * variation, 0f, 1f)
 			};
 		}
 
@@ -337,7 +351,8 @@ namespace Crusaders30XX.ECS.Systems
 				WobbleX = Lerp(a.WobbleX, b.WobbleX, t),
 				WobbleY = Lerp(a.WobbleY, b.WobbleY, t),
 				WobbleSpeed = Lerp(a.WobbleSpeed, b.WobbleSpeed, t),
-				WobblePhase = Lerp(a.WobblePhase, b.WobblePhase, t)
+				WobblePhase = Lerp(a.WobblePhase, b.WobblePhase, t),
+				PathMix = Lerp(a.PathMix, b.PathMix, t)
 			};
 		}
 
@@ -359,21 +374,37 @@ namespace Crusaders30XX.ECS.Systems
 				{ "Current", e.Current.ToString() },
 				{ "Previous", e.Previous.ToString() }
 			});
-			TimerScheduler.Schedule(0.5f, () => {
-				if (e.Current == SubPhase.StartBattle)
-				{
-					ShowBubble(GuardianAngelMessageService.GetMessage(GuardianMessageType.StartOfBattle), BubbleDuration);
-				}
-				else if (e.Current == SubPhase.Action)
-				{
-					ShowBubble(GuardianAngelMessageService.GetMessage(GuardianMessageType.ActionPhase), BubbleDuration);
-				}
-			});
-		}
-
-		private bool SkipMessage()
-		{
-			return Random.Shared.Next(0, 100) > 0;
+			if (e.Current == SubPhase.StartBattle)
+			{
+				EnqueueSpeech(
+					"phase:start",
+					GuardianAngelMessageService.GetMessage(GuardianAmbientMessageType.StartOfBattle),
+					GuardianSpeechCategory.Phase,
+					50,
+					2f,
+					GuardianFlightGesture.Flourish);
+			}
+			else if (e.Current == SubPhase.Action)
+			{
+				EnqueueSpeech(
+					"phase:action",
+					GuardianAngelMessageService.GetMessage(GuardianAmbientMessageType.ActionPhase),
+					GuardianSpeechCategory.Phase,
+					50,
+					2f,
+					GuardianFlightGesture.Flourish);
+			}
+			else if (e.Current == SubPhase.PreBlock
+				&& EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out _, out _, out var planned))
+			{
+				EnqueueSpeech(
+					$"attack:{planned.AttackId}",
+					GuardianAngelMessageService.GetEnemyAttackMessage(planned.AttackId),
+					GuardianSpeechCategory.EnemyAttack,
+					300,
+					6f,
+					GuardianFlightGesture.EnemyBrace);
+			}
 		}
 
 		private void OnTriggerTemperance(TriggerTemperance e)
@@ -381,7 +412,38 @@ namespace Crusaders30XX.ECS.Systems
 			LoggingService.Append("GuardianAngelDisplaySystem.OnTriggerTemperance", new JsonObject {
 				{ "AbilityId", e.AbilityId }
 			});
-			ShowBubble(GuardianAngelMessageService.GetMessage(GuardianMessageType.Temperance), BubbleDuration);
+			EnqueueSpeech(
+				"temperance",
+				GuardianAngelMessageService.GetMessage(GuardianAmbientMessageType.Temperance),
+				GuardianSpeechCategory.Medal,
+				250,
+				5f,
+				GuardianFlightGesture.MedalLoop);
+		}
+
+		private void OnCardPlayed(CardPlayedEvent e)
+		{
+			var card = e?.Card?.GetComponent<CardData>()?.Card;
+			if (card == null || !GameIdExtensions.TryParseCardId(card.CardId, out var cardId)) return;
+			EnqueueSpeech(
+				$"card:{cardId}",
+				GuardianAngelMessageService.GetCardMessage(cardId),
+				GuardianSpeechCategory.Card,
+				100,
+				3f,
+				GuardianFlightGesture.CardHop);
+		}
+
+		private void OnMedalTriggered(MedalTriggered e)
+		{
+			if (e == null || !GameIdExtensions.TryParseMedalId(e.MedalId, out var medalId)) return;
+			EnqueueSpeech(
+				$"medal:{medalId}",
+				GuardianAngelMessageService.GetMedalMessage(medalId),
+				GuardianSpeechCategory.Medal,
+				250,
+				5f,
+				GuardianFlightGesture.MedalLoop);
 		}
 
 		private void OnLoadSceneEvent(LoadSceneEvent @event)
@@ -390,15 +452,108 @@ namespace Crusaders30XX.ECS.Systems
 				{ "Scene", @event.Scene.ToString() }
 			});
 			_bubbleActive = false;
+			_activeSpeech = null;
+			_speechQueue.Clear();
+			_speechGapRemaining = 0f;
+			_flightGesture = GuardianFlightGesture.None;
 		}
 
-		private void ShowBubble(string text, float duration)
+		private void EnqueueSpeech(
+			string sourceKey,
+			string text,
+			GuardianSpeechCategory category,
+			int priority,
+			float maxAge,
+			GuardianFlightGesture gesture)
 		{
-			_bubbleText = text ?? string.Empty;
+			var request = new GuardianSpeechRequest(sourceKey, text, category, priority, _t, maxAge, gesture);
+			if (GuardianAngelSpeechQueue.ShouldInterrupt(_activeSpeech, request))
+			{
+				StartSpeech(request);
+				return;
+			}
+
+			_speechQueue.Enqueue(request, _t);
+			if (!_bubbleActive && _speechGapRemaining <= 0f)
+				StartNextSpeech();
+		}
+
+		private void StartSpeech(GuardianSpeechRequest request)
+		{
+			_activeSpeech = request;
+			_bubbleText = request.Text ?? string.Empty;
 			_bubbleElapsed = 0f;
+			_activeBubbleDuration = MathF.Min(BubbleDuration, GuardianAngelSpeechQueue.GetDisplayDuration(_bubbleText));
 			_bubbleActive = true;
-			// Reset cached texture so it can rebuild to fit text
+			_speechGapRemaining = 0f;
+			StartFlightGesture(request.Gesture);
 			_bubbleTexW = 0; _bubbleTexH = 0;
+		}
+
+		private void StartNextSpeech()
+		{
+			if (_speechQueue.TryDequeue(_t, out var request)) StartSpeech(request);
+		}
+
+		private void UpdateSpeech(float dt)
+		{
+			if (_bubbleActive)
+			{
+				_bubbleElapsed += dt;
+				if (_bubbleElapsed < _activeBubbleDuration) return;
+				_bubbleActive = false;
+				_activeSpeech = null;
+				_speechGapRemaining = SpeechGapSeconds;
+			}
+
+			if (_speechGapRemaining > 0f)
+			{
+				_speechGapRemaining = MathF.Max(0f, _speechGapRemaining - dt);
+				if (_speechGapRemaining > 0f) return;
+			}
+			StartNextSpeech();
+		}
+
+		private void StartFlightGesture(GuardianFlightGesture gesture)
+		{
+			_flightGesture = gesture;
+			_gestureElapsed = 0f;
+			_gestureDuration = gesture switch
+			{
+				GuardianFlightGesture.EnemyBrace => 0.8f,
+				GuardianFlightGesture.MedalLoop => 1.15f,
+				GuardianFlightGesture.CardHop => 0.65f,
+				GuardianFlightGesture.Flourish => 0.85f,
+				_ => 0f,
+			};
+		}
+
+		private void UpdateFlightGesture(float dt)
+		{
+			if (_flightGesture == GuardianFlightGesture.None) return;
+			_gestureElapsed += dt;
+			if (_gestureElapsed >= _gestureDuration)
+			{
+				_flightGesture = GuardianFlightGesture.None;
+				_renderScaleMultiplier = 1f;
+				return;
+			}
+			_renderScaleMultiplier = GetFlightGestureSample().ScaleMultiplier;
+		}
+
+		private GuardianFlightSample GetFlightGestureSample() =>
+			GuardianAngelFlightService.SampleGesture(_flightGesture, _gestureElapsed, _gestureDuration);
+
+		internal void DebugShowSpeech(string text, GuardianFlightGesture gesture)
+		{
+			StartSpeech(new GuardianSpeechRequest(
+				"debug",
+				text,
+				GuardianSpeechCategory.Phase,
+				50,
+				_t,
+				10f,
+				gesture));
 		}
 
 		private void SpawnSparkle(Vector2 origin)
@@ -541,7 +696,7 @@ namespace Crusaders30XX.ECS.Systems
 				float aOut = 1f;
 				if (BubbleFadeOutSeconds > 0f)
 				{
-					float tRemain = Math.Max(0f, BubbleDuration - _bubbleElapsed);
+					float tRemain = Math.Max(0f, _activeBubbleDuration - _bubbleElapsed);
 					aOut = MathHelper.Clamp(tRemain / BubbleFadeOutSeconds, 0f, 1f);
 				}
 				float a = MathHelper.Clamp(aIn * aOut, 0f, 1f);
@@ -554,7 +709,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			// Draw angel
-			_spriteBatch.Draw(_angelTexture, pos, null, color, rotation, origin, Scale, SpriteEffects.None, 0f);
+			_spriteBatch.Draw(_angelTexture, pos, null, color, rotation, origin, Scale * _renderScaleMultiplier, SpriteEffects.None, 0f);
 		}
 
 		private void EnsureGuardianEntity()

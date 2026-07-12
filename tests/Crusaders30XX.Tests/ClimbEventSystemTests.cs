@@ -26,7 +26,9 @@ public class ClimbEventSystemTests
 			var world = ClimbWorld();
 			_ = new ClimbEventSystem(world.EntityManager);
 			ShowNarrativeEventOverlay shown = null;
+			var resourceAnimations = new List<ClimbResourceAcquisitionAnimationRequested>();
 			EventManager.Subscribe<ShowNarrativeEventOverlay>(evt => shown = evt);
+			EventManager.Subscribe<ClimbResourceAcquisitionAnimationRequested>(evt => resourceAnimations.Add(evt));
 
 			EventManager.Publish(new ClimbEventSlotSelectedEvent { SlotId = "hazard" });
 
@@ -53,6 +55,10 @@ public class ClimbEventSystemTests
 			Assert.Null(resolved.pendingEvent);
 			Assert.Contains(RunScopedStateService.RestrictionFrozen,
 				SaveCache.GetRunDeckEntryRestrictions(RunDeckService.PrimaryLoadoutId, "entry_a"));
+			Assert.Single(resourceAnimations);
+			Assert.Equal(2, resourceAnimations[0].Resources.red);
+			Assert.Equal(0, resourceAnimations[0].Resources.white);
+			Assert.Equal(0, resourceAnimations[0].Resources.black);
 
 			var repeated = new NarrativeModalChoiceRequested
 			{
@@ -63,6 +69,7 @@ public class ClimbEventSystemTests
 
 			Assert.True(repeated.Handled);
 			Assert.Equal(3, SaveCache.GetClimbState().resources.red);
+			Assert.Single(resourceAnimations);
 		}
 		finally
 		{

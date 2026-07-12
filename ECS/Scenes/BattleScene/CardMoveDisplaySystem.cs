@@ -213,10 +213,9 @@ namespace Crusaders30XX.ECS.Systems
 			// Optional on-screen test dot to validate additive pass
 			if (ShowAdditiveTestDot)
 			{
-				var vp = _graphicsDevice.Viewport;
 				var dot = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, 8);
 				var dotOrigin = new Vector2(8, 8);
-				_spriteBatch.Draw(dot, new Vector2(vp.Width * 0.5f, vp.Height * 0.5f), null, Color.White * 1f, 0f, dotOrigin, 1f, SpriteEffects.None, 0f);
+				_spriteBatch.Draw(dot, new Vector2(Game1.VirtualWidth * 0.5f, Game1.VirtualHeight * 0.5f), null, Color.White * 1f, 0f, dotOrigin, 1f, SpriteEffects.None, 0f);
 			}
         }
 
@@ -328,8 +327,7 @@ namespace Crusaders30XX.ECS.Systems
             var root = EntityManager.GetEntity("UI_DiscardPileRoot");
             var tr = root?.GetComponent<Transform>();
             if (tr != null) return tr.Position;
-            var vp = _graphicsDevice.Viewport;
-            return new Vector2(60, vp.Height - 60);
+            return new Vector2(60, Game1.VirtualHeight - 60);
         }
 
         private Vector2 ResolveDrawPileAnchor()
@@ -337,8 +335,7 @@ namespace Crusaders30XX.ECS.Systems
             var root = EntityManager.GetEntity("UI_DrawPileRoot");
             var tr = root?.GetComponent<Transform>();
             if (tr != null) return tr.Position;
-            var vp = _graphicsDevice.Viewport;
-            return new Vector2(vp.Width - 60, vp.Height - 60);
+            return new Vector2(Game1.VirtualWidth - 60, Game1.VirtualHeight - 60);
         }
 
         private static float EaseIn(float t, float pow)
@@ -369,7 +366,6 @@ namespace Crusaders30XX.ECS.Systems
         }
     }
 }
-
 
 
 

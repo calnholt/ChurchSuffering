@@ -8,6 +8,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Input;
 using Microsoft.Xna.Framework;
 
 namespace Crusaders30XX.ECS.Systems
@@ -165,6 +166,8 @@ namespace Crusaders30XX.ECS.Systems
 				EventManager.Publish(new EnemyAttackImpactNow());
 			}
 
+			PublishImpactRumble(active);
+
 			if (!active.SuppressImpactSfx && active.Recipe.ImpactSfx != SfxTrack.None)
 			{
 				EventManager.Publish(new PlaySfxEvent
@@ -198,6 +201,22 @@ namespace Crusaders30XX.ECS.Systems
 
 		}
 
+		private static void PublishImpactRumble(ActiveVisualEffect active)
+		{
+			if (active == null || active.IsPreview || active.Recipe == null
+				|| active.Recipe.ImpactRumbleProfile == RumbleProfile.None)
+			{
+				return;
+			}
+
+			EventManager.Publish(new RumbleRequested
+			{
+				Profile = active.Recipe.ImpactRumbleProfile,
+				Scale = Math.Max(0f, active.Recipe.ImpactRumbleScale * active.Recipe.Intensity),
+				Group = RumbleGroup.Gameplay,
+			});
+		}
+
 		private void OnEnemyDamageApplied(EnemyDamageAppliedEvent evt)
 		{
 			if (evt == null || evt.TotalDamage <= 0 || evt.FinalDamage > 0) return;
@@ -214,7 +233,8 @@ namespace Crusaders30XX.ECS.Systems
 
 			active.SuppressImpactSfx = true;
 			active.Recipe = active.Recipe.WithModules(
-				active.Recipe.Modules.Where(module => module != VisualEffectModule.Shake).ToArray());
+				active.Recipe.Modules.Where(module => module != VisualEffectModule.Shake).ToArray())
+				.WithImpactRumble(RumbleProfile.None);
 
 			EventManager.Publish(new VisualEffectRequested
 			{
@@ -270,6 +290,15 @@ namespace Crusaders30XX.ECS.Systems
 				if (request.SourceKind == VisualEffectSourceKind.EnemyAttack && request.DrivesGameplayImpact)
 				{
 					EventManager.Publish(new EnemyAttackImpactNow());
+				}
+				if (request.Recipe?.ImpactRumbleProfile != RumbleProfile.None)
+				{
+					EventManager.Publish(new RumbleRequested
+					{
+						Profile = request.Recipe.ImpactRumbleProfile,
+						Scale = Math.Max(0f, request.Recipe.ImpactRumbleScale * request.Recipe.Intensity),
+						Group = RumbleGroup.Gameplay,
+					});
 				}
 				EventManager.Publish(new VisualEffectImpactReached { RequestId = request.RequestId, IsPreview = false });
 				EventManager.Publish(new VisualEffectCompleted { RequestId = request.RequestId, IsPreview = false });

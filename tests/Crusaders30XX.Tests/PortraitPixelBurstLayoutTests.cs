@@ -147,14 +147,6 @@ public class PortraitPixelBurstLayoutTests
 		Assert.Equal(limit, Vector2.Distance(clamped, spawn), 3);
 	}
 
-	[Theory]
-	[InlineData(0f, false)]
-	[InlineData(0.016f, true)]
-	public void ShouldIntegrateParticle_defersMotionUntilAfterFirstFrame(float age, bool expected)
-	{
-		Assert.Equal(expected, PortraitPixelBurstLayout.ShouldIntegrateParticle(age));
-	}
-
 	private static void AssertNear(Vector2 expected, Vector2 actual)
 	{
 		Assert.True(Vector2.Distance(expected, actual) < Epsilon,

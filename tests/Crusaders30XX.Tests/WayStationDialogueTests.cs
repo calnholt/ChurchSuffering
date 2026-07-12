@@ -296,7 +296,7 @@ public sealed class WayStationDialogueTests : IDisposable
 	public void Catalog_contains_waystation_dialogue_and_ascii_text()
 	{
 		Assert.True(DialogCatalog.TryGet(WayStationDialogueCatalog.KeeperDefinitionId, out var keeper));
-		Assert.Equal(12, keeper.ResolveSegment(WayStationDialogueCatalog.KeeperIntroSegmentId).Count);
+		Assert.Equal(13, keeper.ResolveSegment(WayStationDialogueCatalog.KeeperIntroSegmentId).Count);
 		Assert.Equal(9, keeper.ResolveSegment(WayStationDialogueCatalog.KeeperEarlyReturnSegmentId).Count);
 
 		Assert.True(DialogCatalog.TryGet(WayStationDialogueCatalog.EliasDefinitionId, out var elias));

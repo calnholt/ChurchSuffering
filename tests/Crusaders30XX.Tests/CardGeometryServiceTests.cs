@@ -71,8 +71,6 @@ public sealed class CardGeometryServiceTests
     [Fact]
     public void Resting_hand_card_geometry_matches_ui_bounds_after_layout()
     {
-        Game1.VirtualWidth = 1920;
-        Game1.VirtualHeight = 1080;
         var entityManager = BuildBattleHand(3, out var cards);
         var display = new HandDisplaySystem(entityManager, null)
         {
@@ -92,8 +90,6 @@ public sealed class CardGeometryServiceTests
     [Fact]
     public void Hovered_hand_card_geometry_uses_full_scale()
     {
-        Game1.VirtualWidth = 1920;
-        Game1.VirtualHeight = 1080;
         var entityManager = BuildBattleHand(3, out var cards);
         var display = new HandDisplaySystem(entityManager, null)
         {

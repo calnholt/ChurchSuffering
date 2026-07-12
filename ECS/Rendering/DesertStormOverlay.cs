@@ -56,7 +56,7 @@ public class DesertStormOverlay
         );
 
         _effect.Parameters["MatrixTransform"]?.SetValue(projection);
-        _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(viewport.Width, viewport.Height));
+        _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         _effect.Parameters["Time"]?.SetValue(Time);
         _effect.Parameters["BaseScale"]?.SetValue(BaseScale);
         _effect.Parameters["Lacunarity"]?.SetValue(Lacunarity);

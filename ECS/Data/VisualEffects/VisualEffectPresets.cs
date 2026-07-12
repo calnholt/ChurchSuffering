@@ -1,4 +1,5 @@
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Data.VisualEffects
 {
@@ -171,6 +172,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			return Base("blocked_attack", VisualEffectTimingProfile.SnapImpact, VisualEffectTargetRole.Player)
 				.WithPalette(VisualEffectPalette.Holy)
 				.WithModules(VisualEffectModule.ShieldWard)
+				.WithImpactRumble(RumbleProfile.Guard)
 				.WithStartSfx(SfxTrack.ShieldBlock);
 		}
 		public static VisualEffectRecipe LifeDrain() => Showcase("life_drain", VisualEffectPalette.Blood, VisualEffectModule.SoulSiphon, VisualEffectModule.ResourceMotes);
@@ -185,12 +187,30 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 
 		private static VisualEffectRecipe Base(string id, VisualEffectTimingProfile timing, VisualEffectTargetRole target)
 		{
-			return new VisualEffectRecipe
+			var recipe = new VisualEffectRecipe
 			{
 				Id = id,
 				Timing = timing,
 				TargetRole = target
 			};
+			return recipe.WithImpactRumble(DefaultRumble(timing, target));
+		}
+
+		private static RumbleProfile DefaultRumble(
+			VisualEffectTimingProfile timing,
+			VisualEffectTargetRole target)
+		{
+			if (timing == VisualEffectTimingProfile.DefensiveLock) return RumbleProfile.Guard;
+			if (target == VisualEffectTargetRole.Self || target == VisualEffectTargetRole.Player
+				&& timing is VisualEffectTimingProfile.PlayerBuff
+					or VisualEffectTimingProfile.HolyRise
+					or VisualEffectTimingProfile.RitualPulse)
+			{
+				return RumbleProfile.Soft;
+			}
+			return timing == VisualEffectTimingProfile.HeavyImpact
+				? RumbleProfile.HeavyImpact
+				: RumbleProfile.MediumImpact;
 		}
 	}
 }

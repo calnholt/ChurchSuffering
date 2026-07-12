@@ -205,6 +205,14 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void SynchronizeHazardResult(ClimbEventMutationResult result)
 		{
+			if (result?.AlreadyResolved != true && HasResources(result?.ResourcesGained))
+			{
+				EventManager.Publish(new ClimbResourceAcquisitionAnimationRequested
+				{
+					Resources = CloneResources(result.ResourcesGained),
+				});
+			}
+
 			RunDeckService.EnsureRunDeck(EntityManager);
 			RunScopedStateService.HydrateRunCardRestrictions(EntityManager);
 			var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault(entity => entity.IsActive);
@@ -223,6 +231,23 @@ namespace Crusaders30XX.ECS.Systems
 					});
 				}
 			}
+		}
+
+		private static bool HasResources(ClimbResourceSave resources)
+		{
+			return (resources?.red ?? 0) > 0
+				|| (resources?.white ?? 0) > 0
+				|| (resources?.black ?? 0) > 0;
+		}
+
+		private static ClimbResourceSave CloneResources(ClimbResourceSave resources)
+		{
+			return new ClimbResourceSave
+			{
+				red = Math.Max(0, resources?.red ?? 0),
+				white = Math.Max(0, resources?.white ?? 0),
+				black = Math.Max(0, resources?.black ?? 0),
+			};
 		}
 
 		private void SynchronizeCharacterResult(ClimbEventMutationResult result)

@@ -9,6 +9,7 @@ using System;
 using Crusaders30XX.ECS.Objects.Medals;
 using Crusaders30XX.ECS.Objects.Equipment;
 using Crusaders30XX.ECS.Data.Ids;
+using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Components
 {
@@ -408,6 +409,7 @@ namespace Crusaders30XX.ECS.Components
         WayStationDialoguePoiSelect,
         SkipDialog,
         BoosterPackOpeningClose,
+		ToggleRumble,
     }
 
     public sealed class CardSheen : IComponent
@@ -826,6 +828,7 @@ namespace Crusaders30XX.ECS.Components
     {
         public Entity Owner { get; set; }
         public FaceButton Button { get; set; } = FaceButton.Y;
+        public PlayerButton? KeyboardButton { get; set; }
         public bool RequiresHold { get; set; } = false;
         public float HoldDurationSeconds { get; set; } = 0.75f;
         public Entity ParentEntity { get; set; }

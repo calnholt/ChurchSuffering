@@ -41,24 +41,24 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch = sb;
             _content = content;
 
+			EventManager.Subscribe<PrepareSceneEvent>(evt =>
+			{
+				if (evt.Scene != SceneId.Achievement) return;
+				AddAchievementSystems();
+				SetAchievementSystemsActive(false);
+			});
+
             EventManager.Subscribe<LoadSceneEvent>(_ =>
             {
                 if (_.Scene != SceneId.Achievement) return;
                 EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Achievements });
                 AddAchievementSystems();
+				SetAchievementSystemsActive(true);
             });
 
             EventManager.Subscribe<DeleteCachesEvent>(_ =>
             {
-                if (_backgroundDisplaySystem != null) _world.RemoveSystem(_backgroundDisplaySystem);
-                if (_gridDisplaySystem != null) _world.RemoveSystem(_gridDisplaySystem);
-                if (_descriptionDisplaySystem != null) _world.RemoveSystem(_descriptionDisplaySystem);
-                if (_meterDisplaySystem != null) _world.RemoveSystem(_meterDisplaySystem);
-                if (_titleDisplaySystem != null) _world.RemoveSystem(_titleDisplaySystem);
-                if (_backButtonDisplaySystem != null) _world.RemoveSystem(_backButtonDisplaySystem);
-                if (_explosionSystem != null) _world.RemoveSystem(_explosionSystem);
-                if (_confettiSystem != null) _world.RemoveSystem(_confettiSystem);
-                _firstLoad = true;
+				if (_.Scene != SceneId.Achievement) SetAchievementSystemsActive(false);
             });
         }
 
@@ -125,5 +125,17 @@ namespace Crusaders30XX.ECS.Systems
                 _confettiSystem = new AchievementConfettiDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
             _world.AddSystem(_confettiSystem);
         }
+
+		private void SetAchievementSystemsActive(bool active)
+		{
+			_backgroundDisplaySystem?.SetActive(active);
+			_gridDisplaySystem?.SetActive(active);
+			_descriptionDisplaySystem?.SetActive(active);
+			_meterDisplaySystem?.SetActive(active);
+			_titleDisplaySystem?.SetActive(active);
+			_backButtonDisplaySystem?.SetActive(active);
+			_explosionSystem?.SetActive(active);
+			_confettiSystem?.SetActive(active);
+		}
     }
 }

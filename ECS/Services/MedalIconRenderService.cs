@@ -31,14 +31,16 @@ namespace Crusaders30XX.ECS.Services
             ImageAssetService imageAssets,
             float scale = 1f,
             float rotationRad = 0f,
-            float softenStrength = 0f)
+            float softenStrength = 0f,
+            float opacity = 1f)
         {
+            opacity = MathHelper.Clamp(opacity, 0f, 1f);
             var tex = TryLoadMedalTexture(imageAssets, medalId);
             if (tex != null)
             {
-                return DrawTextureMedal(spriteBatch, center, iconSize, medalId, tex, imageAssets, scale, rotationRad, softenStrength);
+                return DrawTextureMedal(spriteBatch, center, iconSize, medalId, tex, imageAssets, scale, rotationRad, softenStrength, opacity);
             }
-            return DrawPlaceholderMedal(spriteBatch, graphicsDevice, font, center, iconSize, medalId, scale, rotationRad);
+            return DrawPlaceholderMedal(spriteBatch, graphicsDevice, font, center, iconSize, medalId, scale, rotationRad, opacity);
         }
 
         private static Rectangle DrawTextureMedal(
@@ -50,7 +52,8 @@ namespace Crusaders30XX.ECS.Services
             ImageAssetService imageAssets,
             float scale,
             float rotationRad,
-            float softenStrength)
+            float softenStrength,
+            float opacity)
         {
             int drawW = iconSize;
             int drawH = iconSize;
@@ -69,7 +72,7 @@ namespace Crusaders30XX.ECS.Services
 
             var scaledTex = imageAssets?.GetScaledMipmappedTexture($"{MedalAssetPrefix}{medalId}", tex, drawW, drawH, softenStrength) ?? tex;
             var origin = new Vector2(scaledTex.Width / 2f, scaledTex.Height / 2f);
-            spriteBatch.Draw(scaledTex, center, null, Color.White, rotationRad, origin, animationScale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(scaledTex, center, null, Color.White * opacity, rotationRad, origin, animationScale, SpriteEffects.None, 0f);
             return new Rectangle(left, top, scaledDrawW, scaledDrawH);
         }
 
@@ -81,7 +84,8 @@ namespace Crusaders30XX.ECS.Services
             int iconSize,
             string medalId,
             float scale,
-            float rotationRad)
+            float rotationRad,
+            float opacity)
         {
             int radius = System.Math.Max(4, (int)System.Math.Round(iconSize / 2f));
             var circle = PrimitiveTextureFactory.GetAntiAliasedCircle(graphicsDevice, radius);
@@ -91,7 +95,7 @@ namespace Crusaders30XX.ECS.Services
                 circle,
                 center,
                 null,
-                Color.Black,
+                Color.Black * opacity,
                 rotationRad,
                 circleOrigin,
                 circleScale,
@@ -110,7 +114,8 @@ namespace Crusaders30XX.ECS.Services
                     center,
                     drawSize,
                     PlaceholderNameScale * circleScale,
-                    rotationRad);
+                    rotationRad,
+                    opacity);
             }
 
             int left = (int)System.Math.Round(center.X - drawSize / 2f);
@@ -135,7 +140,8 @@ namespace Crusaders30XX.ECS.Services
             Vector2 center,
             int drawSize,
             float baseTextScale,
-            float rotationRad)
+            float rotationRad,
+            float opacity)
         {
             int maxWidth = System.Math.Max(8, (int)System.Math.Round(drawSize * 0.88f));
             float maxHeight = drawSize * 0.82f;
@@ -160,7 +166,7 @@ namespace Crusaders30XX.ECS.Services
                     font,
                     line,
                     worldTopLeft,
-                    Color.White,
+                    Color.White * opacity,
                     rotationRad,
                     Vector2.Zero,
                     textScale,

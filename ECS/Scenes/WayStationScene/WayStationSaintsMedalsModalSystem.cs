@@ -362,8 +362,8 @@ namespace Crusaders30XX.ECS.Systems
 			if (entries.Count == 0) return;
 			var prevScissor = _graphicsDevice.ScissorRectangle;
 			_spriteBatch.End();
-			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer);
-			_graphicsDevice.ScissorRectangle = IntersectWithScreen(render.Transform(layout.ListClip));
+			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
+			_graphicsDevice.ScissorRectangle = Game1.Display.LogicalToRender(IntersectWithScreen(render.Transform(layout.ListClip)));
 
 			int cols = 4;
 			int cellW = System.Math.Max(1, (layout.ListClip.Width - IconGap * (cols - 1)) / cols);
@@ -383,7 +383,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			_spriteBatch.End();
 			_graphicsDevice.ScissorRectangle = prevScissor;
-			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null);
+			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
 		}
 
 		private void DrawMedalTile(MedalEntry entry, Rectangle cell, bool selected, ModalAnimationRenderState render)
@@ -433,8 +433,8 @@ namespace Crusaders30XX.ECS.Systems
 
 			var prevScissor = _graphicsDevice.ScissorRectangle;
 			_spriteBatch.End();
-			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer);
-			_graphicsDevice.ScissorRectangle = IntersectWithScreen(render.Transform(layout.DetailClip));
+			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
+			_graphicsDevice.ScissorRectangle = Game1.Display.LogicalToRender(IntersectWithScreen(render.Transform(layout.DetailClip)));
 
 			int y = layout.DetailClip.Y - (rootState?.DetailScrollOffset ?? 0);
 			DrawStringWithShadow(_titleFont, selected.Medal?.Name ?? selected.Id, render.Transform(new Vector2(layout.DetailClip.X, y)), render.ApplyShell(Color.White), render.TransformScale(SaintNameScale));
@@ -444,7 +444,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			_spriteBatch.End();
 			_graphicsDevice.ScissorRectangle = prevScissor;
-			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null);
+			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
 		}
 
 		private void DrawEmptyDetail(SaintsMedalsLayout layout, ModalAnimationRenderState render)

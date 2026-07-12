@@ -27,6 +27,7 @@ public sealed class CardSheenDisplaySystem : Core.System
 	private CardSheenOverlay _overlay;
 	private bool _failed;
 	private float _timeSeconds;
+	private readonly HashSet<int> _locallyCompositedCards = new();
 
 	[DebugEditable(DisplayName = "Angle Degrees", Step = 1f, Min = 0f, Max = 360f)]
 	public float AngleDegrees { get; set; } = 105f;
@@ -75,6 +76,7 @@ public sealed class CardSheenDisplaySystem : Core.System
 		_pixel = imageAssets.GetPixel(Color.White);
 
 		EventManager.Subscribe<CardBaseRenderCompletedEvent>(OnCardBaseRenderCompleted, RenderPriority);
+		EventManager.Subscribe<CardShaderPassEvent>(OnCardShaderPass, 50);
 		EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCaches);
 	}
 
@@ -115,6 +117,7 @@ public sealed class CardSheenDisplaySystem : Core.System
 
 	private void OnCardBaseRenderCompleted(CardBaseRenderCompletedEvent evt)
 	{
+		if (evt?.Card != null && _locallyCompositedCards.Remove(evt.Card.Id)) return;
 		if (!ShaderRuntimeOptions.ShadersEnabled || _overlay?.IsAvailable != true || evt?.Card == null) return;
 		var sheen = evt.Card.GetComponent<CardSheen>();
 		if (sheen?.IsActive != true || !sheen.HasActivationTime) return;
@@ -126,6 +129,40 @@ public sealed class CardSheenDisplaySystem : Core.System
 			evt.Scale,
 			evt.Rotation);
 
+		ConfigureOverlay(sheen, evt.Scale);
+
+		DrawOverlay(geometry.Center, new Vector2(geometry.Bounds.Width, geometry.Bounds.Height), evt.Rotation);
+	}
+
+	private void OnCardShaderPass(CardShaderPassEvent evt)
+	{
+		CardShaderPassContext context = evt?.Context;
+		if (context == null || !ShaderRuntimeOptions.ShadersEnabled || !EnsureLoaded()) return;
+		CardSheen sheen = context.Card.GetComponent<CardSheen>();
+		if (sheen?.IsActive != true || !sheen.HasActivationTime) return;
+
+		CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
+			EntityManager,
+			context.Card,
+			context.Position,
+			context.Scale,
+			context.Rotation);
+		ConfigureOverlay(sheen, context.Scale);
+		_overlay.Resolution = context.LogicalSize;
+		_overlay.CardCenter = context.ToSurface(geometry.Center);
+		_overlay.CardRotation = context.Rotation;
+		Vector2 size = new(Math.Max(1f, geometry.Bounds.Width), Math.Max(1f, geometry.Bounds.Height));
+		context.Apply("CardSheen", (spriteBatch, source) =>
+		{
+			_overlay.BeginComposite(spriteBatch);
+			_overlay.DrawComposite(spriteBatch, source, size);
+			_overlay.End(spriteBatch);
+		});
+		_locallyCompositedCards.Add(context.Card.Id);
+	}
+
+	private void ConfigureOverlay(CardSheen sheen, float scale)
+	{
 		_overlay.TimeSeconds = MathHelper.Max(0f, _timeSeconds - sheen.ActivationTimeSeconds);
 		_overlay.SheenDurationSeconds = MathHelper.Max(0.001f, SheenDurationSeconds);
 		_overlay.RepeatDelaySeconds = MathHelper.Max(0f, RepeatDelaySeconds);
@@ -133,13 +170,11 @@ public sealed class CardSheenDisplaySystem : Core.System
 		_overlay.BandWidthNormalized = BandWidthNormalized;
 		_overlay.FeatherNormalized = FeatherNormalized;
 		_overlay.CoreWidthNormalized = CoreWidthNormalized;
-		_overlay.CornerRadiusPx = CornerRadiusPx * evt.Scale;
+		_overlay.CornerRadiusPx = CornerRadiusPx * scale;
 		_overlay.Intensity = Intensity;
 		_overlay.GoldFringeColor = new Vector3(1f, 240f / 255f, 164f / 255f) * GoldFringeStrength;
 		_overlay.BlueFringeColor = new Vector3(101f / 255f, 209f / 255f, 1f) * BlueFringeStrength;
 		_overlay.CoreColor = new Vector3(1f, 254f / 255f, 240f / 255f) * CoreStrength;
-
-		DrawOverlay(geometry.Center, new Vector2(geometry.Bounds.Width, geometry.Bounds.Height), evt.Rotation);
 	}
 
 	private void DrawOverlay(Vector2 center, Vector2 size, float rotation)

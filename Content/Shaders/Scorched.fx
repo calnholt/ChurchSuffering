@@ -331,7 +331,10 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
     color = max(color, fire);
     color += embers;
 
-    return float4(saturate(color), source.a) * input.Color;
+    float effectAlpha = saturate(max(max(fire.r, fire.g), max(fire.b, max(max(embers.r, embers.g), embers.b))));
+    float outputAlpha = max(source.a, effectAlpha);
+    color *= outputAlpha;
+    return float4(saturate(color), outputAlpha) * input.Color;
 }
 
 technique SpriteDrawing

@@ -9,6 +9,7 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -24,11 +25,13 @@ namespace Crusaders30XX.ECS.Systems
 		private const string SkipTutorialName = "PauseMenu_SkipTutorialButton";
 		private const string MusicSliderName = "PauseMenu_MusicSlider";
 		private const string SfxSliderName = "PauseMenu_SfxSlider";
+		private const string RumbleToggleName = "PauseMenu_RumbleToggle";
 
 		private readonly SpriteBatch _spriteBatch;
 		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
 		private readonly Texture2D _pixel;
+		private readonly HotKeyGlyphRenderer _hotKeyGlyphRenderer;
 
 		private Entity _rootEntity;
 		private Entity _blockerEntity;
@@ -36,6 +39,7 @@ namespace Crusaders30XX.ECS.Systems
 		private Entity _skipTutorialButtonEntity;
 		private Entity _musicSliderEntity;
 		private Entity _sfxSliderEntity;
+		private Entity _rumbleToggleEntity;
 
 		private static readonly Color DimColor = Color.Black;
 		private static readonly Color RailFill = new Color(8, 8, 8) * 0.92f;
@@ -109,6 +113,15 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "SFX Row Y", Step = 1, Min = 0, Max = 800)]
 		public int SfxRowY { get; set; } = 352;
 
+		[DebugEditable(DisplayName = "Rumble Row Y", Step = 1, Min = 0, Max = 900)]
+		public int RumbleRowY { get; set; } = 500;
+
+		[DebugEditable(DisplayName = "Toggle Width", Step = 1, Min = 40, Max = 240)]
+		public int ToggleWidth { get; set; } = 92;
+
+		[DebugEditable(DisplayName = "Toggle Height", Step = 1, Min = 20, Max = 100)]
+		public int ToggleHeight { get; set; } = 42;
+
 		[DebugEditable(DisplayName = "Slider Row Height", Step = 1, Min = 20, Max = 160)]
 		public int SliderRowHeight { get; set; } = 80;
 
@@ -139,7 +152,12 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch = spriteBatch;
 			_pixel = new Texture2D(graphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
-			EventManager.Subscribe<DeleteCachesEvent>(_ => DismissOverlay());
+			_hotKeyGlyphRenderer = new HotKeyGlyphRenderer(graphicsDevice, spriteBatch, _bodyFont);
+			EventManager.Subscribe<DeleteCachesEvent>(_ =>
+			{
+				DismissOverlay();
+				_hotKeyGlyphRenderer.Dispose();
+			});
 			EventManager.Subscribe<RunEndSequenceRequested>(_ => DismissOverlay());
 			EventManager.Subscribe<GuidedTutorialSkipRequested>(_ => DismissOverlay());
 		}
@@ -165,7 +183,7 @@ namespace Crusaders30XX.ECS.Systems
 				&& scene.Current != SceneId.None;
 
 			PlayerInputFrame input = PlayerInputService.GetFrame(EntityManager);
-			bool togglePressed = input.WasPressed(PlayerButton.Escape) || input.WasPressed(PlayerButton.Back);
+			bool togglePressed = IsTogglePressed(input);
 
 			if (overlay.Phase == PauseMenuPhase.Hidden)
 			{
@@ -204,6 +222,11 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
+		internal static bool IsTogglePressed(PlayerInputFrame input)
+		{
+			return input.WasPressed(PlayerButton.Escape) || input.WasPressed(PlayerButton.Start);
+		}
+
 		private PauseMenuOverlay EnsureOverlay()
 		{
 			EnsureEntities();
@@ -214,6 +237,17 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			overlay.Phase = PauseMenuPhase.FadingIn;
 			overlay.Progress01 = 0f;
+			ResetSlider(_musicSliderEntity, "Music", PauseMenuSliderSetting.MusicVolume, SaveCache.GetMusicVolumeLevel());
+			ResetSlider(_sfxSliderEntity, "SFX", PauseMenuSliderSetting.SfxVolume, SaveCache.GetSfxVolumeLevel());
+			UpdateEntityLayout(overlay);
+			SyncEntitiesActive(true, GetCurrentScene());
+		}
+
+		internal void OpenForSnapshot()
+		{
+			var overlay = EnsureOverlay();
+			overlay.Phase = PauseMenuPhase.Visible;
+			overlay.Progress01 = 1f;
 			ResetSlider(_musicSliderEntity, "Music", PauseMenuSliderSetting.MusicVolume, SaveCache.GetMusicVolumeLevel());
 			ResetSlider(_sfxSliderEntity, "SFX", PauseMenuSliderSetting.SfxVolume, SaveCache.GetSfxVolumeLevel());
 			UpdateEntityLayout(overlay);
@@ -305,6 +339,24 @@ namespace Crusaders30XX.ECS.Systems
 				"SFX",
 				PauseMenuSliderSetting.SfxVolume,
 				SaveCache.GetSfxVolumeLevel());
+
+			if (_rumbleToggleEntity == null || EntityManager.GetEntity(RumbleToggleName) == null)
+			{
+				_rumbleToggleEntity = EntityManager.GetEntity(RumbleToggleName) ?? EntityManager.CreateEntity(RumbleToggleName);
+				EnsureComponent(_rumbleToggleEntity, new Transform { Position = Vector2.Zero, ZOrder = ZOrder + 2 });
+				EnsureComponent(_rumbleToggleEntity, new UIElement
+				{
+					Bounds = Rectangle.Empty,
+					IsInteractable = false,
+					LayerType = UILayerType.Overlay,
+					EventType = UIElementEventType.ToggleRumble,
+					ShowHoverHighlight = false,
+					IsHidden = true,
+				});
+				EnsureComponent(_rumbleToggleEntity, new PauseMenuToggle { Label = "Rumble" });
+				InputContextService.EnsureMember(EntityManager, _rumbleToggleEntity, ContextId);
+				EnsureDontDestroy(_rumbleToggleEntity);
+			}
 
 			if (_abandonButtonEntity == null || EntityManager.GetEntity(AbandonName) == null)
 			{
@@ -399,6 +451,7 @@ namespace Crusaders30XX.ECS.Systems
 			SetUiActive(_blockerEntity, !hidden, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight));
 			SetUiActive(_musicSliderEntity, !hidden, _musicSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
 			SetUiActive(_sfxSliderEntity, !hidden, _sfxSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
+			SetUiActive(_rumbleToggleEntity, !hidden, _rumbleToggleEntity?.GetComponent<PauseMenuToggle>()?.RowBounds ?? Rectangle.Empty);
 
 			bool showAbandon = !hidden
 				&& SaveCache.IsRunActive()
@@ -434,17 +487,29 @@ namespace Crusaders30XX.ECS.Systems
 			UpdateTransform(_blockerEntity, ZOrder, Vector2.Zero);
 			UpdateTransform(_musicSliderEntity, ZOrder + 2, new Vector2(layout.MusicRow.X, layout.MusicRow.Y));
 			UpdateTransform(_sfxSliderEntity, ZOrder + 2, new Vector2(layout.SfxRow.X, layout.SfxRow.Y));
+			UpdateTransform(_rumbleToggleEntity, ZOrder + 2, new Vector2(layout.RumbleRow.X, layout.RumbleRow.Y));
 			UpdateTransform(_abandonButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
 			UpdateTransform(_skipTutorialButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
 
 			UpdateSliderLayout(_musicSliderEntity, layout.MusicRow, layout.MusicTrack);
 			UpdateSliderLayout(_sfxSliderEntity, layout.SfxRow, layout.SfxTrack);
+			UpdateToggleLayout(_rumbleToggleEntity, layout.RumbleRow, layout.RumbleToggle);
 
 			var abandonUi = _abandonButtonEntity?.GetComponent<UIElement>();
 			if (abandonUi?.IsInteractable == true) abandonUi.Bounds = layout.AbandonButton;
 
 			var skipTutorialUi = _skipTutorialButtonEntity?.GetComponent<UIElement>();
 			if (skipTutorialUi?.IsInteractable == true) skipTutorialUi.Bounds = layout.AbandonButton;
+		}
+
+		private static void UpdateToggleLayout(Entity entity, Rectangle row, Rectangle toggleBounds)
+		{
+			var toggle = entity?.GetComponent<PauseMenuToggle>();
+			var ui = entity?.GetComponent<UIElement>();
+			if (toggle == null) return;
+			toggle.RowBounds = row;
+			toggle.ToggleBounds = toggleBounds;
+			if (ui?.IsInteractable == true) ui.Bounds = row;
 		}
 
 		private void UpdateSliderLayout(Entity entity, Rectangle row, Rectangle track)
@@ -480,8 +545,37 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch.Draw(_pixel, drawLayout.Rail, RailFill * alpha);
 			DrawAccent(drawLayout.Accent, alpha);
 			DrawHeader(drawLayout, alpha);
+			DrawRumbleToggle(drawLayout, alpha);
 			DrawFooterButtons(drawLayout, alpha);
 			DrawResumeHint(alpha);
+		}
+
+		private void DrawRumbleToggle(PauseMenuLayout layout, float alpha)
+		{
+			var ui = _rumbleToggleEntity?.GetComponent<UIElement>();
+			if (ui == null || ui.IsHidden) return;
+			bool enabled = SaveCache.GetRumbleEnabled();
+			_spriteBatch.DrawString(
+				_bodyFont,
+				"Rumble",
+				new Vector2(layout.RumbleRow.X, layout.RumbleRow.Y),
+				MutedWhite * alpha,
+				0f,
+				Vector2.Zero,
+				SubtitleScale,
+				SpriteEffects.None,
+				0f);
+
+			Color fill = enabled ? RailAccent : ButtonFill;
+			Color border = ui.IsHovered ? ButtonBorderHover : ButtonBorder;
+			_spriteBatch.Draw(_pixel, layout.RumbleToggle, fill * alpha);
+			DrawBorder(layout.RumbleToggle, border * alpha, ButtonBorderThickness);
+			string value = enabled ? "ON" : "OFF";
+			Vector2 size = _bodyFont.MeasureString(value) * ButtonTextScale;
+			var position = new Vector2(
+				layout.RumbleToggle.Center.X - size.X / 2f,
+				layout.RumbleToggle.Center.Y - size.Y / 2f);
+			_spriteBatch.DrawString(_bodyFont, value, position, WarmWhite * alpha, 0f, Vector2.Zero, ButtonTextScale, SpriteEffects.None, 0f);
 		}
 
 		private void DrawLeftFalloff(float alpha)
@@ -512,7 +606,7 @@ namespace Crusaders30XX.ECS.Systems
 			var titlePos = new Vector2(layout.ContentX, layout.TitleY);
 			_spriteBatch.DrawString(_titleFont, "Paused", titlePos + new Vector2(0, 4), Color.Black * (0.9f * alpha), 0f, Vector2.Zero, TitleScale, SpriteEffects.None, 0f);
 			_spriteBatch.DrawString(_titleFont, "Paused", titlePos, White * alpha, 0f, Vector2.Zero, TitleScale, SpriteEffects.None, 0f);
-			_spriteBatch.DrawString(_bodyFont, "Audio settings", new Vector2(layout.ContentX, layout.SubtitleY), MutedWhite * alpha, 0f, Vector2.Zero, SubtitleScale, SpriteEffects.None, 0f);
+			_spriteBatch.DrawString(_bodyFont, "Audio and haptics", new Vector2(layout.ContentX, layout.SubtitleY), MutedWhite * alpha, 0f, Vector2.Zero, SubtitleScale, SpriteEffects.None, 0f);
 		}
 
 		private void DrawFooterButtons(PauseMenuLayout layout, float alpha)
@@ -545,12 +639,25 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawResumeHint(float alpha)
 		{
-			string text = "Press Esc to resume";
+			PlayerInputFrame input = PlayerInputService.GetFrame(EntityManager);
+			const string text = "Resume";
 			Vector2 size = _bodyFont.MeasureString(text) * HintScale;
-			var pos = new Vector2(
-				Game1.VirtualWidth - HintRight - size.X,
-				Game1.VirtualHeight - HintBottom - size.Y);
-			_spriteBatch.DrawString(_bodyFont, text, pos, Color.White * (0.35f * alpha), 0f, Vector2.Zero, HintScale, SpriteEffects.None, 0f);
+			const int radius = 18;
+			const int gap = 10;
+			Point glyphSize = input.Device == PlayerInputDevice.Gamepad
+				? _hotKeyGlyphRenderer.MeasureGamepad(FaceButton.Start, radius)
+				: _hotKeyGlyphRenderer.MeasureKeyboard(PlayerButton.Escape, radius, HintScale);
+			float right = Game1.VirtualWidth - HintRight;
+			float centerY = Game1.VirtualHeight - HintBottom - Math.Max(size.Y, glyphSize.Y) / 2f;
+			var textPos = new Vector2(right - size.X, centerY - size.Y / 2f);
+			int glyphCx = (int)Math.Round(textPos.X - gap - glyphSize.X / 2f);
+			int glyphCy = (int)Math.Round(centerY);
+			float hintAlpha = 0.45f * alpha;
+			_spriteBatch.DrawString(_bodyFont, text, textPos, Color.White * hintAlpha, 0f, Vector2.Zero, HintScale, SpriteEffects.None, 0f);
+			if (input.Device == PlayerInputDevice.Gamepad)
+				_hotKeyGlyphRenderer.DrawGamepad(FaceButton.Start, input.GamepadGlyphStyle, glyphCx, glyphCy, radius, HintScale, hintAlpha);
+			else
+				_hotKeyGlyphRenderer.DrawKeyboard(PlayerButton.Escape, glyphCx, glyphCy, radius, HintScale, hintAlpha);
 		}
 
 		private void DrawBorder(Rectangle rect, Color color, int thickness)
@@ -583,6 +690,8 @@ namespace Crusaders30XX.ECS.Systems
 				SfxRow = new Rectangle(contentX, SfxRowY, ContentWidth, SliderRowHeight),
 				MusicTrack = new Rectangle(contentX, MusicRowY + TrackOffsetY, ContentWidth, TrackHeight),
 				SfxTrack = new Rectangle(contentX, SfxRowY + TrackOffsetY, ContentWidth, TrackHeight),
+				RumbleRow = new Rectangle(contentX, RumbleRowY, ContentWidth, SliderRowHeight),
+				RumbleToggle = new Rectangle(contentX + ContentWidth - ToggleWidth, RumbleRowY, ToggleWidth, ToggleHeight),
 				AbandonButton = new Rectangle(contentX, buttonY, ContentWidth, ButtonHeight),
 			};
 		}
@@ -611,6 +720,8 @@ namespace Crusaders30XX.ECS.Systems
 			public Rectangle SfxRow;
 			public Rectangle MusicTrack;
 			public Rectangle SfxTrack;
+			public Rectangle RumbleRow;
+			public Rectangle RumbleToggle;
 			public Rectangle AbandonButton;
 
 			public PauseMenuLayout Offset(int x, int y)
@@ -626,6 +737,8 @@ namespace Crusaders30XX.ECS.Systems
 					SfxRow = OffsetRect(SfxRow, x, y),
 					MusicTrack = OffsetRect(MusicTrack, x, y),
 					SfxTrack = OffsetRect(SfxTrack, x, y),
+					RumbleRow = OffsetRect(RumbleRow, x, y),
+					RumbleToggle = OffsetRect(RumbleToggle, x, y),
 					AbandonButton = OffsetRect(AbandonButton, x, y),
 				};
 			}

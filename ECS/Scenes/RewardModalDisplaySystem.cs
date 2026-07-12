@@ -1738,6 +1738,8 @@ namespace Crusaders30XX.ECS.Systems
 			_pendingCloseTransition = false;
 			_pendingCloseTransitionScene = SceneId.Climb;
 
+			PublishClimbResourceAcquisitionIfNeeded(state);
+
 			if (state.IsEncounterReward)
 			{
 				ClimbEncounterService.ResolvePendingEncounterReward(EntityManager);
@@ -1771,6 +1773,27 @@ namespace Crusaders30XX.ECS.Systems
 			DestroyRewardEquipment();
 			InvalidateCaches();
 
+		}
+
+		internal static bool PublishClimbResourceAcquisitionIfNeeded(QuestRewardOverlayState state)
+		{
+			if (state?.IsEncounterReward != true
+				|| state.DismissScene != SceneId.Climb
+				|| !HasClimbResourceReward(state.ClimbResources))
+			{
+				return false;
+			}
+
+			EventManager.Publish(new ClimbResourceAcquisitionAnimationRequested
+			{
+				Resources = new ClimbResourceSave
+				{
+					red = Math.Max(0, state.ClimbResources?.red ?? 0),
+					white = Math.Max(0, state.ClimbResources?.white ?? 0),
+					black = Math.Max(0, state.ClimbResources?.black ?? 0),
+				},
+			});
+			return true;
 		}
 
 		private void HideProceedButton()

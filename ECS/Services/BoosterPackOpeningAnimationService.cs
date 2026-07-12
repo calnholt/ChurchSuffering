@@ -64,7 +64,11 @@ public readonly record struct BoosterPackLootAnimationSample(
 	float Progress,
 	bool IsSettled);
 
-public readonly record struct BoosterPackRumbleSample(float LowFrequency, float HighFrequency)
+public readonly record struct BoosterPackRumbleSample(
+	float LowFrequency,
+	float HighFrequency,
+	float LeftTrigger = 0f,
+	float RightTrigger = 0f)
 {
 	public static BoosterPackRumbleSample Zero => new(0f, 0f);
 	public bool IsActive => LowFrequency > 0f || HighFrequency > 0f;
@@ -75,9 +79,11 @@ public readonly record struct BoosterPackRumbleSettings(
 	float MaxBuildupHigh,
 	float LootPulseLow,
 	float LootPulseHigh,
-	float LootPulseDurationSeconds)
+	float LootPulseDurationSeconds,
+	float MaxBuildupTrigger = 0.18f,
+	float LootPulseTrigger = 0.08f)
 {
-	public static BoosterPackRumbleSettings Default { get; } = new(0.35f, 0.55f, 0.08f, 0.12f, 0.06f);
+	public static BoosterPackRumbleSettings Default { get; } = new(0.35f, 0.55f, 0.08f, 0.12f, 0.06f, 0.18f, 0.08f);
 }
 
 public static class BoosterPackOpeningAnimationService
@@ -251,7 +257,9 @@ public static class BoosterPackOpeningAnimationService
 		float intensity = progress * progress;
 		return new BoosterPackRumbleSample(
 			settings.MaxBuildupLow * intensity,
-			settings.MaxBuildupHigh * intensity);
+			settings.MaxBuildupHigh * intensity,
+			settings.MaxBuildupTrigger * intensity,
+			settings.MaxBuildupTrigger * intensity);
 	}
 
 	public static BoosterPackRumbleSample SampleLootRevealRumble(
@@ -264,6 +272,7 @@ public static class BoosterPackOpeningAnimationService
 		float duration = Math.Max(0.001f, settings.LootPulseDurationSeconds);
 		float bestLow = 0f;
 		float bestHigh = 0f;
+		float bestTrigger = 0f;
 		for (int slotIndex = 0; slotIndex < Math.Max(0, lootCount); slotIndex++)
 		{
 			float local = elapsed - GetLootRevealStartSeconds(slotIndex, timing);
@@ -271,11 +280,12 @@ public static class BoosterPackOpeningAnimationService
 			float envelope = 1f - local / duration;
 			bestLow = Math.Max(bestLow, settings.LootPulseLow * envelope);
 			bestHigh = Math.Max(bestHigh, settings.LootPulseHigh * envelope);
+			bestTrigger = Math.Max(bestTrigger, settings.LootPulseTrigger * envelope);
 		}
 
-		return bestLow <= 0f && bestHigh <= 0f
+		return bestLow <= BoundaryEpsilon && bestHigh <= BoundaryEpsilon && bestTrigger <= BoundaryEpsilon
 			? BoosterPackRumbleSample.Zero
-			: new BoosterPackRumbleSample(bestLow, bestHigh);
+			: new BoosterPackRumbleSample(bestLow, bestHigh, bestTrigger, bestTrigger);
 	}
 
 	public static BoosterPackRumbleSample SampleRumble(

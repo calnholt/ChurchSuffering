@@ -286,6 +286,12 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	[DebugEditable(DisplayName = "Rumble Loot Pulse Duration (s)", Step = 0.01f, Min = 0.01f, Max = 1f)]
 	public float RumbleLootPulseDurationSeconds { get; set; } = 0.06f;
 
+	[DebugEditable(DisplayName = "Rumble Buildup Trigger", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleBuildupTrigger { get; set; } = 0.18f;
+
+	[DebugEditable(DisplayName = "Rumble Loot Pulse Trigger", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleLootPulseTrigger { get; set; } = 0.08f;
+
 	public BoosterPackOpeningDisplaySystem(
 		EntityManager entityManager,
 		GraphicsDevice graphicsDevice,
@@ -420,7 +426,9 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			RumbleBuildupHigh,
 			RumbleLootPulseLow,
 			RumbleLootPulseHigh,
-			RumbleLootPulseDurationSeconds);
+			RumbleLootPulseDurationSeconds,
+			RumbleBuildupTrigger,
+			RumbleLootPulseTrigger);
 	}
 
 	private void UpdateRumble(BoosterPackOpeningOverlayState state, BoosterPackOpeningTiming timing)
@@ -438,10 +446,11 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			state.Loot.Count,
 			timing,
 			BuildRumbleSettings());
-		_inputSource.SetRumbleChannel(
-			RumbleChannelId,
+		_inputSource.SetRumbleChannel(RumbleChannelId, new RumbleMotorState(
 			sample.LowFrequency,
-			sample.HighFrequency);
+			sample.HighFrequency,
+			sample.LeftTrigger,
+			sample.RightTrigger));
 	}
 
 	private void StopRumble()

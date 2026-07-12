@@ -65,7 +65,7 @@ public class CircularMaskOverlay
         Matrix projection = Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, 1);
 
         var pMatrix = _effect.Parameters["MatrixTransform"]; if (pMatrix != null) pMatrix.SetValue(projection);
-        var pViewport = _effect.Parameters["ViewportSize"]; if (pViewport != null) pViewport.SetValue(new Vector2(vp.Width, vp.Height));
+        var pViewport = _effect.Parameters["ViewportSize"]; if (pViewport != null) pViewport.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         var pFeather = _effect.Parameters["FeatherPx"]; if (pFeather != null) pFeather.SetValue(FeatherPx);
         var pTime = _effect.Parameters["iTime"]; if (pTime != null) pTime.SetValue(TimeSeconds);
         var pEaseSpeed = _effect.Parameters["EaseSpeed"]; if (pEaseSpeed != null) pEaseSpeed.SetValue(EaseSpeed);
@@ -151,5 +151,4 @@ public class CircularMaskOverlay
         spriteBatch.End();
     }
 }
-
 

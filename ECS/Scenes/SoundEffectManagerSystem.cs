@@ -203,6 +203,7 @@ namespace Crusaders30XX.ECS.Systems
                 SfxTrack.BoosterPackReveal => "SFX/booster-pack-reveal",
                 SfxTrack.DeckShuffle => "SFX/deck-shuffle",
                 SfxTrack.ShieldBlock => "SFX/shield-block",
+				SfxTrack.GemDrop => "SFX/gem-drop",
                 _ => null
             };
 

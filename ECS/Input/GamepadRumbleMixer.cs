@@ -6,16 +6,13 @@ namespace Crusaders30XX.ECS.Input
 {
     public sealed class GamepadRumbleMixer
     {
-        private readonly Dictionary<string, (float Low, float High)> _channels = new();
-        private readonly List<RumblePulse> _pulses = new();
+        private readonly Dictionary<string, RumbleMotorState> _channels = new();
+        private readonly List<ActiveRumblePattern> _patterns = new();
 
-        public void SetChannel(string channelId, float lowFrequency, float highFrequency)
+        public void SetChannel(string channelId, RumbleMotorState motors)
         {
             if (string.IsNullOrWhiteSpace(channelId)) return;
-
-            _channels[channelId] = (
-                MathHelper.Clamp(lowFrequency, 0f, 1f),
-                MathHelper.Clamp(highFrequency, 0f, 1f));
+            _channels[channelId] = motors.Clamped();
         }
 
         public void ClearChannel(string channelId)
@@ -24,84 +21,70 @@ namespace Crusaders30XX.ECS.Input
             _channels.Remove(channelId);
         }
 
-        public void PlayPulse(
-            float lowFrequency,
-            float highFrequency,
-            float durationSeconds,
-            RumbleGroup group = RumbleGroup.Default)
+        public void PlayPattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default)
         {
-            if (durationSeconds <= 0f) return;
-
-            _pulses.Add(new RumblePulse(
-                MathHelper.Clamp(lowFrequency, 0f, 1f),
-                MathHelper.Clamp(highFrequency, 0f, 1f),
-                durationSeconds,
-                group));
+            if (pattern == null || pattern.DurationSeconds <= 0f) return;
+            _patterns.Add(new ActiveRumblePattern(pattern, group));
         }
 
         public void ClearGroup(RumbleGroup group)
         {
-            _pulses.RemoveAll(pulse => pulse.Group == group);
+            _patterns.RemoveAll(pattern => pattern.Group == group);
+        }
+
+		public void ClearAll()
+		{
+			_channels.Clear();
+			_patterns.Clear();
         }
 
         public void Tick(float deltaSeconds)
         {
             if (deltaSeconds <= 0f) return;
 
-            for (int i = _pulses.Count - 1; i >= 0; i--)
+            for (int i = _patterns.Count - 1; i >= 0; i--)
             {
-                RumblePulse pulse = _pulses[i];
-                pulse.RemainingSeconds -= deltaSeconds;
-                if (pulse.RemainingSeconds <= 0f)
+                ActiveRumblePattern pattern = _patterns[i];
+                pattern.ElapsedSeconds += deltaSeconds;
+                if (pattern.ElapsedSeconds >= pattern.Pattern.DurationSeconds)
                 {
-                    _pulses.RemoveAt(i);
+                    _patterns.RemoveAt(i);
                 }
                 else
                 {
-                    _pulses[i] = pulse;
+                    _patterns[i] = pattern;
                 }
             }
         }
 
-        public (float Low, float High) Combine()
+        public RumbleMotorState Combine()
         {
-            float low = 0f;
-            float high = 0f;
+            RumbleMotorState combined = RumbleMotorState.Zero;
 
-            foreach ((float channelLow, float channelHigh) in _channels.Values)
+            foreach (RumbleMotorState channel in _channels.Values)
             {
-                low += channelLow;
-                high += channelHigh;
+                combined = RumbleMotorState.Add(combined, channel);
             }
 
-            foreach (RumblePulse pulse in _pulses)
+            foreach (ActiveRumblePattern pattern in _patterns)
             {
-                low += pulse.LowFrequency;
-                high += pulse.HighFrequency;
+                combined = RumbleMotorState.Add(combined, pattern.Pattern.Sample(pattern.ElapsedSeconds));
             }
 
-            return (
-                MathHelper.Clamp(low, 0f, 1f),
-                MathHelper.Clamp(high, 0f, 1f));
+            return combined.Clamped();
         }
 
-        private struct RumblePulse
+        private struct ActiveRumblePattern
         {
-            public RumblePulse(
-                float lowFrequency,
-                float highFrequency,
-                float durationSeconds,
-                RumbleGroup group)
+            public ActiveRumblePattern(RumblePattern pattern, RumbleGroup group)
             {
-                LowFrequency = lowFrequency;
-                HighFrequency = highFrequency;
-                RemainingSeconds = durationSeconds;
+                Pattern = pattern;
+                ElapsedSeconds = 0f;
                 Group = group;
             }
 
-            public float LowFrequency { get; }
-            public float HighFrequency { get; }
-            public float RemainingSeconds { get; set; }
+            public RumblePattern Pattern { get; }
+            public float ElapsedSeconds { get; set; }
             public RumbleGroup Group { get; }
         }
     }

@@ -26,6 +26,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new EquipmentTooltipSnapshotFixture());
 			Register(new EnemyDamageMeterSnapshotFixture());
 			Register(new EnemyAttackBannerSnapshotFixture());
+			Register(new EnemyDefeatBurstSnapshotFixture());
+			Register(new GuardianAngelSnapshotFixture());
+			Register(new PauseMenuSnapshotFixture());
+			Register(new HotKeySnapshotFixture());
 			Register(new BattlePhaseTransitionSnapshotFixture());
 			Register(new AchievementSnapshotFixture(AchievementSnapshotVariant.Overview));
 			Register(new AchievementSnapshotFixture(AchievementSnapshotVariant.Detail));
@@ -40,10 +44,13 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CharacterDialog));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ActiveEvents));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.HoverPreview));
+            Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.MedalTooltipHover));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.SoldShopSlot));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.EncounterRewardModal));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ReplacementModal));
-            Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryOverlay));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryOverlay));
+			Register(new ClimbHeaderSnapshotFixture());
+			Register(new ClimbResourceAcquisitionSnapshotFixture());
         }
 
         public static void Register(IDisplaySnapshotFixture fixture)

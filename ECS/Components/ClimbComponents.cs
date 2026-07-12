@@ -220,4 +220,16 @@ namespace Crusaders30XX.ECS.Components
 		public Entity Owner { get; set; }
 		public string EquipmentId { get; set; } = string.Empty;
 	}
+
+	public class ClimbMedalTooltipSource : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string MedalId { get; set; } = string.Empty;
+	}
+
+	public class ClimbMedalTooltipAnchor : IComponent
+	{
+		public Entity Owner { get; set; }
+		public Rectangle IconBounds { get; set; }
+	}
 }

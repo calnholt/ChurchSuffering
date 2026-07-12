@@ -5,6 +5,7 @@ using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
+using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Data.VisualEffects;
 
@@ -62,7 +63,9 @@ public static class VisualEffectSequenceAuthoring
 				ImpactSfxVolume = primary.ImpactSfxVolume,
 				StartSfxPitch = primary.StartSfxPitch,
 				ImpactSfxPitch = primary.ImpactSfxPitch,
-				DrivesGameplayImpact = primary.DrivesGameplayImpact
+				DrivesGameplayImpact = primary.DrivesGameplayImpact,
+				ImpactRumbleProfile = primary.ImpactRumbleProfile,
+				ImpactRumbleScale = primary.ImpactRumbleScale,
 			}.WithModules(primary.Modules.ToArray());
 		}
 
@@ -279,7 +282,8 @@ public static class VisualEffectSequenceAuthoring
 			Palette = CardPalette(direction.Style),
 			StartSfx = attack ? SfxTrack.SwordAttack : SupportSfx(direction.Style),
 			ImpactSfx = attack ? SfxTrack.SwordImpact : SfxTrack.None,
-			StartSfxPitch = Math.Clamp(direction.TempoOffset * 1.8f, -0.3f, 0.3f)
+			StartSfxPitch = Math.Clamp(direction.TempoOffset * 1.8f, -0.3f, 0.3f),
+			ImpactRumbleProfile = attack ? WeightRumble(direction.Weight) : SupportRumble(direction.Style),
 		}.WithModules(modules.ToArray());
 		return new VisualEffectSequence().WithBeats(beat);
 	}
@@ -303,7 +307,8 @@ public static class VisualEffectSequenceAuthoring
 			Palette = EnemyPalette(direction.Style),
 			ImpactSfx = SfxTrack.SwordImpact,
 			ImpactSfxPitch = Math.Clamp(direction.TempoOffset * 1.6f, -0.3f, 0.3f),
-			DrivesGameplayImpact = true
+			DrivesGameplayImpact = true,
+			ImpactRumbleProfile = WeightRumble(direction.Weight),
 		}.WithModules(modules.ToArray());
 		return new VisualEffectSequence().WithBeats(beat);
 	}
@@ -319,6 +324,17 @@ public static class VisualEffectSequenceAuthoring
 	}
 
 	private static bool IsAttack(CardStyle style) => style is CardStyle.Slash or CardStyle.Thrust or CardStyle.Heavy or CardStyle.HolyStrike or CardStyle.FireStrike or CardStyle.FrostStrike or CardStyle.BloodStrike or CardStyle.ShadowStrike or CardStyle.Whirlwind or CardStyle.ThrownBlades;
+
+	private static RumbleProfile WeightRumble(EffectWeight weight) => weight switch
+	{
+		EffectWeight.Light => RumbleProfile.LightImpact,
+		EffectWeight.Medium => RumbleProfile.MediumImpact,
+		EffectWeight.Heavy => RumbleProfile.HeavyImpact,
+		_ => RumbleProfile.EpicImpact,
+	};
+
+	private static RumbleProfile SupportRumble(CardStyle style) =>
+		style == CardStyle.Guard ? RumbleProfile.Guard : RumbleProfile.Soft;
 
 	private static IEnumerable<VisualEffectModule> CardModules(CardStyle style) => style switch
 	{

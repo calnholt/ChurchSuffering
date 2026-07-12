@@ -7,6 +7,7 @@ using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Singletons;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
+using System;
 
 namespace Crusaders30XX.ECS.Components
 {
@@ -25,6 +26,27 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 		public SceneId Current { get; set; } = SceneId.TitleMenu;
+	}
+
+	public enum ScenePreparationStatus
+	{
+		Idle,
+		Preparing,
+		Ready,
+		Failed,
+	}
+
+	public class ScenePreparationState : IComponent
+	{
+		public Entity Owner { get; set; }
+		public Guid PreparationId { get; set; }
+		public SceneId TargetScene { get; set; } = SceneId.None;
+		public ScenePreparationStatus Status { get; set; } = ScenePreparationStatus.Idle;
+		public int CompletedJobs { get; set; }
+		public int TotalJobs { get; set; }
+		public string CurrentJob { get; set; } = string.Empty;
+		public string Error { get; set; } = string.Empty;
+		public double SlowestJobMilliseconds { get; set; }
 	}
 
 	public class GameOverOverlayState : IComponent

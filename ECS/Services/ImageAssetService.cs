@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Crusaders30XX.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Crusaders30XX.ECS.Components;
 
 namespace Crusaders30XX.ECS.Services
 {
@@ -19,7 +21,26 @@ namespace Crusaders30XX.ECS.Services
 		private readonly Dictionary<Texture2D, Color[]> _pixelDataCache = new();
 		private readonly Dictionary<(string CacheKey, int Width, int Height, float SoftenStrength), Texture2D> _scaledMipmappedCache = new();
 		private readonly Dictionary<string, Texture2D> _rawTextureCache = new(StringComparer.Ordinal);
+		private readonly Dictionary<Guid, SceneTextureScope> _sceneScopes = new();
+		private Guid _activeSceneScopeId;
+		private Guid _preparedSceneScopeId;
 		private bool _disposed;
+		private const long DefaultSceneTextureBudgetBytes = 256L * 1024L * 1024L;
+		private const int MaxRetainedSceneTextureScopes = 4;
+
+		private sealed class SceneTextureScope : IDisposable
+		{
+			public Guid Id { get; init; }
+			public SceneId Scene { get; init; }
+			public ContentManager Content { get; init; }
+			public Dictionary<string, Texture2D> Textures { get; } = new(StringComparer.Ordinal);
+			public long EstimatedBytes { get; set; }
+			public long LastUseSequence { get; set; }
+			public void Dispose() => Content.Dispose();
+		}
+
+		private long _sceneScopeUseSequence;
+		public long SceneTextureBudgetBytes { get; set; } = DefaultSceneTextureBudgetBytes;
 
 		public ImageAssetService(ContentManager content, GraphicsDevice graphicsDevice)
 		{
@@ -33,6 +54,8 @@ namespace Crusaders30XX.ECS.Services
 			{
 				throw new ArgumentException("Texture asset name cannot be empty.", nameof(assetName));
 			}
+
+			if (TryGetScopedTexture(assetName, out var scoped)) return scoped;
 
 			try
 			{
@@ -48,6 +71,7 @@ namespace Crusaders30XX.ECS.Services
 		public Texture2D TryGetTexture(string assetName)
 		{
 			if (string.IsNullOrWhiteSpace(assetName)) return null;
+			if (TryGetScopedTexture(assetName, out var scoped)) return scoped;
 			if (_missingTextureAssets.Contains(assetName)) return null;
 
 			try
@@ -182,12 +206,107 @@ namespace Crusaders30XX.ECS.Services
 			_pixelDataCache.Clear();
 		}
 
+		public void BeginSceneTexturePreparation(Guid preparationId, SceneId scene)
+		{
+			if (preparationId == Guid.Empty) throw new ArgumentException("Preparation ID is required.", nameof(preparationId));
+			if (_preparedSceneScopeId != Guid.Empty && _preparedSceneScopeId != preparationId)
+			{
+				_preparedSceneScopeId = Guid.Empty;
+			}
+
+			if (!_sceneScopes.ContainsKey(preparationId))
+			{
+				_sceneScopes[preparationId] = new SceneTextureScope
+				{
+					Id = preparationId,
+					Scene = scene,
+					Content = new ContentManager(_content.ServiceProvider, _content.RootDirectory),
+					LastUseSequence = ++_sceneScopeUseSequence,
+				};
+			}
+			_preparedSceneScopeId = preparationId;
+			EvictUnpinnedSceneScopes();
+		}
+
+		public Texture2D PrepareSceneTexture(Guid preparationId, string assetName)
+		{
+			if (!_sceneScopes.TryGetValue(preparationId, out var scope))
+			{
+				throw new InvalidOperationException($"Scene texture scope '{preparationId}' was not created.");
+			}
+			if (scope.Textures.TryGetValue(assetName, out var cached)) return cached;
+
+			var texture = scope.Content.Load<Texture2D>(assetName);
+			scope.Textures[assetName] = texture;
+			scope.EstimatedBytes += EstimateTextureBytes(texture);
+			scope.LastUseSequence = ++_sceneScopeUseSequence;
+			EvictUnpinnedSceneScopes();
+			return texture;
+		}
+
+		public void ActivateSceneTextureScope(Guid preparationId)
+		{
+			if (!_sceneScopes.ContainsKey(preparationId)) return;
+			_activeSceneScopeId = preparationId;
+			if (_preparedSceneScopeId == preparationId) _preparedSceneScopeId = Guid.Empty;
+			_sceneScopes[preparationId].LastUseSequence = ++_sceneScopeUseSequence;
+			EvictUnpinnedSceneScopes();
+		}
+
 		public void Dispose()
 		{
 			if (_disposed) return;
+			foreach (var scope in _sceneScopes.Values) scope.Dispose();
+			_sceneScopes.Clear();
 			ClearGeneratedTextures();
 			_pixelDataCache.Clear();
 			_disposed = true;
+		}
+
+		private bool TryGetScopedTexture(string assetName, out Texture2D texture)
+		{
+			texture = null;
+			if (string.IsNullOrWhiteSpace(assetName)) return false;
+			if (_preparedSceneScopeId != Guid.Empty
+				&& _sceneScopes.TryGetValue(_preparedSceneScopeId, out var prepared)
+				&& prepared.Textures.TryGetValue(assetName, out texture))
+			{
+				prepared.LastUseSequence = ++_sceneScopeUseSequence;
+				return true;
+			}
+			if (_activeSceneScopeId != Guid.Empty
+				&& _sceneScopes.TryGetValue(_activeSceneScopeId, out var active)
+				&& active.Textures.TryGetValue(assetName, out texture))
+			{
+				active.LastUseSequence = ++_sceneScopeUseSequence;
+				return true;
+			}
+			return false;
+		}
+
+		private void EvictUnpinnedSceneScopes()
+		{
+			long totalBytes = 0;
+			foreach (var scope in _sceneScopes.Values) totalBytes += scope.EstimatedBytes;
+			if (totalBytes <= SceneTextureBudgetBytes && _sceneScopes.Count <= MaxRetainedSceneTextureScopes) return;
+
+			var candidates = _sceneScopes.Values
+				.Where(scope => scope.Id != _activeSceneScopeId && scope.Id != _preparedSceneScopeId)
+				.OrderBy(scope => scope.LastUseSequence)
+				.ToList();
+			foreach (var scope in candidates)
+			{
+				if (totalBytes <= SceneTextureBudgetBytes && _sceneScopes.Count <= MaxRetainedSceneTextureScopes) break;
+				totalBytes -= scope.EstimatedBytes;
+				_sceneScopes.Remove(scope.Id);
+				scope.Dispose();
+			}
+		}
+
+		private static long EstimateTextureBytes(Texture2D texture)
+		{
+			if (texture == null) return 0;
+			return (long)texture.Width * texture.Height * 4L;
 		}
 
 		private static int ClampRadius(int width, int height, int radius)

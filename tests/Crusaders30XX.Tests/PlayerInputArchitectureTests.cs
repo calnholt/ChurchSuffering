@@ -721,33 +721,68 @@ public class PlayerInputArchitectureTests
     }
 
     [Fact]
-    public void Gamepad_back_resolves_to_view_hotkey_before_cancel()
+    public void Gamepad_back_matches_view_hotkey_but_not_face_b_hotkey()
     {
         PlayerButtonMask back = PlayerInputFrame.Mask(PlayerButton.Back);
         PlayerButtonMask cancel = PlayerInputFrame.Mask(PlayerButton.Cancel);
-
-        FaceButton? button = HotKeySystem.GetPressedButton(Frame(
+        PlayerInputFrame frame = Frame(
             device: PlayerInputDevice.Gamepad,
             gamepadConnected: true,
-            pressed: back | cancel));
+            pressed: back | cancel);
 
-        Assert.Equal(FaceButton.View, button);
+        Assert.True(HotKeySystem.IsBindingPressed(frame, new HotKey { Button = FaceButton.View }));
+        Assert.False(HotKeySystem.IsBindingPressed(frame, new HotKey { Button = FaceButton.B }));
     }
 
     [Fact]
-    public void Gamepad_start_and_cancel_resolve_to_menu_and_b_hotkeys()
+    public void Gamepad_start_and_face_b_match_distinct_hotkeys()
     {
-        FaceButton? start = HotKeySystem.GetPressedButton(Frame(
+        PlayerInputFrame start = Frame(
             device: PlayerInputDevice.Gamepad,
             gamepadConnected: true,
-            pressed: PlayerInputFrame.Mask(PlayerButton.Start)));
-        FaceButton? cancel = HotKeySystem.GetPressedButton(Frame(
+            pressed: PlayerInputFrame.Mask(PlayerButton.Start));
+        PlayerInputFrame faceB = Frame(
             device: PlayerInputDevice.Gamepad,
             gamepadConnected: true,
-            pressed: PlayerInputFrame.Mask(PlayerButton.Cancel)));
+            pressed: PlayerInputFrame.Mask(PlayerButton.FaceB));
 
-        Assert.Equal(FaceButton.Start, start);
-        Assert.Equal(FaceButton.B, cancel);
+        Assert.True(HotKeySystem.IsBindingPressed(start, new HotKey { Button = FaceButton.Start }));
+        Assert.True(HotKeySystem.IsBindingPressed(faceB, new HotKey { Button = FaceButton.B }));
+    }
+
+    [Fact]
+    public void Explicit_keyboard_binding_overrides_default_binding()
+    {
+        var retry = new HotKey
+        {
+            Button = FaceButton.View,
+            KeyboardButton = PlayerButton.Enter,
+        };
+
+        Assert.True(HotKeySystem.IsBindingPressed(
+            Frame(pressed: PlayerInputFrame.Mask(PlayerButton.Enter)),
+            retry));
+        Assert.False(HotKeySystem.IsBindingPressed(
+            Frame(pressed: PlayerInputFrame.Mask(PlayerButton.Escape)),
+            retry));
+        Assert.False(HotKeySystem.IsBindingPressed(
+            Frame(pressed: PlayerInputFrame.Mask(PlayerButton.Space)),
+            retry));
+    }
+
+    [Fact]
+    public void Pause_toggle_uses_escape_and_start_but_not_back()
+    {
+        Assert.True(PauseMenuDisplaySystem.IsTogglePressed(
+            Frame(pressed: PlayerInputFrame.Mask(PlayerButton.Escape))));
+        Assert.True(PauseMenuDisplaySystem.IsTogglePressed(Frame(
+            device: PlayerInputDevice.Gamepad,
+            gamepadConnected: true,
+            pressed: PlayerInputFrame.Mask(PlayerButton.Start))));
+        Assert.False(PauseMenuDisplaySystem.IsTogglePressed(Frame(
+            device: PlayerInputDevice.Gamepad,
+            gamepadConnected: true,
+            pressed: PlayerInputFrame.Mask(PlayerButton.Back))));
     }
 
     [Fact]
@@ -773,7 +808,7 @@ public class PlayerInputArchitectureTests
     }
 
     [Fact]
-    public void Gamepad_start_hold_triggers_skip_dialog_delegate_without_click_fallback()
+    public void Gamepad_x_hold_triggers_skip_dialog_delegate_without_click_fallback()
     {
         EventManager.Clear();
         var entityManager = CreateSceneEntityManager();
@@ -786,7 +821,8 @@ public class PlayerInputArchitectureTests
         ui.EventType = UIElementEventType.SkipDialog;
         entityManager.AddComponent(skipButton, new HotKey
         {
-            Button = FaceButton.Start,
+            Button = FaceButton.X,
+            KeyboardButton = PlayerButton.Space,
             RequiresHold = true,
             HoldDurationSeconds = 0.75f,
         });
@@ -797,13 +833,13 @@ public class PlayerInputArchitectureTests
                     sequence: 1,
                     device: PlayerInputDevice.Gamepad,
                     gamepadConnected: true,
-                    down: PlayerInputFrame.Mask(PlayerButton.Start),
-                    pressed: PlayerInputFrame.Mask(PlayerButton.Start)),
+                    down: PlayerInputFrame.Mask(PlayerButton.FaceX),
+                    pressed: PlayerInputFrame.Mask(PlayerButton.FaceX)),
                 Frame(
                     sequence: 2,
                     device: PlayerInputDevice.Gamepad,
                     gamepadConnected: true,
-                    down: PlayerInputFrame.Mask(PlayerButton.Start))));
+                    down: PlayerInputFrame.Mask(PlayerButton.FaceX))));
         var hotKeys = new HotKeySystem(entityManager, null, null);
         int skipRequests = 0;
         EventManager.Subscribe<DialogSkipRequested>(_ => skipRequests++);
@@ -816,6 +852,83 @@ public class PlayerInputArchitectureTests
 
         Assert.Equal(1, skipRequests);
         Assert.False(ui.IsClicked);
+        EventManager.Clear();
+    }
+
+    [Fact]
+    public void Keyboard_space_hold_triggers_x_bound_dialog_skip()
+    {
+        EventManager.Clear();
+        var entityManager = CreateSceneEntityManager();
+        Entity skipButton = CreateUi(entityManager, "DialogEndButton", 10, new Rectangle(0, 0, 100, 40));
+        UIElement ui = skipButton.GetComponent<UIElement>();
+        ui.EventType = UIElementEventType.SkipDialog;
+        entityManager.AddComponent(skipButton, new HotKey
+        {
+            Button = FaceButton.X,
+            KeyboardButton = PlayerButton.Space,
+            RequiresHold = true,
+            HoldDurationSeconds = 0.75f,
+        });
+        var input = new PlayerInputSystem(
+            entityManager,
+            new FakeInputSource(
+                Frame(
+                    sequence: 1,
+                    down: PlayerInputFrame.Mask(PlayerButton.Space),
+                    pressed: PlayerInputFrame.Mask(PlayerButton.Space)),
+                Frame(sequence: 2, down: PlayerInputFrame.Mask(PlayerButton.Space))));
+        var hotKeys = new HotKeySystem(entityManager, null, null);
+        int skipRequests = 0;
+        EventManager.Subscribe<DialogSkipRequested>(_ => skipRequests++);
+        var gameTime = new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.4));
+
+        input.Update(gameTime);
+        hotKeys.Update(gameTime);
+        input.Update(gameTime);
+        hotKeys.Update(gameTime);
+
+        Assert.Equal(1, skipRequests);
+        Assert.False(ui.IsClicked);
+        EventManager.Clear();
+    }
+
+    [Fact]
+    public void Changing_device_during_hotkey_hold_cancels_the_hold()
+    {
+        EventManager.Clear();
+        var entityManager = CreateSceneEntityManager();
+        Entity target = CreateUi(entityManager, "HoldTarget", 10, new Rectangle(0, 0, 100, 40));
+        entityManager.AddComponent(target, new HotKey
+        {
+            Button = FaceButton.X,
+            KeyboardButton = PlayerButton.Space,
+            RequiresHold = true,
+            HoldDurationSeconds = 0.75f,
+        });
+        var input = new PlayerInputSystem(
+            entityManager,
+            new FakeInputSource(
+                Frame(
+                    sequence: 1,
+                    down: PlayerInputFrame.Mask(PlayerButton.Space),
+                    pressed: PlayerInputFrame.Mask(PlayerButton.Space)),
+                Frame(
+                    sequence: 2,
+                    device: PlayerInputDevice.Gamepad,
+                    previousDevice: PlayerInputDevice.KeyboardMouse,
+                    gamepadConnected: true,
+                    down: PlayerInputFrame.Mask(PlayerButton.FaceX))));
+        var hotKeys = new HotKeySystem(entityManager, null, null);
+        var gameTime = new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.4));
+
+        input.Update(gameTime);
+        hotKeys.Update(gameTime);
+        input.Update(gameTime);
+        hotKeys.Update(gameTime);
+
+        Assert.False(target.GetComponent<UIElement>().IsClicked);
+        Assert.Empty(hotKeys.HoldProgress);
         EventManager.Clear();
     }
 
@@ -861,7 +974,7 @@ public class PlayerInputArchitectureTests
             10,
             new Rectangle(0, 0, 200, 200));
         var source = new MixedRumbleFakeInputSource(
-            Frame(sequence: 1, pointer: new Vector2(300, 100)),
+			Frame(sequence: 1, pointer: new Vector2(300, 100), gamepadConnected: true),
             Frame(
                 sequence: 2,
                 device: PlayerInputDevice.Gamepad,
@@ -945,7 +1058,8 @@ public class PlayerInputArchitectureTests
                 sequence: 3,
                 pointer: new Vector2(155, 100),
                 device: PlayerInputDevice.KeyboardMouse,
-                previousDevice: PlayerInputDevice.Gamepad));
+				previousDevice: PlayerInputDevice.Gamepad,
+				gamepadConnected: true));
         var input = new PlayerInputSystem(entityManager, source);
         var rumble = new ControllerRumbleSystem(entityManager, source);
         var interaction = new UIInteractionSystem(entityManager);
@@ -980,7 +1094,7 @@ public class PlayerInputArchitectureTests
             10,
             new Rectangle(0, 0, 200, 200));
         var source = new MixedRumbleFakeInputSource(
-            Frame(sequence: 1, pointer: new Vector2(300, 100)),
+			Frame(sequence: 1, pointer: new Vector2(300, 100), gamepadConnected: true),
             Frame(
                 sequence: 2,
                 device: PlayerInputDevice.Gamepad,
@@ -991,8 +1105,9 @@ public class PlayerInputArchitectureTests
                 sequence: 3,
                 pointer: new Vector2(155, 100),
                 device: PlayerInputDevice.KeyboardMouse,
-                previousDevice: PlayerInputDevice.Gamepad));
-        source.SetRumbleChannel("booster-pack-opening", 0.35f, 0.55f);
+				previousDevice: PlayerInputDevice.Gamepad,
+				gamepadConnected: true));
+		source.SetRumbleChannel("booster-pack-opening", new RumbleMotorState(0.35f, 0.55f));
         var input = new PlayerInputSystem(entityManager, source);
         var rumble = new ControllerRumbleSystem(entityManager, source);
         var interaction = new UIInteractionSystem(entityManager);

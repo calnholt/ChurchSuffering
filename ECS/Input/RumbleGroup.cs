@@ -4,5 +4,8 @@ namespace Crusaders30XX.ECS.Input
     {
         Default = 0,
         UiHover = 1,
+		HotKeyHold = 2,
+		Gameplay = 3,
+		Achievement = 4,
     }
 }

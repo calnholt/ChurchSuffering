@@ -6,10 +6,11 @@ namespace Crusaders30XX.ECS.Rendering;
 public class BrittleOverlay
 {
     private readonly Effect _effect;
+    private readonly EffectParameterCache _parameters;
 
     public bool IsAvailable => _effect != null;
 
-    public Texture2D BackgroundTexture { get; set; }
+    public Vector2 Resolution { get; set; } = new(Game1.VirtualWidth, Game1.VirtualHeight);
     public float Time { get; set; }
     public Vector2 CardCenter { get; set; }
     public float CardScale { get; set; } = 1f;
@@ -39,6 +40,7 @@ public class BrittleOverlay
     public BrittleOverlay(Effect effect)
     {
         _effect = effect;
+        _parameters = new EffectParameterCache(effect);
     }
 
     public void Begin(SpriteBatch spriteBatch)
@@ -50,34 +52,33 @@ public class BrittleOverlay
         Viewport vp = spriteBatch.GraphicsDevice.Viewport;
         Matrix projection = Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, 1);
 
-        _effect.Parameters["MatrixTransform"]?.SetValue(projection);
-        _effect.Parameters["iResolution"]?.SetValue(new Vector2(vp.Width, vp.Height));
-        _effect.Parameters["iTime"]?.SetValue(Time);
-        _effect.Parameters["BackgroundTexture"]?.SetValue(BackgroundTexture);
-        _effect.Parameters["CARD_CENTER"]?.SetValue(CardCenter);
-        _effect.Parameters["CARD_SCALE"]?.SetValue(CardScale);
-        _effect.Parameters["CARD_ROTATION"]?.SetValue(CardRotation);
+        _parameters.Set("MatrixTransform", projection);
+        _parameters.Set("iResolution", Resolution);
+        _parameters.Set("iTime", Time);
+        _parameters.Set("CARD_CENTER", CardCenter);
+        _parameters.Set("CARD_SCALE", CardScale);
+        _parameters.Set("CARD_ROTATION", CardRotation);
 
-        _effect.Parameters["GRID_MIN"]?.SetValue(GridMin);
-        _effect.Parameters["GRID_MAX"]?.SetValue(GridMax);
-        _effect.Parameters["GRID_SEED"]?.SetValue(GridSeed);
-        _effect.Parameters["CELL_JITTER"]?.SetValue(CellJitter);
-        _effect.Parameters["SEAM_WIDTH"]?.SetValue(SeamWidth);
-        _effect.Parameters["FALL_FRACTION"]?.SetValue(FallFraction);
-        _effect.Parameters["PERIOD_MIN"]?.SetValue(PeriodMin);
-        _effect.Parameters["PERIOD_MAX"]?.SetValue(PeriodMax);
-        _effect.Parameters["ATTACH_END"]?.SetValue(AttachEnd);
-        _effect.Parameters["FALL_END"]?.SetValue(FallEnd);
-        _effect.Parameters["MAX_FALL"]?.SetValue(MaxFall);
-        _effect.Parameters["MAX_DRIFT"]?.SetValue(MaxDrift);
-        _effect.Parameters["FALL_GRAVITY"]?.SetValue(FallGravity);
-        _effect.Parameters["FALL_ROT"]?.SetValue(FallRot);
-        _effect.Parameters["CHUNK_SIZE_PX"]?.SetValue(ChunkSizePx);
-        _effect.Parameters["MASK_THRESHOLD"]?.SetValue(MaskThreshold);
-        _effect.Parameters["DEBRIS_DARK"]?.SetValue(DebrisDark);
-        _effect.Parameters["EDGE_GLOW"]?.SetValue(EdgeGlow);
-        _effect.Parameters["EDGE_GLOW_AMT"]?.SetValue(EdgeGlowAmount);
-        _effect.Parameters["HOLE_DARKEN"]?.SetValue(HoleDarken);
+        _parameters.Set("GRID_MIN", GridMin);
+        _parameters.Set("GRID_MAX", GridMax);
+        _parameters.Set("GRID_SEED", GridSeed);
+        _parameters.Set("CELL_JITTER", CellJitter);
+        _parameters.Set("SEAM_WIDTH", SeamWidth);
+        _parameters.Set("FALL_FRACTION", FallFraction);
+        _parameters.Set("PERIOD_MIN", PeriodMin);
+        _parameters.Set("PERIOD_MAX", PeriodMax);
+        _parameters.Set("ATTACH_END", AttachEnd);
+        _parameters.Set("FALL_END", FallEnd);
+        _parameters.Set("MAX_FALL", MaxFall);
+        _parameters.Set("MAX_DRIFT", MaxDrift);
+        _parameters.Set("FALL_GRAVITY", FallGravity);
+        _parameters.Set("FALL_ROT", FallRot);
+        _parameters.Set("CHUNK_SIZE_PX", ChunkSizePx);
+        _parameters.Set("MASK_THRESHOLD", MaskThreshold);
+        _parameters.Set("DEBRIS_DARK", DebrisDark);
+        _parameters.Set("EDGE_GLOW", EdgeGlow);
+        _parameters.Set("EDGE_GLOW_AMT", EdgeGlowAmount);
+        _parameters.Set("HOLE_DARKEN", HoleDarken);
 
         spriteBatch.Begin(
             SpriteSortMode.Deferred,
@@ -91,7 +92,7 @@ public class BrittleOverlay
 
     public void Draw(SpriteBatch spriteBatch, Texture2D source)
     {
-        if (_effect == null || source == null || BackgroundTexture == null) return;
+        if (_effect == null || source == null) return;
         spriteBatch.Draw(source, spriteBatch.GraphicsDevice.Viewport.Bounds, Color.White);
     }
 

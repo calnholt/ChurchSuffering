@@ -1,6 +1,7 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Data.Save;
 using System.Collections.Generic;
+using System;
 
 namespace Crusaders30XX.ECS.Events
 {
@@ -16,6 +17,49 @@ namespace Crusaders30XX.ECS.Events
 	public class LoadSceneEvent {
 		public SceneId Scene;
 		public SceneId PreviousScene { get; set; } = SceneId.None;
+	}
+
+	public class SceneTransitionRequested
+	{
+		public Guid PreparationId { get; set; }
+		public SceneId From { get; set; }
+		public SceneId To { get; set; }
+	}
+
+	public class PrepareSceneEvent
+	{
+		public Guid PreparationId { get; set; }
+		public SceneId Scene { get; set; }
+	}
+
+	public class ScenePreparationReady
+	{
+		public Guid PreparationId { get; set; }
+		public SceneId Scene { get; set; }
+	}
+
+	public class SceneDeactivating
+	{
+		public SceneId From { get; set; }
+		public SceneId To { get; set; }
+	}
+
+	public class SceneActivating
+	{
+		public Guid PreparationId { get; set; }
+		public SceneId From { get; set; }
+		public SceneId To { get; set; }
+	}
+
+	public class SceneActivated
+	{
+		public Guid PreparationId { get; set; }
+		public SceneId Scene { get; set; }
+	}
+
+	public class PrepareMusicTrackEvent
+	{
+		public MusicTrack Track { get; set; }
 	}
 
 	public class DeleteCachesEvent { public SceneId Scene; }

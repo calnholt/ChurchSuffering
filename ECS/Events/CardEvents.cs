@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Crusaders30XX.ECS.Components;
 using static Crusaders30XX.ECS.Systems.MustBeBlockedSystem;
+using Crusaders30XX.ECS.Rendering;
 
 namespace Crusaders30XX.ECS.Events
 {
@@ -62,6 +63,11 @@ namespace Crusaders30XX.ECS.Events
         public Vector2 Position { get; set; }
         public float Scale { get; set; } = 1f;
         public float Rotation { get; set; }
+    }
+
+    internal sealed class CardShaderPassEvent
+    {
+        public CardShaderPassContext Context { get; init; }
     }
 
     /// <summary>
@@ -553,6 +559,7 @@ namespace Crusaders30XX.ECS.Events
         BoosterPackReveal = 41,
         DeckShuffle = 42,
         ShieldBlock = 43,
+		GemDrop = 44,
     }
 
     /// <summary>

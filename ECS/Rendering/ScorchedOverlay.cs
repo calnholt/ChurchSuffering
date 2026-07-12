@@ -6,13 +6,16 @@ namespace Crusaders30XX.ECS.Rendering;
 public sealed class ScorchedOverlay
 {
     private readonly Effect _effect;
+    private readonly EffectParameterCache _parameters;
 
     public ScorchedOverlay(Effect effect)
     {
         _effect = effect;
+        _parameters = new EffectParameterCache(effect);
     }
 
     public bool IsAvailable => _effect != null;
+    public Vector2 Resolution { get; set; } = new(Game1.VirtualWidth, Game1.VirtualHeight);
     public float Time { get; set; }
     public Vector2 CardCenter { get; set; }
     public Vector2 CardSize { get; set; }
@@ -51,7 +54,7 @@ public sealed class ScorchedOverlay
         Matrix projection = Matrix.CreateOrthographicOffCenter(0, viewport.Width, viewport.Height, 0, 0, 1);
 
         Set("MatrixTransform", projection);
-        Set("iResolution", new Vector2(viewport.Width, viewport.Height));
+        Set("iResolution", Resolution);
         Set("iTime", Time);
         Set("CARD_CENTER", CardCenter);
         Set("CARD_SIZE", CardSize);
@@ -106,8 +109,8 @@ public sealed class ScorchedOverlay
         spriteBatch.End();
     }
 
-    private void Set(string parameterName, float value) => _effect.Parameters[parameterName]?.SetValue(value);
-    private void Set(string parameterName, Vector2 value) => _effect.Parameters[parameterName]?.SetValue(value);
-    private void Set(string parameterName, Vector3 value) => _effect.Parameters[parameterName]?.SetValue(value);
-    private void Set(string parameterName, Matrix value) => _effect.Parameters[parameterName]?.SetValue(value);
+    private void Set(string parameterName, float value) => _parameters.Set(parameterName, value);
+    private void Set(string parameterName, Vector2 value) => _parameters.Set(parameterName, value);
+    private void Set(string parameterName, Vector3 value) => _parameters.Set(parameterName, value);
+    private void Set(string parameterName, Matrix value) => _parameters.Set(parameterName, value);
 }

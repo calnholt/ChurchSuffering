@@ -104,4 +104,14 @@ namespace Crusaders30XX.ECS.Events
 		public List<string> CurrentRestrictionNames { get; set; } = new();
 		public bool TransitionToBattleOnComplete { get; set; }
 	}
-}
+
+	public class ClimbResourceAcquisitionAnimationRequested
+	{
+		public ClimbResourceSave Resources { get; set; } = new();
+	}
+
+	public class ClimbResourceHeaderPulseRequested
+	{
+		public ClimbResourceSave Resources { get; set; } = new();
+	}
+	}
