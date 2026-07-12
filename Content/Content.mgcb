@@ -913,6 +913,17 @@
 /processorParam:TextureFormat=Color
 /build:Climb_UI/white_gem.png
 
+#begin Climb_UI/gem_pouch.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Climb_UI/gem_pouch.png
+
 #begin Battle_UI/draw_pile.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2833,3 +2844,8 @@
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /build:SFX/deck-shuffle.wav
+
+#begin SFX/gem-drop.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/gem-drop.wav

@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Rendering;
+using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -116,6 +117,7 @@ namespace Crusaders30XX.ECS.Systems
 				EntityManager.AddComponent(retryBtn, new HotKey
 				{
 					Button = FaceButton.View,
+					KeyboardButton = PlayerButton.Enter,
 					RequiresHold = true,
 					HoldDurationSeconds = HoldDuration,
 					Position = HotKeyPosition.Below,
@@ -131,7 +133,12 @@ namespace Crusaders30XX.ECS.Systems
 				if (t != null) t.Position = new Vector2(btnRect.X, btnRect.Y);
 
 				var hotKey = retryBtn.GetComponent<HotKey>();
-				if (hotKey != null) hotKey.HoldDurationSeconds = HoldDuration;
+				if (hotKey != null)
+				{
+					hotKey.Button = FaceButton.View;
+					hotKey.KeyboardButton = PlayerButton.Enter;
+					hotKey.HoldDurationSeconds = HoldDuration;
+				}
 			}
 
 			bool tutorialOverlayActive = EntityManager.GetEntitiesWithComponent<InputContext>()

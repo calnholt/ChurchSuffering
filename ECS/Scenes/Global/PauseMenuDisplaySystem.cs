@@ -9,6 +9,7 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -30,6 +31,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
 		private readonly Texture2D _pixel;
+		private readonly HotKeyGlyphRenderer _hotKeyGlyphRenderer;
 
 		private Entity _rootEntity;
 		private Entity _blockerEntity;
@@ -150,7 +152,12 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch = spriteBatch;
 			_pixel = new Texture2D(graphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
-			EventManager.Subscribe<DeleteCachesEvent>(_ => DismissOverlay());
+			_hotKeyGlyphRenderer = new HotKeyGlyphRenderer(graphicsDevice, spriteBatch, _bodyFont);
+			EventManager.Subscribe<DeleteCachesEvent>(_ =>
+			{
+				DismissOverlay();
+				_hotKeyGlyphRenderer.Dispose();
+			});
 			EventManager.Subscribe<RunEndSequenceRequested>(_ => DismissOverlay());
 			EventManager.Subscribe<GuidedTutorialSkipRequested>(_ => DismissOverlay());
 		}
@@ -176,7 +183,7 @@ namespace Crusaders30XX.ECS.Systems
 				&& scene.Current != SceneId.None;
 
 			PlayerInputFrame input = PlayerInputService.GetFrame(EntityManager);
-			bool togglePressed = input.WasPressed(PlayerButton.Escape) || input.WasPressed(PlayerButton.Back);
+			bool togglePressed = IsTogglePressed(input);
 
 			if (overlay.Phase == PauseMenuPhase.Hidden)
 			{
@@ -213,6 +220,11 @@ namespace Crusaders30XX.ECS.Systems
 					BeginClose(overlay);
 				}
 			}
+		}
+
+		internal static bool IsTogglePressed(PlayerInputFrame input)
+		{
+			return input.WasPressed(PlayerButton.Escape) || input.WasPressed(PlayerButton.Start);
 		}
 
 		private PauseMenuOverlay EnsureOverlay()
@@ -627,12 +639,25 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawResumeHint(float alpha)
 		{
-			string text = "Press Esc to resume";
+			PlayerInputFrame input = PlayerInputService.GetFrame(EntityManager);
+			const string text = "Resume";
 			Vector2 size = _bodyFont.MeasureString(text) * HintScale;
-			var pos = new Vector2(
-				Game1.VirtualWidth - HintRight - size.X,
-				Game1.VirtualHeight - HintBottom - size.Y);
-			_spriteBatch.DrawString(_bodyFont, text, pos, Color.White * (0.35f * alpha), 0f, Vector2.Zero, HintScale, SpriteEffects.None, 0f);
+			const int radius = 18;
+			const int gap = 10;
+			Point glyphSize = input.Device == PlayerInputDevice.Gamepad
+				? _hotKeyGlyphRenderer.MeasureGamepad(FaceButton.Start, radius)
+				: _hotKeyGlyphRenderer.MeasureKeyboard(PlayerButton.Escape, radius, HintScale);
+			float right = Game1.VirtualWidth - HintRight;
+			float centerY = Game1.VirtualHeight - HintBottom - Math.Max(size.Y, glyphSize.Y) / 2f;
+			var textPos = new Vector2(right - size.X, centerY - size.Y / 2f);
+			int glyphCx = (int)Math.Round(textPos.X - gap - glyphSize.X / 2f);
+			int glyphCy = (int)Math.Round(centerY);
+			float hintAlpha = 0.45f * alpha;
+			_spriteBatch.DrawString(_bodyFont, text, textPos, Color.White * hintAlpha, 0f, Vector2.Zero, HintScale, SpriteEffects.None, 0f);
+			if (input.Device == PlayerInputDevice.Gamepad)
+				_hotKeyGlyphRenderer.DrawGamepad(FaceButton.Start, input.GamepadGlyphStyle, glyphCx, glyphCy, radius, HintScale, hintAlpha);
+			else
+				_hotKeyGlyphRenderer.DrawKeyboard(PlayerButton.Escape, glyphCx, glyphCy, radius, HintScale, hintAlpha);
 		}
 
 		private void DrawBorder(Rectangle rect, Color color, int thickness)

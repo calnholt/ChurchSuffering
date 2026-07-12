@@ -68,6 +68,8 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
     {
         public List<GlyphLayoutInfo> GlyphLayouts = new List<GlyphLayoutInfo>();
         public float LineHeightPx;
+        public int LineCount;
+        public float ContentHeightPx;
     }
 
     public static class RichTextFlattener
@@ -273,6 +275,8 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
             var lines = TextUtils.WrapText(font, text ?? string.Empty, scale, maxWidth);
             float lineHeight = font.MeasureString("Mg").Y * scale + lineSpacingPx;
             laid.LineHeightPx = lineHeight;
+            laid.LineCount = lines.Count;
+            laid.ContentHeightPx = lines.Count * lineHeight;
 
             int glyphIndex = 0;
             float y = startY;
@@ -298,5 +302,4 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
         }
     }
 }
-
 

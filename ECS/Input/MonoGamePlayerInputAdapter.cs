@@ -180,6 +180,7 @@ namespace Crusaders30XX.ECS.Input
                 || gamepad.Buttons.B == ButtonState.Pressed);
             Add(ref mask, PlayerButton.Escape, keyboard.IsKeyDown(Keys.Escape));
             Add(ref mask, PlayerButton.Back, gamepad.Buttons.Back == ButtonState.Pressed);
+            Add(ref mask, PlayerButton.FaceB, gamepad.Buttons.B == ButtonState.Pressed);
             Add(ref mask, PlayerButton.FaceX, gamepad.Buttons.X == ButtonState.Pressed);
             Add(ref mask, PlayerButton.FaceY, gamepad.Buttons.Y == ButtonState.Pressed);
             Add(ref mask, PlayerButton.Start, gamepad.Buttons.Start == ButtonState.Pressed);
@@ -187,6 +188,7 @@ namespace Crusaders30XX.ECS.Input
             Add(ref mask, PlayerButton.RightShoulder, gamepad.Buttons.RightShoulder == ButtonState.Pressed);
             Add(ref mask, PlayerButton.LeftStick, gamepad.Buttons.LeftStick == ButtonState.Pressed);
             Add(ref mask, PlayerButton.Space, keyboard.IsKeyDown(Keys.Space));
+            Add(ref mask, PlayerButton.Enter, keyboard.IsKeyDown(Keys.Enter));
             Add(ref mask, PlayerButton.Shift, keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift));
             Add(ref mask, PlayerButton.MoveUp, keyboard.IsKeyDown(Keys.W));
             Add(ref mask, PlayerButton.MoveDown, keyboard.IsKeyDown(Keys.S));

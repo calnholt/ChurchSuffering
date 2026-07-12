@@ -553,6 +553,7 @@ namespace Crusaders30XX.ECS.Events
         BoosterPackReveal = 41,
         DeckShuffle = 42,
         ShieldBlock = 43,
+		GemDrop = 44,
     }
 
     /// <summary>

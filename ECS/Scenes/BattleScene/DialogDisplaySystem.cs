@@ -14,6 +14,7 @@ using Crusaders30XX.ECS.Utils.RichText;
 using Crusaders30XX.ECS.Rendering;
 using System;
 using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -48,9 +49,6 @@ namespace Crusaders30XX.ECS.Systems
 
         [DebugEditable(DisplayName = "Rail Accent W (px)", Step = 1, Min = 1, Max = 12)]
         public int RailAccentWidthPx { get; set; } = 3;
-
-        [DebugEditable(DisplayName = "Rail Grad Steps", Step = 1, Min = 2, Max = 40)]
-        public int RailGradientSteps { get; set; } = 10;
 
         // Portrait
         [DebugEditable(DisplayName = "Portrait Left %", Step = 0.01f, Min = 0.05f, Max = 0.45f)]
@@ -146,9 +144,6 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Bottom Bar H", Step = 1, Min = 1, Max = 16)]
         public int BottomBarHeight { get; set; } = 4;
 
-        [DebugEditable(DisplayName = "Bottom Bar Steps", Step = 1, Min = 2, Max = 40)]
-        public int BottomBarGradientSteps { get; set; } = 10;
-
         // Skip button
         [DebugEditable(DisplayName = "Skip Btn Margin", Step = 1, Min = 0, Max = 200)]
         public int SkipBtnMargin { get; set; } = 16;
@@ -237,6 +232,7 @@ namespace Crusaders30XX.ECS.Systems
         // Rich text
         private FlattenedRichText _flat;
         private LaidOutText _layout;
+        private DialogBodyLayoutKey? _layoutKey;
         private List<float> _glyphRevealTimes = new List<float>();
         private float _effectsTimeSec = 0f;
 
@@ -626,6 +622,7 @@ namespace Crusaders30XX.ECS.Systems
             _cachedFilteredMessage = string.Empty;
             _cachedLineIndex = -1;
             _layout = null;
+            _layoutKey = null;
             _flat = null;
             _revealProgressSec = 0f;
             _revealedChars = 0;
@@ -651,6 +648,68 @@ namespace Crusaders30XX.ECS.Systems
             st.SegmentId = string.Empty;
             st.RequestId = Guid.Empty;
             PlayIntro(st);
+        }
+
+        internal void PrepareSnapshot(
+            DialogDefinition definition,
+            DialogPhase phase,
+            float phaseElapsedSeconds,
+            bool revealAll)
+        {
+            Open(definition);
+            var state = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
+            if (state == null) return;
+
+            state.Phase = phase;
+            _phaseElapsedSec = System.Math.Max(0f, phaseElapsedSeconds);
+            _effectsTimeSec = _phaseElapsedSec;
+            if (revealAll)
+            {
+                _revealedChars = _flat?.Glyphs?.Count ?? 0;
+                _lineComplete = true;
+                _glyphRevealTimes = Enumerable.Repeat(1f, _revealedChars).ToList();
+            }
+        }
+
+        internal IReadOnlyList<string> ValidateCatalogTextFits()
+        {
+            var errors = new List<string>();
+            var cinematicLayout = ComputeLayout(Game1.VirtualWidth, Game1.VirtualHeight);
+
+            foreach (var definitionEntry in DialogCatalog.GetAll())
+            {
+                ValidateLines(definitionEntry.Key, "lines", definitionEntry.Value.lines);
+                if (definitionEntry.Value.segments == null) continue;
+                foreach (var segment in definitionEntry.Value.segments)
+                {
+                    ValidateLines(definitionEntry.Key, segment.Key, segment.Value);
+                }
+            }
+
+            return errors;
+
+            void ValidateLines(string definitionId, string segmentId, IReadOnlyList<DialogLine> lines)
+            {
+                if (lines == null) return;
+                for (int index = 0; index < lines.Count; index++)
+                {
+                    var document = RichTextParser.Parse(lines[index]?.message ?? string.Empty);
+                    var flattened = RichTextFlattener.FlattenAndFilter(document, _bodyFont, BuildSettings());
+                    var textLayout = RichTextLayout.Layout(
+                        _bodyFont,
+                        flattened.FilteredPlain,
+                        BodyScale,
+                        cinematicLayout.BodyTextArea.Width,
+                        cinematicLayout.BodyTextArea.X,
+                        cinematicLayout.BodyTextArea.Y,
+                        0);
+                    if (textLayout.ContentHeightPx <= cinematicLayout.BodyTextArea.Height + 0.01f) continue;
+
+                    errors.Add(
+                        $"Dialog '{definitionId}' segment '{segmentId}' line {index + 1} " +
+                        $"uses {textLayout.ContentHeightPx:0.#}px of {cinematicLayout.BodyTextArea.Height}px.");
+                }
+            }
         }
 
         private void OnDialogueSequenceRequested(DialogueSequenceRequested request)
@@ -717,7 +776,6 @@ namespace Crusaders30XX.ECS.Systems
 
             var line = (st.Index >= 0 && st.Index < (st.Lines?.Count ?? 0)) ? st.Lines[st.Index] : null;
             string actor = line?.actor ?? string.Empty;
-            string message = line?.message ?? string.Empty;
 
             // 1. Idle overlay dim (idle phase only)
             if (st.Phase == DialogPhase.Idle)
@@ -727,65 +785,60 @@ namespace Crusaders30XX.ECS.Systems
             }
 
             // Animation progress
-            float railProgress = RailProgress();
-            float railAccentProgress = RailAccentProgress();
-            float portraitOpacity = PortraitOpacity();
-            float stageOpacity = StageOpacity();
-            float stageSlide = StageTranslateX();
-            float bottomBarProgress = BottomBarProgress();
-            float speakerDashProgress = SpeakerDashProgress();
-            float skipOpacity = SkipButtonOpacity();
-            float skipSlideY = SkipButtonSlideY();
+            var presentation = DialogPresentationMath.CalculateAnimation(
+                st.Phase,
+                _phaseElapsedSec,
+                OutroDurationSec);
 
             // 2. Rail gradient clip-reveal
-            DrawRail(layout, railProgress);
+            DrawRail(layout, presentation.RailProgress);
 
             // 3. Rail accent (scaleY)
-            if (railAccentProgress > 0f)
+            if (presentation.RailAccentProgress > 0f)
             {
-                int accentDrawH = (int)(layout.RailAccent.Height * railAccentProgress);
+                int accentDrawH = (int)(layout.RailAccent.Height * presentation.RailAccentProgress);
                 int accentY = layout.RailAccent.Y + (layout.RailAccent.Height - accentDrawH) / 2;
                 if (accentDrawH > 0)
                     _spriteBatch.Draw(_pixel, new Rectangle(layout.RailAccent.X, accentY, layout.RailAccent.Width, accentDrawH), RailAccentRed);
             }
 
             // 4. Bottom bar (scaleX from left)
-            if (bottomBarProgress > 0f)
+            if (presentation.BottomBarProgress > 0f)
             {
-                int barW = (int)System.Math.Ceiling(layout.BottomBar.Width * System.Math.Clamp(bottomBarProgress, 0f, 1f));
-                DrawHorizontalGradientStrip(layout.BottomBar.X, layout.BottomBar.Y, layout.BottomBar.Width, barW, layout.BottomBar.Height, BottomBarRed, BottomBarGradientSteps);
+                int barW = (int)System.Math.Ceiling(layout.BottomBar.Width * System.Math.Clamp(presentation.BottomBarProgress, 0f, 1f));
+                DrawHorizontalGradientStrip(layout.BottomBar.X, layout.BottomBar.Y, layout.BottomBar.Width, barW, layout.BottomBar.Height, BottomBarRed);
             }
 
             // 5. Portrait
-            DrawPortrait(layout, portraitOpacity, stageSlide, actor);
+            DrawPortrait(layout, presentation.PortraitOpacity);
 
             // 6. Stage (opacity + slide)
-            if (stageOpacity > 0f)
+            if (presentation.StageOpacity > 0f)
             {
                 int stageDrawY = layout.Stage.Y;
-                int stageDrawX = layout.Stage.X + (int)stageSlide;
+                int stageDrawX = layout.Stage.X + (int)presentation.StageTranslateX;
 
                 // Faint black background behind text
                 if (TextBgAlpha > 0f)
                     _spriteBatch.Draw(_pixel,
                         new Rectangle(stageDrawX, stageDrawY, layout.Stage.Width, layout.Stage.Height),
-                        Color.Black * TextBgAlpha * stageOpacity);
+                        Color.Black * TextBgAlpha * presentation.StageOpacity);
 
                 // 6a. Speaker dash (scaleX)
-                if (speakerDashProgress > 0f)
+                if (presentation.SpeakerDashProgress > 0f)
                 {
-                    int dashW = (int)(layout.SpeakerDash.Width * speakerDashProgress);
+                    int dashW = (int)(layout.SpeakerDash.Width * presentation.SpeakerDashProgress);
                     if (dashW > 0)
                         _spriteBatch.Draw(_pixel,
                             new Rectangle(stageDrawX + layout.SpeakerDash.X - layout.Stage.X, layout.SpeakerDash.Y, dashW, layout.SpeakerDash.Height),
-                            SpeakerDashRed * stageOpacity);
+                            SpeakerDashRed * presentation.StageOpacity);
                 }
 
                 // 6b. Speaker name
-                DrawSpeakerName(layout, stageDrawX, stageDrawY, stageOpacity, actor);
+                DrawSpeakerName(layout, stageDrawX, stageDrawY, presentation.StageOpacity, actor);
 
                 // 6c. Body text
-                DrawBodyText(layout, stageDrawX, stageDrawY, stageOpacity, message);
+                DrawBodyText(layout, stageDrawX, stageDrawY, presentation.StageOpacity);
             }
 
             // 7. Click prompt
@@ -797,7 +850,7 @@ namespace Crusaders30XX.ECS.Systems
             // 8. Skip button
             if (st.Phase != DialogPhase.Idle)
             {
-                DrawSkipButton(layout, skipOpacity, skipSlideY);
+                DrawSkipButton(layout, presentation.SkipButtonOpacity, presentation.SkipButtonSlideY);
             }
         }
 
@@ -811,7 +864,6 @@ namespace Crusaders30XX.ECS.Systems
             int dashX = stageX;
             int dashY = stageY + (SpeakerLineHeight - SpeakerDashHeight) / 2;
 
-            float nameMeasuredW = _titleFont.MeasureString("A").X * SpeakerNameScale;
             int nameX = dashX + SpeakerDashWidth + SpeakerNameGap;
             float nameY = stageY + (SpeakerLineHeight - _titleFont.MeasureString("A").Y * SpeakerNameScale) / 2f;
 
@@ -851,162 +903,10 @@ namespace Crusaders30XX.ECS.Systems
             };
         }
 
-        // Animation progress helpers
-        private float RailProgress()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 0f;
-            if (st.Phase == DialogPhase.Active) return 1f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.6f);
-                return EaseOut(t);
-            }
-            if (st.Phase == DialogPhase.Outro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / System.Math.Max(0.001f, OutroDurationSec * (0.5f / 0.52f)));
-                return 1f - EaseIn(t);
-            }
-            return 0f;
-        }
-
-        private float RailAccentProgress()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 0f;
-            if (st.Phase == DialogPhase.Active) return 1f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Max(0f, System.Math.Min(1f, (_phaseElapsedSec - 0.25f) / 0.55f));
-                return EaseOut(t);
-            }
-            if (st.Phase == DialogPhase.Outro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.4f);
-                return 1f - EaseIn(t);
-            }
-            return 0f;
-        }
-
-        private float PortraitOpacity()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 0f;
-            if (st.Phase == DialogPhase.Active) return 1f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Max(0f, System.Math.Min(1f, (_phaseElapsedSec - 0.2f) / 0.35f));
-                return EaseOut(t);
-            }
-            if (st.Phase == DialogPhase.Outro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.35f);
-                return 1f - EaseIn(t);
-            }
-            return 0f;
-        }
-
-        private float StageOpacity()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 0f;
-            if (st.Phase == DialogPhase.Active) return 1f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Max(0f, System.Math.Min(1f, (_phaseElapsedSec - 0.22f) / 0.5f));
-                return EaseOut(t);
-            }
-            if (st.Phase == DialogPhase.Outro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.35f);
-                return 1f - EaseOut(t);
-            }
-            return 0f;
-        }
-
-        private float StageTranslateX()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 40f;
-            if (st.Phase == DialogPhase.Active) return 0f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Max(0f, System.Math.Min(1f, (_phaseElapsedSec - 0.22f) / 0.5f));
-                return (1f - t) * 40f;
-            }
-            if (st.Phase == DialogPhase.Outro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.35f);
-                return t * 30f;
-            }
-            return 40f;
-        }
-
-        private float BottomBarProgress()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 0f;
-            if (st.Phase == DialogPhase.Active) return 1f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Max(0f, System.Math.Min(1f, (_phaseElapsedSec - 0.35f) / 0.55f));
-                return EaseOut(t);
-            }
-            if (st.Phase == DialogPhase.Outro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.3f);
-                return 1f - EaseOut(t);
-            }
-            return 0f;
-        }
-
-        private float SpeakerDashProgress()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 0f;
-            if (st.Phase == DialogPhase.Active) return 1f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Max(0f, System.Math.Min(1f, (_phaseElapsedSec - 0.22f) / 0.35f));
-                return EaseOut(t);
-            }
-            if (st.Phase == DialogPhase.Outro) return 0f;
-            return 0f;
-        }
-
-        private float SkipButtonOpacity()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return 0f;
-            if (st.Phase == DialogPhase.Idle) return 0f;
-            if (st.Phase == DialogPhase.Active) return 1f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.35f);
-                return EaseOut(t);
-            }
-            if (st.Phase == DialogPhase.Outro) return 0f;
-            return 0f;
-        }
-
-        private float SkipButtonSlideY()
-        {
-            var st = EntityManager.GetEntity("DialogOverlay")?.GetComponent<DialogOverlayState>();
-            if (st == null) return -12f;
-            if (st.Phase == DialogPhase.Idle) return -12f;
-            if (st.Phase == DialogPhase.Active) return 0f;
-            if (st.Phase == DialogPhase.Intro)
-            {
-                float t = System.Math.Min(1f, _phaseElapsedSec / 0.35f);
-                return (1f - t) * -12f;
-            }
-            if (st.Phase == DialogPhase.Outro) return -12f;
-            return -12f;
-        }
-
         private float PromptAlpha()
         {
-            float t = (float)(System.DateTime.Now.Ticks / 10000000.0) % PromptPulsePeriodSec / PromptPulsePeriodSec;
+            float period = System.Math.Max(0.001f, PromptPulsePeriodSec);
+            float t = (_effectsTimeSec % period) / period;
             float sin = (float)System.Math.Sin(t * System.Math.PI * 2) * 0.5f + 0.5f;
             return System.Math.Max(0f, PromptPulseMinAlpha + sin * (PromptPulseMaxAlpha - PromptPulseMinAlpha));
         }
@@ -1079,7 +979,7 @@ namespace Crusaders30XX.ECS.Systems
                 Color.White);
         }
 
-        private void DrawHorizontalGradientStrip(int x, int y, int fullWidth, int visibleWidth, int height, Color baseColor, int steps)
+        private void DrawHorizontalGradientStrip(int x, int y, int fullWidth, int visibleWidth, int height, Color baseColor)
         {
             if (fullWidth <= 0 || visibleWidth <= 0 || height <= 0) return;
 
@@ -1140,7 +1040,7 @@ namespace Crusaders30XX.ECS.Systems
             _bottomBarGradientTexture.SetData(data);
         }
 
-        private void DrawPortrait(CinematicLayout layout, float slotOpacity, float stageSlide, string actor)
+        private void DrawPortrait(CinematicLayout layout, float slotOpacity)
         {
             if (slotOpacity <= 0f) return;
 
@@ -1209,16 +1109,33 @@ namespace Crusaders30XX.ECS.Systems
                 nameColor = Color.Lerp(SpeakerNameSwapColor, SpeakerNameColor, System.Math.Min(1f, _portraitSwapTimer / 0.18f)) * opacity;
             }
 
-            var drawPos = new Vector2(stageDrawX + namePos.X - layout.Stage.X, namePos.Y);
+            var drawPos = DialogPresentationMath.TranslateStagePosition(
+                namePos,
+                layout.Stage,
+                stageDrawX,
+                stageDrawY);
             _spriteBatch.DrawString(_titleFont, safeActor, drawPos, nameColor, 0f, Vector2.Zero, SpeakerNameScale, SpriteEffects.None, 0f);
         }
 
-        private void DrawBodyText(CinematicLayout layout, int stageDrawX, int stageDrawY, float opacity, string message)
+        private void DrawBodyText(CinematicLayout layout, int stageDrawX, int stageDrawY, float opacity)
         {
-            if (_layout == null)
+            var layoutKey = new DialogBodyLayoutKey(
+                _cachedFilteredMessage ?? string.Empty,
+                BodyScale,
+                layout.BodyTextArea.Width,
+                layout.BodyTextArea.X,
+                layout.BodyTextArea.Y);
+            if (_layout == null || _layoutKey != layoutKey)
             {
-                int bodyX = stageDrawX + layout.BodyTextArea.X - layout.Stage.X;
-                _layout = RichTextLayout.Layout(_bodyFont, _cachedFilteredMessage ?? string.Empty, BodyScale, layout.BodyTextArea.Width, bodyX, layout.BodyTextArea.Y, 0);
+                _layout = RichTextLayout.Layout(
+                    _bodyFont,
+                    _cachedFilteredMessage ?? string.Empty,
+                    BodyScale,
+                    layout.BodyTextArea.Width,
+                    layout.BodyTextArea.X,
+                    layout.BodyTextArea.Y,
+                    0);
+                _layoutKey = layoutKey;
             }
 
             int toDraw = System.Math.Min(_revealedChars, _layout.GlyphLayouts.Count);
@@ -1230,6 +1147,11 @@ namespace Crusaders30XX.ECS.Systems
             {
                 var gl = _layout.GlyphLayouts[i];
                 var g = _flat.Glyphs[i];
+                var glyphDrawPosition = DialogPresentationMath.TranslateStagePosition(
+                    gl.BasePosition,
+                    layout.Stage,
+                    stageDrawX,
+                    stageDrawY);
                 bool hasVisual = HasVisualEffect(g.Effects);
                 if (!hasVisual)
                 {
@@ -1252,11 +1174,11 @@ namespace Crusaders30XX.ECS.Systems
                         // Text shadow pass
                         if (BodyTextShadowColor.A > 0)
                         {
-                            var shadowPos = gl.BasePosition + new Vector2(0, 2);
+                            var shadowPos = glyphDrawPosition + new Vector2(0, 2);
                             _spriteBatch.DrawString(_bodyFont, buff.ToString(), shadowPos, BodyTextShadowColor * opacity, 0f, Vector2.Zero, BodyScale, SpriteEffects.None, 0f);
                         }
 
-                        _spriteBatch.DrawString(_bodyFont, buff.ToString(), gl.BasePosition, drawColor, 0f, Vector2.Zero, BodyScale, SpriteEffects.None, 0f);
+                        _spriteBatch.DrawString(_bodyFont, buff.ToString(), glyphDrawPosition, drawColor, 0f, Vector2.Zero, BodyScale, SpriteEffects.None, 0f);
                         i = j;
                         continue;
                     }
@@ -1269,10 +1191,10 @@ namespace Crusaders30XX.ECS.Systems
                     for (int p = 0; p < BloomPasses; p++)
                     {
                         var offset = new Vector2((p - BloomPasses / 2f) * BloomRadius * 0.15f);
-                        _spriteBatch.DrawString(_bodyFont, gl.Character.ToString(), gl.BasePosition + xf.Offset + offset, Color.White * BloomIntensity * opacity, 0f, Vector2.Zero, BodyScale * xf.Scale, SpriteEffects.None, 0f);
+                        _spriteBatch.DrawString(_bodyFont, gl.Character.ToString(), glyphDrawPosition + xf.Offset + offset, Color.White * BloomIntensity * opacity, 0f, Vector2.Zero, BodyScale * xf.Scale, SpriteEffects.None, 0f);
                     }
                 }
-                _spriteBatch.DrawString(_bodyFont, gl.Character.ToString(), gl.BasePosition + xf.Offset, Color.White * xf.Alpha * opacity, 0f, Vector2.Zero, BodyScale * xf.Scale, SpriteEffects.None, 0f);
+                _spriteBatch.DrawString(_bodyFont, gl.Character.ToString(), glyphDrawPosition + xf.Offset, Color.White * xf.Alpha * opacity, 0f, Vector2.Zero, BodyScale * xf.Scale, SpriteEffects.None, 0f);
                 i++;
             }
         }
@@ -1396,7 +1318,12 @@ namespace Crusaders30XX.ECS.Systems
                 int y = SkipBtnMargin;
                 EntityManager.AddComponent(ent, new Transform { Position = new Vector2(x, y), ZOrder = ZOrder + 1 });
                 EntityManager.AddComponent(ent, new UIElement { Bounds = new Rectangle(x, y, btnW + borderPx * 2, btnH + borderPx * 2), IsInteractable = true, LayerType = UILayerType.Overlay, EventType = UIElementEventType.SkipDialog });
-                EntityManager.AddComponent(ent, new HotKey { Button = FaceButton.Start, RequiresHold = true });
+                EntityManager.AddComponent(ent, new HotKey
+                {
+                    Button = FaceButton.X,
+                    KeyboardButton = PlayerButton.Space,
+                    RequiresHold = true,
+                });
                 InputContextService.EnsureMember(
                     EntityManager,
                     ent,
@@ -1421,6 +1348,13 @@ namespace Crusaders30XX.ECS.Systems
                     ui.IsInteractable = true;
                     ui.EventType = UIElementEventType.SkipDialog;
                 }
+                var hotKey = ent.GetComponent<HotKey>();
+                if (hotKey != null)
+                {
+                    hotKey.Button = FaceButton.X;
+                    hotKey.KeyboardButton = PlayerButton.Space;
+                    hotKey.RequiresHold = true;
+                }
             }
         }
 
@@ -1433,6 +1367,7 @@ namespace Crusaders30XX.ECS.Systems
             _flat = RichTextFlattener.FlattenAndFilter(doc, _bodyFont, settings);
             _cachedFilteredMessage = _flat.FilteredPlain;
             _layout = null;
+            _layoutKey = null;
             _revealProgressSec = 0f;
             _revealedChars = 0;
             _glyphRevealTimes.Clear();

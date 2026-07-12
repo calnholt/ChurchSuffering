@@ -5,6 +5,7 @@ using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -22,6 +23,9 @@ namespace Crusaders30XX.ECS.Systems
 		private string _weaponArtKey = string.Empty;
 		private float _resourcePreviewAlpha;
 		private ClimbResourceSave _lastPreviewResources = new ClimbResourceSave();
+		private ClimbResourceSave _pulseResources = new ClimbResourceSave();
+		private float _resourcePulseElapsed = float.MaxValue;
+		private readonly Action<ClimbResourceHeaderPulseRequested> _pulseHandler;
 
 		[DebugEditable(DisplayName = "Header Height", Step = 1, Min = 40, Max = 180)]
 		public int HeaderHeight { get; set; } = 90;
@@ -53,6 +57,12 @@ namespace Crusaders30XX.ECS.Systems
 		public int ResourceIconSize { get; set; } = 24;
 		[DebugEditable(DisplayName = "Resource Fade Seconds", Step = 0.01f, Min = 0.01f, Max = 1f)]
 		public float ResourceFadeSeconds { get; set; } = 0.2f;
+		[DebugEditable(DisplayName = "Resource Pulse Duration", Step = 0.01f, Min = 0.05f, Max = 1f)]
+		public float ResourcePulseDuration { get; set; } = 0.28f;
+		[DebugEditable(DisplayName = "Resource Pulse Max Scale", Step = 0.01f, Min = 1f, Max = 1.5f)]
+		public float ResourcePulseMaxScale { get; set; } = 1.18f;
+		[DebugEditable(DisplayName = "Resource Pulse Highlight", Step = 0.01f, Min = 0f, Max = 1f)]
+		public float ResourcePulseHighlight { get; set; } = 0.65f;
 		[DebugEditable(DisplayName = "Resource Bar Border Thickness", Step = 1, Min = 1, Max = 6)]
 		public int ResourceBarBorderThickness { get; set; } = 2;
 		[DebugEditable(DisplayName = "Timeline Hourglass Width", Step = 1, Min = 3, Max = 24)]
@@ -116,6 +126,8 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch = spriteBatch;
 			_imageAssets = imageAssets;
 			_pixel = _imageAssets.GetPixel(Color.White);
+			_pulseHandler = OnResourcePulseRequested;
+			EventManager.Subscribe(_pulseHandler);
 			ClimbSceneDrawHelpers.EnsureHourglassTextures(_imageAssets);
 			ClimbSceneDrawHelpers.EnsureResourceTextures(_imageAssets);
 		}
@@ -148,6 +160,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				SyncWeaponArt();
 				UpdateResourcePreviewFade(gameTime);
+				_resourcePulseElapsed += Math.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
 			}
 		}
 
@@ -271,29 +284,66 @@ namespace Crusaders30XX.ECS.Systems
 			float previewAlpha = MathHelper.Clamp(_resourcePreviewAlpha, 0f, 1f);
 			bool showPreviewDelta = previewAlpha > 0.001f && delta != 0;
 
-			var amountSize = ClimbSceneDrawHelpers.MeasureBodyText(amountText, ResourceAmountFontScale);
-			var previewSize = ClimbSceneDrawHelpers.MeasureBodyText(previewText, ResourceAmountFontScale);
+			float pulse = GetResourcePulse(type);
+			float pulseScale = MathHelper.Lerp(1f, ResourcePulseMaxScale, pulse);
+			float fontScale = ResourceAmountFontScale * pulseScale;
+			int iconSize = Math.Max(1, (int)Math.Round(ResourceIconSize * pulseScale));
+			var amountSize = ClimbSceneDrawHelpers.MeasureBodyText(amountText, fontScale);
+			var previewSize = ClimbSceneDrawHelpers.MeasureBodyText(previewText, fontScale);
 			float amountWidth = Math.Max(amountSize.X, previewSize.X);
 			float reservedDeltaWidth = GetReservedDeltaSuffixWidth();
 			float textWidth = amountWidth + reservedDeltaWidth;
-			int groupW = ResourceIconSize + ResourceIconTextGap + (int)Math.Ceiling(textWidth);
+			int groupW = iconSize + ResourceIconTextGap + (int)Math.Ceiling(textWidth);
 			int iconX = rightX - groupW;
-			var iconPos = new Vector2(iconX, iconY);
-			ClimbSceneDrawHelpers.DrawResourceIcon(_spriteBatch, _graphicsDevice, _pixel, iconPos, type, ResourceIconSize, color);
-			var textPos = new Vector2(iconPos.X + ResourceIconSize + ResourceIconTextGap, iconPos.Y + ResourceAmountTextYOffset);
+			var iconPos = new Vector2(iconX, iconY - (iconSize - ResourceIconSize) * 0.5f);
+			var pulseColor = Color.Lerp(color, Color.White, pulse * ResourcePulseHighlight);
+			ClimbSceneDrawHelpers.DrawResourceIcon(_spriteBatch, _graphicsDevice, _pixel, iconPos, type, iconSize, pulseColor);
+			var textPos = new Vector2(iconPos.X + iconSize + ResourceIconTextGap, iconPos.Y + ResourceAmountTextYOffset);
+			var textColor = Color.Lerp(ClimbSceneDrawHelpers.White1, Color.White, pulse * ResourcePulseHighlight);
 
 			if (!showPreviewDelta)
 			{
-				ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, amountText, textPos, ResourceAmountFontScale, ClimbSceneDrawHelpers.White1);
+				ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, amountText, textPos, fontScale, textColor);
 				return iconX;
 			}
 
-			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, amountText, textPos, ResourceAmountFontScale, ClimbSceneDrawHelpers.White1 * (1f - previewAlpha));
-			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, previewText, textPos, ResourceAmountFontScale, ClimbSceneDrawHelpers.White1 * previewAlpha);
+			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, amountText, textPos, fontScale, textColor * (1f - previewAlpha));
+			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, previewText, textPos, fontScale, textColor * previewAlpha);
 			var deltaPos = new Vector2(textPos.X + amountWidth + ResourceAmountDeltaGap, textPos.Y);
 			var deltaColor = delta > 0 ? ClimbSceneDrawHelpers.GreenPositive : ClimbSceneDrawHelpers.Red2;
 			ClimbSceneDrawHelpers.DrawBodyText(_spriteBatch, deltaText, deltaPos, ResourceAmountFontScale, deltaColor * previewAlpha);
 			return iconX;
+		}
+
+		private void OnResourcePulseRequested(ClimbResourceHeaderPulseRequested evt)
+		{
+			if (evt?.Resources == null) return;
+			_pulseResources = CloneResources(evt.Resources);
+			_resourcePulseElapsed = 0f;
+		}
+
+		private float GetResourcePulse(ClimbResourceType type)
+		{
+			int amount = type switch
+			{
+				ClimbResourceType.Red => _pulseResources?.red ?? 0,
+				ClimbResourceType.White => _pulseResources?.white ?? 0,
+				_ => _pulseResources?.black ?? 0,
+			};
+			if (amount <= 0 || ResourcePulseDuration <= 0f || _resourcePulseElapsed >= ResourcePulseDuration) return 0f;
+			float progress = MathHelper.Clamp(_resourcePulseElapsed / ResourcePulseDuration, 0f, 1f);
+			return MathF.Sin(MathF.PI * progress);
+		}
+
+		public void Shutdown()
+		{
+			EventManager.Unsubscribe(_pulseHandler);
+		}
+
+		internal void SetResourcePulseForSnapshot(ClimbResourceSave resources, float progress)
+		{
+			_pulseResources = CloneResources(resources);
+			_resourcePulseElapsed = MathHelper.Clamp(progress, 0f, 1f) * ResourcePulseDuration;
 		}
 
 		private float GetReservedDeltaSuffixWidth()

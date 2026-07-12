@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Dialog;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
@@ -42,6 +43,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private NarrativeEventModalDisplaySystem _narrativeModal;
 		private DialogDisplaySystem _dialog;
 		private bool _modalOpened;
+		private string _dialogSample = "settled";
 
 		public ClimbSnapshotFixture(ClimbSnapshotVariant variant)
 		{
@@ -68,10 +70,26 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		};
 
 		public int WarmupFrames => _variant is ClimbSnapshotVariant.ReplacementModal or ClimbSnapshotVariant.InventoryOverlay ? 4 : 3;
-		public string OutputFileName => Id;
+		public string OutputFileName => _variant == ClimbSnapshotVariant.CharacterDialog
+			? _dialogSample
+			: Id;
 
 		public void Setup(DisplaySnapshotContext ctx, string[] args)
 		{
+			if (_variant == ClimbSnapshotVariant.CharacterDialog)
+			{
+				_dialogSample = args.Length == 0 ? "settled" : args[0].Trim().ToLowerInvariant();
+				if (args.Length > 1 || (_dialogSample != "intro" && _dialogSample != "settled"))
+				{
+					throw new DisplaySnapshotSetupException(
+						"climb-character-dialog accepts one optional variant: intro or settled.");
+				}
+			}
+			else if (args.Length > 0)
+			{
+				throw new DisplaySnapshotSetupException($"{Id} does not accept fixture arguments.");
+			}
+
 			ConfigureSave();
 			SetScene(ctx, SceneId.Climb);
 			EventManager.Publish(new LoadSceneEvent
@@ -90,6 +108,13 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			if (_variant == ClimbSnapshotVariant.CharacterDialog && _dialog != null)
 			{
 				_dialog.CharsPerSecond = 100000f;
+				var layoutErrors = _dialog.ValidateCatalogTextFits();
+				if (layoutErrors.Count > 0)
+				{
+					throw new DisplaySnapshotSetupException(
+						"Dialog catalog contains text that does not fit the dialogue stage:\n" +
+						string.Join("\n", layoutErrors));
+				}
 			}
 
 			if (_climbScene == null || _headerLayout == null || _columnLayout == null)
@@ -122,8 +147,22 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 			if (_variant == ClimbSnapshotVariant.CharacterDialog)
 			{
+				if (_dialog == null || !DialogCatalog.TryGet("nun_counsel", out var definition))
+				{
+					throw new DisplaySnapshotSetupException("Character dialogue snapshot data was unavailable.");
+				}
+				var snapshotDefinition = new DialogDefinition
+				{
+					id = definition.id,
+					lines = definition.ResolveSegment("climb_event").ToList(),
+				};
+				_dialog.PrepareSnapshot(
+					snapshotDefinition,
+					_dialogSample == "intro" ? DialogPhase.Intro : DialogPhase.Active,
+					_dialogSample == "intro" ? 0.4f : 1f,
+					revealAll: _dialogSample == "settled");
 				_climbScene.DrawBackgroundOnly();
-				_dialog?.Draw();
+				_dialog.Draw();
 				return;
 			}
 

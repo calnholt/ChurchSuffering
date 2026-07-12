@@ -932,6 +932,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				{
 					Succeeded = true,
 					EventSlotId = slot.id,
+					ResourcesGained = CloneClimbResources(slot.rewardResources),
 					RestrictedEntryId = restrictedEntryId,
 					RestrictionName = restrictionName,
 					RunLongPassivesChanged = runLongPassivesChanged,

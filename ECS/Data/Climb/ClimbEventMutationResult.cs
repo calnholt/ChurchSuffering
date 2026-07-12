@@ -1,3 +1,5 @@
+using Crusaders30XX.ECS.Data.Save;
+
 namespace Crusaders30XX.ECS.Data.Climb
 {
 	public sealed class ClimbEventMutationResult
@@ -11,6 +13,7 @@ namespace Crusaders30XX.ECS.Data.Climb
 		public string RunLongPassiveType { get; init; } = string.Empty;
 		public int RunLongPassiveAmount { get; init; }
 		public int RunLongPassiveTotal { get; init; }
+		public ClimbResourceSave ResourcesGained { get; init; } = new();
 		public string UpgradedEntryId { get; init; } = string.Empty;
 		public string UpgradedCardKey { get; init; } = string.Empty;
 		public bool ReachedFinalTime { get; init; }

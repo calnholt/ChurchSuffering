@@ -70,6 +70,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
 | `enemy-defeat-burst` | Enemy defeat pixel burst | Assembled portrait pixels, peak jitter buildup, and released explosion |
 | `pause-menu` | Pause menu | Persisted rumble toggle in enabled and disabled states |
+| `hotkey-hints` | Shared hotkey glyph renderer | Keyboard, Xbox, and PlayStation hint treatments and placement |
 | `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
 | `achievement-detail` | Achievement scene | Hover detail panel for a visible achievement |
@@ -86,6 +87,23 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
+| `climb-resource-acquisition` | Climb scene | Gem fall, pouch catch, and earned-resource pulse |
+
+---
+
+## `climb-resource-acquisition`
+
+Renders the production Climb resource acquisition overlay with a fixed reward of two red, one white, and one black gem. The variants sample the pouch entrance, weighted gem fall, first catch, and earned-color header pulse.
+
+```bash
+dotnet run -- snapshot climb-resource-acquisition entry --verify
+dotnet run -- snapshot climb-resource-acquisition fall --verify
+dotnet run -- snapshot climb-resource-acquisition catch --verify
+dotnet run -- snapshot climb-resource-acquisition pulse --verify
+./scripts/verify-climb-resource-acquisition-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/climb-resource-acquisition/`.
 
 ---
 
@@ -162,6 +180,21 @@ dotnet run -- snapshot pause-menu rumble-off --verify
 ```
 
 Approved images are `rumble-on.png` and `rumble-off.png` under `tests/VisualBaselines/pause-menu/`.
+
+---
+
+## `hotkey-hints`
+
+Renders the shared keyboard, Xbox, and PlayStation hotkey glyph treatments plus top, right, left, and below placement around a sample action.
+
+```bash
+dotnet run -- snapshot hotkey-hints keyboard --verify
+dotnet run -- snapshot hotkey-hints xbox --verify
+dotnet run -- snapshot hotkey-hints playstation --verify
+./scripts/verify-hotkey-hint-snapshots.sh
+```
+
+Approved images are `keyboard.png`, `xbox.png`, and `playstation.png` under `tests/VisualBaselines/hotkey-hints/`.
 
 ---
 
@@ -519,7 +552,8 @@ dotnet run -- snapshot climb-hazard-hover-preview
 dotnet run -- snapshot climb-character-hover-preview
 dotnet run -- snapshot climb-hazard-confirmation
 dotnet run -- snapshot climb-character-summary
-dotnet run -- snapshot climb-character-dialog
+dotnet run -- snapshot climb-character-dialog intro
+dotnet run -- snapshot climb-character-dialog settled
 dotnet run -- snapshot climb-active-events
 dotnet run -- snapshot climb-hover-preview
 dotnet run -- snapshot climb-sold-shop-slot
@@ -529,6 +563,16 @@ dotnet run -- snapshot climb-replacement-modal
 
 Modal variants draw the Climb scene plus the open modal overlay. The Character
 dialogue variant draws only the undimmed desert background and dialogue overlay.
+It accepts `intro` and `settled` samples, defaulting to `settled`; outputs are
+`intro.png` and `settled.png`. Both samples validate that every authored catalog
+line fits the production dialogue body area before rendering.
+
+Approved dialogue images are under
+`tests/VisualBaselines/climb-character-dialog/`. Verify both with:
+
+```bash
+./scripts/verify-climb-character-dialog-snapshots.sh
+```
 
 ---
 

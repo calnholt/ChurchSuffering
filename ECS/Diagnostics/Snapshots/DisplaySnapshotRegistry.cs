@@ -28,6 +28,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
 			Register(new EnemyAttackBannerSnapshotFixture());
 			Register(new EnemyDefeatBurstSnapshotFixture());
 			Register(new PauseMenuSnapshotFixture());
+			Register(new HotKeySnapshotFixture());
 			Register(new BattlePhaseTransitionSnapshotFixture());
 			Register(new AchievementSnapshotFixture(AchievementSnapshotVariant.Overview));
 			Register(new AchievementSnapshotFixture(AchievementSnapshotVariant.Detail));
@@ -46,6 +47,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.EncounterRewardModal));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ReplacementModal));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryOverlay));
+			Register(new ClimbResourceAcquisitionSnapshotFixture());
         }
 
         public static void Register(IDisplaySnapshotFixture fixture)

@@ -69,6 +69,7 @@ namespace Crusaders30XX.ECS.Systems
             string contextId = InputContextResolver.ResolveCommandContext(EntityManager);
             bool gameplayBlocked = StateSingleton.PreventClicking
                 && contextId == InputContextIds.Gameplay;
+            PlayerInputFrame frame = PlayerInputService.GetFrame(EntityManager);
 
             foreach ((Entity entity, float elapsed) in hotKeySystem.HoldProgress.ToList())
             {
@@ -81,10 +82,12 @@ namespace Crusaders30XX.ECS.Systems
 
                 Rectangle bounds = ui.Bounds;
                 if (bounds.Width < 2 || bounds.Height < 2) continue;
+                Point hintSize = hotKeySystem.GetHintSize(frame, hotKey);
+                if (hintSize == Point.Zero) continue;
                 var (centerX, centerY) = hotKeySystem.CalculateHintPosition(
                     bounds,
                     hotKey.Position,
-                    hotKeySystem.HintRadius,
+                    hintSize,
                     hotKeySystem.HintGapX,
                     hotKeySystem.HintGapY);
                 float progress = MathHelper.Clamp(
