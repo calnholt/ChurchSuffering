@@ -35,9 +35,10 @@ namespace Crusaders30XX.ECS.Systems
 		// Battle systems (logic and draw). Only present while in Battle
 	
 
-	private HandDisplaySystem _handDisplaySystem;
-	private CardHoverDetectionSystem _cardHoverDetectionSystem;
-	private CardVisualEffectsSuppressionSystem _cardVisualEffectsSuppressionSystem;
+		private HandDisplaySystem _handDisplaySystem;
+		private HandCardBoundsLateSystem _handCardBoundsLateSystem;
+		private CardHoverDetectionSystem _cardHoverDetectionSystem;
+		private CardVisualEffectsSuppressionSystem _cardVisualEffectsSuppressionSystem;
 		private BattleBackgroundSystem _battleBackgroundSystem;
 		private DrawPileDisplaySystem _drawPileDisplaySystem;
 		private ShuffleDeckDisplaySystem _shuffleDeckDisplaySystem;
@@ -731,7 +732,8 @@ namespace Crusaders30XX.ECS.Systems
 			_loadedSystems = true;
 			LoggingService.Append("BattleSceneSystem.AddBattleSystems", new System.Text.Json.Nodes.JsonObject { ["action"] = "Adding battle systems" });
 		_battleBackgroundSystem = new BattleBackgroundSystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
-		_handDisplaySystem = new HandDisplaySystem(_world.EntityManager, _graphicsDevice);
+			_handDisplaySystem = new HandDisplaySystem(_world.EntityManager);
+			_handCardBoundsLateSystem = new HandCardBoundsLateSystem(_world.EntityManager);
 		_cardHoverDetectionSystem = new CardHoverDetectionSystem(_world.EntityManager);
 		_cardVisualEffectsSuppressionSystem = new CardVisualEffectsSuppressionSystem(_world.EntityManager);
 			_cardZoneSystem = new CardZoneSystem(_world.EntityManager);
@@ -880,7 +882,8 @@ namespace Crusaders30XX.ECS.Systems
 			_rasterizerState = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
 			
 		// Register
-		_world.AddSystem(_handDisplaySystem);
+			_world.AddSystem(_handDisplaySystem);
+			_world.AddLateSystem(_handCardBoundsLateSystem);
 		_world.AddSystem(_cardHoverDetectionSystem);
 		_world.AddSystem(_cardVisualEffectsSuppressionSystem);
 		_world.AddSystem(_cardZoneSystem);

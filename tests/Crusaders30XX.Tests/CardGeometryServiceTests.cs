@@ -72,12 +72,13 @@ public sealed class CardGeometryServiceTests
     public void Resting_hand_card_geometry_matches_ui_bounds_after_layout()
     {
         var entityManager = BuildBattleHand(3, out var cards);
-        var display = new HandDisplaySystem(entityManager, null)
+        var display = new HandDisplaySystem(entityManager)
         {
-            HandHoverScale = 0.85f,
+            HandRestScale = 0.85f,
         };
 
         display.Update(Frame());
+        new HandCardBoundsLateSystem(entityManager).Update(Frame());
 
         var card = cards[1];
         var uiBounds = card.GetComponent<UIElement>().Bounds;
@@ -91,15 +92,16 @@ public sealed class CardGeometryServiceTests
     public void Hovered_hand_card_geometry_uses_full_scale()
     {
         var entityManager = BuildBattleHand(3, out var cards);
-        var display = new HandDisplaySystem(entityManager, null)
+        var display = new HandDisplaySystem(entityManager)
         {
-            HandHoverScale = 0.85f,
+            HandRestScale = 0.85f,
         };
         display.Update(Frame());
 
         var hovered = cards[1];
         hovered.GetComponent<UIElement>().IsHovered = true;
         display.Update(Frame());
+        new HandCardBoundsLateSystem(entityManager).Update(Frame());
 
         var geometry = CardGeometryService.GetVisualGeometry(entityManager, hovered);
         var settings = CardGeometryService.GetSettings(entityManager);

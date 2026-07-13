@@ -1283,6 +1283,26 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
+		public static int GetAcceptedDeckRewardMutationCount()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				return Math.Max(0, _save?.acceptedDeckRewardMutations ?? 0);
+			}
+		}
+
+		public static void RecordAcceptedDeckRewardMutation()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				if (_save == null) return;
+				_save.acceptedDeckRewardMutations = Math.Max(0, _save.acceptedDeckRewardMutations) + 1;
+				Persist();
+			}
+		}
+
 		public static void SetPendingDeckRewardOffer(DeckRewardOfferSave offer)
 		{
 			EnsureLoaded();

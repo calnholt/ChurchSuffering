@@ -8,7 +8,7 @@ namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 21;
+		public const int CURRENT_VERSION = 22;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -32,6 +32,8 @@ namespace Crusaders30XX.ECS.Data.Save
 		public WayStationMetaSave waystation { get; set; } = new WayStationMetaSave();
 		/// <summary>Exact unresolved deck reward offer shown after a quest reward.</summary>
 		public DeckRewardOfferSave pendingDeckRewardOffer { get; set; }
+		/// <summary>Accepted replacement or upgrade selections from quest deck-reward offers in this run.</summary>
+		public int acceptedDeckRewardMutations { get; set; }
 		public ClimbSaveState climb { get; set; } = new ClimbSaveState();
 	}
 

@@ -59,10 +59,10 @@ public sealed class CollectionProgressionTests : IDisposable
 	[Theory]
 	[InlineData(0, 0, 0, 20)]
 	[InlineData(19, 0, 19, 20)]
-	[InlineData(20, 1, 0, 30)]
-	[InlineData(49, 1, 29, 30)]
-	[InlineData(50, 2, 0, 30)]
-	public void Level_state_uses_twenty_then_thirty_point_thresholds(int total, int level, int inLevel, int required)
+	[InlineData(20, 1, 0, 50)]
+	[InlineData(69, 1, 49, 50)]
+	[InlineData(70, 2, 0, 50)]
+	public void Level_state_uses_twenty_then_fifty_point_thresholds(int total, int level, int inLevel, int required)
 	{
 		var actual = CollectionProgressionRules.GetLevelState(total);
 		Assert.Equal(level, actual.Level);
@@ -124,9 +124,10 @@ public sealed class CollectionProgressionTests : IDisposable
 	[Theory]
 	[InlineData(0, 20)]
 	[InlineData(19, 20)]
-	[InlineData(20, 50)]
-	[InlineData(49, 50)]
-	public void Next_level_threshold_uses_twenty_then_thirty_point_costs(int total, int expected)
+	[InlineData(20, 70)]
+	[InlineData(69, 70)]
+	[InlineData(70, 120)]
+	public void Next_level_threshold_uses_twenty_then_fifty_point_costs(int total, int expected)
 	{
 		Assert.Equal(expected, CollectionProgressionRules.GetNextLevelThresholdTotal(total));
 	}

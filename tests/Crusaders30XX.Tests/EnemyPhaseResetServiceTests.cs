@@ -4,6 +4,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Systems;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -11,7 +12,7 @@ namespace Crusaders30XX.Tests;
 public class EnemyPhaseResetServiceTests
 {
 	[Fact]
-	public void Reset_advances_phase_and_preserves_long_lived_battle_state()
+	public void Reset_advances_phase_and_clears_battle_passives()
 	{
 		var world = new World();
 		var phaseEntity = world.CreateEntity("PhaseState");
@@ -76,9 +77,13 @@ public class EnemyPhaseResetServiceTests
 			Passives =
 			{
 				[AppliedPassiveType.Sharpen] = 1,
-				[AppliedPassiveType.Armor] = 2,
 			},
 		});
+		foreach (var passive in AppliedPassivesManagementSystem.GetBattlePassives())
+		{
+			player.GetComponent<AppliedPassives>().Passives[passive] = 1;
+			enemy.GetComponent<AppliedPassives>().Passives[passive] = 1;
+		}
 
 		bool reset = EnemyPhaseResetService.TryResetForNextPhase(
 			world.EntityManager,
@@ -95,9 +100,12 @@ public class EnemyPhaseResetServiceTests
 		Assert.Equal(3, player.GetComponent<Temperance>().Amount);
 		Assert.False(player.GetComponent<AppliedPassives>().Passives.ContainsKey(AppliedPassiveType.Might));
 		Assert.True(player.GetComponent<AppliedPassives>().Passives.ContainsKey(AppliedPassiveType.Frostbite));
-		Assert.True(player.GetComponent<AppliedPassives>().Passives.ContainsKey(AppliedPassiveType.Burn));
 		Assert.False(enemy.GetComponent<AppliedPassives>().Passives.ContainsKey(AppliedPassiveType.Sharpen));
-		Assert.True(enemy.GetComponent<AppliedPassives>().Passives.ContainsKey(AppliedPassiveType.Armor));
+		foreach (var passive in AppliedPassivesManagementSystem.GetBattlePassives())
+		{
+			Assert.False(player.GetComponent<AppliedPassives>().Passives.ContainsKey(passive));
+			Assert.False(enemy.GetComponent<AppliedPassives>().Passives.ContainsKey(passive));
+		}
 		Assert.Empty(deck.Hand);
 		Assert.Empty(deck.DiscardPile);
 		Assert.Equal(3, deck.DrawPile.Count);

@@ -51,8 +51,8 @@ namespace Crusaders30XX.ECS.Services
 			}
 
 			ResetDeck(entityManager, random ?? Random.Shared);
-			ClearTurnPassives(entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault());
-			ClearTurnPassives(enemy);
+			ClearPhasePassives(entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault());
+			ClearPhasePassives(enemy);
 			BattleTransientStateCleanupService.ClearInteractionState(entityManager);
 
 			var actionPoints = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault()?.GetComponent<ActionPoints>();
@@ -120,13 +120,14 @@ namespace Crusaders30XX.ECS.Services
 			}
 		}
 
-		private static void ClearTurnPassives(Entity owner)
+		private static void ClearPhasePassives(Entity owner)
 		{
 			var passives = owner?.GetComponent<AppliedPassives>()?.Passives;
 			if (passives == null) return;
 
 			foreach (var passive in AppliedPassivesManagementSystem.GetTurnPassives()
-				.Concat(AppliedPassivesManagementSystem.GetTurnPassivesToDecrement()))
+				.Concat(AppliedPassivesManagementSystem.GetTurnPassivesToDecrement())
+				.Concat(AppliedPassivesManagementSystem.GetBattlePassives()))
 			{
 				passives.Remove(passive);
 			}

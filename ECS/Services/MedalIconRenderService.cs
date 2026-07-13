@@ -32,13 +32,14 @@ namespace Crusaders30XX.ECS.Services
             float scale = 1f,
             float rotationRad = 0f,
             float softenStrength = 0f,
-            float opacity = 1f)
+            float opacity = 1f,
+            bool usePostProcessing = true)
         {
             opacity = MathHelper.Clamp(opacity, 0f, 1f);
             var tex = TryLoadMedalTexture(imageAssets, medalId);
             if (tex != null)
             {
-                return DrawTextureMedal(spriteBatch, center, iconSize, medalId, tex, imageAssets, scale, rotationRad, softenStrength, opacity);
+                return DrawTextureMedal(spriteBatch, center, iconSize, medalId, tex, imageAssets, scale, rotationRad, softenStrength, opacity, usePostProcessing);
             }
             return DrawPlaceholderMedal(spriteBatch, graphicsDevice, font, center, iconSize, medalId, scale, rotationRad, opacity);
         }
@@ -53,7 +54,8 @@ namespace Crusaders30XX.ECS.Services
             float scale,
             float rotationRad,
             float softenStrength,
-            float opacity)
+            float opacity,
+            bool usePostProcessing)
         {
             int drawW = iconSize;
             int drawH = iconSize;
@@ -70,9 +72,18 @@ namespace Crusaders30XX.ECS.Services
             int left = (int)System.Math.Round(center.X - scaledDrawW / 2f);
             int top = (int)System.Math.Round(center.Y - scaledDrawH / 2f);
 
-            var scaledTex = imageAssets?.GetScaledMipmappedTexture($"{MedalAssetPrefix}{medalId}", tex, drawW, drawH, softenStrength) ?? tex;
-            var origin = new Vector2(scaledTex.Width / 2f, scaledTex.Height / 2f);
-            spriteBatch.Draw(scaledTex, center, null, Color.White * opacity, rotationRad, origin, animationScale, SpriteEffects.None, 0f);
+            if (usePostProcessing)
+            {
+                var scaledTex = imageAssets?.GetScaledMipmappedTexture($"{MedalAssetPrefix}{medalId}", tex, drawW, drawH, softenStrength) ?? tex;
+                var origin = new Vector2(scaledTex.Width / 2f, scaledTex.Height / 2f);
+                spriteBatch.Draw(scaledTex, center, null, Color.White * opacity, rotationRad, origin, animationScale, SpriteEffects.None, 0f);
+            }
+            else
+            {
+                var origin = new Vector2(tex.Width / 2f, tex.Height / 2f);
+                var rawScale = new Vector2(drawW / (float)tex.Width, drawH / (float)tex.Height) * animationScale;
+                spriteBatch.Draw(tex, center, null, Color.White * opacity, rotationRad, origin, rawScale, SpriteEffects.None, 0f);
+            }
             return new Rectangle(left, top, scaledDrawW, scaledDrawH);
         }
 

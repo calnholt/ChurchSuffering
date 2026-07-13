@@ -28,8 +28,6 @@ namespace Crusaders30XX.ECS.Systems
 		public int TopMargin { get; set; } = 20;
 		[DebugEditable(DisplayName = "Icon Size", Step = 1, Min = 8, Max = 512)]
 		public int IconSize { get; set; } = 119;
-		[DebugEditable(DisplayName = "Icon Soften Strength", Step = 0.01f, Min = 0f, Max = 4f)]
-		public float IconSoftenStrength { get; set; } = 0.4f;
 		[DebugEditable(DisplayName = "Spacing X", Step = 1, Min = 0, Max = 256)]
 		public int SpacingX { get; set; } = 12;
 		[DebugEditable(DisplayName = "Background Corner Radius", Step = 1, Min = 0, Max = 64)]
@@ -168,7 +166,7 @@ namespace Crusaders30XX.ECS.Systems
                     _imageAssets,
                     scalePulse,
                     rot,
-                    IconSoftenStrength);
+                    usePostProcessing: false);
 
 				if (m.Medal.MaxCount > 0)
 				{
@@ -233,4 +231,3 @@ namespace Crusaders30XX.ECS.Systems
     }
   }
 }
-

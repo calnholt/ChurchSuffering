@@ -2,7 +2,7 @@
 
 This document summarizes all passive effects in the game. Each passive has a duration type:
 - **(Turn)** - Resets at the end of each turn
-- **(Battle)** - Lasts for the entire battle
+- **(Battle)** - Lasts until the battle ends or a multi-phase boss advances to its next phase
 - **(Quest)** - Persists across battles
 
 ---
