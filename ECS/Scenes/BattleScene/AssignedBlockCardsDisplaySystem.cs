@@ -133,13 +133,13 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch.Draw(shield, Inflate(bounds, 3), foreground * 0.95f);
 			_spriteBatch.Draw(shield, bounds, Color.Lerp(background, new Color(18, 12, 17), 0.32f));
 
-			var icon = _imageAssets.TryGetTexture((assignment.EquipmentType ?? string.Empty).Trim().ToLowerInvariant());
+			var equipment = entity.GetComponent<EquippedEquipment>()?.Equipment;
+			var icon = EquipmentArtService.GetTexture(_imageAssets, equipment);
 			if (icon == null) return;
 			int size = Math.Min(Math.Min(bounds.Width - 12, bounds.Height - 18), Math.Max(12, EquipmentIconSize));
-			float aspect = icon.Height > 0 ? icon.Width / (float)icon.Height : 1f;
-			int width = aspect >= 1f ? size : Math.Max(1, (int)Math.Round(size * aspect));
-			int height = aspect >= 1f ? Math.Max(1, (int)Math.Round(size / aspect)) : size;
-			var destination = new Rectangle(bounds.Center.X - width / 2, bounds.Center.Y - height / 2 - 4, width, height);
+			var destination = EquipmentArtService.GetContainedBounds(
+				icon,
+				new Rectangle(bounds.Center.X - size / 2, bounds.Center.Y - size / 2 - 4, size, size));
 			_spriteBatch.Draw(icon, destination, Color.White);
 		}
 

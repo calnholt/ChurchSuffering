@@ -13,6 +13,24 @@ public sealed class CardDisplaySystemTests
 		Assert.Equal(0f, new CardRenderScaledEvent().Rotation);
 	}
 
+	[Fact]
+	public void CardRenderScaledEvent_does_not_prefer_cached_base_by_default()
+	{
+		Assert.False(new CardRenderScaledEvent().PreferCachedBase);
+	}
+
+	[Theory]
+	[InlineData(1f, 0, true)]
+	[InlineData(0.5f, 0, false)]
+	[InlineData(1f, 1, false)]
+	public void Base_cache_eligibility_bypasses_faded_and_animated_presentations(
+		float alpha,
+		int waivedPipCount,
+		bool expected)
+	{
+		Assert.Equal(expected, CardDisplaySystem.IsBaseCacheEligible(alpha, waivedPipCount));
+	}
+
     [Fact]
     public void CreateDescriptionTextLayout_keepsWrapMetricsStableAcrossVisualScales()
     {

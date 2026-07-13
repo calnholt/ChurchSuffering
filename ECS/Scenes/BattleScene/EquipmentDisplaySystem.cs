@@ -436,11 +436,9 @@ namespace Crusaders30XX.ECS.Systems
 			Texture2D texture = EquipmentArtService.GetTexture(_imageAssets, equipment);
 			if (texture == null) return;
 			int size = Math.Min(SlotIconSize, Math.Min(socketBounds.Width, socketBounds.Height));
-			var destination = new Rectangle(
-				socketBounds.Center.X - size / 2,
-				socketBounds.Center.Y - size / 2,
-				size,
-				size);
+			var destination = EquipmentArtService.GetContainedBounds(
+				texture,
+				new Rectangle(socketBounds.Center.X - size / 2, socketBounds.Center.Y - size / 2, size, size));
 			_spriteBatch.Draw(texture, destination, Color.White * opacity);
 		}
 

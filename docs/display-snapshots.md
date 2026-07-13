@@ -610,6 +610,8 @@ dotnet run -- snapshot climb-medal-tooltip-hover
 dotnet run -- snapshot climb-sold-shop-slot
 dotnet run -- snapshot climb-encounter-reward-modal
 dotnet run -- snapshot climb-replacement-modal
+dotnet run -- snapshot climb-inventory-overlay
+dotnet run -- snapshot climb-inventory-equipment-tooltip
 ```
 
 Modal variants draw the Climb scene plus the open modal overlay. The Character
@@ -623,6 +625,21 @@ Approved dialogue images are under
 
 ```bash
 ./scripts/verify-climb-character-dialog-snapshots.sh
+```
+
+The inventory variants cover the Run Overview's equipment art and its shared rich
+equipment tooltip. Approved images are under `tests/VisualBaselines/climb-inventory-overlay/`
+and `tests/VisualBaselines/climb-inventory-equipment-tooltip/`. Verify both with:
+
+```bash
+./scripts/verify-climb-inventory-snapshots.sh
+```
+
+Card-list renderer changes should also verify the replacement picker and default
+inventory overlay at the top, middle, and bottom of a deterministic 60-card list:
+
+```bash
+./scripts/verify-card-list-modal-snapshots.sh
 ```
 
 ---

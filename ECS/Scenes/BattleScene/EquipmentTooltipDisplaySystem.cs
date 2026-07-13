@@ -171,8 +171,9 @@ namespace Crusaders30XX.ECS.Systems
 			state.TargetVisible = hovered != null;
 			if (hovered != null)
 			{
-				state.EquipmentEntity = hovered;
-				LayoutTooltip(root, tooltipEntity, hovered, state);
+				state.EquipmentEntity = hovered.EquipmentEntity;
+				state.AnchorEntity = hovered.AnchorEntity;
+				LayoutTooltip(root, tooltipEntity, hovered.AnchorEntity, hovered.EquipmentEntity, state);
 			}
 
 			float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -219,26 +220,47 @@ namespace Crusaders30XX.ECS.Systems
 					new Rectangle(0, 0, state.Bounds.Width, state.Bounds.Height));
 		}
 
-		private Entity FindHoveredEquipment()
+		private HoveredEquipment FindHoveredEquipment()
 		{
-			return EntityManager.GetEntitiesWithComponent<EquippedEquipment>()
+			var explicitSources = EntityManager.GetEntitiesWithComponent<EquipmentTooltipSource>()
+				.Select(entity => new
+				{
+					Anchor = entity,
+					Source = entity.GetComponent<EquipmentTooltipSource>(),
+					Ui = entity.GetComponent<UIElement>(),
+				})
+				.Where(item => item.Source?.EquipmentEntity?.GetComponent<EquippedEquipment>()?.Equipment != null
+					&& string.Equals(item.Source.TooltipEntityName, _tooltipEntityName, StringComparison.OrdinalIgnoreCase)
+					&& item.Ui?.IsHovered == true
+					&& !item.Ui.IsHidden
+					&& item.Ui.TooltipType == TooltipType.Equipment)
+				.Select(item => new HoveredEquipment(item.Anchor, item.Source.EquipmentEntity));
+
+			var directSources = EntityManager.GetEntitiesWithComponent<EquippedEquipment>()
 				.Where(entity =>
 				{
 					var zone = entity.GetComponent<EquipmentZone>();
 					var ui = entity.GetComponent<UIElement>();
-					return (zone?.Zone ?? EquipmentZoneType.Default) == EquipmentZoneType.Default
+					return entity.GetComponent<EquipmentTooltipSource>() == null
+						&& (zone == null
+							|| zone.Zone is EquipmentZoneType.Default or EquipmentZoneType.AssignedBlock)
 						&& ui?.IsHovered == true
 						&& !ui.IsHidden
 						&& ui.TooltipType == TooltipType.Equipment;
 				})
-				.OrderByDescending(entity => entity.GetComponent<Transform>()?.ZOrder ?? 0)
-				.ThenByDescending(entity => entity.Id)
+				.Select(entity => new HoveredEquipment(entity, entity));
+
+			return explicitSources
+				.Concat(directSources)
+				.OrderByDescending(item => item.AnchorEntity.GetComponent<Transform>()?.ZOrder ?? 0)
+				.ThenByDescending(item => item.AnchorEntity.Id)
 				.FirstOrDefault();
 		}
 
 		private void LayoutTooltip(
 			Entity root,
 			Entity tooltipEntity,
+			Entity anchorEntity,
 			Entity equipmentEntity,
 			EquipmentTooltipState state)
 		{
@@ -246,8 +268,8 @@ namespace Crusaders30XX.ECS.Systems
 			int height = CalculateHeight(equipment);
 			Rectangle panelBounds = TransformResolverService.ResolveUIBounds(
 				EntityManager,
-				equipmentEntity,
-				equipmentEntity.GetComponent<UIElement>());
+				anchorEntity,
+				anchorEntity.GetComponent<UIElement>());
 			Vector2 rootWorld = root == null
 				? Vector2.Zero
 				: TransformResolverService.ResolveWorldPosition(EntityManager, root);
@@ -356,11 +378,9 @@ namespace Crusaders30XX.ECS.Systems
 			var icon = EquipmentArtService.GetTexture(_imageAssets, equipment);
 			if (icon != null)
 			{
-				var iconBounds = new Rectangle(
-					x - GutterIconSize / 2,
-					y,
-					GutterIconSize,
-					GutterIconSize);
+				var iconBounds = EquipmentArtService.GetContainedBounds(
+					icon,
+					new Rectangle(x - GutterIconSize / 2, y, GutterIconSize, GutterIconSize));
 				_spriteBatch.Draw(icon, iconBounds, Color.White * alpha);
 			}
 			y += GutterIconSize + GutterGap;
@@ -657,6 +677,8 @@ namespace Crusaders30XX.ECS.Systems
 				Math.Max(1, bounds.Width - amount * 2),
 				Math.Max(1, bounds.Height - amount * 2));
 		}
+
+		private sealed record HoveredEquipment(Entity AnchorEntity, Entity EquipmentEntity);
 
 		private void OnDeleteCaches(DeleteCachesEvent evt)
 		{

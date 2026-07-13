@@ -7,6 +7,7 @@ using Crusaders30XX.ECS.Data.Dialog;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Systems;
 using Microsoft.Xna.Framework;
@@ -30,6 +31,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		EncounterRewardModal,
 		ReplacementModal,
 		InventoryOverlay,
+		InventoryEquipmentTooltip,
+		CardListTop,
+		CardListMiddle,
+		CardListBottom,
 	}
 
 	public sealed class ClimbSnapshotFixture : IDisplaySnapshotFixture
@@ -70,13 +75,22 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			ClimbSnapshotVariant.EncounterRewardModal => "climb-encounter-reward-modal",
 			ClimbSnapshotVariant.ReplacementModal => "climb-replacement-modal",
 			ClimbSnapshotVariant.InventoryOverlay => "climb-inventory-overlay",
+			ClimbSnapshotVariant.InventoryEquipmentTooltip => "climb-inventory-equipment-tooltip",
+			ClimbSnapshotVariant.CardListTop => "card-list-modal-top",
+			ClimbSnapshotVariant.CardListMiddle => "card-list-modal-middle",
+			ClimbSnapshotVariant.CardListBottom => "card-list-modal-bottom",
 			_ => "climb",
 		};
 
 		public int WarmupFrames => _variant switch
 		{
 			ClimbSnapshotVariant.MedalTooltipHover => 8,
-			ClimbSnapshotVariant.ReplacementModal or ClimbSnapshotVariant.InventoryOverlay => 4,
+			ClimbSnapshotVariant.ReplacementModal
+				or ClimbSnapshotVariant.InventoryOverlay
+				or ClimbSnapshotVariant.InventoryEquipmentTooltip
+				or ClimbSnapshotVariant.CardListTop
+				or ClimbSnapshotVariant.CardListMiddle
+				or ClimbSnapshotVariant.CardListBottom => 4,
 			_ => 3,
 		};
 		public string OutputFileName => _variant == ClimbSnapshotVariant.CharacterDialog
@@ -114,6 +128,12 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_textTooltip = ctx.World.GetSystem<TooltipTextDisplaySystem>();
 			_rewardModal = ctx.World.GetSystem<RewardModalDisplaySystem>();
 			_cardListModal = ctx.World.GetSystem<CardListModalSystem>();
+			if (IsCardListScrollVariant() && _cardListModal != null)
+			{
+				// These fixtures validate ordering, clipping, and visible-row culling.
+				// Keep their pixels independent of driver-specific render-target cache warmup.
+				_cardListModal.UseCachedCardBasesForDiagnostics = false;
+			}
 			_narrativeModal = ctx.World.GetSystem<NarrativeEventModalDisplaySystem>();
 			_dialog = ctx.World.GetSystem<DialogDisplaySystem>();
 			if (_variant == ClimbSnapshotVariant.CharacterDialog && _dialog != null)
@@ -163,9 +183,13 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				OpenReplacementModal(ctx.World.EntityManager);
 			}
-			else if (_variant == ClimbSnapshotVariant.InventoryOverlay)
+			else if (IsInventoryVariant())
 			{
 				OpenInventoryOverlay(ctx.World.EntityManager);
+				if (_variant == ClimbSnapshotVariant.InventoryEquipmentTooltip)
+				{
+					ForceInventoryEquipmentHover(ctx.World.EntityManager);
+				}
 			}
 
 			if (_variant == ClimbSnapshotVariant.CharacterDialog)
@@ -203,7 +227,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				_cardListModal?.Draw();
 			}
-			else if (_variant == ClimbSnapshotVariant.InventoryOverlay)
+			else if (IsInventoryVariant())
 			{
 				_cardListModal?.Draw();
 			}
@@ -223,7 +247,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId)
 				?? new LoadoutDefinition { id = RunDeckService.PrimaryLoadoutId, name = "Deck" };
-			var cardKeys = new List<string>
+			var baseCardKeys = new List<string>
 			{
 				"strike|White",
 				"smite|White",
@@ -232,6 +256,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				"unburdened_strike|Black",
 				"hold_the_line|White",
 			};
+			var cardKeys = IsCardListScrollVariant()
+				? Enumerable.Range(0, 60).Select(index => baseCardKeys[index % baseCardKeys.Count]).ToList()
+				: baseCardKeys;
 			loadout.cards = cardKeys.Select((cardKey, index) => new LoadoutCardEntry
 			{
 				entryId = $"run_card_{index}",
@@ -242,10 +269,12 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			save.nextRunDeckEntryId = loadout.cards.Count;
 			loadout.weaponId = "sword";
 			loadout.temperanceId = "angelic_aura";
-			loadout.chestId = string.Empty;
-			loadout.legsId = string.Empty;
-			loadout.armsId = string.Empty;
-			loadout.headId = string.Empty;
+			bool inventorySnapshot = _variant is ClimbSnapshotVariant.InventoryOverlay
+				or ClimbSnapshotVariant.InventoryEquipmentTooltip;
+			loadout.chestId = inventorySnapshot ? "pierced_heart_plate" : string.Empty;
+			loadout.legsId = inventorySnapshot ? "fleetfoot_greaves" : string.Empty;
+			loadout.armsId = inventorySnapshot ? "knightly_gauntlets" : string.Empty;
+			loadout.headId = inventorySnapshot ? "helm_of_seeing" : string.Empty;
 			loadout.medalIds = new List<string>();
 			SaveCache.SaveLoadout(loadout);
 
@@ -579,8 +608,71 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				throw new DisplaySnapshotSetupException("No run deck cards were created.");
 			}
 
+			EnsureInventorySnapshotEquipment(entityManager);
+
 			_cardListModal.OpenInventoryForSnapshot("Run Overview", deck.Cards.ToList());
 			_cardListModal.Update(new GameTime(TimeSpan.FromSeconds(1d), TimeSpan.FromSeconds(1d / 60d)));
+			if (IsCardListScrollVariant())
+			{
+				float fraction = _variant switch
+				{
+					ClimbSnapshotVariant.CardListMiddle => 0.5f,
+					ClimbSnapshotVariant.CardListBottom => 1f,
+					_ => 0f,
+				};
+				_cardListModal.SetScrollFractionForDiagnostics(fraction);
+				_cardListModal.Update(new GameTime(TimeSpan.FromSeconds(2d), TimeSpan.FromSeconds(1d / 60d)));
+			}
+		}
+
+		private bool IsInventoryVariant() => _variant is
+			ClimbSnapshotVariant.InventoryOverlay or
+			ClimbSnapshotVariant.InventoryEquipmentTooltip or
+			ClimbSnapshotVariant.CardListTop or
+			ClimbSnapshotVariant.CardListMiddle or
+			ClimbSnapshotVariant.CardListBottom;
+
+		private bool IsCardListScrollVariant() => _variant is
+			ClimbSnapshotVariant.CardListTop or
+			ClimbSnapshotVariant.CardListMiddle or
+			ClimbSnapshotVariant.CardListBottom;
+
+		private static void EnsureInventorySnapshotEquipment(EntityManager entityManager)
+		{
+			var player = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+			if (player == null)
+			{
+				player = entityManager.CreateEntity("InventorySnapshotPlayer");
+				entityManager.AddComponent(player, new Player());
+			}
+
+			foreach (string equipmentId in new[] { "helm_of_seeing", "pierced_heart_plate", "knightly_gauntlets", "fleetfoot_greaves" })
+			{
+				if (entityManager.GetEntity("InventorySnapshot_" + equipmentId) != null) continue;
+				var equipment = EquipmentFactory.Create(equipmentId);
+				if (equipment == null) throw new DisplaySnapshotSetupException($"Failed to create equipment '{equipmentId}'");
+				var entity = entityManager.CreateEntity("InventorySnapshot_" + equipmentId);
+				equipment.Initialize(entityManager, entity);
+				entityManager.AddComponent(entity, new EquippedEquipment
+				{
+					EquippedOwner = player,
+					Equipment = equipment,
+				});
+			}
+		}
+
+		private void ForceInventoryEquipmentHover(EntityManager entityManager)
+		{
+			var source = entityManager.GetAllEntities()
+				.FirstOrDefault(entity => string.Equals(entity.Name, "CardListModal_Tooltip_equipment_Head", StringComparison.Ordinal));
+			var ui = source?.GetComponent<UIElement>();
+			if (ui == null)
+			{
+				throw new DisplaySnapshotSetupException("Inventory equipment tooltip source was unavailable.");
+			}
+
+			ui.IsHovered = true;
+			_cardListModal.Update(new GameTime(TimeSpan.FromSeconds(2d), TimeSpan.FromSeconds(1d)));
 		}
 
 		private static void SetScene(DisplaySnapshotContext ctx, SceneId sceneId)

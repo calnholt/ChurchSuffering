@@ -23,6 +23,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private AssignedBlockAnimationSystem _animation;
 		private AssignedBlockLateLayoutSystem _lateLayout;
 		private AssignedBlockCardsDisplaySystem _display;
+		private EquipmentTooltipDisplaySystem _tooltip;
 
 		public void Setup(DisplaySnapshotContext ctx, string[] args)
 		{
@@ -58,6 +59,11 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_animation = new AssignedBlockAnimationSystem(ctx.World.EntityManager);
 			_lateLayout = new AssignedBlockLateLayoutSystem(ctx.World.EntityManager);
 			_display = new AssignedBlockCardsDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch, ctx.ImageAssets);
+			var tooltipEntity = ctx.World.CreateEntity(EquipmentDisplaySystem.TooltipEntityName);
+			ctx.World.AddComponent(tooltipEntity, new EquipmentTooltipState());
+			ctx.World.AddComponent(tooltipEntity, new Transform { ZOrder = 10002 });
+			ctx.World.AddComponent(tooltipEntity, new UIElement { IsInteractable = false, IsHidden = true });
+			_tooltip = new EquipmentTooltipDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch, ctx.ImageAssets);
 
 			BuildVariant(ctx);
 			Advance(_variant == "entry-impact" ? 0.245f : 0.55f);
@@ -66,6 +72,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				_assignments[_assignments.Count / 2].GetComponent<UIElement>().IsHovered = true;
 				Advance(0.12f);
+				_tooltip.Update(new GameTime(TimeSpan.FromSeconds(1d), TimeSpan.FromSeconds(_tooltip.FadeSeconds)));
 			}
 			else if (_variant == "returning")
 			{
@@ -90,6 +97,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			ctx.SpriteBatch.Draw(_pixel, banner, new Color(15, 9, 14, 225));
 			DrawBorder(ctx.SpriteBatch, banner, new Color(122, 18, 32), 2);
 			_display.Draw();
+			_tooltip.Draw();
 		}
 
 		private void BuildVariant(DisplaySnapshotContext ctx)
@@ -104,20 +112,20 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				case "entry-impact":
 				case "returning":
 					AddCard(ctx, "mantlet", CardData.CardColor.White, 2);
-					AddEquipment(ctx, "chest", 3, new Color(117, 27, 35));
+					AddEquipment(ctx, "knightly_chest", 3, new Color(117, 27, 35));
 					AddCard(ctx, "stalwart", CardData.CardColor.Black, 4);
-					AddEquipment(ctx, "legs", 2, new Color(185, 180, 161));
+					AddEquipment(ctx, "knightly_grieves", 2, new Color(185, 180, 161));
 					AddCard(ctx, "hold_the_line", CardData.CardColor.Red, 3);
 					break;
 				case "dense-row":
 					AddCard(ctx, "mantlet", CardData.CardColor.White, 2);
-					AddEquipment(ctx, "head", 2, new Color(185, 180, 161));
+					AddEquipment(ctx, "knightly_helm", 2, new Color(185, 180, 161));
 					AddCard(ctx, "stalwart", CardData.CardColor.Black, 4);
-					AddEquipment(ctx, "chest", 3, new Color(117, 27, 35));
+					AddEquipment(ctx, "pierced_heart_plate", 3, new Color(117, 27, 35));
 					AddCard(ctx, "hold_the_line", CardData.CardColor.Red, 3);
-					AddEquipment(ctx, "arms", 2, new Color(64, 56, 66));
-					AddEquipment(ctx, "head", 4, new Color(185, 180, 161));
-					AddEquipment(ctx, "legs", 3, new Color(117, 27, 35));
+					AddEquipment(ctx, "knightly_gauntlets", 2, new Color(64, 56, 66));
+					AddEquipment(ctx, "helm_of_seeing", 4, new Color(185, 180, 161));
+					AddEquipment(ctx, "fleetfoot_greaves", 3, new Color(117, 27, 35));
 					break;
 			}
 		}
@@ -141,16 +149,21 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			});
 		}
 
-		private void AddEquipment(DisplaySnapshotContext ctx, string slot, int block, Color color)
+		private void AddEquipment(DisplaySnapshotContext ctx, string equipmentId, int block, Color color)
 		{
-			var entity = ctx.World.CreateEntity($"SnapshotEquipment_{slot}_{_assignments.Count}");
+			var entity = ctx.World.CreateEntity($"SnapshotEquipment_{equipmentId}_{_assignments.Count}");
+			var equipment = EquipmentFactory.Create(equipmentId);
+			if (equipment == null) throw new DisplaySnapshotSetupException($"Failed to create equipment '{equipmentId}'");
+			equipment.Initialize(ctx.World.EntityManager, entity);
 			ctx.World.AddComponent(entity, new Transform { Position = new Vector2(1540f, 650f), Scale = Vector2.One });
-			ctx.World.AddComponent(entity, new UIElement());
+			ctx.World.AddComponent(entity, new UIElement { TooltipType = TooltipType.Equipment });
+			ctx.World.AddComponent(entity, new EquippedEquipment { Equipment = equipment });
+			ctx.World.AddComponent(entity, new EquipmentZone { Zone = EquipmentZoneType.AssignedBlock });
 			AddAssignment(ctx, entity, new AssignedBlockCard
 			{
 				BlockAmount = block,
 				IsEquipment = true,
-				EquipmentType = slot,
+				EquipmentType = equipment.Slot.ToString(),
 				DisplayBgColor = color,
 				DisplayFgColor = Color.White,
 			});

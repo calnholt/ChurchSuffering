@@ -179,8 +179,8 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (assignment.IsEquipment)
 			{
-				ui.Tooltip = assignment.Tooltip ?? string.Empty;
-				ui.TooltipType = TooltipType.Text;
+				ui.Tooltip = string.Empty;
+				ui.TooltipType = TooltipType.Equipment;
 				ui.TooltipPosition = TooltipPosition.Above;
 				ui.TooltipOffsetPx = 10;
 				return;

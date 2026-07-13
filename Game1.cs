@@ -17,6 +17,8 @@ using System.IO;
 using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Data.Ids;
+using System.Collections.Generic;
 
 namespace Crusaders30XX;
 
@@ -85,6 +87,12 @@ public class Game1 : Game
     private DisplaySnapshotHost _snapshotHost;
     private readonly DisplaySnapshotLaunchOptions _snapshotOptions;
     private readonly TestFightLaunchOptions _testFightOptions;
+    private readonly CardListProfileLaunchOptions _cardListProfileOptions;
+#if DEBUG
+    private int _cardListProfileRenderedFrames;
+    private int _cardListProfileSettleFrames;
+    private int _cardListProfileMaxVisible;
+#endif
 #if DEBUG
     private bool _writePerfReportOnExit;
 #endif
@@ -120,10 +128,12 @@ public class Game1 : Game
     
     public Game1(
         DisplaySnapshotLaunchOptions snapshotOptions = null,
-        TestFightLaunchOptions testFightOptions = null)
+        TestFightLaunchOptions testFightOptions = null,
+        CardListProfileLaunchOptions cardListProfileOptions = null)
     {
         _snapshotOptions = snapshotOptions;
         _testFightOptions = testFightOptions;
+        _cardListProfileOptions = cardListProfileOptions;
         if (_testFightOptions != null)
         {
             TestFightRuntime.Configure(_testFightOptions);
@@ -135,6 +145,13 @@ public class Game1 : Game
         // Initial setup - will be adjusted by CalculateRenderDestination
         _graphics.PreferredBackBufferWidth = VirtualWidth;
         _graphics.PreferredBackBufferHeight = VirtualHeight;
+#if DEBUG
+        if (_cardListProfileOptions != null)
+        {
+            _graphics.SynchronizeWithVerticalRetrace = false;
+            IsFixedTimeStep = false;
+        }
+#endif
         
         _graphics.ApplyChanges();
         IsMouseVisible = false;
@@ -156,7 +173,8 @@ public class Game1 : Game
     protected override void Initialize()
     {
         LoggingService.Initialize();
-        CardUsageTelemetryRuntime.Initialize(_snapshotOptions == null && _testFightOptions == null);
+        CardUsageTelemetryRuntime.Initialize(
+            _snapshotOptions == null && _testFightOptions == null && _cardListProfileOptions == null);
         CalculateRenderDestination();
         // Initialize ECS World
         _world = new World();
@@ -166,6 +184,8 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
+        GpuProfiler.Initialize(GraphicsDevice);
+        GraphicsDevice.DeviceReset += (_, _) => GpuProfiler.Reset();
         _spriteRasterizer = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
         _imageAssets = new ImageAssetService(Content, GraphicsDevice);
         EventManager.Subscribe<DeleteCachesEvent>(_ => _imageAssets.ClearTransientCaches());
@@ -174,7 +194,7 @@ public class Game1 : Game
         FontSingleton.Initialize(Content);
 
         // Initialize Achievement system
-        if (_testFightOptions == null)
+        if (_testFightOptions == null && _cardListProfileOptions == null)
         {
             AchievementManager.Initialize(_world.EntityManager);
         }
@@ -356,11 +376,23 @@ public class Game1 : Game
                 SkipWipe = true,
             });
         }
+
+#if DEBUG
+        if (_cardListProfileOptions != null)
+        {
+            PrepareCardListProfile();
+        }
+#endif
     }
     
     protected override void Update(GameTime gameTime)
     {
-        FrameProfiler.BeginGameFrame(gameTime, _snapshotHost?.IsActive == true);
+        bool skipProfile = _snapshotHost?.IsActive == true || IsCardListProfileSettling();
+        FrameProfiler.BeginUpdateIteration(skipProfile);
+
+#if DEBUG
+        UpdateCardListProfileScroll();
+#endif
 
 #if DEBUG
         FrameProfiler.MeasureInclusive("Game1.Update", () => RunUpdate(gameTime));
@@ -440,8 +472,16 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
 #if DEBUG
-        FrameProfiler.MeasureInclusive("Game1.Draw", () => DrawGame(gameTime));
-        FrameProfiler.EndGameFrame(gameTime);
+        FrameProfiler.BeginRenderFrame(_snapshotHost?.IsActive == true || IsCardListProfileSettling());
+        try
+        {
+            FrameProfiler.MeasureInclusive("Game1.Draw.Commands", () => DrawGame(gameTime));
+        }
+        finally
+        {
+            FrameProfiler.EndRenderFrame();
+            AdvanceCardListProfile();
+        }
 #else
         DrawGame(gameTime);
 #endif
@@ -662,6 +702,106 @@ public class Game1 : Game
         _spriteBatch.End();
     }
 
+#if DEBUG
+    private void PrepareCardListProfile()
+    {
+        var definitions = CardFactory.GetAllCards()
+            .Where(pair => pair.Value != null && !pair.Value.IsWeapon && !pair.Value.IsToken)
+            .Select(pair => pair.Key)
+            .OrderBy(id => id)
+            .ToArray();
+        if (definitions.Length == 0)
+        {
+            throw new CardListProfileSetupException("No non-weapon cards are registered for card-list-profile");
+        }
+
+        var cards = new List<Entity>(60);
+        CardData.CardColor[] colors = { CardData.CardColor.Red, CardData.CardColor.White, CardData.CardColor.Black };
+        for (int i = 0; i < 60; i++)
+        {
+            var card = EntityFactory.CreateCardFromDefinition(
+                _world.EntityManager,
+                definitions[i % definitions.Length].ToKey(),
+                colors[i % colors.Length],
+                index: i,
+                isUpgraded: i % 5 == 0);
+            if (card != null) cards.Add(card);
+        }
+        if (cards.Count != 60)
+        {
+            throw new CardListProfileSetupException($"Expected 60 benchmark cards but created {cards.Count}");
+        }
+
+        _cardListModalSystem.OpenInventoryForSnapshot("60 Card Performance Profile", cards);
+        GpuProfiler.ResumeCapture();
+        Console.WriteLine($"[CardListProfile] prepared {cards.Count} cards at {Display.RenderWidth}x{Display.RenderHeight}");
+    }
+
+    private void UpdateCardListProfileScroll()
+    {
+        if (_cardListProfileOptions == null || IsCardListProfileSettling()) return;
+        const int traversalFrames = 120;
+        int phase = _cardListProfileRenderedFrames % (traversalFrames * 2);
+        float fraction = phase <= traversalFrames
+            ? phase / (float)traversalFrames
+            : 2f - phase / (float)traversalFrames;
+        _cardListModalSystem.SetScrollFractionForDiagnostics(fraction);
+    }
+
+    private bool IsCardListProfileSettling() =>
+        _cardListProfileOptions != null &&
+        _cardListProfileRenderedFrames >= CardListProfileLaunchOptions.WarmupFrames + CardListProfileLaunchOptions.MeasuredFrames;
+
+    private void AdvanceCardListProfile()
+    {
+        if (_cardListProfileOptions == null) return;
+        _cardListProfileMaxVisible = Math.Max(_cardListProfileMaxVisible, _cardListModalSystem.VisibleCardCountForDiagnostics);
+        _cardListProfileRenderedFrames++;
+
+        if (_cardListProfileRenderedFrames == CardListProfileLaunchOptions.WarmupFrames)
+        {
+            FrameProfiler.ResetSession();
+            Console.WriteLine("[CardListProfile] warm-up complete; measuring 300 frames");
+            return;
+        }
+
+        int measurementEnd = CardListProfileLaunchOptions.WarmupFrames + CardListProfileLaunchOptions.MeasuredFrames;
+        if (_cardListProfileRenderedFrames == measurementEnd)
+        {
+            GpuProfiler.PauseCapture();
+            Console.WriteLine($"[CardListProfile] measurement complete; resolving {GpuProfiler.PendingQueries} query pairs without blocking");
+            return;
+        }
+
+        if (_cardListProfileRenderedFrames <= measurementEnd) return;
+        _cardListProfileSettleFrames++;
+        if (GpuProfiler.PendingQueries == 0 || _cardListProfileSettleFrames >= CardListProfileLaunchOptions.MaxQuerySettleFrames)
+        {
+            FinishCardListProfile();
+        }
+    }
+
+    private void FinishCardListProfile()
+    {
+        const string scope = "CardListModalSystem.DrawForeground";
+        bool hasCpu = FrameProfiler.TryGetSessionStats(scope, gpu: false, out var cpu);
+        bool hasGpu = FrameProfiler.TryGetSessionStats(scope, gpu: true, out var gpu);
+        bool cpuPass = hasCpu && cpu.P95Ms < 8 && cpu.MaxMs <= 16.67;
+        bool gpuPass = GpuProfiler.TimerSupported && hasGpu && gpu.P95Ms < 8 && gpu.MaxMs <= 16.67;
+        bool pass = cpuPass && gpuPass;
+        const string reportPath = "logs/card-list-profile-report.txt";
+        FrameProfiler.WriteReport(reportPath, FrameProfiler.ActiveSceneId, ShaderRuntimeOptions.ShadersEnabled);
+        Console.WriteLine($"[CardListProfile] CPU p95={(hasCpu ? cpu.P95Ms.ToString("0.00") : "n/a")} ms max={(hasCpu ? cpu.MaxMs.ToString("0.00") : "n/a")} ms: {(cpuPass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"[CardListProfile] GPU p95={(hasGpu ? gpu.P95Ms.ToString("0.00") : "n/a")} ms max={(hasGpu ? gpu.MaxMs.ToString("0.00") : "n/a")} ms: {(gpuPass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"[CardListProfile] max visible submissions={_cardListProfileMaxVisible}, pending={GpuProfiler.PendingQueries}, report={reportPath}");
+        Console.WriteLine($"[CardListProfile] {(pass ? "PASS" : "FAIL")}");
+        Environment.ExitCode = pass ? 0 : 1;
+        Exit();
+    }
+#else
+    private bool IsCardListProfileSettling() => false;
+#endif
+
 	protected override void UnloadContent()
 	{
 		CardUsageTelemetryRuntime.ExportCsv();
@@ -680,7 +820,8 @@ public class Game1 : Game
 			}
 		}
 #endif
-		LoggingService.Flush();
+			LoggingService.Flush();
+			GpuProfiler.Shutdown();
 		try { _imageAssets?.Dispose(); } catch { }
 	try { FullScreenRenderTargetPool.DisposeAll(GraphicsDevice); } catch { }
 	try { CardShaderSurfacePool.DisposeAll(GraphicsDevice); } catch { }
@@ -724,7 +865,7 @@ public class Game1 : Game
         DisplayMetrics nextDisplay = DisplayMetrics.Calculate(
             presentation.BackBufferWidth,
             presentation.BackBufferHeight,
-            _snapshotOptions == null ? null : _snapshotOptions.RenderScaleOverride ?? 1f);
+            _cardListProfileOptions?.RenderScale ?? (_snapshotOptions == null ? null : _snapshotOptions.RenderScaleOverride ?? 1f));
         if (Display.RenderWidth != nextDisplay.RenderWidth || Display.RenderHeight != nextDisplay.RenderHeight)
         {
             FullScreenRenderTargetPool.DisposeAll(GraphicsDevice);

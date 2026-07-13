@@ -22,10 +22,14 @@ namespace Crusaders30XX.ECS.Systems
         private readonly SpriteBatch _spriteBatch;
         private readonly ImageAssetService _imageAssets;
         private readonly Dictionary<(string assetName, int artW, int artH, int artX, int artY, int cardW, int cardH, int radius), Texture2D> _clippedArtCache = new();
+        private readonly WeightedLruCache<CardBaseRenderModel, CachedCardSurface> _baseSurfaceCache;
         private readonly Texture2D _pixelTexture;
         private SpriteFont _nameFont = FontSingleton.TitleFont;
         private SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
         private CardGeometrySettings _settings;
+        private int _cacheRenderWidth;
+        private int _cacheRenderHeight;
+        private const long BaseSurfaceCacheBudgetBytes = 64L * 1024L * 1024L;
 
         internal readonly struct CardDescriptionTextLayout
         {
@@ -212,11 +216,18 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch = spriteBatch;
             _imageAssets = imageAssets;
             _pixelTexture = _imageAssets.GetPixel(Color.White);
+            _baseSurfaceCache = new WeightedLruCache<CardBaseRenderModel, CachedCardSurface>(
+                BaseSurfaceCacheBudgetBytes,
+                surface => surface.Texture?.Dispose());
+            _cacheRenderWidth = Game1.Display.RenderWidth;
+            _cacheRenderHeight = Game1.Display.RenderHeight;
 
             LoadTypeIconTextures();
             EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent);
             EventManager.Subscribe<CardRenderScaledEvent>(OnCardRenderScaledEvent);
             EventManager.Subscribe<CardRenderScaledRotatedEvent>(OnCardRenderScaledRotatedEvent);
+            EventManager.Subscribe<DeleteCachesEvent>(_ => ClearRenderCaches());
+            _graphicsDevice.DeviceReset += (_, _) => ClearRenderCaches();
         }
 
         private void LoadTypeIconTextures()
@@ -401,7 +412,10 @@ namespace Crusaders30XX.ECS.Systems
                         transform.Position = evt.Position;
                         transform.Scale = new Vector2(evt.Scale, evt.Scale);
                         transform.Rotation = evt.Rotation;
-                        RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation);
+                        CachedCardSurface cached = evt.PreferCachedBase
+                            ? GetOrCreateCachedBase(evt.Card, evt.Position, evt.Scale, evt.Rotation)
+                            : null;
+                        RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
                     }
                     finally
                     {
@@ -411,14 +425,17 @@ namespace Crusaders30XX.ECS.Systems
                     }
 
                     var ui = evt.Card.GetComponent<UIElement>();
-                    if (ui != null)
+                    if (ui != null && !ui.IsHidden)
                     {
                         ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
                     }
                 }
                 else
                 {
-                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation);
+                    CachedCardSurface cached = evt.PreferCachedBase
+                        ? GetOrCreateCachedBase(evt.Card, evt.Position, evt.Scale, evt.Rotation)
+                        : null;
+                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
                 }
             }
             finally
@@ -448,7 +465,12 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        private void RenderCardWithLifecycle(Entity card, Vector2 position, float scale, float rotation)
+        private void RenderCardWithLifecycle(
+            Entity card,
+            Vector2 position,
+            float scale,
+            float rotation,
+            CachedCardSurface cachedBase = null)
         {
             var transform = card.GetComponent<Transform>();
             var ui = card.GetComponent<UIElement>();
@@ -462,7 +484,23 @@ namespace Crusaders30XX.ECS.Systems
             });
             try
             {
-                DrawCard(card, position);
+                if (cachedBase != null)
+                {
+                    _spriteBatch.Draw(
+                        cachedBase.Texture,
+                        new Vector2(cachedBase.LogicalBounds.X, cachedBase.LogicalBounds.Y),
+                        null,
+                        Color.White,
+                        0f,
+                        Vector2.Zero,
+                        new Vector2(1f / Game1.Display.RenderScaleX, 1f / Game1.Display.RenderScaleY),
+                        SpriteEffects.None,
+                        0f);
+                }
+                else
+                {
+                    DrawCard(card, position);
+                }
             }
             finally
             {
@@ -474,6 +512,220 @@ namespace Crusaders30XX.ECS.Systems
                     Rotation = rotation
                 });
             }
+        }
+
+        private CachedCardSurface GetOrCreateCachedBase(Entity card, Vector2 position, float scale, float rotation)
+        {
+            if (!CanCacheBase(card, scale)) return null;
+            EnsureCacheMatchesRenderScale();
+
+            CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
+                EntityManager,
+                card,
+                position,
+                scale,
+                rotation);
+            Rectangle logicalBounds = geometry.Bounds;
+            int physicalWidth = Math.Max(1, (int)MathF.Ceiling(logicalBounds.Width * Game1.Display.RenderScaleX));
+            int physicalHeight = Math.Max(1, (int)MathF.Ceiling(logicalBounds.Height * Game1.Display.RenderScaleY));
+            CardBaseRenderModel model = CreateRenderModel(card, scale, rotation, physicalWidth, physicalHeight);
+            if (_baseSurfaceCache.TryGet(model, out CachedCardSurface cached) && !cached.Texture.IsDisposed)
+            {
+                return new CachedCardSurface(cached.Texture, logicalBounds);
+            }
+
+            if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
+                _graphicsDevice,
+                out RenderTargetBinding[] sceneTargets,
+                out _)) return null;
+
+            var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
+            var target = new RenderTarget2D(
+                _graphicsDevice,
+                physicalWidth,
+                physicalHeight,
+                false,
+                SurfaceFormat.Color,
+                DepthFormat.None,
+                0,
+                RenderTargetUsage.PreserveContents);
+            try
+            {
+                _spriteBatch.End();
+                _graphicsDevice.SetRenderTarget(target);
+                _graphicsDevice.Clear(Color.Transparent);
+                Matrix localTransform = Matrix.CreateTranslation(-logicalBounds.X, -logicalBounds.Y, 0f) *
+                    (Game1.Display.SpriteBatchTransform ?? Matrix.Identity);
+                _spriteBatch.Begin(
+                    SpriteSortMode.Immediate,
+                    BlendState.AlphaBlend,
+                    SamplerState.PointClamp,
+                    DepthStencilState.None,
+                    RasterizerState.CullNone,
+                    null,
+                    localTransform);
+                DrawCard(card, position);
+                _spriteBatch.End();
+                SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, sceneTargets);
+                SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
+            }
+            catch
+            {
+                try { _spriteBatch.End(); } catch { }
+                target.Dispose();
+                SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, sceneTargets);
+                SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(_graphicsDevice, _spriteBatch, state);
+                throw;
+            }
+
+            cached = new CachedCardSurface(target, logicalBounds);
+            _baseSurfaceCache.Add(model, cached, physicalWidth * (long)physicalHeight * 4L);
+            return cached;
+        }
+
+        private bool CanCacheBase(Entity card, float scale)
+        {
+            CardBase definition = card?.GetComponent<CardData>()?.Card;
+            if (definition == null || scale <= 0f) return false;
+            int vigorStacks = VigorService.GetPlayerVigorStacks(EntityManager);
+            return IsBaseCacheEligible(_drawAlpha, VigorService.GetWaivedPipCount(definition, vigorStacks));
+        }
+
+        internal static bool IsBaseCacheEligible(float alpha, int waivedPipCount)
+            => alpha >= 0.999f && waivedPipCount <= 0;
+
+        private CardBaseRenderModel CreateRenderModel(
+            Entity entity,
+            float scale,
+            float rotation,
+            int physicalWidth,
+            int physicalHeight)
+        {
+            CardData data = entity.GetComponent<CardData>();
+            CardBase card = data.Card;
+            int effectiveBlock;
+            try { effectiveBlock = BlockValueService.GetTotalBlockValue(entity); }
+            catch { effectiveBlock = card.Block; }
+            PhaseState phase = EntityManager.GetEntitiesWithComponent<PhaseState>()
+                .FirstOrDefault()?.GetComponent<PhaseState>();
+            var alternate = phase?.Sub == SubPhase.Action
+                ? AlternateCardPlayService.GetProfile(EntityManager, entity, SubPhase.Action)
+                : null;
+            int effectiveDamage = alternate?.TreatsAsAttack == true
+                ? GetAlternateAttackDamage(entity, alternate.AttackDamage)
+                : GetEffectiveDamage(entity, card);
+            return new CardBaseRenderModel(
+                card.CardId ?? string.Empty,
+                card.DisplayName ?? string.Empty,
+                card.GetDisplayText() ?? string.Empty,
+                string.Join("|", card.Cost ?? new List<string>()),
+                data.Color,
+                card.Type,
+                card.Damage,
+                card.Block,
+                effectiveDamage,
+                effectiveBlock,
+                card.IsFreeAction,
+                card.IsWeapon,
+                card.IsToken,
+                card.IsUpgraded,
+                entity.HasComponent<Colorless>(),
+                entity.HasComponent<SuppressStatDeltaDisplay>(),
+                alternate?.TreatsAsAttack == true,
+                alternate?.AttackDamage ?? 0,
+                alternate?.IsFreeAction == true,
+                GetStyleFingerprint(),
+                scale,
+                rotation,
+                physicalWidth,
+                physicalHeight);
+        }
+
+        private int GetStyleFingerprint()
+        {
+            CardGeometrySettings settings = GetSettings();
+            var hash = new HashCode();
+            hash.Add(settings.CardWidth);
+            hash.Add(settings.CardHeight);
+            hash.Add(settings.CardOffsetYExtra);
+            hash.Add(settings.CardCornerRadius);
+            hash.Add(StripeWidth);
+            hash.Add(GutterX);
+            hash.Add(GutterWidth);
+            hash.Add(GutterTopY);
+            hash.Add(TitleBandPadTop);
+            hash.Add(TitleBandPadLeft);
+            hash.Add(TitleBandPadRight);
+            hash.Add(TypeRowMarginTop);
+            hash.Add(RuleMarginTop);
+            hash.Add(NameFontScale);
+            hash.Add(CostPipSize);
+            hash.Add(CostPipGap);
+            hash.Add(CostLabelGap);
+            hash.Add(CostLabelFontScale);
+            hash.Add(CostPipOutlineFrac);
+            hash.Add(ContentMarginLeft);
+            hash.Add(ContentPadTop);
+            hash.Add(ContentPadRight);
+            hash.Add(DescFontScale);
+            hash.Add(TextBackgroundPaddingX);
+            hash.Add(TextBackgroundPaddingY);
+            hash.Add(TextBackgroundOpacity);
+            hash.Add(TextBackgroundBorderRadius);
+            hash.Add(ArtWidth);
+            hash.Add(ArtHeight);
+            hash.Add(ArtOffsetRight);
+            hash.Add(ArtOffsetBottom);
+            hash.Add(ChipSize);
+            hash.Add(ChipWidth);
+            hash.Add(ChipColumnX);
+            hash.Add(ChipColumnTopY);
+            hash.Add(ChipSlotHeight);
+            hash.Add(ChipCornerRadius);
+            hash.Add(ChipBorderThickness);
+            hash.Add(ChipValueFontScale);
+            hash.Add(ChipGap);
+            hash.Add(ChipColumnBottomPad);
+            hash.Add(LabelSlabHeight);
+            hash.Add(LabelSlabFontScale);
+            hash.Add(SlabWidth);
+            hash.Add(SlabHeight);
+            hash.Add(SlabCornerRadius);
+            hash.Add(SlabFontScale);
+            hash.Add(TypeIconScale);
+            hash.Add(TypeIconAlpha);
+            hash.Add(TypeIconBottomPad);
+            hash.Add(RuleHeight);
+            hash.Add(ChipScaleWithTitle);
+            hash.Add(ColorlessBackgroundR);
+            hash.Add(ColorlessBackgroundG);
+            hash.Add(ColorlessBackgroundB);
+            hash.Add(ColorlessPrimaryTextR);
+            hash.Add(ColorlessPrimaryTextG);
+            hash.Add(ColorlessPrimaryTextB);
+            hash.Add(ColorlessMutedTextR);
+            hash.Add(ColorlessMutedTextG);
+            hash.Add(ColorlessMutedTextB);
+            hash.Add(ColorlessSurfaceR);
+            hash.Add(ColorlessSurfaceG);
+            hash.Add(ColorlessSurfaceB);
+            return hash.ToHashCode();
+        }
+
+        private void EnsureCacheMatchesRenderScale()
+        {
+            if (_cacheRenderWidth == Game1.Display.RenderWidth &&
+                _cacheRenderHeight == Game1.Display.RenderHeight) return;
+            ClearRenderCaches();
+            _cacheRenderWidth = Game1.Display.RenderWidth;
+            _cacheRenderHeight = Game1.Display.RenderHeight;
+        }
+
+        private void ClearRenderCaches()
+        {
+            _baseSurfaceCache.Clear();
+            foreach (Texture2D texture in _clippedArtCache.Values) texture?.Dispose();
+            _clippedArtCache.Clear();
         }
 
         public void DrawCard(Entity entity, Vector2 position)
