@@ -829,6 +829,7 @@ namespace Crusaders30XX.ECS.Components
         public Entity Owner { get; set; }
         public FaceButton Button { get; set; } = FaceButton.Y;
         public PlayerButton? KeyboardButton { get; set; }
+        public bool IsKeyboardMouseEnabled { get; set; } = true;
         public bool RequiresHold { get; set; } = false;
         public float HoldDurationSeconds { get; set; } = 0.75f;
         public Entity ParentEntity { get; set; }

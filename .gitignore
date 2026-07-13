@@ -6,6 +6,7 @@ Content/obj/
 
 # Debug output (repo root only; do not use bare debug/ — it matches source folders named Debug on case-insensitive FS)
 /debug/
+/.venv-card-art-cleanup/
 logs/
 
 # Downloaded MGCB ffmpeg/ffprobe (see scripts/setup-mgcb-ffmpeg.sh)

@@ -771,6 +771,26 @@ public class PlayerInputArchitectureTests
     }
 
     [Fact]
+    public void Keyboard_mouse_disabled_hotkey_only_matches_gamepad_binding()
+    {
+        var hotKey = new HotKey
+        {
+            Button = FaceButton.B,
+            IsKeyboardMouseEnabled = false,
+        };
+
+        Assert.False(HotKeySystem.IsBindingPressed(
+            Frame(pressed: PlayerInputFrame.Mask(PlayerButton.Escape)),
+            hotKey));
+        Assert.True(HotKeySystem.IsBindingPressed(
+            Frame(
+                device: PlayerInputDevice.Gamepad,
+                gamepadConnected: true,
+                pressed: PlayerInputFrame.Mask(PlayerButton.FaceB)),
+            hotKey));
+    }
+
+    [Fact]
     public void Pause_toggle_uses_escape_and_start_but_not_back()
     {
         Assert.True(PauseMenuDisplaySystem.IsTogglePressed(

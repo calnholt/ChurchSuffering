@@ -38,6 +38,37 @@ dotnet run -- test-fight hammer skeleton hard
 dotnet publish -c Release
 ```
 
+## Local itch.io publishing
+
+The workstation-local `scripts/publish-itch-local.sh` script reproduces the itch.io
+release builds without using a GitHub-hosted runner. The script is intentionally
+gitignored because it is local release tooling rather than a shared CI entrypoint.
+
+Before the first publish, install `butler` and complete the macOS/Linux content
+pipeline setup described below. Then run from the repository root:
+
+```bash
+./scripts/publish-itch-local.sh
+```
+
+The script reads the release number from `VERSION`; it does not increment or commit
+the version. It builds MonoGame content once, creates self-contained `win-x64`,
+`osx-arm64`, and `osx-x64` builds, and pushes them to the `windows`,
+`mac-apple-silicon`, and `mac-intel` itch.io channels.
+
+Supply itch.io authentication through the hidden prompt, or export it for the current
+shell before running:
+
+```bash
+export BUTLER_API_KEY="..."
+./scripts/publish-itch-local.sh
+```
+
+After uploading, the script polls each channel for the exact value in `VERSION`. It
+deletes its temporary build directory only when all three channels verify. If a build,
+upload, or verification fails, it prints and preserves the temporary directory for
+inspection or retry.
+
 `profile-gpu` is optional and stripped before ordinary command parsing. On DesktopGL
 systems with OpenGL timestamp-query support it records delayed GPU milliseconds without
 waiting for results. Unsupported systems still report MonoGame rendering workload

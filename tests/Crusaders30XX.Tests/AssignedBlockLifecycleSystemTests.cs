@@ -83,11 +83,13 @@ public sealed class AssignedBlockLifecycleSystemTests : IDisposable
 
 		Assert.Null(older.GetComponent<HotKey>());
 		Assert.Equal(FaceButton.B, newer.GetComponent<HotKey>().Button);
+		Assert.False(newer.GetComponent<HotKey>().IsKeyboardMouseEnabled);
 
 		newer.GetComponent<AssignedBlockPresentation>().Phase = AssignedBlockPresentation.PhaseState.Returning;
 		system.Update(new GameTime());
 
 		Assert.Equal(FaceButton.B, older.GetComponent<HotKey>().Button);
+		Assert.False(older.GetComponent<HotKey>().IsKeyboardMouseEnabled);
 		Assert.Null(newer.GetComponent<HotKey>());
 	}
 

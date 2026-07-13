@@ -240,6 +240,7 @@ namespace Crusaders30XX.ECS.Systems
 
         internal static PlayerButton? ResolveKeyboardButton(HotKey hotKey)
         {
+            if (hotKey?.IsKeyboardMouseEnabled != true) return null;
             if (hotKey?.KeyboardButton != null) return hotKey.KeyboardButton;
             return hotKey?.Button switch
             {

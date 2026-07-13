@@ -35,9 +35,6 @@ namespace Crusaders30XX.ECS.Systems
 		public float ImpactSeconds { get; set; } = 0.08f;
 		[DebugEditable(DisplayName = "Return Seconds", Step = 0.01f, Min = 0f, Max = 1f)]
 		public float ReturnSeconds { get; set; } = 0.18f;
-		[DebugEditable(DisplayName = "Hover Lift", Step = 1, Min = 0, Max = 30)]
-		public float HoverLift { get; set; } = 8f;
-
 		public AssignedBlockAnimationSystem(EntityManager entityManager) : base(entityManager) { }
 
 		protected override IEnumerable<Entity> GetRelevantEntities() =>
@@ -87,13 +84,9 @@ namespace Crusaders30XX.ECS.Systems
 					: MathHelper.Clamp(CardScalePercent, 10f, 100f) * 0.01f;
 				float bottomOffset = GetVisualBottomOffset(assignment, targetScale);
 				float offsetIndex = index - (entities.Count - 1) * 0.5f;
-				float hoverLift = entity.GetComponent<UIElement>()?.IsHovered == true
-					&& presentation.Phase == AssignedBlockPresentation.PhaseState.Idle
-					? HoverLift
-					: 0f;
 				presentation.TargetPos = new Vector2(
 					anchorTop.X + offsetIndex * spacing,
-					anchorTop.Y + RailOffsetY - CardBottomGap - bottomOffset - hoverLift);
+					anchorTop.Y + RailOffsetY - CardBottomGap - bottomOffset);
 				Advance(entity, assignment, presentation, targetScale, dt);
 			}
 		}

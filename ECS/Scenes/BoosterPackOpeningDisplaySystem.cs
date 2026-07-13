@@ -21,6 +21,11 @@ namespace Crusaders30XX.ECS.Systems;
 [DebugTab("Booster Pack Opening")]
 public sealed class BoosterPackOpeningDisplaySystem : Core.System
 {
+	internal readonly record struct CardFanPlacement(
+		CardData.CardColor Color,
+		Vector2 Position,
+		float Rotation);
+
 	private const string OverlayEntityName = "BoosterPackOpeningOverlay";
 	private const string BlockerEntityName = "BoosterPackOpeningBlocker";
 	private const string EquipmentTooltipEntityName = "BoosterPack_EquipmentTooltip";
@@ -196,6 +201,15 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 
 	[DebugEditable(DisplayName = "Card Scale", Step = 0.01f, Min = 0.2f, Max = 2f)]
 	public float CardScale { get; set; } = 1.09f;
+
+	[DebugEditable(DisplayName = "Card Fan Horizontal Gap", Step = 1f, Min = 0f, Max = 160f)]
+	public float CardFanHorizontalGap { get; set; } = 34f;
+
+	[DebugEditable(DisplayName = "Card Fan Rear Drop", Step = 1f, Min = -100f, Max = 100f)]
+	public float CardFanRearDrop { get; set; } = 12f;
+
+	[DebugEditable(DisplayName = "Card Fan Rotation (deg)", Step = 0.5f, Min = 0f, Max = 30f)]
+	public float CardFanRotationDegrees { get; set; } = 5f;
 
 	[DebugEditable(DisplayName = "Medal Size", Step = 1, Min = 40, Max = 320)]
 	public int MedalSize { get; set; } = 156;
@@ -649,7 +663,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			var reward = pack?.rewards?[index];
 			if (reward != null && TryConfigureAuthoritativePreview(preview, reward, index))
 			{
-				PreparePreviewEntity(preview.PreviewEntity);
+				PreparePreviewEntities(preview);
 				PreloadLootTexture(preview, index);
 				loot.Add(preview);
 				continue;
@@ -669,7 +683,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 					break;
 			}
 
-			PreparePreviewEntity(preview.PreviewEntity);
+			PreparePreviewEntities(preview);
 			PreloadLootTexture(preview, index);
 			loot.Add(preview);
 		}
@@ -684,22 +698,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		preview.Id = reward.id;
 		if (kind == BoosterPackLootKind.Card)
 		{
-			preview.CardColor = Enum.TryParse<CardData.CardColor>(reward.cardColor, true, out var color)
-				? color
-				: CardData.CardColor.White;
-			preview.PreviewEntity = EntityFactory.CreateCardFromDefinition(
-				EntityManager, preview.Id, preview.CardColor, allowWeapons: false, index: index);
-			if (preview.PreviewEntity == null) return false;
-			if (preview.PreviewEntity.GetComponent<UIElement>() is UIElement ui)
-			{
-				ui.EventType = UIElementEventType.None;
-				ui.SecondaryEventType = UIElementEventType.None;
-				ui.TooltipPosition = TooltipPosition.Above;
-				ui.TooltipOffsetPx = 18;
-			}
-			if (preview.PreviewEntity.GetComponent<CardTooltip>() is CardTooltip tooltip) tooltip.CardColor = preview.CardColor;
-			EntityManager.AddComponent(preview.PreviewEntity, new CardSheen());
-			return true;
+			return ConfigureCardPreviewEntities(preview, index, allowWeapons: false);
 		}
 		if (kind == BoosterPackLootKind.Medal)
 		{
@@ -714,29 +713,52 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	{
 		var cards = CardFactory.GetAllCards().Keys.Select(id => id.ToKey()).ToList();
 		if (cards.Count == 0) return;
-		var colors = new[] { CardData.CardColor.White, CardData.CardColor.Red, CardData.CardColor.Black };
 		preview.Id = cards[_rng.Next(cards.Count)];
-		preview.CardColor = colors[_rng.Next(colors.Length)];
-		preview.PreviewEntity = EntityFactory.CreateCardFromDefinition(
-			EntityManager,
-			preview.Id,
-			preview.CardColor,
-			allowWeapons: true,
-			index: index);
-		if (preview.PreviewEntity == null) return;
+		ConfigureCardPreviewEntities(preview, index, allowWeapons: true);
+	}
 
-		if (preview.PreviewEntity.GetComponent<UIElement>() is UIElement ui)
+	private bool ConfigureCardPreviewEntities(
+		BoosterPackLootPreview preview,
+		int index,
+		bool allowWeapons)
+	{
+		foreach (var color in new[]
 		{
-			ui.EventType = UIElementEventType.None;
-			ui.SecondaryEventType = UIElementEventType.None;
-			ui.TooltipPosition = TooltipPosition.Above;
-			ui.TooltipOffsetPx = 18;
-		}
-		if (preview.PreviewEntity.GetComponent<CardTooltip>() is CardTooltip tooltip)
+			CardData.CardColor.White,
+			CardData.CardColor.Red,
+			CardData.CardColor.Black,
+		})
 		{
-			tooltip.CardColor = preview.CardColor;
+			var entity = EntityFactory.CreateCardFromDefinition(
+				EntityManager,
+				preview.Id,
+				color,
+				allowWeapons,
+				index);
+			if (entity == null)
+			{
+				DestroyPreviewEntities(preview);
+				return false;
+			}
+
+			if (entity.GetComponent<UIElement>() is UIElement ui)
+			{
+				ui.EventType = UIElementEventType.None;
+				ui.SecondaryEventType = UIElementEventType.None;
+				ui.TooltipPosition = TooltipPosition.Above;
+				ui.TooltipOffsetPx = 18;
+			}
+			if (entity.GetComponent<CardTooltip>() is CardTooltip tooltip)
+			{
+				tooltip.CardColor = color;
+			}
+			EntityManager.AddComponent(entity, new CardSheen());
+			preview.CardPreviewEntities[color] = entity;
 		}
-		EntityManager.AddComponent(preview.PreviewEntity, new CardSheen());
+
+		preview.CardColor = CardData.CardColor.White;
+		preview.PreviewEntity = preview.CardPreviewEntities[CardData.CardColor.White];
+		return true;
 	}
 
 	private void ConfigureMedalPreview(BoosterPackLootPreview preview, int index)
@@ -802,6 +824,14 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		preview.PreviewEntity = entity;
 	}
 
+	private void PreparePreviewEntities(BoosterPackLootPreview preview)
+	{
+		foreach (var entity in GetPreviewEntities(preview))
+		{
+			PreparePreviewEntity(entity);
+		}
+	}
+
 	private void PreparePreviewEntity(Entity entity)
 	{
 		if (entity == null) return;
@@ -842,14 +872,33 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		if (state?.Loot == null) return;
 		foreach (var preview in state.Loot)
 		{
-			if (preview?.PreviewEntity == null) continue;
-			if (preview.PreviewEntity.GetComponent<CardSheen>() is CardSheen sheen)
-			{
-				sheen.IsActive = false;
-			}
-			EntityManager.DestroyEntity(preview.PreviewEntity.Id);
-			preview.PreviewEntity = null;
+			DestroyPreviewEntities(preview);
 		}
+	}
+
+	private void DestroyPreviewEntities(BoosterPackLootPreview preview)
+	{
+		foreach (var entity in GetPreviewEntities(preview).ToList())
+		{
+			if (entity.GetComponent<CardSheen>() is CardSheen sheen) sheen.IsActive = false;
+			EntityManager.DestroyEntity(entity.Id);
+		}
+		preview?.CardPreviewEntities?.Clear();
+		if (preview != null) preview.PreviewEntity = null;
+	}
+
+	private static IEnumerable<Entity> GetPreviewEntities(BoosterPackLootPreview preview)
+	{
+		if (preview?.CardPreviewEntities?.Count > 0)
+		{
+			foreach (var entity in preview.CardPreviewEntities.Values)
+			{
+				if (entity != null) yield return entity;
+			}
+			yield break;
+		}
+
+		if (preview?.PreviewEntity != null) yield return preview.PreviewEntity;
 	}
 
 	private void ProcessMilestones(
@@ -979,12 +1028,14 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 	{
 		for (int index = 0; index < state.Loot.Count; index++)
 		{
-			var sheen = state.Loot[index].PreviewEntity?.GetComponent<CardSheen>();
-			if (sheen == null) continue;
-			sheen.IsActive = BoosterPackOpeningAnimationService.HasSheenStarted(
+			bool isActive = BoosterPackOpeningAnimationService.HasSheenStarted(
 				state.ElapsedSeconds,
 				index,
 				timing);
+			foreach (var entity in GetPreviewEntities(state.Loot[index]))
+			{
+				if (entity.GetComponent<CardSheen>() is CardSheen sheen) sheen.IsActive = isActive;
+			}
 		}
 	}
 
@@ -1062,17 +1113,17 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		if (state?.Loot == null) return;
 		foreach (var preview in state.Loot)
 		{
-			if (preview.PreviewEntity?.GetComponent<UIElement>() is UIElement ui)
+			foreach (var entity in GetPreviewEntities(preview))
 			{
-				ui.Bounds = Rectangle.Empty;
-				ui.IsHidden = true;
-				ui.IsInteractable = false;
-				ui.EventType = UIElementEventType.None;
-				ui.SecondaryEventType = UIElementEventType.None;
-			}
-			if (preview.PreviewEntity?.GetComponent<CardSheen>() is CardSheen sheen)
-			{
-				sheen.IsActive = false;
+				if (entity.GetComponent<UIElement>() is UIElement ui)
+				{
+					ui.Bounds = Rectangle.Empty;
+					ui.IsHidden = true;
+					ui.IsInteractable = false;
+					ui.EventType = UIElementEventType.None;
+					ui.SecondaryEventType = UIElementEventType.None;
+				}
+				if (entity.GetComponent<CardSheen>() is CardSheen sheen) sheen.IsActive = false;
 			}
 		}
 	}
@@ -1518,19 +1569,61 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		BoosterPackLootAnimationSample sample)
 	{
 		float renderScale = CardScale * sample.Scale;
-		Vector2 position = GetCardRenderPosition(sample.Position, renderScale);
+		var placements = ComputeCardFanPlacements(
+			sample.Position,
+			sample.Scale,
+			sample.Rotation,
+			CardFanHorizontalGap,
+			CardFanRearDrop,
+			MathHelper.ToRadians(CardFanRotationDegrees));
+		Vector2 position = GetCardRenderPosition(placements[^1].Position, renderScale);
 		var rect = CardGeometryService.GetVisualRect(EntityManager, position, renderScale);
 		DrawSoftMask(Inflate(rect, 44, 44), Blood * (0.28f * sample.Alpha));
 		DrawSoftMask(Inflate(rect, 8, 8), GoldHot * (0.16f * sample.Alpha));
-		if (preview.PreviewEntity == null) return;
-		EventManager.Publish(new CardRenderScaledEvent
+
+		foreach (var placement in placements)
 		{
-			Card = preview.PreviewEntity,
-			Position = position,
-			Scale = renderScale,
-			Alpha = sample.Alpha,
-			Rotation = sample.Rotation,
-		});
+			if (!preview.CardPreviewEntities.TryGetValue(placement.Color, out var entity)) continue;
+			EventManager.Publish(new CardRenderScaledEvent
+			{
+				Card = entity,
+				Position = GetCardRenderPosition(placement.Position, renderScale),
+				Scale = renderScale,
+				Alpha = sample.Alpha,
+				Rotation = placement.Rotation,
+			});
+		}
+	}
+
+	internal static CardFanPlacement[] ComputeCardFanPlacements(
+		Vector2 center,
+		float revealScale,
+		float groupRotation,
+		float horizontalGap,
+		float rearDrop,
+		float fanRotation)
+	{
+		Vector2 redOffset = RotateOffset(
+			new Vector2(-horizontalGap, rearDrop) * revealScale,
+			groupRotation);
+		Vector2 blackOffset = RotateOffset(
+			new Vector2(horizontalGap, rearDrop) * revealScale,
+			groupRotation);
+		return new[]
+		{
+			new CardFanPlacement(CardData.CardColor.Black, center + blackOffset, groupRotation + fanRotation),
+			new CardFanPlacement(CardData.CardColor.Red, center + redOffset, groupRotation - fanRotation),
+			new CardFanPlacement(CardData.CardColor.White, center, groupRotation),
+		};
+	}
+
+	private static Vector2 RotateOffset(Vector2 offset, float rotation)
+	{
+		float cosine = MathF.Cos(rotation);
+		float sine = MathF.Sin(rotation);
+		return new Vector2(
+			offset.X * cosine - offset.Y * sine,
+			offset.X * sine + offset.Y * cosine);
 	}
 
 	private void DrawMedalPreview(int slotIndex, BoosterPackLootAnimationSample sample)

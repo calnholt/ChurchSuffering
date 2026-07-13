@@ -261,11 +261,17 @@ namespace Crusaders30XX.ECS.Systems
 				if (entity == newest)
 				{
 					if (hotKey == null)
-						EntityManager.AddComponent(entity, new HotKey { Button = FaceButton.B, Position = HotKeyPosition.Top });
+						EntityManager.AddComponent(entity, new HotKey
+						{
+							Button = FaceButton.B,
+							Position = HotKeyPosition.Top,
+							IsKeyboardMouseEnabled = false,
+						});
 					else
 					{
 						hotKey.Button = FaceButton.B;
 						hotKey.Position = HotKeyPosition.Top;
+						hotKey.IsKeyboardMouseEnabled = false;
 					}
 				}
 				else if (hotKey?.Button == FaceButton.B)
