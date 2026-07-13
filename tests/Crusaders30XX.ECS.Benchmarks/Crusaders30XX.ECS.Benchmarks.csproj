@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+    <TieredCompilation>false</TieredCompilation>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <RootNamespace>Crusaders30XX.ECS.Benchmarks</RootNamespace>
+  </PropertyGroup>
+
+  <!-- The CPU-only foundation runtime is compiled directly so this runner stays
+       independent of the game executable, MonoGame, and content building. -->
+  <ItemGroup>
+    <Compile Include="..\..\ECS\DataOriented\Core\EntityId.cs" Link="Runtime\EntityId.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\EntityLifecycle.cs" Link="Runtime\EntityLifecycle.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\ComponentSignature.cs" Link="Runtime\ComponentSignature.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\ComponentTypeRegistry.cs" Link="Runtime\ComponentTypeRegistry.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\ComponentColumn.cs" Link="Runtime\ComponentColumn.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\Chunk.cs" Link="Runtime\Chunk.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\Archetype.cs" Link="Runtime\Archetype.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\SpawnBundle.cs" Link="Runtime\SpawnBundle.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\World.cs" Link="Runtime\World.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\DynamicBufferCommand.cs" Link="Runtime\DynamicBufferCommand.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\CommandBuffer.cs" Link="Runtime\CommandBuffer.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\QueryCache.cs" Link="Runtime\QueryCache.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Core\Queries.cs" Link="Runtime\Queries.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Storage\DynamicBuffer.cs" Link="Runtime\DynamicBuffer.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Storage\DynamicBufferDebugInfo.cs" Link="Runtime\DynamicBufferDebugInfo.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Storage\DynamicBufferHandle.cs" Link="Runtime\DynamicBufferHandle.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Storage\DynamicBufferMutation.cs" Link="Runtime\DynamicBufferMutation.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Storage\DynamicBufferStore.cs" Link="Runtime\DynamicBufferStore.cs" />
+    <Compile Include="..\..\ECS\DataOriented\Storage\World.DynamicBuffers.cs" Link="Runtime\World.DynamicBuffers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference
+      Include="..\..\ECS.Generators\Crusaders30XX.ECS.Generators.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

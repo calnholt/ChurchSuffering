@@ -505,7 +505,7 @@ Return the required handoff report; do not begin follow-on work.
 
 ### 9.1 Phase A - Baseline and contracts
 
-#### [ ] ECS-000: Establish the legacy baseline
+#### [x] ECS-000: Establish the legacy baseline
 
 - **Owner:** Verification subagent.
 - **Dependencies:** None.
@@ -519,7 +519,7 @@ Return the required handoff report; do not begin follow-on work.
   - Capture the initial legacy result artifact used by later comparison.
 - **Verification:** `dotnet build`; full existing tests; new characterization fixtures; one battle and one climb performance capture.
 
-#### [ ] ECS-001: Freeze architecture contracts and migration ledgers
+#### [x] ECS-001: Freeze architecture contracts and migration ledgers
 
 - **Owner:** Coordinator.
 - **Dependencies:** None.
@@ -534,7 +534,7 @@ Return the required handoff report; do not begin follow-on work.
 
 ### 9.2 Phase B - Runtime foundation
 
-#### [ ] ECS-010: Implement entity, archetype, and chunk storage
+#### [x] ECS-010: Implement entity, archetype, and chunk storage
 
 - **Owner:** Core-runtime subagent.
 - **Dependencies:** ECS-001.
@@ -542,7 +542,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Entity handles/generations, location table, 512-bit signatures, archetype lookup, transition-edge cache, typed column chunks, capacity calculation, pooling, swap removal, enable/disable state, spawn bundles' runtime endpoint, and bulk destruction.
 - **Verification:** Focused unit tests for create/get/set, stale handles, generation reuse, archetype moves, swap removal, enable/disable, chunk reuse, and bulk teardown.
 
-#### [ ] ECS-011: Implement incremental generators and analyzers
+#### [x] ECS-011: Implement incremental generators and analyzers
 
 - **Owner:** Generator subagent.
 - **Dependencies:** ECS-001.
@@ -550,7 +550,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Component/tag registration, unmanaged validation, 512-type diagnostic, spawn-bundle generation, query arities one through eight, stable descriptor generation, and generated debug metadata.
 - **Verification:** Generator snapshot tests and compile-fail tests for managed fields, class components, excessive types, duplicate IDs, and invalid query declarations.
 
-#### [ ] ECS-012: Build benchmark and model-test harnesses
+#### [x] ECS-012: Build benchmark and model-test harnesses
 
 - **Owner:** Verification subagent.
 - **Dependencies:** ECS-000 and frozen contracts from ECS-001.
@@ -558,7 +558,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Standalone Release microbenchmark runner; legacy baseline loader; randomized reference-model framework; allocation measurement; optional platform hardware-counter command documentation.
 - **Verification:** Repeated runs produce stable medians and machine-readable output; empty harness overhead is measured and subtracted/reported.
 
-#### [ ] ECS-013: Implement cached queries and structural command buffers
+#### [x] ECS-013: Implement cached queries and structural command buffers
 
 - **Owner:** Core-runtime subagent.
 - **Dependencies:** ECS-010 and ECS-011.
@@ -566,7 +566,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Cached archetype query matching, chunk/span enumeration, filters, disabled inclusion, structural-change guards, all command types, deterministic playback, and batch transitions.
 - **Verification:** Query correctness for all/any/none, new-archetype cache updates, no allocations after warm-up, structural mutation exception, command order, and batched single-move behavior.
 
-#### [ ] ECS-014: Implement dynamic buffers, indexes, and resource IDs
+#### [x] ECS-014: Implement dynamic buffers, indexes, and resource IDs
 
 - **Owner:** Core-runtime subagent.
 - **Dependencies:** ECS-010 and ECS-011.
@@ -574,7 +574,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Generation-checked dynamic buffers, pooling/growth/release, unique indexes, string/name indexes, compact resource ID base contracts, and debug inspection hooks.
 - **Verification:** Buffer order, capacity reuse, stale handles, owner destruction, unique collisions, name lookup, and zero steady allocation.
 
-#### [ ] ECS-015: Implement scheduler, event streams, and queued rules
+#### [x] ECS-015: Implement scheduler, event streams, and queued rules
 
 - **Owner:** Systems-runtime subagent.
 - **Dependencies:** ECS-011 and ECS-013; dynamic-buffer interface from ECS-014 frozen.
@@ -582,7 +582,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** System descriptors, dependency graph validation, cached phase arrays, scene groups, profiling, typed event streams, generated routing endpoint, event waves/cycle guard, command playback barriers, rules FIFO, trigger FIFO, and multi-frame queued-state contract.
 - **Verification:** System order, cycle diagnostics, scene activation, event priority/nesting, queue precedence, multi-frame resume, and per-system allocation metrics.
 
-#### [ ] ECS-016: Foundation integration gate
+#### [x] ECS-016: Foundation integration gate
 
 - **Owner:** Coordinator plus verification subagent.
 - **Dependencies:** ECS-010 through ECS-015.
@@ -592,7 +592,7 @@ Return the required handoff report; do not begin follow-on work.
 
 ### 9.3 Phase C - Shared data and authoring infrastructure
 
-#### [ ] ECS-020: Define shared data-oriented components and tags
+#### [x] ECS-020: Define shared data-oriented components and tags
 
 - **Owner:** Shared-schema subagent.
 - **Dependencies:** ECS-016 and migration ledgers.
@@ -600,7 +600,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Entity metadata, scene state, transforms, hierarchy handles, timing/tween state, common UI interaction state, common combat resources, common presentation state, persistence tags, and component splitting documented by the ledger.
 - **Verification:** Analyzer passes; component-size report is generated; no managed fields; component round-trip and query tests pass.
 
-#### [ ] ECS-021: Implement definition-module generator and catalogs
+#### [x] ECS-021: Implement definition-module generator and catalogs
 
 - **Owner:** Generator subagent.
 - **Dependencies:** ECS-016 and stable domain IDs.
@@ -608,7 +608,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Definition attributes/contracts, dense catalog generation, duplicate/missing ID diagnostics, static handler dispatch, declarative effect/condition table generation, and debug enumeration metadata.
 - **Verification:** Sample definition modules compile and dispatch without reflection, delegates, closures, or per-use allocation.
 
-#### [ ] ECS-022: Implement shared rule commands and read-only contexts
+#### [x] ECS-022: Implement shared rule commands and read-only contexts
 
 - **Owner:** Gameplay-contract subagent.
 - **Dependencies:** ECS-016.
@@ -616,7 +616,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Unmanaged rule-command union/types, read-only world view, card/enemy/equipment/medal handler contexts, targeting handles, compact stat/effect/condition data, and deterministic command append APIs.
 - **Verification:** Command serialization-in-memory tests, ordering tests, invalid direct write tests, and zero-allocation handler invocation.
 
-#### [ ] ECS-023: Shared-data integration gate
+#### [x] ECS-023: Shared-data integration gate
 
 - **Owner:** Coordinator.
 - **Dependencies:** ECS-020 through ECS-022.
@@ -625,7 +625,7 @@ Return the required handoff report; do not begin follow-on work.
 
 ### 9.4 Phase D - Parallel content conversion
 
-#### [ ] ECS-030: Convert all cards and upgrades
+#### [x] ECS-030: Convert all cards and upgrades
 
 - **Owner:** Card-content subagent.
 - **Dependencies:** ECS-023.
@@ -634,7 +634,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** One module per card; immutable metadata, cost, color/type, upgrade delta, visual recipe ID, common effects, exceptional static handlers, and generated catalog coverage for every existing card.
 - **Verification:** Legacy-vs-new definition snapshots and behavioral command traces for base/upgraded variants and special hooks.
 
-#### [ ] ECS-031: Convert enemies and enemy attacks
+#### [x] ECS-031: Convert enemies and enemy attacks
 
 - **Owner:** Enemy-content subagent.
 - **Dependencies:** ECS-023.
@@ -643,7 +643,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Enemy definitions, phase data, arsenals, attack definitions, conditions, impact effects, planning metadata, visuals, and exceptional static handlers.
 - **Verification:** Catalog completeness; deterministic planning traces; attack requirement, damage, passive, phase, and special-condition parity tests.
 
-#### [ ] ECS-032: Convert equipment and medals
+#### [x] ECS-032: Convert equipment and medals
 
 - **Owner:** Equipment/medal content subagent.
 - **Dependencies:** ECS-023.
@@ -652,7 +652,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Definitions, slots, triggers, stat modifiers, replacement effects, alternate play providers, activation rules, visual recipe IDs, and exceptional static handlers.
 - **Verification:** Definition snapshots and behavioral traces for every equipment and medal item.
 
-#### [ ] ECS-033: Content catalog integration gate
+#### [x] ECS-033: Content catalog integration gate
 
 - **Owner:** Coordinator plus verification subagent.
 - **Dependencies:** ECS-030 through ECS-032.
@@ -661,7 +661,7 @@ Return the required handoff report; do not begin follow-on work.
 
 ### 9.5 Phase E - Parallel system conversion
 
-#### [ ] ECS-040: Convert global lifecycle, scenes, input, and UI interaction
+#### [x] ECS-040: Convert global lifecycle, scenes, input, and UI interaction
 
 - **Owner:** Global/UI systems subagent.
 - **Dependencies:** ECS-023; relevant content IDs from ECS-033 where needed.
@@ -670,7 +670,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Scene-owned tags, persistent entity handling, bulk teardown, scene groups, transition state, player input state, cursor targeting, input contexts, UI reset/click/hover dispatch, modal suppression, and unique globals.
 - **Verification:** Scene transition traces, input tests, rotated bounds, Z-order winner, modal/context blocking, and allocation-free steady cursor targeting.
 
-#### [ ] ECS-041: Convert deck, card zones, and card gameplay
+#### [x] ECS-041: Convert deck, card zones, and card gameplay
 
 - **Owner:** Card-gameplay systems subagent.
 - **Dependencies:** ECS-023 and ECS-030.
@@ -679,7 +679,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Deck buffers, shuffle/draw/discard/exhaust/hand movement, card spawning, play validation, cost/payment, upgrades, modifiers, alternate play, pledge, recoil, colorless/frozen/sealed/cursed states, and card lifecycle commands.
 - **Verification:** Exact ordered-zone traces; deterministic shuffle; duplicate identity; all card behavior tests; zero LINQ/allocation in per-frame card queries.
 
-#### [ ] ECS-042: Convert combat, enemies, phases, and queued resolution
+#### [x] ECS-042: Convert combat, enemies, phases, and queued resolution
 
 - **Owner:** Combat systems subagent.
 - **Dependencies:** ECS-023 and ECS-031.
@@ -688,7 +688,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** HP/resources, phase coordinator, enemy planning, attack progress, block assignment, requirements, damage/prevention, defeat flow, passives applied by attacks, ambush, multi-phase enemies, and rules/trigger queue integration.
 - **Verification:** Existing combat suites ported; deterministic full-fight event trace; attack-order and block-condition parity; no direct system references.
 
-#### [ ] ECS-043: Convert equipment, medals, passives, and stat/replacement systems
+#### [x] ECS-043: Convert equipment, medals, passives, and stat/replacement systems
 
 - **Owner:** Effects systems subagent.
 - **Dependencies:** ECS-033, ECS-041, and stable combat command contracts from ECS-042.
@@ -697,7 +697,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Equip state, triggers, provider tables, passive storage, stat aggregation, replacement resolution, once-per-phase/battle tracking buffers, equipment zones, and activation events.
 - **Verification:** All equipment/medal/passive tests, ordering/stacking tests, provider precedence, and reset lifetime parity.
 
-#### [ ] ECS-044: Convert climb, way station, rewards, saves, achievements, tutorials, and dialogue
+#### [x] ECS-044: Convert climb, way station, rewards, saves, achievements, tutorials, and dialogue
 
 - **Owner:** Meta-game systems subagent.
 - **Dependencies:** ECS-033 and ECS-040; card/equipment APIs from ECS-041/ECS-043 frozen.
@@ -706,7 +706,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Climb columns/events/shops, way station, run deck/equipment materialization, reward/card-list modals, booster packs, achievements, tutorials, dialogue queues, save DTO-to-runtime spawning, and runtime-to-save extraction.
 - **Verification:** Existing meta-game tests, fresh-save flow, deterministic climb fixture, modal interruption behavior, and no old-save migration.
 
-#### [ ] ECS-045: Convert presentation, rendering, visual effects, audio requests, and diagnostics
+#### [x] ECS-045: Convert presentation, rendering, visual effects, audio requests, and diagnostics
 
 - **Owner:** Presentation systems subagent.
 - **Dependencies:** ECS-023 and ECS-040; presentation contracts from ECS-041/ECS-042 frozen.
@@ -715,7 +715,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Transform/tween/parallax, render packets, card/hand/player/enemy/HUD displays, tooltips, overlays, visual effects, shader request components, audio event requests, profiler, debug menu, and entity inspector.
 - **Verification:** Draw methods are read-only; packet buffers allocate zero after warm-up; Z/layer parity; all relevant snapshot fixtures pass when registered in a new-world fixture host.
 
-#### [ ] ECS-046: System conversion completeness audit
+#### [x] ECS-046: System conversion completeness audit
 
 - **Owner:** Verification subagent.
 - **Dependencies:** ECS-040 through ECS-045.
@@ -724,7 +724,7 @@ Return the required handoff report; do not begin follow-on work.
 
 ### 9.6 Phase F - Cutover and deletion
 
-#### [ ] ECS-050: Integrate the new world into `Game1`
+#### [x] ECS-050: Integrate the new world into `Game1`
 
 - **Owner:** Coordinator/integration owner only.
 - **Dependencies:** ECS-046.
@@ -732,7 +732,7 @@ Return the required handoff report; do not begin follow-on work.
 - **Deliverables:** Initialize the new world, catalogs, resources, scheduler, scene groups, input, update phases, late presentation phase, render extraction, and draw consumers. Register only new systems.
 - **Verification:** Build; title-to-climb-to-battle smoke flow; fresh run; test-fight launch; no old world instantiated.
 
-#### [ ] ECS-051: Delete the old ECS and object behavior runtime
+#### [x] ECS-051: Delete the old ECS and object behavior runtime
 
 - **Owner:** Coordinator with one deletion-audit subagent.
 - **Dependencies:** ECS-050 smoke gate.

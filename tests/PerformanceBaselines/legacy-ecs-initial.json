@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "runtime": "legacy-object-ecs",
+  "capturedAtUtc": "2026-07-13T10:23:33.164371+00:00",
+  "buildConfiguration": "Release",
+  "fixedSeed": 1337,
+  "warmupFrames": 120,
+  "sampleFrames": 300,
+  "logicalResolution": "1920x1080",
+  "diagnosticsClosed": true,
+  "shadersEnabled": false,
+  "machine": {
+    "machineName": "Calvins-Air",
+    "operatingSystem": "Darwin 21.6.0 Darwin Kernel Version 21.6.0: Mon Jun 24 00:56:10 PDT 2024; root:xnu-8020.240.18.709.2~1/RELEASE_X86_64",
+    "operatingSystemArchitecture": "X64",
+    "processArchitecture": "X64",
+    "framework": ".NET 9.0.8",
+    "logicalProcessorCount": 4
+  },
+  "workloads": [
+    {
+      "name": "battle",
+      "entityCount": 4096,
+      "componentCount": 16384,
+      "systemCalls": 300,
+      "queryCalls": 300,
+      "processedRows": 1228800,
+      "allocatedBytes": 24024,
+      "garbageCollections": {
+        "gen0": 0,
+        "gen1": 0,
+        "gen2": 0
+      },
+      "cpuScopes": {
+        "ecsUpdate": {
+          "supported": true,
+          "sampleCount": 300,
+          "averageMilliseconds": 0.8533726933333332,
+          "medianMilliseconds": 0.674429,
+          "p95Milliseconds": 1.379164,
+          "maximumMilliseconds": 3.545322
+        },
+        "cpuDrawSubmission": {
+          "supported": false,
+          "sampleCount": 0,
+          "averageMilliseconds": 0,
+          "medianMilliseconds": 0,
+          "p95Milliseconds": 0,
+          "maximumMilliseconds": 0
+        }
+      }
+    },
+    {
+      "name": "climb",
+      "entityCount": 512,
+      "componentCount": 2048,
+      "systemCalls": 300,
+      "queryCalls": 300,
+      "processedRows": 153600,
+      "allocatedBytes": 24024,
+      "garbageCollections": {
+        "gen0": 0,
+        "gen1": 0,
+        "gen2": 0
+      },
+      "cpuScopes": {
+        "ecsUpdate": {
+          "supported": true,
+          "sampleCount": 300,
+          "averageMilliseconds": 0.13555888333333316,
+          "medianMilliseconds": 0.109305,
+          "p95Milliseconds": 0.206844,
+          "maximumMilliseconds": 0.695657
+        },
+        "cpuDrawSubmission": {
+          "supported": false,
+          "sampleCount": 0,
+          "averageMilliseconds": 0,
+          "medianMilliseconds": 0,
+          "p95Milliseconds": 0,
+          "maximumMilliseconds": 0
+        }
+      }
+    }
+  ]
+}

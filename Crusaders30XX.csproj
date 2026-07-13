@@ -5,6 +5,7 @@
     <RollForward>Major</RollForward>
     <PublishReadyToRun>false</PublishReadyToRun>
     <TieredCompilation>false</TieredCompilation>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -38,12 +39,38 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference
+      Include="ECS.Generators/Crusaders30XX.ECS.Generators.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Crusaders30XX.Tests" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="tests/**" />
-    <None Remove="tests/**" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Game1.cs" />
+    <Compile Include="ECS/Data/Ids/GameIds.cs" />
+    <Compile Include="ECS/DataOriented/**/*.cs" />
+    <Compile Include="ECS/Input/GamepadRumbleMixer.cs" />
+    <Compile Include="ECS/Input/IPlayerInputSource.cs" />
+    <Compile Include="ECS/Input/MonoGamePlayerInputAdapter.cs" />
+    <Compile Include="ECS/Input/PlayerInputFrame.cs" />
+    <Compile Include="ECS/Input/RumbleGroup.cs" />
+    <Compile Include="ECS/Input/RumbleModels.cs" />
+    <Compile Include="ECS/Rendering/DisplayMetrics.cs" />
+    <Compile Include="ECS/Diagnostics/CardListProfileLaunchOptions.cs" />
+    <Compile Include="ECS/Diagnostics/GpuProfilingRuntimeOptions.cs" />
+    <Compile Include="ECS/Diagnostics/NewGameLaunchOptions.cs" />
+    <Compile Include="ECS/Diagnostics/ShaderRuntimeOptions.cs" />
+    <Compile Include="ECS/Diagnostics/TestFightLaunchOptions.cs" />
+    <Compile Include="ECS/Diagnostics/TutorialLaunchOptions.cs" />
+    <Compile Include="ECS/Diagnostics/UnlockLaunchOptions.cs" />
+    <Compile Include="ECS/Diagnostics/Snapshots/DisplaySnapshotBaselineComparer.cs" />
+    <Compile Include="ECS/Diagnostics/Snapshots/DisplaySnapshotLaunchOptions.cs" />
+    <Compile Include="ECS/Diagnostics/Snapshots/DisplaySnapshotSetupException.cs" />
   </ItemGroup>
 
   <ItemGroup>

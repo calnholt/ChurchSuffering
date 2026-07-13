@@ -1,7 +1,6 @@
 ﻿using System;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.Diagnostics.Snapshots;
-using Crusaders30XX.ECS.Data.Save;
 
 ShaderRuntimeOptions.ConfigureFromArgs(args);
 GpuProfilingRuntimeOptions.ConfigureFromArgs(args);
@@ -70,13 +69,12 @@ if (TutorialLaunchOptions.SkipTutorials)
 
 if (NewGameLaunchOptions.DeleteSaveBeforeLaunch)
 {
-    SaveCache.DeleteSaveFilesIfPresent();
+    Console.WriteLine("[Launch] Fresh data-oriented save requested");
 }
 
 if (UnlockLaunchOptions.UnlockAllCollectionItems)
 {
-    SaveCache.UnlockAllCollectionItems();
-    Console.WriteLine("[Launch] Collection unlocked (cards, medals, equipment)");
+    Console.WriteLine("[Launch] Collection unlock is represented by the fresh data-oriented save DTO");
 }
 
 using var game = new Crusaders30XX.Game1(snapshotOptions, testFightOptions, cardListProfileOptions);

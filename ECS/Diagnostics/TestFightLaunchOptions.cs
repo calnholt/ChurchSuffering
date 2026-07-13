@@ -1,6 +1,7 @@
 using System;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Data.Ids;
+using Crusaders30XX.ECS.DataOriented.Generated;
+using Crusaders30XX.ECS.DataOriented.Gameplay.Meta;
 
 namespace Crusaders30XX.Diagnostics
 {
@@ -10,7 +11,7 @@ namespace Crusaders30XX.Diagnostics
 
 		public string WeaponId { get; init; } = string.Empty;
 		public string EnemyId { get; init; } = string.Empty;
-		public RunDifficulty Difficulty { get; init; } = RunDifficulty.Easy;
+		public ClimbDifficulty Difficulty { get; init; } = ClimbDifficulty.Easy;
 
 		public static bool TryParse(string[] args, out TestFightLaunchOptions options)
 		{
@@ -35,10 +36,12 @@ namespace Crusaders30XX.Diagnostics
 			}
 
 			string enemyId = args[2].Trim().ToLowerInvariant();
-			if (!EnemyFactory.IsRegistered(enemyId))
+			string normalizedEnemy = enemyId.Replace("-", string.Empty, StringComparison.Ordinal);
+			if (!Enum.TryParse(normalizedEnemy, ignoreCase: true, out EnemyId parsedEnemy))
 			{
 				throw new TestFightSetupException($"Unknown test-fight enemy '{args[2]}'.");
 			}
+			_ = GeneratedEnemyCatalog.GetDefinition(parsedEnemy);
 
 			if (!TryParseDifficulty(args[3], out var difficulty))
 			{
@@ -55,21 +58,21 @@ namespace Crusaders30XX.Diagnostics
 			return true;
 		}
 
-		private static bool TryParseDifficulty(string value, out RunDifficulty difficulty)
+		private static bool TryParseDifficulty(string value, out ClimbDifficulty difficulty)
 		{
 			switch (value?.Trim().ToLowerInvariant())
 			{
 				case "easy":
-					difficulty = RunDifficulty.Easy;
+					difficulty = ClimbDifficulty.Easy;
 					return true;
 				case "normal":
-					difficulty = RunDifficulty.Normal;
+					difficulty = ClimbDifficulty.Normal;
 					return true;
 				case "hard":
-					difficulty = RunDifficulty.Hard;
+					difficulty = ClimbDifficulty.Hard;
 					return true;
 				default:
-					difficulty = RunDifficulty.Easy;
+					difficulty = ClimbDifficulty.Easy;
 					return false;
 			}
 		}

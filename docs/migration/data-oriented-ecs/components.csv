@@ -1,0 +1,183 @@
+Key,Source,Line,LegacyType,OwnerTask,TargetClassification
+ECS/Components/AchievementComponents.cs#AchievementBackButton,ECS/Components/AchievementComponents.cs,77,AchievementBackButton,ECS-044,Empty tag
+ECS/Components/AchievementComponents.cs#AchievementButton,ECS/Components/AchievementComponents.cs,85,AchievementButton,ECS-044,Empty tag
+ECS/Components/AchievementComponents.cs#AchievementGridItem,ECS/Components/AchievementComponents.cs,9,AchievementGridItem,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/AchievementComponents.cs#AchievementSceneState,ECS/Components/AchievementComponents.cs,93,AchievementSceneState,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#ActionPoints,ECS/Components/CardComponents.cs,123,ActionPoints,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#AnimatingHandToDiscard,ECS/Components/CardComponents.cs,1094,AnimatingHandToDiscard,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#AnimatingHandToDrawPile,ECS/Components/CardComponents.cs,1114,AnimatingHandToDrawPile,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#AnimatingHandToZone,ECS/Components/CardComponents.cs,1104,AnimatingHandToZone,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Animation,ECS/Components/CardComponents.cs,660,Animation,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#AppliedPassives,ECS/Components/CardComponents.cs,1153,AppliedPassives,ECS-043,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#BattleInfo,ECS/Components/CardComponents.cs,959,BattleInfo,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#BattleStateInfo,ECS/Components/CardComponents.cs,216,BattleStateInfo,ECS-042,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#Battlefield,ECS/Components/CardComponents.cs,913,Battlefield,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Brittle,ECS/Components/CardComponents.cs,510,Brittle,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#CanPlayHighlightSettings,ECS/Components/CardComponents.cs,1022,CanPlayHighlightSettings,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#CannotBlockThisAttack,ECS/Components/CardComponents.cs,1281,CannotBlockThisAttack,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#CardData,ECS/Components/CardComponents.cs,21,CardData,ECS-041,Catalog definition referenced by compact ID
+ECS/Components/CardComponents.cs#CardGeometrySettings,ECS/Components/CardComponents.cs,979,CardGeometrySettings,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#CardListModal,ECS/Components/CardComponents.cs,752,CardListModal,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#CardListModalClose,ECS/Components/CardComponents.cs,778,CardListModalClose,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#CardListModalSelectionMetadata,ECS/Components/CardComponents.cs,766,CardListModalSelectionMetadata,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#CardPlayStatContext,ECS/Components/CardComponents.cs,903,CardPlayStatContext,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#CardSheen,ECS/Components/CardComponents.cs,415,CardSheen,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#CardToDiscardFlight,ECS/Components/CardComponents.cs,1119,CardToDiscardFlight,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#CardTooltip,ECS/Components/CardComponents.cs,457,CardTooltip,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#ClimbShopSlotAction,ECS/Components/CardComponents.cs,783,ClimbShopSlotAction,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Colorless,ECS/Components/CardComponents.cs,556,Colorless,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#Courage,ECS/Components/CardComponents.cs,113,Courage,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#CourageTooltipAnchor,ECS/Components/CardComponents.cs,618,CourageTooltipAnchor,ECS-042,Empty tag
+ECS/Components/CardComponents.cs#Cursed,ECS/Components/CardComponents.cs,534,Cursed,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#CursedOriginalCard,ECS/Components/CardComponents.cs,543,CursedOriginalCard,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#DebugMenu,ECS/Components/CardComponents.cs,792,DebugMenu,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Deck,ECS/Components/CardComponents.cs,66,Deck,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#Enemy,ECS/Components/CardComponents.cs,92,Enemy,ECS-042,Catalog definition referenced by compact ID
+ECS/Components/CardComponents.cs#EquipmentHighlightSettings,ECS/Components/CardComponents.cs,1000,EquipmentHighlightSettings,ECS-043,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#EquipmentZone,ECS/Components/CardComponents.cs,1077,EquipmentZone,ECS-043,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#EquippedEquipment,ECS/Components/CardComponents.cs,194,EquippedEquipment,ECS-043,Catalog definition referenced by compact ID
+ECS/Components/CardComponents.cs#EquippedMedal,ECS/Components/CardComponents.cs,1042,EquippedMedal,ECS-043,Catalog definition referenced by compact ID
+ECS/Components/CardComponents.cs#EquippedTemperanceAbility,ECS/Components/CardComponents.cs,153,EquippedTemperanceAbility,ECS-043,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#EquippedWeapon,ECS/Components/CardComponents.cs,162,EquippedWeapon,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#FilteredFromHand,ECS/Components/CardComponents.cs,1242,FilteredFromHand,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#Frozen,ECS/Components/CardComponents.cs,501,Frozen,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#HP,ECS/Components/CardComponents.cs,968,HP,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#HPBarAnchor,ECS/Components/CardComponents.cs,427,HPBarAnchor,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#HPBarOverride,ECS/Components/CardComponents.cs,437,HPBarOverride,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Hint,ECS/Components/CardComponents.cs,359,Hint,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#HotKey,ECS/Components/CardComponents.cs,827,HotKey,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Intellect,ECS/Components/CardComponents.cs,172,Intellect,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Intimidated,ECS/Components/CardComponents.cs,493,Intimidated,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#LastPaymentCache,ECS/Components/CardComponents.cs,892,LastPaymentCache,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#MarkedForBottomOfDrawPile,ECS/Components/CardComponents.cs,1220,MarkedForBottomOfDrawPile,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#MarkedForEndOfTurnDiscard,ECS/Components/CardComponents.cs,1233,MarkedForEndOfTurnDiscard,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#MarkedForExhaust,ECS/Components/CardComponents.cs,1229,MarkedForExhaust,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#MarkedForReturnToDeck,ECS/Components/CardComponents.cs,1215,MarkedForReturnToDeck,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#MarkedForSpecificDiscard,ECS/Components/CardComponents.cs,485,MarkedForSpecificDiscard,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#MaxHandSize,ECS/Components/CardComponents.cs,183,MaxHandSize,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#ModifiedBlock,ECS/Components/CardComponents.cs,584,ModifiedBlock,ECS-042,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#ModifiedDamage,ECS/Components/CardComponents.cs,594,ModifiedDamage,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#ParallaxLayer,ECS/Components/CardComponents.cs,265,ParallaxLayer,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#ParentTransform,ECS/Components/CardComponents.cs,255,ParentTransform,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#PassiveMeterComponent,ECS/Components/CardComponents.cs,1204,PassiveMeterComponent,ECS-043,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#PayCostCancelButton,ECS/Components/CardComponents.cs,883,PayCostCancelButton,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#PayCostOverlayState,ECS/Components/CardComponents.cs,861,PayCostOverlayState,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#PhaseState,ECS/Components/CardComponents.cs,944,PhaseState,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Player,ECS/Components/CardComponents.cs,81,Player,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Pledge,ECS/Components/CardComponents.cs,1255,Pledge,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#PledgeAvailabilityState,ECS/Components/CardComponents.cs,1266,PledgeAvailabilityState,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#PledgePreview,ECS/Components/CardComponents.cs,1276,PledgePreview,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#PlunderRescueFlight,ECS/Components/CardComponents.cs,1332,PlunderRescueFlight,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#PlunderSnatchFlight,ECS/Components/CardComponents.cs,1307,PlunderSnatchFlight,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Plundered,ECS/Components/CardComponents.cs,1291,Plundered,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#PortraitInfo,ECS/Components/CardComponents.cs,684,PortraitInfo,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#ProfilerOverlay,ECS/Components/CardComponents.cs,735,ProfilerOverlay,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#QuestTooltip,ECS/Components/CardComponents.cs,642,QuestTooltip,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#Recoil,ECS/Components/CardComponents.cs,565,Recoil,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#RelentlessStrikeBattleState,ECS/Components/CardComponents.cs,1225,RelentlessStrikeBattleState,ECS-042,Empty tag
+ECS/Components/CardComponents.cs#Scorched,ECS/Components/CardComponents.cs,518,Scorched,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#Sealed,ECS/Components/CardComponents.cs,575,Sealed,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#SelectedForPayment,ECS/Components/CardComponents.cs,1137,SelectedForPayment,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Shackle,ECS/Components/CardComponents.cs,604,Shackle,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#Sprite,ECS/Components/CardComponents.cs,312,Sprite,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#SuppressCardVisualEffects,ECS/Components/CardComponents.cs,727,SuppressCardVisualEffects,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#SuppressCardZoneRender,ECS/Components/CardComponents.cs,719,SuppressCardZoneRender,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#SuppressPortraitRender,ECS/Components/CardComponents.cs,702,SuppressPortraitRender,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#SuppressStatDeltaDisplay,ECS/Components/CardComponents.cs,711,SuppressStatDeltaDisplay,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#Temperance,ECS/Components/CardComponents.cs,133,Temperance,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#TemperanceTooltipAnchor,ECS/Components/CardComponents.cs,626,TemperanceTooltipAnchor,ECS-043,Empty tag
+ECS/Components/CardComponents.cs#Thorned,ECS/Components/CardComponents.cs,526,Thorned,ECS-041,Empty tag
+ECS/Components/CardComponents.cs#Threat,ECS/Components/CardComponents.cs,143,Threat,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#ThreatTooltipAnchor,ECS/Components/CardComponents.cs,634,ThreatTooltipAnchor,ECS-042,Empty tag
+ECS/Components/CardComponents.cs#TooltipOverrideBackup,ECS/Components/CardComponents.cs,471,TooltipOverrideBackup,ECS-041,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#Transform,ECS/Components/CardComponents.cs,241,Transform,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CardComponents.cs#TutorialInteractionPermitted,ECS/Components/CardComponents.cs,840,TutorialInteractionPermitted,ECS-044,Empty tag
+ECS/Components/CardComponents.cs#UIDropdown,ECS/Components/CardComponents.cs,848,UIDropdown,ECS-041,Dynamic buffer handle plus unmanaged component
+ECS/Components/CardComponents.cs#UIElement,ECS/Components/CardComponents.cs,325,UIElement,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbColumnPresentation,ECS/Components/ClimbComponents.cs,164,ClimbColumnPresentation,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbColumnTransitionInputSuppression,ECS/Components/ClimbComponents.cs,87,ClimbColumnTransitionInputSuppression,ECS-044,Empty tag
+ECS/Components/ClimbComponents.cs#ClimbColumnTransitionState,ECS/Components/ClimbComponents.cs,73,ClimbColumnTransitionState,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/ClimbComponents.cs#ClimbEncounterSlotAction,ECS/Components/ClimbComponents.cs,206,ClimbEncounterSlotAction,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbEventSlotAction,ECS/Components/ClimbComponents.cs,212,ClimbEventSlotAction,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbHeaderElement,ECS/Components/ClimbComponents.cs,144,ClimbHeaderElement,ECS-044,Empty tag
+ECS/Components/ClimbComponents.cs#ClimbLoadoutButton,ECS/Components/ClimbComponents.cs,159,ClimbLoadoutButton,ECS-044,Empty tag
+ECS/Components/ClimbComponents.cs#ClimbMedalTooltipAnchor,ECS/Components/ClimbComponents.cs,230,ClimbMedalTooltipAnchor,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbMedalTooltipSource,ECS/Components/ClimbComponents.cs,224,ClimbMedalTooltipSource,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbPreviewState,ECS/Components/ClimbComponents.cs,48,ClimbPreviewState,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/ClimbComponents.cs#ClimbResourceBarElement,ECS/Components/ClimbComponents.cs,154,ClimbResourceBarElement,ECS-044,Empty tag
+ECS/Components/ClimbComponents.cs#ClimbSceneRoot,ECS/Components/ClimbComponents.cs,43,ClimbSceneRoot,ECS-044,Empty tag
+ECS/Components/ClimbComponents.cs#ClimbShopTooltipSource,ECS/Components/ClimbComponents.cs,218,ClimbShopTooltipSource,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbSlotPresentation,ECS/Components/ClimbComponents.cs,175,ClimbSlotPresentation,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ClimbComponents.cs#ClimbSlotRefreshTransitionState,ECS/Components/ClimbComponents.cs,92,ClimbSlotRefreshTransitionState,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/ClimbComponents.cs#ClimbTimelineElement,ECS/Components/ClimbComponents.cs,149,ClimbTimelineElement,ECS-044,Empty tag
+ECS/Components/CombatComponents.cs#AmbushState,ECS/Components/CombatComponents.cs,187,AmbushState,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CombatComponents.cs#AssignedBlockCard,ECS/Components/CombatComponents.cs,133,AssignedBlockCard,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CombatComponents.cs#AssignedBlockPresentation,ECS/Components/CombatComponents.cs,152,AssignedBlockPresentation,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CombatComponents.cs#AssignedBlockRailPresentation,ECS/Components/CombatComponents.cs,175,AssignedBlockRailPresentation,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CombatComponents.cs#AttackIntent,ECS/Components/CombatComponents.cs,21,AttackIntent,ECS-042,Dynamic buffer handle plus unmanaged component
+ECS/Components/CombatComponents.cs#EnemyArsenal,ECS/Components/CombatComponents.cs,12,EnemyArsenal,ECS-042,Dynamic buffer handle plus unmanaged component
+ECS/Components/CombatComponents.cs#EnemyAttackBannerAnchor,ECS/Components/CombatComponents.cs,86,EnemyAttackBannerAnchor,ECS-042,Empty tag
+ECS/Components/CombatComponents.cs#EnemyAttackBannerPresentation,ECS/Components/CombatComponents.cs,96,EnemyAttackBannerPresentation,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CombatComponents.cs#EnemyAttackProgress,ECS/Components/CombatComponents.cs,52,EnemyAttackProgress,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/CombatComponents.cs#ExhaustOnBlock,ECS/Components/CombatComponents.cs,212,ExhaustOnBlock,ECS-042,Empty tag
+ECS/Components/CombatComponents.cs#NextTurnAttackIntent,ECS/Components/CombatComponents.cs,31,NextTurnAttackIntent,ECS-042,Dynamic buffer handle plus unmanaged component
+ECS/Components/CombatComponents.cs#Tribulation,ECS/Components/CombatComponents.cs,202,Tribulation,ECS-042,Hot unmanaged component split from catalog/buffer state
+ECS/Components/EquipmentDisplayComponents.cs#EquipmentDisplayRoot,ECS/Components/EquipmentDisplayComponents.cs,6,EquipmentDisplayRoot,ECS-043,Empty tag
+ECS/Components/EquipmentDisplayComponents.cs#EquipmentTooltipSource,ECS/Components/EquipmentDisplayComponents.cs,24,EquipmentTooltipSource,ECS-043,Hot unmanaged component split from catalog/buffer state
+ECS/Components/EquipmentDisplayComponents.cs#EquipmentTooltipState,ECS/Components/EquipmentDisplayComponents.cs,11,EquipmentTooltipState,ECS-043,Hot unmanaged component split from catalog/buffer state
+ECS/Components/GuidedTutorialComponents.cs#GuidedTutorial,ECS/Components/GuidedTutorialComponents.cs,16,GuidedTutorial,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/GuidedTutorialComponents.cs#StockHand,ECS/Components/GuidedTutorialComponents.cs,34,StockHand,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/GuidedTutorialComponents.cs#TutorialEnemy,ECS/Components/GuidedTutorialComponents.cs,41,TutorialEnemy,ECS-044,Empty tag
+ECS/Components/InputComponents.cs#InputContext,ECS/Components/InputComponents.cs,14,InputContext,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/InputComponents.cs#InputContextMember,ECS/Components/InputComponents.cs,25,InputContextMember,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/InputComponents.cs#PlayerInputState,ECS/Components/InputComponents.cs,6,PlayerInputState,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PauseMenuComponents.cs#PauseMenuOverlay,ECS/Components/PauseMenuComponents.cs,21,PauseMenuOverlay,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PauseMenuComponents.cs#PauseMenuSlider,ECS/Components/PauseMenuComponents.cs,28,PauseMenuSlider,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PauseMenuComponents.cs#PauseMenuToggle,ECS/Components/PauseMenuComponents.cs,43,PauseMenuToggle,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PlayerHudComponents.cs#PlayerHudAnchor,ECS/Components/PlayerHudComponents.cs,20,PlayerHudAnchor,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PlayerHudComponents.cs#PlayerHudFeedbackState,ECS/Components/PlayerHudComponents.cs,85,PlayerHudFeedbackState,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PlayerHudComponents.cs#PlayerHudRegion,ECS/Components/PlayerHudComponents.cs,74,PlayerHudRegion,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PointOfInterest.cs#POITitleTooltipSource,ECS/Components/PointOfInterest.cs,32,POITitleTooltipSource,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/PointOfInterest.cs#PointOfInterest,ECS/Components/PointOfInterest.cs,7,PointOfInterest,ECS-045,Dynamic buffer handle plus unmanaged component
+ECS/Components/PositionTween.cs#PositionTween,ECS/Components/PositionTween.cs,6,PositionTween,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/QuestScopedCardModificationCleanup.cs#QuestScopedCardModificationCleanup,ECS/Components/QuestScopedCardModificationCleanup.cs,11,QuestScopedCardModificationCleanup,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/RunDeckComponents.cs#RunDeckCard,ECS/Components/RunDeckComponents.cs,8,RunDeckCard,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#AmbushTextAnchor,ECS/Components/Scenes.cs,430,AmbushTextAnchor,ECS-042,Empty tag
+ECS/Components/Scenes.cs#AmbushTimerAnchor,ECS/Components/Scenes.cs,438,AmbushTimerAnchor,ECS-042,Empty tag
+ECS/Components/Scenes.cs#BoosterPackOpeningOverlayState,ECS/Components/Scenes.cs,380,BoosterPackOpeningOverlayState,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/Scenes.cs#DialogOverlayState,ECS/Components/Scenes.cs,297,DialogOverlayState,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/Scenes.cs#DontDestroyOnLoad,ECS/Components/Scenes.cs,185,DontDestroyOnLoad,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#DontDestroyOnReload,ECS/Components/Scenes.cs,190,DontDestroyOnReload,ECS-020,Empty tag
+ECS/Components/Scenes.cs#EntityListOverlay,ECS/Components/Scenes.cs,227,EntityListOverlay,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#GameOverOverlayState,ECS/Components/Scenes.cs,52,GameOverOverlayState,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#LocationCustomizeButton,ECS/Components/Scenes.cs,279,LocationCustomizeButton,ECS-040,Empty tag
+ECS/Components/Scenes.cs#ModalAnimation,ECS/Components/Scenes.cs,68,ModalAnimation,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#ModalInputSuppression,ECS/Components/Scenes.cs,89,ModalInputSuppression,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#NarrativeEventOverlayState,ECS/Components/Scenes.cs,314,NarrativeEventOverlayState,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#OwnedByScene,ECS/Components/Scenes.cs,176,OwnedByScene,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#PendingQuestDialog,ECS/Components/Scenes.cs,418,PendingQuestDialog,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#QuestArrowLeft,ECS/Components/Scenes.cs,255,QuestArrowLeft,ECS-044,Empty tag
+ECS/Components/Scenes.cs#QuestArrowRight,ECS/Components/Scenes.cs,263,QuestArrowRight,ECS-044,Empty tag
+ECS/Components/Scenes.cs#QuestBackButton,ECS/Components/Scenes.cs,271,QuestBackButton,ECS-044,Empty tag
+ECS/Components/Scenes.cs#QuestRewardOverlayState,ECS/Components/Scenes.cs,323,QuestRewardOverlayState,ECS-044,Dynamic buffer handle plus unmanaged component
+ECS/Components/Scenes.cs#QuestSelectState,ECS/Components/Scenes.cs,244,QuestSelectState,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#QuestStartArea,ECS/Components/Scenes.cs,287,QuestStartArea,ECS-044,Empty tag
+ECS/Components/Scenes.cs#QueuedEvents,ECS/Components/Scenes.cs,198,QueuedEvents,ECS-040,Dynamic buffer handle plus unmanaged component
+ECS/Components/Scenes.cs#ScenePreparationState,ECS/Components/Scenes.cs,39,ScenePreparationState,ECS-040,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#SceneState,ECS/Components/Scenes.cs,25,SceneState,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#WayStationArrivalContextState,ECS/Components/Scenes.cs,160,WayStationArrivalContextState,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#WayStationClimbModalCloseButton,ECS/Components/Scenes.cs,105,WayStationClimbModalCloseButton,ECS-044,Empty tag
+ECS/Components/Scenes.cs#WayStationClimbModalDepartButton,ECS/Components/Scenes.cs,122,WayStationClimbModalDepartButton,ECS-044,Empty tag
+ECS/Components/Scenes.cs#WayStationClimbModalDifficultyChoice,ECS/Components/Scenes.cs,116,WayStationClimbModalDifficultyChoice,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#WayStationClimbModalPanel,ECS/Components/Scenes.cs,100,WayStationClimbModalPanel,ECS-044,Empty tag
+ECS/Components/Scenes.cs#WayStationClimbModalRoot,ECS/Components/Scenes.cs,95,WayStationClimbModalRoot,ECS-044,Empty tag
+ECS/Components/Scenes.cs#WayStationClimbModalWeaponChoice,ECS/Components/Scenes.cs,110,WayStationClimbModalWeaponChoice,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#WayStationDialoguePoiAction,ECS/Components/Scenes.cs,167,WayStationDialoguePoiAction,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#WayStationSaintsMedalsModalCloseButton,ECS/Components/Scenes.cs,140,WayStationSaintsMedalsModalCloseButton,ECS-044,Empty tag
+ECS/Components/Scenes.cs#WayStationSaintsMedalsModalPanel,ECS/Components/Scenes.cs,135,WayStationSaintsMedalsModalPanel,ECS-044,Empty tag
+ECS/Components/Scenes.cs#WayStationSaintsMedalsModalRoot,ECS/Components/Scenes.cs,127,WayStationSaintsMedalsModalRoot,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/Scenes.cs#WayStationSaintsMedalsModalTile,ECS/Components/Scenes.cs,145,WayStationSaintsMedalsModalTile,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/ShopComponents.cs#ForSaleItem,ECS/Components/ShopComponents.cs,14,ForSaleItem,ECS-044,Hot unmanaged component split from catalog/buffer state
+ECS/Components/VisualEffectComponents.cs#ActiveVisualEffect,ECS/Components/VisualEffectComponents.cs,8,ActiveVisualEffect,ECS-045,Hot unmanaged component split from catalog/buffer state
+ECS/Components/VisualEffectComponents.cs#ActorPresentationState,ECS/Components/VisualEffectComponents.cs,36,ActorPresentationState,ECS-020,Hot unmanaged component split from catalog/buffer state
+ECS/Components/VisualEffectComponents.cs#BattlePresentationTransform,ECS/Components/VisualEffectComponents.cs,45,BattlePresentationTransform,ECS-020,Hot unmanaged component split from catalog/buffer state

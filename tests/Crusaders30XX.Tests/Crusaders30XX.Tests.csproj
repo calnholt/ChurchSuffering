@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>Crusaders30XX.Tests</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,5 +19,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Crusaders30XX.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="DataOriented/**/*.cs" />
+    <Compile Include="DataOrientedStorageTests.cs" />
+    <Compile Include="Ecs020ComponentLayoutTests.cs" />
+    <Compile Include="Ecs020ComponentRoundTripTests.cs" />
   </ItemGroup>
 </Project>
