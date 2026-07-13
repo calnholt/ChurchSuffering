@@ -374,6 +374,7 @@ namespace Crusaders30XX.ECS.Components
 			public string Id { get; set; } = string.Empty;
 			public CardData.CardColor CardColor { get; set; } = CardData.CardColor.White;
 			public Entity PreviewEntity { get; set; }
+			public Dictionary<CardData.CardColor, Entity> CardPreviewEntities { get; set; } = new();
 			public float RevealDelaySeconds { get; set; }
 		}
 

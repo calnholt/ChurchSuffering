@@ -281,7 +281,7 @@ Output files are stored under `debug/snapshots/<fixture-id>/<fixture-id>.png`.
 
 Renders the production booster opening overlay at a deterministic timeline sample. `--time` accepts a finite value from `0.0` through `30.0`; `--seed` accepts any signed 32-bit integer.
 
-The fixture always displays a fixed Card, Medal, and Scarlet Vest reward so equipment-art changes are covered by the baseline; the seed controls presentation particles only.
+The fixture always displays a fixed Card as a White/Red/Black fan, plus a Medal and Scarlet Vest reward, so card-fan layout and equipment-art changes are covered by the baseline; the seed controls presentation particles only.
 
 ```bash
 dotnet run -- snapshot booster-pack-opening
