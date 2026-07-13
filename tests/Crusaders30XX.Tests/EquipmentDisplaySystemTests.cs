@@ -128,7 +128,9 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 			equipment.GetComponent<Transform>().Position);
 		var assigned = equipment.GetComponent<AssignedBlockCard>();
 		Assert.NotNull(assigned);
-		Assert.Equal(new Vector2(panelBounds.Center.X, panelBounds.Center.Y), assigned.StartPos);
+		Assert.Equal(
+			new Vector2(panelBounds.Center.X, panelBounds.Center.Y),
+			equipment.GetComponent<AssignedBlockPresentation>().StartPos);
 		Assert.Equal(new Vector2(panelBounds.Center.X, panelBounds.Center.Y), assigned.ReturnTargetPos);
 	}
 

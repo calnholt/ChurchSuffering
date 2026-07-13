@@ -49,8 +49,8 @@ public class EnemyAttackConfirmAvailabilityServiceTests
 	public void Valid_attack_with_animating_blocker_can_be_requested_but_not_resolved()
 	{
 		var entityManager = CreateCombat(ConditionType.MustBeBlockedByAtLeast2Cards);
-		AddBlocker(entityManager, AssignedBlockCard.PhaseState.Idle);
-		AddBlocker(entityManager, AssignedBlockCard.PhaseState.Launch);
+		AddBlocker(entityManager, AssignedBlockPresentation.PhaseState.Idle);
+		AddBlocker(entityManager, AssignedBlockPresentation.PhaseState.Launch);
 
 		var canRequest = EnemyAttackConfirmAvailabilityService.CanRequestCurrentAttackConfirm(entityManager);
 		var canResolve = EnemyAttackConfirmAvailabilityService.CanResolveCurrentAttackConfirm(entityManager);
@@ -66,7 +66,7 @@ public class EnemyAttackConfirmAvailabilityServiceTests
 	{
 		var entityManager = CreateCombat(ConditionType.MustBeBlockedByAtLeast2Cards);
 		AddBlockers(entityManager, 1);
-		AddBlocker(entityManager, AssignedBlockCard.PhaseState.Returning);
+		AddBlocker(entityManager, AssignedBlockPresentation.PhaseState.Returning);
 
 		var canConfirm = EnemyAttackConfirmAvailabilityService.CanConfirmCurrentAttack(entityManager);
 
@@ -126,7 +126,7 @@ public class EnemyAttackConfirmAvailabilityServiceTests
 			.Single()
 			.GetComponent<PhaseState>();
 		phase.PendingBlockConfirm = true;
-		AddBlocker(entityManager, AssignedBlockCard.PhaseState.Launch);
+		AddBlocker(entityManager, AssignedBlockPresentation.PhaseState.Launch);
 
 		var canResolve = EnemyAttackConfirmAvailabilityService.CanResolveCurrentAttackConfirm(entityManager);
 
@@ -243,19 +243,16 @@ public class EnemyAttackConfirmAvailabilityServiceTests
 	{
 		for (int i = 0; i < count; i++)
 		{
-			AddBlocker(entityManager, AssignedBlockCard.PhaseState.Idle);
+			AddBlocker(entityManager, AssignedBlockPresentation.PhaseState.Idle);
 		}
 	}
 
 	private static void AddBlocker(
 		EntityManager entityManager,
-		AssignedBlockCard.PhaseState phase)
+		AssignedBlockPresentation.PhaseState phase)
 	{
 		var card = entityManager.CreateEntity("Blocker");
-		entityManager.AddComponent(card, new AssignedBlockCard
-		{
-			Phase = phase,
-			BlockAmount = 1
-		});
+		entityManager.AddComponent(card, new AssignedBlockCard { BlockAmount = 1 });
+		entityManager.AddComponent(card, new AssignedBlockPresentation { Phase = phase });
 	}
 }

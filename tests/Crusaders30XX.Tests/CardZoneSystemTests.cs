@@ -52,6 +52,28 @@ public class CardZoneSystemTests : IDisposable
         Assert.False(card.HasComponent<AssignedBlockCard>());
     }
 
+	[Fact]
+	public void Reserve_assigned_block_return_adds_hand_layout_membership_without_finalizing_zone()
+	{
+		var entityManager = new EntityManager();
+		var deckEntity = entityManager.CreateEntity("Deck");
+		var deck = new Deck();
+		entityManager.AddComponent(deckEntity, deck);
+		var card = entityManager.CreateEntity("AssignedBlockCard");
+		entityManager.AddComponent(card, new AssignedBlockCard { IsEquipment = false });
+		entityManager.AddComponent(card, new AssignedBlockPresentation
+		{
+			Phase = AssignedBlockPresentation.PhaseState.Returning,
+		});
+		_ = new CardZoneSystem(entityManager);
+
+		EventManager.Publish(new ReserveAssignedBlockReturnRequested { Card = card, Deck = deckEntity });
+
+		Assert.Contains(card, deck.Hand);
+		Assert.True(card.HasComponent<AssignedBlockCard>());
+		Assert.True(card.HasComponent<AssignedBlockPresentation>());
+	}
+
     [Fact]
     public void BeginDefeatPresentation_returns_unspent_assigned_block_to_hand()
     {
@@ -105,7 +127,8 @@ public class CardZoneSystemTests : IDisposable
 
         var card = entityManager.CreateEntity("AssignedBlockCard");
         entityManager.AddComponent(card, new CardData { Card = new Tempest() });
-        entityManager.AddComponent(card, new AssignedBlockCard { Phase = AssignedBlockCard.PhaseState.Idle });
+		entityManager.AddComponent(card, new AssignedBlockCard());
+		entityManager.AddComponent(card, new AssignedBlockPresentation { Phase = AssignedBlockPresentation.PhaseState.Idle });
 
         _ = new CardZoneSystem(entityManager);
 
@@ -144,7 +167,8 @@ public class CardZoneSystemTests : IDisposable
 
         card = entityManager.CreateEntity("AssignedBlockCard");
         entityManager.AddComponent(card, new CardData { Card = new Tempest() });
-        entityManager.AddComponent(card, new AssignedBlockCard { Phase = AssignedBlockCard.PhaseState.Idle });
+		entityManager.AddComponent(card, new AssignedBlockCard());
+		entityManager.AddComponent(card, new AssignedBlockPresentation { Phase = AssignedBlockPresentation.PhaseState.Idle });
         entityManager.AddComponent(card, new UIElement { EventType = UIElementEventType.UnassignCardAsBlock });
 
         return entityManager;

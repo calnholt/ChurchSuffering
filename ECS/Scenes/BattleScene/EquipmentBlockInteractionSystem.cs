@@ -28,19 +28,6 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			base.Update(gameTime);
 			if (BattleInputGate.IsBattleInputFrozen(EntityManager)) return;
-			// Ensure all AssignedBlockCard entities have a UIElement so clicks can be detected elsewhere.
-			// AssignedBlockCardsDisplaySystem owns assigned-block bounds and interactability.
-			var assigned = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>();
-			foreach (var e in assigned)
-			{
-				var uiAbc = e.GetComponent<UIElement>();
-				if (uiAbc == null)
-				{
-					uiAbc = new UIElement { IsInteractable = true };
-					EntityManager.AddComponent(e, uiAbc);
-				}
-				uiAbc.EventType = UIElementEventType.UnassignCardAsBlock;
-			}
 			// Only in Block or Action phase
 			var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
 			if (phase == null) return;
@@ -157,14 +144,38 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc = new AssignedBlockCard { BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, StartPos = t?.Position ?? Vector2.Zero, CurrentPos = t?.Position ?? Vector2.Zero, TargetPos = t?.Position ?? Vector2.Zero, StartScale = t?.Scale.X ?? 1f, TargetScale = 0.35f, Phase = AssignedBlockCard.PhaseState.Pullback, Elapsed = 0f, IsEquipment = true, ColorKey = NormalizeColorKey(color), Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
+						abc = new AssignedBlockCard { BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, IsEquipment = true, ColorKey = NormalizeColorKey(color), Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
 						EntityManager.AddComponent(eqEntity, abc);
 					}
 					else
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.Phase = AssignedBlockCard.PhaseState.Pullback; abc.Elapsed = 0f; abc.IsEquipment = true; abc.ColorKey = NormalizeColorKey(color); abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
+						abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.IsEquipment = true; abc.ColorKey = NormalizeColorKey(color); abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
+					}
+					var assignedPresentation = eqEntity.GetComponent<AssignedBlockPresentation>();
+					if (assignedPresentation == null)
+					{
+						EntityManager.AddComponent(eqEntity, new AssignedBlockPresentation
+						{
+							StartPos = t.Position,
+							CurrentPos = t.Position,
+							TargetPos = t.Position,
+							StartScale = t.Scale.X,
+							CurrentScale = t.Scale.X,
+							Phase = AssignedBlockPresentation.PhaseState.Pullback,
+						});
+					}
+					else
+					{
+						assignedPresentation.StartPos = t.Position;
+						assignedPresentation.CurrentPos = t.Position;
+						assignedPresentation.TargetPos = t.Position;
+						assignedPresentation.StartScale = t.Scale.X;
+						assignedPresentation.CurrentScale = t.Scale.X;
+						assignedPresentation.Phase = AssignedBlockPresentation.PhaseState.Pullback;
+						assignedPresentation.Elapsed = 0f;
+						assignedPresentation.ReturnCompletionPublished = false;
 					}
 					EventManager.Publish(new BlockAssignmentAdded { Card = eqEntity, DeltaBlock = blockVal, Color = color });
 					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Equip, Volume = 0.5f });

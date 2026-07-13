@@ -162,8 +162,8 @@ public class FrostEaterTests : IDisposable
         entityManager.AddComponent(card, new AssignedBlockCard
         {
             BlockAmount = blockAmount,
-            Phase = AssignedBlockCard.PhaseState.Idle,
         });
+		entityManager.AddComponent(card, new AssignedBlockPresentation { Phase = AssignedBlockPresentation.PhaseState.Idle });
         if (frozen)
         {
             entityManager.AddComponent(card, new Frozen { Owner = card });

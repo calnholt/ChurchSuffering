@@ -100,12 +100,14 @@ namespace Crusaders30XX.ECS.Systems
             t.Position = pos;
             float scl = MathHelper.Lerp(flight.StartScale, flight.EndScale, p);
             t.Scale = new Vector2(scl, scl);
-            // Mirror motion to AssignedBlockCard so existing display system renders the motion
+            // Mirror motion to assigned-block presentation so the rail renderer follows the flight.
             var abc = entity.GetComponent<AssignedBlockCard>();
-            if (abc != null)
+            var assignedPresentation = entity.GetComponent<AssignedBlockPresentation>();
+            if (assignedPresentation != null)
             {
-                abc.CurrentPos = pos;
-                abc.CurrentScale = scl;
+                assignedPresentation.CurrentPos = pos;
+                assignedPresentation.CurrentScale = scl;
+                assignedPresentation.RenderPos = pos;
             }
 
             if (p >= 1f && !flight.Completed)
@@ -145,6 +147,7 @@ namespace Crusaders30XX.ECS.Systems
                     catch { }
                     EntityManager.RemoveComponent<CardToDiscardFlight>(entity);
                     EntityManager.RemoveComponent<AssignedBlockCard>(entity);
+					EntityManager.RemoveComponent<AssignedBlockPresentation>(entity);
                     CardTransientStateService.ClearAssignedBlockHotKey(EntityManager, entity);
                     var uiE = entity.GetComponent<UIElement>();
                     if (uiE != null) { uiE.IsHovered = false; uiE.IsInteractable = true; uiE.Tooltip = string.Empty; uiE.EventType = UIElementEventType.None; }
@@ -165,7 +168,7 @@ namespace Crusaders30XX.ECS.Systems
                     CardTransientStateService.ClearAssignedBlockHotKey(EntityManager, entity);
                     // Mark the block assignment as Returning so MaintainLatestHotKeyForContext
                     // does not re-add the HotKey during the synchronous CardMoveRequested/CardMoved chain
-                    if (abc != null) { abc.Phase = AssignedBlockCard.PhaseState.Returning; }
+                    if (assignedPresentation != null) { assignedPresentation.Phase = AssignedBlockPresentation.PhaseState.Returning; }
                     EventManager.Publish(new CardMoveRequested
                     {
                         Card = entity,
@@ -177,6 +180,7 @@ namespace Crusaders30XX.ECS.Systems
                     EntityManager.RemoveComponent<CardToDiscardFlight>(entity);
                     // Clear AssignedBlockCard if still present
                     EntityManager.RemoveComponent<AssignedBlockCard>(entity);
+                    EntityManager.RemoveComponent<AssignedBlockPresentation>(entity);
                     // Clear any tooltip/hovers applied while assigned as block
                     var ui = entity.GetComponent<UIElement>();
                     if (ui != null)
@@ -231,19 +235,22 @@ namespace Crusaders30XX.ECS.Systems
             {
                 var card = assigned[i];
                 var abc = card.GetComponent<AssignedBlockCard>();
+				var presentation = card.GetComponent<AssignedBlockPresentation>();
                 var t = card.GetComponent<Transform>();
-                if (t == null) { t = new Transform(); EntityManager.AddComponent(card, t); t.Position = abc.CurrentPos; t.Scale = new Vector2(abc.CurrentScale, abc.CurrentScale); }
+                Vector2 startPos = presentation?.RenderPos ?? t?.Position ?? Vector2.Zero;
+				float startScale = presentation?.CurrentScale ?? t?.Scale.X ?? 1f;
+				if (t == null) { t = new Transform(); EntityManager.AddComponent(card, t); t.Position = startPos; t.Scale = new Vector2(startScale, startScale); }
 
                 // For equipment, fly back to its saved return target (left panel), else fly to discard
                 Vector2 targetPos = abc.IsEquipment && abc.ReturnTargetPos != Vector2.Zero ? abc.ReturnTargetPos : discardTarget;
                 var flight = new CardToDiscardFlight
                 {
-                    StartPos = abc.CurrentPos,
+                    StartPos = startPos,
                     TargetPos = targetPos,
                     StartDelaySeconds = StartDelayBetweenCardsSeconds * i,
                     DurationSeconds = FlightDurationSeconds,
                     ArcHeightPx = ArcHeightPx,
-                    StartScale = abc.CurrentScale,
+                    StartScale = startScale,
                     EndScale = EndScale,
                 };
                 EntityManager.AddComponent(card, flight);

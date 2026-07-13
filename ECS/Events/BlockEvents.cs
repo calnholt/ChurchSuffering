@@ -15,5 +15,15 @@ namespace Crusaders30XX.ECS.Events
 		public int DeltaBlock;
 		public string Color; // optional, e.g., "Red", "White", "Black"
 	}
-}
 
+	public class AssignedBlockReturnCompleted
+	{
+		public Entity Card;
+	}
+
+	public class ReserveAssignedBlockReturnRequested
+	{
+		public Entity Card;
+		public Entity Deck;
+	}
+}

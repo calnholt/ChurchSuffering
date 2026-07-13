@@ -426,7 +426,9 @@ namespace Crusaders30XX.ECS.Systems
         {
             if (entity.HasComponent<SuppressCardZoneRender>()) return false;
             var assigned = entity.GetComponent<AssignedBlockCard>();
-            return assigned == null || (!assigned.IsEquipment && assigned.Phase == AssignedBlockCard.PhaseState.Returning);
+            var presentation = entity.GetComponent<AssignedBlockPresentation>();
+            return assigned == null || (!assigned.IsEquipment
+				&& presentation?.Phase == AssignedBlockPresentation.PhaseState.Returning);
         }
 
         private void LogHandReconciliationIfChanged(Deck deck, string reason)

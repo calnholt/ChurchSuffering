@@ -68,6 +68,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
 | `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
+| `assigned-block-rail` | Assigned blocker rail | Card/equipment density, hover, entry impact, and return presentation samples |
 | `enemy-defeat-burst` | Enemy defeat pixel burst | Assembled portrait pixels, peak jitter buildup, and released explosion |
 | `guardian-angel` | Guardian Angel battle companion | Idle, speech, and reactive flight gesture samples |
 | `pause-menu` | Pause menu | Persisted rumble toggle in enabled and disabled states |
@@ -170,6 +171,19 @@ dotnet run -- snapshot enemy-attack-banner absorb --verify
 ```
 
 Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
+
+---
+
+## `assigned-block-rail`
+
+Renders the production gothic blocker rail attached to a fixed enemy attack banner. Variants cover a single card, mixed card/equipment assignments, the normal eight-item dense state, hover lift, entry impact, and equipment return motion.
+
+```bash
+dotnet run -- snapshot assigned-block-rail single-card --verify
+./scripts/verify-assigned-block-rail-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/assigned-block-rail/`.
 
 ---
 

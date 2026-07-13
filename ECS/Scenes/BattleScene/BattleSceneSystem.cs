@@ -100,6 +100,9 @@ namespace Crusaders30XX.ECS.Systems
 		private EnemyDefeatFlowSystem _enemyDefeatFlowSystem;
 		private EnemyPhaseFlowSystem _enemyPhaseFlowSystem;
 		private CardMoveDisplaySystem _cardMoveDisplaySystem;
+		private AssignedBlockLifecycleSystem _assignedBlockLifecycleSystem;
+		private AssignedBlockAnimationSystem _assignedBlockAnimationSystem;
+		private AssignedBlockLateLayoutSystem _assignedBlockLateLayoutSystem;
 		private AssignedBlockCardsDisplaySystem _assignedBlockCardsDisplaySystem;
 		private ExhaustOnBlockDisplaySystem _exhaustOnBlockDisplaySystem;
 		private EnemyIntentPlanningSystem _enemyIntentPlanningSystem;
@@ -800,6 +803,9 @@ namespace Crusaders30XX.ECS.Systems
 			_enemyDefeatFlowSystem = new EnemyDefeatFlowSystem(_world.EntityManager, _imageAssets);
 			_enemyPhaseFlowSystem = new EnemyPhaseFlowSystem(_world.EntityManager);
 			_endTurnDisplaySystem = new EndTurnDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_assignedBlockLifecycleSystem = new AssignedBlockLifecycleSystem(_world.EntityManager);
+			_assignedBlockAnimationSystem = new AssignedBlockAnimationSystem(_world.EntityManager);
+			_assignedBlockLateLayoutSystem = new AssignedBlockLateLayoutSystem(_world.EntityManager);
 			_assignedBlockCardsDisplaySystem = new AssignedBlockCardsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_exhaustOnBlockDisplaySystem = new ExhaustOnBlockDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_payCostOverlaySystem = new PayCostOverlaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -951,7 +957,9 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_cardPlayedAnimationSystem);
 			_world.AddSystem(_cardMoveDisplaySystem);
 			_world.AddSystem(_endTurnDisplaySystem);
-			_world.AddSystem(_assignedBlockCardsDisplaySystem);
+			_world.AddSystem(_assignedBlockLifecycleSystem);
+			_world.AddSystem(_assignedBlockAnimationSystem, SystemUpdatePhase.Presentation);
+			_world.AddLateSystem(_assignedBlockLateLayoutSystem);
 			_world.AddSystem(_exhaustOnBlockDisplaySystem);
 			_world.AddSystem(_assignedBlocksToDiscardSystem);
 			_world.AddSystem(_enemyDamageManagerSystem);

@@ -26,6 +26,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new EquipmentTooltipSnapshotFixture());
 			Register(new EnemyDamageMeterSnapshotFixture());
 			Register(new EnemyAttackBannerSnapshotFixture());
+			Register(new AssignedBlockRailSnapshotFixture());
 			Register(new EnemyDefeatBurstSnapshotFixture());
 			Register(new GuardianAngelSnapshotFixture());
 			Register(new PauseMenuSnapshotFixture());
