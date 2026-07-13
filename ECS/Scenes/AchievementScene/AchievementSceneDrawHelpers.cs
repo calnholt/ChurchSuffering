@@ -71,6 +71,11 @@ namespace Crusaders30XX.ECS.Systems
 			var result = new StringBuilder(text.Length);
 			foreach (char c in text)
 			{
+				if (c == '\r' || c == '\n')
+				{
+					result.Append(c);
+					continue;
+				}
 				if (c >= ' ' && c <= '~') result.Append(c);
 				else result.Append(' ');
 			}

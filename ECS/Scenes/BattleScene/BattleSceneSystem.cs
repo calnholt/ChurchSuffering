@@ -35,9 +35,10 @@ namespace Crusaders30XX.ECS.Systems
 		// Battle systems (logic and draw). Only present while in Battle
 	
 
-	private HandDisplaySystem _handDisplaySystem;
-	private CardHoverDetectionSystem _cardHoverDetectionSystem;
-	private CardVisualEffectsSuppressionSystem _cardVisualEffectsSuppressionSystem;
+		private HandDisplaySystem _handDisplaySystem;
+		private HandCardBoundsLateSystem _handCardBoundsLateSystem;
+		private CardHoverDetectionSystem _cardHoverDetectionSystem;
+		private CardVisualEffectsSuppressionSystem _cardVisualEffectsSuppressionSystem;
 		private BattleBackgroundSystem _battleBackgroundSystem;
 		private DrawPileDisplaySystem _drawPileDisplaySystem;
 		private ShuffleDeckDisplaySystem _shuffleDeckDisplaySystem;
@@ -100,6 +101,9 @@ namespace Crusaders30XX.ECS.Systems
 		private EnemyDefeatFlowSystem _enemyDefeatFlowSystem;
 		private EnemyPhaseFlowSystem _enemyPhaseFlowSystem;
 		private CardMoveDisplaySystem _cardMoveDisplaySystem;
+		private AssignedBlockLifecycleSystem _assignedBlockLifecycleSystem;
+		private AssignedBlockAnimationSystem _assignedBlockAnimationSystem;
+		private AssignedBlockLateLayoutSystem _assignedBlockLateLayoutSystem;
 		private AssignedBlockCardsDisplaySystem _assignedBlockCardsDisplaySystem;
 		private ExhaustOnBlockDisplaySystem _exhaustOnBlockDisplaySystem;
 		private EnemyIntentPlanningSystem _enemyIntentPlanningSystem;
@@ -728,7 +732,8 @@ namespace Crusaders30XX.ECS.Systems
 			_loadedSystems = true;
 			LoggingService.Append("BattleSceneSystem.AddBattleSystems", new System.Text.Json.Nodes.JsonObject { ["action"] = "Adding battle systems" });
 		_battleBackgroundSystem = new BattleBackgroundSystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
-		_handDisplaySystem = new HandDisplaySystem(_world.EntityManager, _graphicsDevice);
+			_handDisplaySystem = new HandDisplaySystem(_world.EntityManager);
+			_handCardBoundsLateSystem = new HandCardBoundsLateSystem(_world.EntityManager);
 		_cardHoverDetectionSystem = new CardHoverDetectionSystem(_world.EntityManager);
 		_cardVisualEffectsSuppressionSystem = new CardVisualEffectsSuppressionSystem(_world.EntityManager);
 			_cardZoneSystem = new CardZoneSystem(_world.EntityManager);
@@ -800,6 +805,9 @@ namespace Crusaders30XX.ECS.Systems
 			_enemyDefeatFlowSystem = new EnemyDefeatFlowSystem(_world.EntityManager, _imageAssets);
 			_enemyPhaseFlowSystem = new EnemyPhaseFlowSystem(_world.EntityManager);
 			_endTurnDisplaySystem = new EndTurnDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_assignedBlockLifecycleSystem = new AssignedBlockLifecycleSystem(_world.EntityManager);
+			_assignedBlockAnimationSystem = new AssignedBlockAnimationSystem(_world.EntityManager);
+			_assignedBlockLateLayoutSystem = new AssignedBlockLateLayoutSystem(_world.EntityManager);
 			_assignedBlockCardsDisplaySystem = new AssignedBlockCardsDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_exhaustOnBlockDisplaySystem = new ExhaustOnBlockDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_payCostOverlaySystem = new PayCostOverlaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -874,7 +882,8 @@ namespace Crusaders30XX.ECS.Systems
 			_rasterizerState = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
 			
 		// Register
-		_world.AddSystem(_handDisplaySystem);
+			_world.AddSystem(_handDisplaySystem);
+			_world.AddLateSystem(_handCardBoundsLateSystem);
 		_world.AddSystem(_cardHoverDetectionSystem);
 		_world.AddSystem(_cardVisualEffectsSuppressionSystem);
 		_world.AddSystem(_cardZoneSystem);
@@ -951,7 +960,9 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_cardPlayedAnimationSystem);
 			_world.AddSystem(_cardMoveDisplaySystem);
 			_world.AddSystem(_endTurnDisplaySystem);
-			_world.AddSystem(_assignedBlockCardsDisplaySystem);
+			_world.AddSystem(_assignedBlockLifecycleSystem);
+			_world.AddSystem(_assignedBlockAnimationSystem, SystemUpdatePhase.Presentation);
+			_world.AddLateSystem(_assignedBlockLateLayoutSystem);
 			_world.AddSystem(_exhaustOnBlockDisplaySystem);
 			_world.AddSystem(_assignedBlocksToDiscardSystem);
 			_world.AddSystem(_enemyDamageManagerSystem);

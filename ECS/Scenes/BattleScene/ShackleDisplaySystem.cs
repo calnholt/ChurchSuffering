@@ -21,7 +21,6 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteBatch _spriteBatch;
 		private readonly GraphicsDevice _graphicsDevice;
 		private Texture2D _shackleTexture;
-		private CardGeometrySettings _settings;
 
 	[DebugEditable(DisplayName = "Min Alpha", Step = 5, Min = 0, Max = 255)]
 	public int MinAlpha { get; set; } = 40;
@@ -33,7 +32,7 @@ namespace Crusaders30XX.ECS.Systems
 	public float FadeSpeed { get; set; } = 0.2f;
 
 	[DebugEditable(DisplayName = "Shackle Scale", Step = 0.05f, Min = 0.1f, Max = 2.0f)]
-	public float ShackleScale { get; set; } = 0.95f;
+	public float ShackleScale { get; set; } = 1.0f;
 
 		[DebugEditable(DisplayName = "Shackle Offset X", Step = 1f, Min = -100f, Max = 100f)]
 		public float ShackleOffsetX { get; set; } = 0f;
@@ -83,7 +82,7 @@ namespace Crusaders30XX.ECS.Systems
 			center.X += ShackleOffsetX * geometry.Scale;
 			center.Y += ShackleOffsetY * geometry.Scale;
 
-			DrawShackleOverlay(center, geometry.Bounds.Width, geometry.Bounds.Height, geometry.Scale, geometry.Rotation);
+			DrawShackleOverlay(center, geometry.Bounds.Width, geometry.Bounds.Height, geometry.Rotation);
 		}
 
 		private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
@@ -107,10 +106,7 @@ namespace Crusaders30XX.ECS.Systems
 			center.X += ShackleOffsetX * geometry.Scale;
 			center.Y += ShackleOffsetY * geometry.Scale;
 
-			_settings ??= CardGeometryService.GetSettings(EntityManager);
-			int cardWidth = _settings?.CardWidth ?? CardGeometrySettings.DefaultWidth;
-			int cardHeight = _settings?.CardHeight ?? CardGeometrySettings.DefaultHeight;
-			DrawShackleOverlay(center, cardWidth, cardHeight, geometry.Scale, evt.Rotation);
+			DrawShackleOverlay(center, geometry.Bounds.Width, geometry.Bounds.Height, evt.Rotation);
 		}
 
 		private bool ShouldRenderShackles(Entity card)
@@ -121,7 +117,7 @@ namespace Crusaders30XX.ECS.Systems
 				&& _shackleTexture != null;
 		}
 
-		private void DrawShackleOverlay(Vector2 center, float cardWidth, float cardHeight, float scale, float rotation)
+		private void DrawShackleOverlay(Vector2 center, float cardWidth, float cardHeight, float rotation)
 		{
 			// Calculate final alpha using a sine wave for slow fade
 			float t = _elapsedTime * FadeSpeed * MathHelper.TwoPi;
@@ -133,10 +129,10 @@ namespace Crusaders30XX.ECS.Systems
 			float finalAlpha = MathHelper.Lerp(minA, maxA, lerpFactor);
 			finalAlpha = MathHelper.Clamp(finalAlpha, 0f, 1f);
 
-			// Calculate final scale based on card size and scale factor
-			// Stretching to fit over card as requested
-			float scaleX = (cardWidth / (float)_shackleTexture.Width) * ShackleScale * scale;
-			float scaleY = (cardHeight / (float)_shackleTexture.Height) * ShackleScale * scale;
+			// geometry.Bounds already includes the card's presentation scale. Scale the
+			// texture directly to those rendered bounds so the scale is applied once.
+			float scaleX = (cardWidth / (float)_shackleTexture.Width) * ShackleScale;
+			float scaleY = (cardHeight / (float)_shackleTexture.Height) * ShackleScale;
 			var spriteScale = new Vector2(scaleX, scaleY);
 
 			// Draw the shackle texture centered on the card

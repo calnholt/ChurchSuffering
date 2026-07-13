@@ -21,6 +21,12 @@ dotnet run --launch-profile no-shaders
 # Run without in-battle tutorials
 dotnet run -- skip-tutorials
 
+# DEBUG only: asynchronous GPU command timing and rendering workload counters
+dotnet run -- profile-gpu
+
+# DEBUG only: deterministic 60-card, 4K card-list performance benchmark
+dotnet run -- card-list-profile profile-gpu --render-scale 2
+
 # Unlock every collectible card, medal, and equipment item in the current save
 dotnet run -- unlock
 dotnet run --launch-profile unlock
@@ -31,6 +37,12 @@ dotnet run -- test-fight hammer skeleton hard
 # Publish for distribution
 dotnet publish -c Release
 ```
+
+`profile-gpu` is optional and stripped before ordinary command parsing. On DesktopGL
+systems with OpenGL timestamp-query support it records delayed GPU milliseconds without
+waiting for results. Unsupported systems still report MonoGame rendering workload
+counters. Shift+Escape writes `logs/performance-report.txt`; pending queries are reported
+at shutdown and are not synchronously drained.
 
 ## Verification by change type
 

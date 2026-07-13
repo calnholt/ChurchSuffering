@@ -163,7 +163,8 @@ public class EnemyAttackFlowTests : System.IDisposable
 	{
 		var card = entityManager.CreateEntity("BlockerCard");
 		entityManager.AddComponent(card, new CardData());
-		entityManager.AddComponent(card, new AssignedBlockCard { Phase = AssignedBlockCard.PhaseState.Idle });
+		entityManager.AddComponent(card, new AssignedBlockCard());
+		entityManager.AddComponent(card, new AssignedBlockPresentation { Phase = AssignedBlockPresentation.PhaseState.Idle });
 		return card;
 	}
 

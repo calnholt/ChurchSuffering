@@ -22,6 +22,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
             EventManager.Subscribe<CardMoveFinalizeRequested>(OnCardMoveFinalizeRequested);
             EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
+			EventManager.Subscribe<ReserveAssignedBlockReturnRequested>(OnReserveAssignedBlockReturnRequested);
         }
 
         protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -30,6 +31,14 @@ namespace Crusaders30XX.ECS.Systems
         }
 
         protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
+
+		private void OnReserveAssignedBlockReturnRequested(ReserveAssignedBlockReturnRequested evt)
+		{
+			if (evt?.Card == null || evt.Card.GetComponent<AssignedBlockCard>()?.IsEquipment != false) return;
+			var deck = (evt.Deck ?? EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault())?.GetComponent<Deck>();
+			if (deck == null || deck.Hand.Contains(evt.Card)) return;
+			deck.Hand.Add(evt.Card);
+		}
 
         private void OnCardMoved(CardMoved evt)
         {
@@ -234,6 +243,7 @@ namespace Crusaders30XX.ECS.Systems
                     if (abc != null)
                     {
                         EntityManager.RemoveComponent<AssignedBlockCard>(evt.Card);
+						EntityManager.RemoveComponent<AssignedBlockPresentation>(evt.Card);
                     }
                     var sfp = evt.Card.GetComponent<SelectedForPayment>();
                     if (sfp != null)
@@ -352,13 +362,6 @@ namespace Crusaders30XX.ECS.Systems
                         abc = new AssignedBlockCard
                         {
                             BlockAmount = BlockValueService.GetTotalBlockValue(evt.Card),
-                            StartPos = t?.Position ?? Vector2.Zero,
-                            CurrentPos = t?.Position ?? Vector2.Zero,
-                            TargetPos = t?.Position ?? Vector2.Zero,
-                            StartScale = t?.Scale.X ?? 1f,
-                            TargetScale = 0.35f,
-                            Phase = AssignedBlockCard.PhaseState.Pullback,
-                            Elapsed = 0f,
                             AssignedAtTicks = DateTime.UtcNow.Ticks,
                             IsEquipment = false,
                             ColorKey = NormalizeColorKey(
@@ -369,19 +372,23 @@ namespace Crusaders30XX.ECS.Systems
                         };
                         EntityManager.AddComponent(evt.Card, abc);
                     }
+					var presentation = evt.Card.GetComponent<AssignedBlockPresentation>();
+					if (presentation == null)
+					{
+						var start = t?.Position ?? Vector2.Zero;
+						EntityManager.AddComponent(evt.Card, new AssignedBlockPresentation
+						{
+							StartPos = start,
+							CurrentPos = start,
+							TargetPos = start,
+							StartScale = t?.Scale.X ?? 1f,
+							CurrentScale = t?.Scale.X ?? 1f,
+							Phase = AssignedBlockPresentation.PhaseState.Pullback,
+						});
+					}
                     // Do not assign HotKey here; it will be added when animation reaches Idle
                     // Ensure the card is not still in hand to prevent later clicks from finding it
                     deck.Hand.Remove(evt.Card);
-                    // Make assigned block cards non-interactable as cards (interactions happen via assigned UI)
-                    var uiA = evt.Card.GetComponent<UIElement>();
-                    if (uiA != null)
-                    {
-                        uiA.IsInteractable = false;
-                        uiA.IsHovered = false;
-                        uiA.IsClicked = false;
-                        uiA.EventType = UIElementEventType.UnassignCardAsBlock;
-                        uiA.LayerType = UILayerType.Default;
-                    }
                     EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Equip, Volume = 0.5f });
                     break;
                 }
@@ -588,6 +595,7 @@ namespace Crusaders30XX.ECS.Systems
             if (card.GetComponent<AssignedBlockCard>() != null)
             {
                 EntityManager.RemoveComponent<AssignedBlockCard>(card);
+				EntityManager.RemoveComponent<AssignedBlockPresentation>(card);
             }
 
             var sfp = card.GetComponent<SelectedForPayment>();
@@ -657,6 +665,7 @@ namespace Crusaders30XX.ECS.Systems
                 if (card.GetComponent<AssignedBlockCard>() != null)
                 {
                     EntityManager.RemoveComponent<AssignedBlockCard>(card);
+					EntityManager.RemoveComponent<AssignedBlockPresentation>(card);
                 }
                 RestoreTooltipOverride(card);
             }

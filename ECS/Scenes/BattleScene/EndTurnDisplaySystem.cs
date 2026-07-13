@@ -210,6 +210,7 @@ namespace Crusaders30XX.ECS.Systems
         private void SyncEndTurnButton()
         {
             bool frozen = BattleInputGate.IsBattleInputFrozen(EntityManager);
+            bool enemyDefeated = BattleInputGate.IsEnemyDefeated(EntityManager);
             var btnRect = GetButtonRect();
             var endBtn = EntityManager.GetEntity("UIButton_EndTurn");
             if (endBtn == null)
@@ -233,14 +234,14 @@ namespace Crusaders30XX.ECS.Systems
             var endUi = endBtn?.GetComponent<UIElement>();
             if (endUi != null)
             {
-                if (frozen)
+                if (enemyDefeated)
                 {
                     endUi.IsHidden = true;
                     endUi.IsInteractable = false;
                 }
                 else if (!endUi.IsHidden)
                 {
-                    endUi.IsInteractable = true;
+                    endUi.IsInteractable = !frozen;
                 }
             }
         }

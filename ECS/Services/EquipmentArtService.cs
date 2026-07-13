@@ -1,5 +1,7 @@
+using System;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Objects.Equipment;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Services;
@@ -29,5 +31,24 @@ public static class EquipmentArtService
 		if (imageAssets == null) return null;
 		return imageAssets.TryGetTexture(GetAssetName(equipmentId))
 			?? imageAssets.TryGetTexture(fallbackSlot.ToString().ToLowerInvariant());
+	}
+
+	public static Rectangle GetContainedBounds(Texture2D texture, Rectangle container)
+	{
+		if (texture == null || container.Width <= 0 || container.Height <= 0)
+		{
+			return Rectangle.Empty;
+		}
+
+		float scale = Math.Min(
+			container.Width / (float)Math.Max(1, texture.Width),
+			container.Height / (float)Math.Max(1, texture.Height));
+		int width = Math.Max(1, (int)Math.Round(texture.Width * scale));
+		int height = Math.Max(1, (int)Math.Round(texture.Height * scale));
+		return new Rectangle(
+			container.Center.X - width / 2,
+			container.Center.Y - height / 2,
+			width,
+			height);
 	}
 }

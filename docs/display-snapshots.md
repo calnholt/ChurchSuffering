@@ -68,6 +68,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
 | `enemy-attack-banner` | Enemy attack banner | Anticipation, impact, settled, hover, and absorb presentation samples |
+| `assigned-block-rail` | Assigned blocker rail | Card/equipment density, hover, entry impact, and return presentation samples |
 | `enemy-defeat-burst` | Enemy defeat pixel burst | Assembled portrait pixels, peak jitter buildup, and released explosion |
 | `guardian-angel` | Guardian Angel battle companion | Idle, speech, and reactive flight gesture samples |
 | `pause-menu` | Pause menu | Persisted rumble toggle in enabled and disabled states |
@@ -170,6 +171,19 @@ dotnet run -- snapshot enemy-attack-banner absorb --verify
 ```
 
 Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
+
+---
+
+## `assigned-block-rail`
+
+Renders the production gothic blocker rail attached to a fixed enemy attack banner. Variants cover a single card, mixed card/equipment assignments, the normal eight-item dense state, hover lift, entry impact, and equipment return motion.
+
+```bash
+dotnet run -- snapshot assigned-block-rail single-card --verify
+./scripts/verify-assigned-block-rail-snapshots.sh
+```
+
+Approved images are stored under `tests/VisualBaselines/assigned-block-rail/`.
 
 ---
 
@@ -596,6 +610,8 @@ dotnet run -- snapshot climb-medal-tooltip-hover
 dotnet run -- snapshot climb-sold-shop-slot
 dotnet run -- snapshot climb-encounter-reward-modal
 dotnet run -- snapshot climb-replacement-modal
+dotnet run -- snapshot climb-inventory-overlay
+dotnet run -- snapshot climb-inventory-equipment-tooltip
 ```
 
 Modal variants draw the Climb scene plus the open modal overlay. The Character
@@ -609,6 +625,21 @@ Approved dialogue images are under
 
 ```bash
 ./scripts/verify-climb-character-dialog-snapshots.sh
+```
+
+The inventory variants cover the Run Overview's equipment art and its shared rich
+equipment tooltip. Approved images are under `tests/VisualBaselines/climb-inventory-overlay/`
+and `tests/VisualBaselines/climb-inventory-equipment-tooltip/`. Verify both with:
+
+```bash
+./scripts/verify-climb-inventory-snapshots.sh
+```
+
+Card-list renderer changes should also verify the replacement picker and default
+inventory overlay at the top, middle, and bottom of a deterministic 60-card list:
+
+```bash
+./scripts/verify-card-list-modal-snapshots.sh
 ```
 
 ---

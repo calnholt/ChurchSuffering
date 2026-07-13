@@ -143,6 +143,15 @@ namespace Crusaders30XX.ECS.Components
 		public Color DisplayFgColor { get; set; } = Color.Black;
 		public Vector2 ReturnTargetPos { get; set; } = Vector2.Zero;
 		public string EquipmentType { get; set; } = string.Empty; // Head | Chest | Arms | Legs for equipment
+	}
+
+	/// <summary>
+	/// Presentation-only pose and animation state for an assigned blocker.
+	/// Written by assigned-block presentation systems and read by render/input systems.
+	/// </summary>
+	public class AssignedBlockPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
 		public enum PhaseState { Pullback, Launch, Impact, Idle, Returning }
 		public PhaseState Phase { get; set; } = PhaseState.Pullback;
 		public Vector2 StartPos { get; set; }
@@ -154,7 +163,22 @@ namespace Crusaders30XX.ECS.Components
 		public float StartRotation { get; set; } = 0f;
 		public float CurrentRotation { get; set; } = 0f;
 		public float Elapsed { get; set; } = 0f;
-		public bool ImpactPlayed { get; set; } = false;
+		public Vector2 RenderPos { get; set; }
+		public Rectangle RenderBounds { get; set; }
+		public float RailFlash { get; set; }
+		public bool ReturnCompletionPublished { get; set; }
+	}
+
+	/// <summary>
+	/// Aggregate render state for the assigned-block rail attached to the attack banner.
+	/// </summary>
+	public class AssignedBlockRailPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public Vector2 LogicalAnchorPos { get; set; }
+		public float VerticalOffset { get; set; }
+		public Rectangle Bounds { get; set; }
+		public float Flash { get; set; }
 	}
 
 	/// <summary>

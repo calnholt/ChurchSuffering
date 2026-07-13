@@ -28,17 +28,20 @@ public sealed class HandDisplaySystemTests : IDisposable
     public void Hovered_card_snaps_to_full_scale_zero_rotation_and_bottom_anchor()
     {
         var entityManager = BuildBattleHand(4, out var cards);
-        var display = new HandDisplaySystem(entityManager, null)
+        var display = new HandDisplaySystem(entityManager)
         {
-            HandHoverScale = 0.8f,
+            HandRestScale = 0.8f,
             HandFanMaxAngleDeg = 12f,
         };
+        var boundsSystem = new HandCardBoundsLateSystem(entityManager);
         display.Update(Frame());
+        boundsSystem.Update(Frame());
         var hovered = cards[1];
         float normalRotation = hovered.GetComponent<Transform>().Rotation;
         hovered.GetComponent<UIElement>().IsHovered = true;
 
         display.Update(Frame());
+        boundsSystem.Update(Frame());
 
         var transform = hovered.GetComponent<Transform>();
         var bounds = hovered.GetComponent<UIElement>().Bounds;
@@ -55,9 +58,9 @@ public sealed class HandDisplaySystemTests : IDisposable
     public void Hovering_card_fans_neighbor_targets_away_then_returns_them_when_hover_clears()
     {
         var entityManager = BuildBattleHand(5, out var cards);
-        var display = new HandDisplaySystem(entityManager, null)
+        var display = new HandDisplaySystem(entityManager)
         {
-            HandHoverScale = 0.8f,
+            HandRestScale = 0.8f,
             HandFanMaxAngleDeg = 12f,
         };
         display.Update(Frame());
@@ -85,7 +88,7 @@ public sealed class HandDisplaySystemTests : IDisposable
     public void Weapon_at_index_zero_gets_hover_z_boost_and_stays_behind_neighbors_at_rest()
     {
         var entityManager = BuildBattleHand(3, out var cards, weaponAtIndexZero: true);
-        var display = new HandDisplaySystem(entityManager, null)
+        var display = new HandDisplaySystem(entityManager)
         {
             HandZBase = 100,
             HandZStep = 1,
@@ -114,12 +117,12 @@ public sealed class HandDisplaySystemTests : IDisposable
     }
 
     [Fact]
-    public void Scale_tweens_down_after_hover_clears_without_tweening_up()
+    public void Scale_snaps_up_then_tweens_down_quickly()
     {
         var entityManager = BuildBattleHand(3, out var cards);
-        var display = new HandDisplaySystem(entityManager, null)
+        var display = new HandDisplaySystem(entityManager)
         {
-            HandHoverScale = 0.8f,
+            HandRestScale = 0.8f,
         };
         var hovered = cards[1];
         hovered.GetComponent<UIElement>().IsHovered = true;
@@ -132,15 +135,94 @@ public sealed class HandDisplaySystemTests : IDisposable
         display.Update(Frame());
         float firstReturnScale = hovered.GetComponent<Transform>().Scale.X;
 
-        Assert.InRange(firstReturnScale, 0.8f, 1.1f);
-        Assert.NotEqual(0.8f, firstReturnScale, 3);
+        Assert.Equal(0.982f, firstReturnScale, 3);
 
-        for (int i = 0; i < 60; i++)
+        for (int i = 0; i < 15; i++)
         {
             display.Update(Frame());
         }
 
-        Assert.Equal(0.8f, hovered.GetComponent<Transform>().Scale.X, 2);
+        Assert.Equal(0.8f, hovered.GetComponent<Transform>().Scale.X, 3);
+
+        hovered.GetComponent<UIElement>().IsHovered = true;
+        display.Update(Frame());
+
+        Assert.Equal(1.1f, hovered.GetComponent<Transform>().Scale.X, 3);
+    }
+
+    [Fact]
+    public void Scale_down_is_frame_rate_independent()
+    {
+        float sixtyFpsScale = ScaleAfterOneTenthSecond(6, 1d / 60d);
+        float thirtyFpsScale = ScaleAfterOneTenthSecond(3, 1d / 30d);
+
+        Assert.Equal(sixtyFpsScale, thirtyFpsScale, 5);
+    }
+
+    [Fact]
+    public void Late_bounds_match_position_after_tweening()
+    {
+        var entityManager = BuildBattleHand(3, out var cards);
+        var display = new HandDisplaySystem(entityManager);
+        var positionTween = new PositionTweenSystem(entityManager);
+        var bounds = new HandCardBoundsLateSystem(entityManager);
+
+        display.Update(Frame());
+        positionTween.Update(Frame());
+        bounds.Update(Frame());
+
+        Entity card = cards[1];
+        Transform transform = card.GetComponent<Transform>();
+        Rectangle expected = CardGeometryService.GetVisualRect(
+            CardGeometryService.GetSettings(entityManager),
+            transform.Position,
+            transform.Scale.X);
+        Assert.Equal(expected, card.GetComponent<UIElement>().Bounds);
+    }
+
+    [Fact]
+    public void Dense_hovered_hand_respects_horizontal_padding()
+    {
+        var entityManager = BuildBattleHand(12, out var cards);
+        var display = new HandDisplaySystem(entityManager)
+        {
+            HandHorizontalScreenPadding = 124f,
+            HandHoverFanOut = 50f,
+        };
+        cards[5].GetComponent<UIElement>().IsHovered = true;
+
+        display.Update(Frame());
+
+        CardGeometrySettings settings = CardGeometryService.GetSettings(entityManager);
+        foreach (Entity card in cards)
+        {
+            Rectangle targetBounds = CardGeometryService.GetVisualRect(
+                settings,
+                card.GetComponent<PositionTween>().Target,
+                1.1f);
+            Assert.True(targetBounds.Left >= 124, $"Card {card.Id} exceeded left padding: {targetBounds.Left}");
+            Assert.True(targetBounds.Right <= Game1.VirtualWidth - 124, $"Card {card.Id} exceeded right padding: {targetBounds.Right}");
+        }
+    }
+
+    private static float ScaleAfterOneTenthSecond(int frameCount, double frameSeconds)
+    {
+        var entityManager = BuildBattleHand(1, out var cards);
+        var display = new HandDisplaySystem(entityManager)
+        {
+            HandRestScale = 0.8f,
+        };
+        UIElement ui = cards[0].GetComponent<UIElement>();
+        ui.IsHovered = true;
+        display.Update(Frame(frameSeconds));
+        ui.IsHovered = false;
+
+        for (int i = 0; i < frameCount; i++)
+        {
+            display.Update(Frame(frameSeconds));
+        }
+
+        return cards[0].GetComponent<Transform>().Scale.X;
     }
 
     private static EntityManager BuildBattleHand(int cardCount, out List<Entity> cards, bool weaponAtIndexZero = false)
@@ -192,8 +274,8 @@ public sealed class HandDisplaySystemTests : IDisposable
         return entityManager;
     }
 
-    private static GameTime Frame()
+    private static GameTime Frame(double frameSeconds = 1d / 60d)
     {
-        return new GameTime(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1d / 60d));
+        return new GameTime(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(frameSeconds));
     }
 }

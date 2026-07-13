@@ -2,6 +2,24 @@
 
 Terms only. No implementation details.
 
+## Performance diagnostics
+
+### Render cadence
+
+Wall-clock time between the starts of consecutive rendered frames. This includes CPU work, pacing, and driver stalls; it is distinct from fixed-step simulation time.
+
+### CPU busy time
+
+Wall-clock time spent from the first update iteration after a rendered frame through completion of the next frame's draw commands.
+
+### GPU command time
+
+Delayed device time for a bounded set of submitted rendering commands. It excludes swap and display synchronization time.
+
+### Outside/pacing/driver time
+
+The part of render cadence not covered by the preceding CPU busy interval. It may include framework pacing, operating-system scheduling, and graphics-driver waits outside instrumented work.
+
 ## Run
 
 A single playthrough from WayStation Depart through the **Climb** until victory, failure, or abandon. A save may hold one active run or no active run.

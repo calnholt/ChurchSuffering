@@ -14,6 +14,7 @@ namespace Crusaders30XX.ECS.Services
 	{
 		private const int MaxOfferOptions = 3;
 		private const int PreferredExchangeOptions = 2;
+		private const int LateRewardMutationThreshold = 10;
 
 		private static readonly CardData.CardColor[] RewardColors =
 		{
@@ -74,13 +75,14 @@ namespace Crusaders30XX.ECS.Services
 
 		private readonly struct DeckEntry
 		{
-			public DeckEntry(int index, string entryId, string cardKey, string cardId, CardData.CardColor color, CardBase card)
+			public DeckEntry(int index, string entryId, string cardKey, string cardId, CardData.CardColor color, bool isUpgraded, CardBase card)
 			{
 				Index = index;
 				EntryId = entryId;
 				CardKey = cardKey;
 				CardId = cardId;
 				Color = color;
+				IsUpgraded = isUpgraded;
 				Card = card;
 			}
 
@@ -89,6 +91,7 @@ namespace Crusaders30XX.ECS.Services
 			public string CardKey { get; }
 			public string CardId { get; }
 			public CardData.CardColor Color { get; }
+			public bool IsUpgraded { get; }
 			public CardBase Card { get; }
 		}
 
@@ -111,7 +114,13 @@ namespace Crusaders30XX.ECS.Services
 			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
 			var deckEntries = loadout?.cards ?? new List<LoadoutCardEntry>();
 			string weaponId = loadout?.weaponId ?? string.Empty;
-			return GenerateDeckRewardOffer(deckEntries, weaponId, rewardGold, restrictToCollection);
+			return GenerateDeckRewardOffer(
+				deckEntries,
+				weaponId,
+				rewardGold,
+				restrictToCollection,
+				SaveCache.GetAcceptedDeckRewardMutationCount(),
+				Random.Shared);
 		}
 
 		internal static DeckRewardOfferSave GenerateDeckRewardOffer(IReadOnlyList<string> deckKeys, string weaponId, int rewardGold = 0, bool restrictToCollection = false)
@@ -119,17 +128,34 @@ namespace Crusaders30XX.ECS.Services
 			var entries = (deckKeys ?? Array.Empty<string>())
 				.Select((cardKey, index) => new LoadoutCardEntry { entryId = $"test_entry_{index}", cardKey = cardKey })
 				.ToList();
-			return GenerateDeckRewardOffer(entries, weaponId, rewardGold, restrictToCollection);
+			return GenerateDeckRewardOffer(entries, weaponId, rewardGold, restrictToCollection, acceptedDeckRewardMutations: 0, random: Random.Shared);
 		}
 
 		internal static DeckRewardOfferSave GenerateDeckRewardOffer(IReadOnlyList<LoadoutCardEntry> deckEntries, string weaponId, int rewardGold = 0, bool restrictToCollection = false)
 		{
+			return GenerateDeckRewardOffer(deckEntries, weaponId, rewardGold, restrictToCollection, acceptedDeckRewardMutations: 0, random: Random.Shared);
+		}
+
+		internal static DeckRewardOfferSave GenerateDeckRewardOffer(
+			IReadOnlyList<LoadoutCardEntry> deckEntries,
+			string weaponId,
+			int rewardGold,
+			bool restrictToCollection,
+			int acceptedDeckRewardMutations,
+			Random random)
+		{
 			var offer = new DeckRewardOfferSave { rewardGold = Math.Max(0, rewardGold) };
 			var usedIndices = new HashSet<int>();
+			random ??= Random.Shared;
+			bool useLateRewardRules = acceptedDeckRewardMutations >= LateRewardMutationThreshold;
+			int exchangeOptionCount = useLateRewardRules && random.Next(2) == 0
+				? 1
+				: PreferredExchangeOptions;
 
-			foreach (var entry in PickExchangeOutgoingEntries(deckEntries).Take(PreferredExchangeOptions))
+			foreach (var entry in PickExchangeOutgoingEntries(deckEntries, exchangeOptionCount, useLateRewardRules, random))
 			{
-				string incomingKey = PickIncomingCardKey(entry.CardId, weaponId, restrictToCollection);
+				bool forceIncomingUpgrade = useLateRewardRules && entry.IsUpgraded && entry.Card.Rarity == Rarity.Starter;
+				string incomingKey = PickIncomingCardKey(entry.CardId, weaponId, restrictToCollection, forceIncomingUpgrade, random);
 				if (string.IsNullOrWhiteSpace(incomingKey)) continue;
 
 				offer.options.Add(new DeckRewardOfferOptionSave
@@ -145,7 +171,7 @@ namespace Crusaders30XX.ECS.Services
 
 			while (offer.options.Count < MaxOfferOptions)
 			{
-				var upgrade = PickUpgradeEntry(deckEntries, usedIndices);
+				var upgrade = PickUpgradeEntry(deckEntries, usedIndices, random);
 				if (upgrade == null) break;
 				var entry = upgrade.Value;
 				string upgradedKey = RunDeckService.BuildUpgradedCardKey(entry.CardKey);
@@ -214,6 +240,7 @@ namespace Crusaders30XX.ECS.Services
 				{
 					CardUpgradeService.InvokeUpgradeConfirmed(option.upgradedCardKey);
 				}
+				SaveCache.RecordAcceptedDeckRewardMutation();
 				SaveCache.ClearPendingDeckRewardOffer();
 			}
 			return applied;
@@ -265,7 +292,7 @@ namespace Crusaders30XX.ECS.Services
 
 		internal static IReadOnlyList<string> GetExchangeOutgoingCardKeysForTests(IReadOnlyList<string> deckKeys)
 		{
-			return PickExchangeOutgoingEntries(ToTemporaryEntries(deckKeys)).Select(e => e.CardKey).ToList();
+			return PickExchangeOutgoingEntries(ToTemporaryEntries(deckKeys), PreferredExchangeOptions, useLateRewardRules: false, Random.Shared).Select(e => e.CardKey).ToList();
 		}
 
 		internal static IReadOnlyList<string> GetUpgradeCardKeysForTests(IReadOnlyList<string> deckKeys)
@@ -293,25 +320,41 @@ namespace Crusaders30XX.ECS.Services
 			return results;
 		}
 
-		private static IReadOnlyList<DeckEntry> PickExchangeOutgoingEntries(IReadOnlyList<LoadoutCardEntry> deckEntries)
+		private static IReadOnlyList<DeckEntry> PickExchangeOutgoingEntries(
+			IReadOnlyList<LoadoutCardEntry> deckEntries,
+			int count,
+			bool useLateRewardRules,
+			Random random)
 		{
-			var eligible = BuildEligibleDeckEntries(deckEntries);
+			var eligible = BuildEligibleDeckEntries(deckEntries, includeUpgradedStarters: useLateRewardRules);
 			var picked = new List<DeckEntry>();
+			int targetCount = Math.Max(0, count);
+
+			if (useLateRewardRules)
+			{
+				while (picked.Count < targetCount && eligible.Count > 0)
+				{
+					int index = random.Next(eligible.Count);
+					picked.Add(eligible[index]);
+					eligible.RemoveAt(index);
+				}
+				return picked;
+			}
 
 			foreach (var starter in eligible.Where(e => e.Card.Rarity == Rarity.Starter))
 			{
-				if (picked.Count >= PreferredExchangeOptions) break;
+				if (picked.Count >= targetCount) break;
 				picked.Add(starter);
 			}
 
-			if (picked.Count >= PreferredExchangeOptions) return picked;
+			if (picked.Count >= targetCount) return picked;
 
 			var nonStarters = eligible
 				.Where(e => e.Card.Rarity != Rarity.Starter && picked.All(p => p.Index != e.Index))
 				.ToList();
-			while (picked.Count < PreferredExchangeOptions && nonStarters.Count > 0)
+			while (picked.Count < targetCount && nonStarters.Count > 0)
 			{
-				int idx = Random.Shared.Next(nonStarters.Count);
+				int idx = random.Next(nonStarters.Count);
 				picked.Add(nonStarters[idx]);
 				nonStarters.RemoveAt(idx);
 			}
@@ -319,16 +362,16 @@ namespace Crusaders30XX.ECS.Services
 			return picked;
 		}
 
-		private static DeckEntry? PickUpgradeEntry(IReadOnlyList<LoadoutCardEntry> deckEntries, HashSet<int> usedIndices)
+		private static DeckEntry? PickUpgradeEntry(IReadOnlyList<LoadoutCardEntry> deckEntries, HashSet<int> usedIndices, Random random)
 		{
 			var eligible = BuildEligibleDeckEntries(deckEntries)
 				.Where(e => usedIndices == null || !usedIndices.Contains(e.Index))
 				.ToList();
 			if (eligible.Count == 0) return null;
-			return eligible[Random.Shared.Next(eligible.Count)];
+			return eligible[random.Next(eligible.Count)];
 		}
 
-		private static List<DeckEntry> BuildEligibleDeckEntries(IReadOnlyList<LoadoutCardEntry> deckEntries)
+		private static List<DeckEntry> BuildEligibleDeckEntries(IReadOnlyList<LoadoutCardEntry> deckEntries, bool includeUpgradedStarters = false)
 		{
 			var entries = new List<DeckEntry>();
 			if (deckEntries == null) return entries;
@@ -339,10 +382,10 @@ namespace Crusaders30XX.ECS.Services
 				if (loadoutEntry == null) continue;
 				string key = loadoutEntry.cardKey;
 				if (!RunDeckService.TryParseCardKey(key, out var cardId, out var color, out var isUpgraded)) continue;
-				if (isUpgraded) continue;
 				var card = CardFactory.Create(cardId);
 				if (card == null || card.IsWeapon || card.IsToken || !card.CanAddToLoadout) continue;
-				entries.Add(new DeckEntry(i, loadoutEntry.entryId, key, cardId, color, card));
+				if (isUpgraded && (!includeUpgradedStarters || card.Rarity != Rarity.Starter)) continue;
+				entries.Add(new DeckEntry(i, loadoutEntry.entryId, key, cardId, color, isUpgraded, card));
 			}
 
 			return entries;
@@ -359,7 +402,12 @@ namespace Crusaders30XX.ECS.Services
 				.ToList();
 		}
 
-		private static string PickIncomingCardKey(string outgoingCardId, string weaponId, bool restrictToCollection)
+		private static string PickIncomingCardKey(
+			string outgoingCardId,
+			string weaponId,
+			bool restrictToCollection,
+			bool forceUpgrade,
+			Random random)
 		{
 			var pool = BuildIncomingPool(weaponId)
 				.Select(NormalizeCardId)
@@ -378,10 +426,10 @@ namespace Crusaders30XX.ECS.Services
 				.ToList();
 			if (pool.Count == 0) return string.Empty;
 
-			string incomingId = pool[Random.Shared.Next(pool.Count)];
-			var color = RewardColors[Random.Shared.Next(RewardColors.Length)];
+			string incomingId = pool[random.Next(pool.Count)];
+			var color = RewardColors[random.Next(RewardColors.Length)];
 			string key = RunDeckService.BuildCardKey(incomingId, color);
-			if (StartingDeckGeneratorService.GetAutoUpgradeCardIds(weaponId ?? string.Empty).Contains(incomingId))
+			if (forceUpgrade || StartingDeckGeneratorService.GetAutoUpgradeCardIds(weaponId ?? string.Empty).Contains(incomingId))
 			{
 				key = RunDeckService.BuildUpgradedCardKey(key);
 			}

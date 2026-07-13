@@ -9,13 +9,13 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class CrimsonRite : CardBase
     {
-        private List<string> CostUpgrade = ["Any, Any"];
+        private List<string> CostUpgrade = ["Any", "Any"];
         public CrimsonRite()
         {
             CardId = "crimson_rite";
             Name = "Crimson Rite";
             Target = "Enemy";
-            Cost = ["Black", "Any"];
+            Cost = ["Any", "Any"];
             VisualEffectRecipe = PlayerAttackEffect();
             Damage = 3;
             Block = 3;

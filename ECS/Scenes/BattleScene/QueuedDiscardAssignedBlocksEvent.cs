@@ -146,6 +146,7 @@ namespace Crusaders30XX.ECS.Systems
             catch { }
 
             entityManager.RemoveComponent<AssignedBlockCard>(entity);
+			entityManager.RemoveComponent<AssignedBlockPresentation>(entity);
             CardTransientStateService.ClearAssignedBlockHotKey(entityManager, entity);
             var ui = entity.GetComponent<UIElement>();
             if (ui != null)
@@ -175,7 +176,8 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Publish(new CardBlockedEvent { Card = entity });
 
             CardTransientStateService.ClearAssignedBlockHotKey(entityManager, entity);
-            abc.Phase = AssignedBlockCard.PhaseState.Returning;
+			var presentation = entity.GetComponent<AssignedBlockPresentation>();
+			if (presentation != null) presentation.Phase = AssignedBlockPresentation.PhaseState.Returning;
             EventManager.Publish(new CardMoveRequested
             {
                 Card = entity,
@@ -184,6 +186,7 @@ namespace Crusaders30XX.ECS.Systems
                 Reason = destination == CardZoneType.ExhaustPile ? "AssignedBlockToExhaust" : "AssignedBlockToDiscard"
             });
             entityManager.RemoveComponent<AssignedBlockCard>(entity);
+			entityManager.RemoveComponent<AssignedBlockPresentation>(entity);
             RestoreTooltipFromBackup(entityManager, entity);
         }
 

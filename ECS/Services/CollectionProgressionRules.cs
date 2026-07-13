@@ -10,7 +10,7 @@ namespace Crusaders30XX.ECS.Services;
 public static class CollectionProgressionRules
 {
 	public const int FirstLevelPoints = 20;
-	public const int SubsequentLevelPoints = 30;
+	public const int SubsequentLevelPoints = 50;
 	public const int FirstShopRefreshTime = 8;
 	public const int SecondShopRefreshTime = 16;
 	public const int ThirdShopRefreshTime = 24;

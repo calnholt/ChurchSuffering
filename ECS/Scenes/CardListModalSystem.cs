@@ -26,6 +26,7 @@ namespace Crusaders30XX.ECS.Systems
         private const string ContextId = "overlay.card-list";
         private const string CloseEntityName = "CardListModal_Close";
         private const string TooltipEntityPrefix = "CardListModal_Tooltip_";
+        private const string EquipmentTooltipEntityName = "CardListModal_EquipmentTooltip";
         private const string WeaponPreviewEntityName = "CardListModal_WeaponPreview";
         private const string ReplacementInstruction = "Select a card to replace";
 
@@ -37,8 +38,13 @@ namespace Crusaders30XX.ECS.Systems
         private readonly Texture2D _pixel;
         private readonly RasterizerState _scissorRasterizer;
         private readonly Dictionary<int, bool> _previousCardHoverHighlight = new();
-        private readonly Dictionary<int, EquipmentBase> _equipmentTooltipByEntityId = new();
         private readonly HashSet<int> _inventoryAuxCardIds = new();
+        private readonly EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
+        private readonly List<Entity> _orderedCards = new();
+        private readonly List<VisibleCardPresentation> _visibleCards = new();
+        public bool UseCachedCardBasesForDiagnostics { get; set; } = true;
+        private CardLedgerSummary _ledgerSummary;
+        private CardListModal _presentationModal;
 
         private Entity _weaponPreviewCard;
         private string _weaponPreviewId = string.Empty;
@@ -120,10 +126,18 @@ namespace Crusaders30XX.ECS.Systems
             _bodyFont = FontSingleton.ChakraPetchFont;
             _pixel = _imageAssets.GetPixel(Color.White);
             _scissorRasterizer = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
+            EnsureEquipmentTooltipEntity();
+            _equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(
+                EntityManager,
+                _graphicsDevice,
+                _spriteBatch,
+                _imageAssets,
+                EquipmentTooltipEntityName);
 
             EventManager.Subscribe<OpenCardListModalEvent>(OpenModal);
             EventManager.Subscribe<CloseCardListModalEvent>(_ => CloseModal());
             EventManager.Subscribe<CardListModalCardSelectedEvent>(OnCardSelected);
+            EventManager.Subscribe<DeleteCachesEvent>(_ => ClearPresentationCache());
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -147,15 +161,18 @@ namespace Crusaders30XX.ECS.Systems
                 SetCloseButtonActive(false);
                 CleanupOverlayTooltipEntities();
                 RestoreModalHoverHighlightState();
+                ResetEquipmentTooltipState();
                 return;
             }
 
             var mode = ResolveMode(modal);
             var layout = ComputeLayout(mode, modal);
+            if (!ReferenceEquals(modal, _presentationModal)) RebuildPresentationCache(modal);
             EnsureCloseButton(layout.CloseButton);
             UpdateScroll(modal, mode, layout, gameTime);
-            LayoutCards(modal, mode, layout);
+            LayoutCards(modal, layout);
             UpdateInventoryTooltipEntities(modal, mode, layout);
+            UpdateEquipmentTooltip(gameTime, mode);
             TryPublishSelection(modal);
         }
 
@@ -183,15 +200,18 @@ namespace Crusaders30XX.ECS.Systems
             if (mode == CardListModalMode.Inventory)
             {
                 DrawInventoryBuildPanel(modal, layout);
-                DrawCardGrid(modal, layout.DeckClip);
+                DrawCardGrid(layout.DeckClip);
             }
             else
             {
-                DrawCardGrid(modal, layout.DeckClip);
+                DrawCardGrid(layout.DeckClip);
             }
 
             DrawCloseButton(layout.CloseButton);
-            DrawHoveredEquipmentTooltip();
+            if (mode == CardListModalMode.Inventory)
+            {
+                _equipmentTooltipDisplaySystem.Draw();
+            }
         }
 
         private bool TryGetOpenDrawState(out CardListModal modal, out CardListModalMode mode, out OverlayLayout layout)
@@ -207,6 +227,61 @@ namespace Crusaders30XX.ECS.Systems
             mode = ResolveMode(modal);
             layout = ComputeLayout(mode, modal);
             return true;
+        }
+
+        private void EnsureEquipmentTooltipEntity()
+        {
+            var entity = EntityManager.GetEntity(EquipmentTooltipEntityName);
+            if (entity == null)
+            {
+                entity = EntityManager.CreateEntity(EquipmentTooltipEntityName);
+                EntityManager.AddComponent(entity, new EquipmentTooltipState());
+                EntityManager.AddComponent(entity, new Transform { ZOrder = 20001 });
+                EntityManager.AddComponent(entity, new UIElement
+                {
+                    Bounds = Rectangle.Empty,
+                    IsInteractable = false,
+                    IsHidden = true,
+                    TooltipType = TooltipType.None,
+                });
+                EntityManager.AddComponent(entity, new DontDestroyOnLoad());
+                return;
+            }
+
+            if (entity.GetComponent<EquipmentTooltipState>() == null) EntityManager.AddComponent(entity, new EquipmentTooltipState());
+            if (entity.GetComponent<Transform>() == null) EntityManager.AddComponent(entity, new Transform { ZOrder = 20001 });
+            if (entity.GetComponent<UIElement>() == null)
+            {
+                EntityManager.AddComponent(entity, new UIElement
+                {
+                    Bounds = Rectangle.Empty,
+                    IsInteractable = false,
+                    IsHidden = true,
+                    TooltipType = TooltipType.None,
+                });
+            }
+        }
+
+        private void UpdateEquipmentTooltip(GameTime gameTime, CardListModalMode mode)
+        {
+            if (mode != CardListModalMode.Inventory)
+            {
+                ResetEquipmentTooltipState();
+                return;
+            }
+
+            _equipmentTooltipDisplaySystem.Update(gameTime);
+        }
+
+        private void ResetEquipmentTooltipState()
+        {
+            var state = EntityManager.GetEntity(EquipmentTooltipEntityName)
+                ?.GetComponent<EquipmentTooltipState>();
+            if (state == null) return;
+            state.TargetVisible = false;
+            state.EquipmentEntity = null;
+            state.AnchorEntity = null;
+            state.Alpha01 = 0f;
         }
 
         private OverlayLayout ComputeLayout(CardListModalMode mode, CardListModal modal)
@@ -323,7 +398,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             string title = string.IsNullOrWhiteSpace(modal.Title) ? "Cards" : modal.Title;
             DrawTextWithShadow(_titleFont, title, new Vector2(HeaderPaddingX, HeaderPaddingTop), White1, TitleScale);
-            DrawLedger(GetOrderedCards(modal), layout.Ledger);
+            DrawLedger(layout.Ledger);
 
             if (ShouldShowReplacementInstruction(modal))
             {
@@ -332,20 +407,16 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        private void DrawLedger(List<Entity> cards, Rectangle rect)
+        private void DrawLedger(Rectangle rect)
         {
             if (_titleFont == null || rect.Width <= 0) return;
-            int total = cards.Count;
-            int white = cards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.White);
-            int red = cards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Red);
-            int black = cards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Black);
 
             int x = rect.Right;
-            DrawLedgerPip(ref x, rect.Center.Y, black, CardBlackBg, CardBlackStripe, LedgerCountScale);
-            DrawLedgerPip(ref x, rect.Center.Y, red, CardRedBg, CardRedStripe, LedgerCountScale);
-            DrawLedgerPip(ref x, rect.Center.Y, white, CardWhiteBg, CardWhiteStripe, LedgerCountScale);
+            DrawLedgerPip(ref x, rect.Center.Y, _ledgerSummary.Black, CardBlackBg, CardBlackStripe, LedgerCountScale);
+            DrawLedgerPip(ref x, rect.Center.Y, _ledgerSummary.Red, CardRedBg, CardRedStripe, LedgerCountScale);
+            DrawLedgerPip(ref x, rect.Center.Y, _ledgerSummary.White, CardWhiteBg, CardWhiteStripe, LedgerCountScale);
             x -= 20;
-            DrawRightAlignedText(_titleFont, total.ToString(), ref x, rect.Center.Y, White1, TotalCountScale);
+            DrawRightAlignedText(_titleFont, _ledgerSummary.Total.ToString(), ref x, rect.Center.Y, White1, TotalCountScale);
         }
 
         private void DrawLedgerPip(ref int rightX, int centerY, int count, Color fill, Color stripe, float scale)
@@ -366,44 +437,30 @@ namespace Crusaders30XX.ECS.Systems
             rightX = (int)Math.Round(pos.X);
         }
 
-        private void DrawCardGrid(CardListModal modal, Rectangle clip)
+        private void DrawCardGrid(Rectangle clip)
         {
-            var cards = GetOrderedCards(modal);
-            if (cards.Count == 0 || clip.Width <= 0 || clip.Height <= 0) return;
+            if (_visibleCards.Count == 0 || clip.Width <= 0 || clip.Height <= 0) return;
 
             var prevScissor = _graphicsDevice.ScissorRectangle;
             _spriteBatch.End();
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
             _graphicsDevice.ScissorRectangle = Game1.Display.LogicalToRender(IntersectWithScreen(clip));
 
-            int cardW = GridCellW;
-            int cardH = GridCellH;
-            int cols = CalculateColumns(clip.Width);
-            int startX = clip.X;
-            int offsetY = CardOffsetYExtra;
-
-            for (int i = 0; i < cards.Count; i++)
+            foreach (VisibleCardPresentation presentation in _visibleCards)
             {
-                int col = i % cols;
-                int row = i / cols;
-                var cell = new Rectangle(
-                    startX + col * (cardW + GridGap),
-                    clip.Y + row * (cardH + GridGap) - modal.ScrollOffset,
-                    cardW,
-                    cardH);
-                var visualTopLeft = new Vector2(cell.X + cell.Width / 2f, cell.Y + cell.Height / 2f + offsetY);
                 EventManager.Publish(new CardRenderScaledEvent
                 {
-                    Card = cards[i],
-                    Position = visualTopLeft,
+                    Card = presentation.Card,
+                    Position = presentation.Position,
                     Scale = 1f,
                     ClipRect = clip,
+                    PreferCachedBase = UseCachedCardBasesForDiagnostics,
                 });
             }
 
             _spriteBatch.End();
             _graphicsDevice.ScissorRectangle = prevScissor;
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
         }
 
         private Rectangle IntersectWithScreen(Rectangle rect)
@@ -416,21 +473,24 @@ namespace Crusaders30XX.ECS.Systems
         {
             var prevScissor = _graphicsDevice.ScissorRectangle;
             _spriteBatch.End();
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _scissorRasterizer, null, Game1.Display.SpriteBatchTransform);
             _graphicsDevice.ScissorRectangle = Game1.Display.LogicalToRender(IntersectWithScreen(layout.BuildClip));
 
             var player = GetPlayer();
             int y = layout.BuildClip.Y - modal.BuildScrollOffset;
-            DrawHealthSection(player, layout.BuildClip.X, ref y);
+            if (IsBuildSectionVisible(layout.BuildClip, y, 92)) DrawHealthSection(player, layout.BuildClip.X, ref y);
+            else y += 92;
             DrawWeaponSection(player, layout.BuildClip.X, ref y, layout.BuildClip);
-            DrawTemperanceSection(player, layout.BuildClip.X, ref y);
-            DrawEquipmentSection(player, layout.BuildClip.X, ref y);
-            DrawMedalsSection(player, layout.BuildClip.X, ref y);
-            DrawPassivesSection(player, layout.BuildClip.X, ref y);
+            if (IsBuildSectionVisible(layout.BuildClip, y, 156)) DrawTemperanceSection(player, layout.BuildClip.X, ref y);
+            else y += 156;
+            if (IsBuildSectionVisible(layout.BuildClip, y, 210)) DrawEquipmentSection(player, layout.BuildClip.X, ref y);
+            else y += 210;
+            DrawMedalsSectionIfVisible(player, layout.BuildClip.X, ref y, layout.BuildClip);
+            if (y < layout.BuildClip.Bottom) DrawPassivesSection(player, layout.BuildClip.X, ref y);
 
             _spriteBatch.End();
             _graphicsDevice.ScissorRectangle = prevScissor;
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Game1.Display.SpriteBatchTransform);
         }
 
         private void DrawHealthSection(Entity player, int x, ref int y)
@@ -456,9 +516,16 @@ namespace Crusaders30XX.ECS.Systems
 
         private void DrawWeaponSection(Entity player, int x, ref int y, Rectangle clip)
         {
+            Entity weapon = ResolveWeaponPreview(player);
+            int sectionHeight = weapon != null ? 22 + GridCellH + 22 : 110;
+            if (!IsBuildSectionVisible(clip, y, sectionHeight))
+            {
+                y += sectionHeight;
+                return;
+            }
+
             DrawSectionHead("Weapon", x, y);
             y += 22;
-            Entity weapon = ResolveWeaponPreview(player);
             if (weapon != null)
             {
                 int cardW = GridCellW;
@@ -471,6 +538,7 @@ namespace Crusaders30XX.ECS.Systems
                     Position = position,
                     Scale = 1f,
                     ClipRect = clip,
+                    PreferCachedBase = UseCachedCardBasesForDiagnostics,
                 });
                 y += cardH + 22;
             }
@@ -551,6 +619,25 @@ namespace Crusaders30XX.ECS.Systems
             y += rows * (icon + gap) + 14;
         }
 
+        private void DrawMedalsSectionIfVisible(Entity player, int x, ref int y, Rectangle clip)
+        {
+            var medals = GetPlayerMedals(player);
+            const int icon = 56;
+            const int gap = 10;
+            int cols = Math.Max(1, (BuildPanelWidth + gap) / (icon + gap));
+            int contentHeight = medals.Count == 0
+                ? 70
+                : ((medals.Count + cols - 1) / cols) * (icon + gap) + 14;
+            int sectionHeight = 22 + contentHeight;
+            if (IsBuildSectionVisible(clip, y, sectionHeight)) DrawMedalsSection(player, x, ref y);
+            else y += sectionHeight;
+        }
+
+        private static bool IsBuildSectionVisible(Rectangle clip, int y, int height)
+        {
+            return height > 0 && new Rectangle(clip.X, y, clip.Width, height).Intersects(clip);
+        }
+
         private void DrawPassivesSection(Entity player, int x, ref int y)
         {
             var passives = player?.GetComponent<AppliedPassives>()?.Passives;
@@ -595,8 +682,11 @@ namespace Crusaders30XX.ECS.Systems
             var iconRect = new Rectangle(rect.Center.X - 30, rect.Y, 60, 60);
             if (equipment?.Equipment != null)
             {
-                var tex = GetTexture(slot.ToString().ToLowerInvariant());
-                if (tex != null) _spriteBatch.Draw(tex, iconRect, White1);
+                var tex = EquipmentArtService.GetTexture(_imageAssets, equipment.Equipment);
+                if (tex != null)
+                {
+                    _spriteBatch.Draw(tex, EquipmentArtService.GetContainedBounds(tex, iconRect), White1);
+                }
             }
             else
             {
@@ -665,52 +755,6 @@ namespace Crusaders30XX.ECS.Systems
             _spriteBatch.DrawString(font, text, pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
-        private void DrawHoveredEquipmentTooltip()
-        {
-            var hovered = _equipmentTooltipByEntityId
-                .Select(kv => new { Entity = EntityManager.GetEntity(kv.Key), Equipment = kv.Value })
-                .Where(x => x.Entity?.GetComponent<UIElement>()?.IsHovered == true && x.Equipment != null)
-                .OrderByDescending(x => x.Entity.GetComponent<Transform>()?.ZOrder ?? 0)
-                .FirstOrDefault();
-            if (hovered == null) return;
-            var ui = hovered.Entity.GetComponent<UIElement>();
-            Rectangle anchor = TransformResolverService.ResolveUIBounds(EntityManager, hovered.Entity, ui);
-            DrawRichEquipmentTooltip(anchor, hovered.Equipment);
-        }
-
-        private void DrawRichEquipmentTooltip(Rectangle anchor, EquipmentBase equipment)
-        {
-            const int width = 300;
-            int height = 168;
-            var bounds = new Rectangle(
-                Math.Min(Game1.VirtualWidth - width - 8, anchor.Right + 20),
-                Math.Clamp(anchor.Center.Y - height / 2, 8, Game1.VirtualHeight - height - 8),
-                width,
-                height);
-            DrawRoundedFilledBordered(bounds, 8, 2, new Color(8, 8, 8) * 0.94f, White1 * 0.85f);
-            var inner = Inset(bounds, 2);
-            var stripe = new Rectangle(inner.X, inner.Y, 6, inner.Height);
-            _spriteBatch.Draw(_pixel, stripe, GetCardColor(equipment.Color));
-            var body = new Rectangle(inner.X + 66, inner.Y + 12, inner.Width - 78, inner.Height - 24);
-            _spriteBatch.DrawString(_titleFont, equipment.Name ?? equipment.Id ?? string.Empty, new Vector2(body.X, body.Y), White1, 0f, Vector2.Zero, 0.16f, SpriteEffects.None, 0f);
-            _spriteBatch.Draw(_pixel, new Rectangle(body.X, body.Y + 30, body.Width, 2), GetCardColor(equipment.Color));
-            DrawWrappedBody(equipment.Text ?? string.Empty, new Rectangle(body.X, body.Y + 40, body.Width, body.Height - 40), White3);
-
-            if (equipment.Block > 0)
-            {
-                DrawSmallStat(new Rectangle(inner.X + 16, inner.Y + 52, 38, 38), equipment.Block.ToString(), "Block");
-            }
-        }
-
-        private void DrawSmallStat(Rectangle rect, string value, string label)
-        {
-            _spriteBatch.Draw(_pixel, rect, Black3);
-            DrawBorder(rect, White1 * 0.2f, 1);
-            Vector2 v = _titleFont.MeasureString(value) * 0.14f;
-            _spriteBatch.DrawString(_titleFont, value, new Vector2(rect.Center.X - v.X / 2f, rect.Y + 2), White1, 0f, Vector2.Zero, 0.14f, SpriteEffects.None, 0f);
-            Vector2 l = _bodyFont.MeasureString(label) * 0.05f;
-            _spriteBatch.DrawString(_bodyFont, label, new Vector2(rect.Center.X - l.X / 2f, rect.Bottom - 13), White1, 0f, Vector2.Zero, 0.05f, SpriteEffects.None, 0f);
-        }
 
         private void DrawRoundedFilledBordered(Rectangle bounds, int radius, int border, Color fill, Color borderColor)
         {
@@ -758,6 +802,7 @@ namespace Crusaders30XX.ECS.Systems
             modal.SelectionContext = evt.SelectionContext ?? string.Empty;
             modal.SelectedCardIndex = -1;
             modal.Mode = evt.Mode;
+            RebuildPresentationCache(modal);
 
             if (evt.Mode == CardListModalMode.Inventory)
             {
@@ -835,6 +880,7 @@ namespace Crusaders30XX.ECS.Systems
             SetCloseButtonActive(false);
             CleanupOverlayTooltipEntities();
             CleanupInventoryAuxCards();
+            ClearPresentationCache();
 
             if (shouldCancelClimbReplacement)
             {
@@ -896,11 +942,24 @@ namespace Crusaders30XX.ECS.Systems
             if (!active) ui.Bounds = Rectangle.Empty;
         }
 
-        private void LayoutCards(CardListModal modal, CardListModalMode mode, OverlayLayout layout)
+        private void LayoutCards(CardListModal modal, OverlayLayout layout)
         {
             var cards = GetOrderedCards(modal);
+            _visibleCards.Clear();
             int cols = CalculateColumns(layout.DeckClip.Width);
             int offsetY = CardOffsetYExtra;
+            int overscan = GridCellH + GridGap;
+            (int firstRow, int lastRow) = CalculateOverscanRowRange(
+                cards.Count,
+                cols,
+                GridCellH + GridGap,
+                modal.ScrollOffset,
+                layout.DeckClip.Height);
+            var overscanClip = new Rectangle(
+                layout.DeckClip.X,
+                layout.DeckClip.Y - overscan,
+                layout.DeckClip.Width,
+                layout.DeckClip.Height + overscan * 2);
             for (int i = 0; i < cards.Count; i++)
             {
                 int col = i % cols;
@@ -912,8 +971,20 @@ namespace Crusaders30XX.ECS.Systems
                     GridCellH);
                 var eventPosition = new Vector2(cell.X + cell.Width / 2f, cell.Y + cell.Height / 2f + offsetY);
                 var visual = CardGeometryService.GetVisualRect(GetSettings(), eventPosition, 1f);
-                bool visible = visual.Intersects(layout.DeckClip);
                 var card = cards[i];
+                Rectangle renderBounds = Rectangle.Empty;
+                bool shouldRender = row >= firstRow && row <= lastRow;
+                if (shouldRender)
+                {
+                    renderBounds = CardRenderBoundsService.GetBounds(EntityManager, card, eventPosition, 1f, 0f);
+                    shouldRender = renderBounds.Intersects(overscanClip);
+                }
+                bool interactable = visual.Intersects(layout.DeckClip);
+                if (shouldRender)
+                {
+                    _visibleCards.Add(new VisibleCardPresentation(card, i, eventPosition, renderBounds));
+                }
+
                 var transform = card.GetComponent<Transform>();
                 if (transform != null)
                 {
@@ -925,8 +996,9 @@ namespace Crusaders30XX.ECS.Systems
                 var ui = card.GetComponent<UIElement>();
                 if (ui == null) continue;
                 ui.LayerType = UILayerType.Overlay;
-                ui.IsInteractable = modal.IsSelectable && visible;
-                ui.Bounds = visible ? visual : Rectangle.Empty;
+                ui.IsInteractable = modal.IsSelectable && interactable;
+                ui.IsHidden = !interactable;
+                ui.Bounds = interactable ? visual : Rectangle.Empty;
                 ui.TooltipPosition = TooltipPosition.Right;
                 ApplyModalHoverHighlightState(card, ui, modal);
                 InputContextService.EnsureMember(EntityManager, card, ContextId);
@@ -970,10 +1042,7 @@ namespace Crusaders30XX.ECS.Systems
                 }
 
                 var entity = EnsureTooltipEntity(region.Key, region.Bounds, layout.BuildClip, region.Type, region.Tooltip, region.TooltipKeywordSource);
-                if (region.Equipment != null)
-                {
-                    _equipmentTooltipByEntityId[entity.Id] = region.Equipment;
-                }
+                SyncEquipmentTooltipSource(entity, region.EquipmentEntity);
             }
 
             CleanupStaleTooltipEntities(liveKeys);
@@ -1021,7 +1090,13 @@ namespace Crusaders30XX.ECS.Systems
                 int col = i % 2;
                 int row = i / 2;
                 var rect = new Rectangle(x + col * (slotW + 10), y + row * slotH, slotW, 78);
-                yield return new InventoryHitRegion("equipment_" + slots[i], rect, TooltipType.Equipment, string.Empty, string.Empty, equipment.Equipment);
+                yield return new InventoryHitRegion(
+                    "equipment_" + slots[i],
+                    rect,
+                    TooltipType.Equipment,
+                    string.Empty,
+                    string.Empty,
+                    ResolveEquipmentEntity(equipment));
             }
             y += slotH * 2 + 12;
 
@@ -1130,6 +1205,29 @@ namespace Crusaders30XX.ECS.Systems
             return entity;
         }
 
+        private void SyncEquipmentTooltipSource(Entity entity, Entity equipmentEntity)
+        {
+            var source = entity.GetComponent<EquipmentTooltipSource>();
+            if (equipmentEntity == null)
+            {
+                if (source != null) EntityManager.RemoveComponent<EquipmentTooltipSource>(entity);
+                return;
+            }
+
+            if (source == null)
+            {
+                EntityManager.AddComponent(entity, new EquipmentTooltipSource
+                {
+                    EquipmentEntity = equipmentEntity,
+                    TooltipEntityName = EquipmentTooltipEntityName,
+                });
+                return;
+            }
+
+            source.EquipmentEntity = equipmentEntity;
+            source.TooltipEntityName = EquipmentTooltipEntityName;
+        }
+
         private void CleanupStaleTooltipEntities(HashSet<string> liveKeys)
         {
             foreach (var entity in EntityManager.GetAllEntities()
@@ -1138,7 +1236,6 @@ namespace Crusaders30XX.ECS.Systems
             {
                 string key = entity.Name.Substring(TooltipEntityPrefix.Length);
                 if (liveKeys.Contains(key)) continue;
-                _equipmentTooltipByEntityId.Remove(entity.Id);
                 EntityManager.DestroyEntity(entity.Id);
             }
         }
@@ -1149,20 +1246,84 @@ namespace Crusaders30XX.ECS.Systems
                 .Where(entity => entity.Name != null && entity.Name.StartsWith(TooltipEntityPrefix, StringComparison.Ordinal))
                 .ToList())
             {
-                _equipmentTooltipByEntityId.Remove(entity.Id);
                 EntityManager.DestroyEntity(entity.Id);
             }
         }
 
         private List<Entity> GetOrderedCards(CardListModal modal)
         {
-            return (modal?.Cards ?? new List<Entity>())
+            if (ReferenceEquals(modal, _presentationModal)) return _orderedCards;
+            return OrderCardsForPresentation(modal?.Cards);
+        }
+
+        internal static List<Entity> OrderCardsForPresentation(IEnumerable<Entity> cards)
+        {
+            return (cards ?? Enumerable.Empty<Entity>())
                 .Where(e => e != null && e.GetComponent<CardData>() != null)
                 .OrderBy(e => GetCardSortName(e), StringComparer.OrdinalIgnoreCase)
                 .ThenBy(e => GetColorSortRank(e.GetComponent<CardData>().Color))
                 .ThenBy(e => e.Id)
                 .ToList();
         }
+
+        internal static (int FirstRow, int LastRow) CalculateOverscanRowRange(
+            int cardCount,
+            int columns,
+            int rowStride,
+            int scrollOffset,
+            int viewportHeight,
+            int overscanRows = 1)
+        {
+            if (cardCount <= 0 || columns <= 0 || rowStride <= 0 || viewportHeight <= 0) return (0, -1);
+            int rowCount = (cardCount + columns - 1) / columns;
+            int safeOverscan = Math.Max(0, overscanRows);
+            int first = Math.Max(0, scrollOffset / rowStride - safeOverscan);
+            int last = Math.Min(
+                rowCount - 1,
+                (Math.Max(0, scrollOffset) + viewportHeight - 1) / rowStride + safeOverscan);
+            return (first, last);
+        }
+
+        private void RebuildPresentationCache(CardListModal modal)
+        {
+            _presentationModal = modal;
+            _orderedCards.Clear();
+            _orderedCards.AddRange(OrderCardsForPresentation(modal?.Cards));
+            _ledgerSummary = new CardLedgerSummary(
+                _orderedCards.Count,
+                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.White),
+                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Red),
+                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Black));
+            _visibleCards.Clear();
+        }
+
+        private void ClearPresentationCache()
+        {
+            _presentationModal = null;
+            _orderedCards.Clear();
+            _visibleCards.Clear();
+            _ledgerSummary = default;
+        }
+
+        public void SetScrollOffsetForDiagnostics(int scrollOffset)
+        {
+            var modal = GetRelevantEntities().FirstOrDefault()?.GetComponent<CardListModal>();
+            if (modal?.IsOpen != true) return;
+            OverlayLayout layout = ComputeLayout(ResolveMode(modal), modal);
+            int maxScroll = Math.Max(0, CalculateCardContentHeight(modal, layout.DeckClip.Width) - layout.DeckClip.Height);
+            modal.ScrollOffset = Math.Clamp(scrollOffset, 0, maxScroll);
+        }
+
+        public void SetScrollFractionForDiagnostics(float fraction)
+        {
+            var modal = GetRelevantEntities().FirstOrDefault()?.GetComponent<CardListModal>();
+            if (modal?.IsOpen != true) return;
+            OverlayLayout layout = ComputeLayout(ResolveMode(modal), modal);
+            int maxScroll = Math.Max(0, CalculateCardContentHeight(modal, layout.DeckClip.Width) - layout.DeckClip.Height);
+            modal.ScrollOffset = (int)Math.Round(maxScroll * MathHelper.Clamp(fraction, 0f, 1f));
+        }
+
+        public int VisibleCardCountForDiagnostics => _visibleCards.Count;
 
         private static string GetCardSortName(Entity card)
         {
@@ -1330,6 +1491,13 @@ namespace Crusaders30XX.ECS.Systems
                 .ToList();
         }
 
+        private Entity ResolveEquipmentEntity(EquippedEquipment equipment)
+        {
+            if (equipment?.Owner != null) return equipment.Owner;
+            return EntityManager.GetEntitiesWithComponent<EquippedEquipment>()
+                .FirstOrDefault(entity => ReferenceEquals(entity.GetComponent<EquippedEquipment>(), equipment));
+        }
+
         private List<EquippedMedal> GetPlayerMedals(Entity player)
         {
             if (player == null) return new List<EquippedMedal>();
@@ -1387,11 +1555,6 @@ namespace Crusaders30XX.ECS.Systems
             return ability?.Text ?? string.Empty;
         }
 
-        private Texture2D GetTexture(string asset)
-        {
-            return _imageAssets.TryGetTexture(asset);
-        }
-
         private static Color GetCardColor(CardData.CardColor color)
         {
             return color switch
@@ -1417,6 +1580,14 @@ namespace Crusaders30XX.ECS.Systems
             TooltipType Type,
             string Tooltip,
             string TooltipKeywordSource,
-            EquipmentBase Equipment);
+            Entity EquipmentEntity);
+
+        private readonly record struct VisibleCardPresentation(
+            Entity Card,
+            int OrderedIndex,
+            Vector2 Position,
+            Rectangle RenderBounds);
+
+        private readonly record struct CardLedgerSummary(int Total, int White, int Red, int Black);
     }
 }

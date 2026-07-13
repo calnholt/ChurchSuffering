@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Singletons;
 
@@ -22,8 +23,12 @@ namespace Crusaders30XX.ECS.Systems
 
         private const int MaxSamples = 180; // ~3s at 60 FPS
         private readonly Queue<float> _frameTimes = new Queue<float>(MaxSamples);
-        private float _accumulatedTime;
-        private int _frameCount;
+        private readonly Queue<float> _cpuTimes = new Queue<float>(MaxSamples);
+        private readonly Queue<float> _gpuTimes = new Queue<float>(MaxSamples);
+        private long _lastCapturedRenderFrame = -1;
+        private long _nextTopRefresh;
+        private List<FrameProfiler.Sample> _cachedCpuTop = new();
+        private List<FrameProfiler.Sample> _cachedGpuTop = new();
         private float _fps;
 
         // Overlay layout (full-screen overlay with margin)
@@ -92,28 +97,34 @@ namespace Crusaders30XX.ECS.Systems
 
         public override void Update(GameTime gameTime)
         {
-            var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // Track instantaneous FPS using averaging over 0.5s
-            _accumulatedTime += dt;
-            _frameCount++;
-            if (_accumulatedTime >= 0.5f)
+            long renderFrame = FrameProfiler.CurrentRenderFrameId;
+            if (renderFrame != _lastCapturedRenderFrame)
             {
-                _fps = _frameCount / _accumulatedTime;
-                _frameCount = 0;
-                _accumulatedTime = 0f;
+                _lastCapturedRenderFrame = renderFrame;
+                FrameProfiler.LiveFrameMetrics frame = FrameProfiler.GetLatestFrameMetrics();
+                EnqueueBounded(_frameTimes, (float)frame.RenderCadenceMs);
+                EnqueueBounded(_cpuTimes, (float)frame.CpuBusyMs);
+                EnqueueBounded(_gpuTimes, (float)frame.GpuMs);
+                _fps = frame.RenderCadenceMs > 0 ? (float)(1000.0 / frame.RenderCadenceMs) : 0;
             }
 
-            // Rolling window of wall-clock frame duration (seconds between Update calls; includes Draw + vsync wait)
-            _frameTimes.Enqueue(dt);
-            while (_frameTimes.Count > MaxSamples)
+            long now = Stopwatch.GetTimestamp();
+            if (now >= _nextTopRefresh)
             {
-                _frameTimes.Dequeue();
+                _cachedCpuTop = FrameProfiler.GetTopSamples(7);
+                _cachedGpuTop = FrameProfiler.GetTopGpuSamples(7);
+                _nextTopRefresh = now + Stopwatch.Frequency / 4;
             }
 
             EnsureWhiteTexture();
 
             base.Update(gameTime);
+        }
+
+        private static void EnqueueBounded(Queue<float> queue, float value)
+        {
+            queue.Enqueue(Math.Max(0, value));
+            while (queue.Count > MaxSamples) queue.Dequeue();
         }
 
         protected override void UpdateEntity(Entity entity, GameTime gameTime)
@@ -141,8 +152,9 @@ namespace Crusaders30XX.ECS.Systems
             // Title and metrics (use measured line spacing to avoid cramped text)
             string title = "Profiler";
             string fpsStr = $"FPS: {Math.Round(_fps):0}";
-            float lastDt = _frameTimes.Count > 0 ? _frameTimes.Last() : 0f;
-            string msStr = lastDt > 0 ? $"Frame: {(lastDt * 1000f):0.0} ms" : "Frame: -- ms";
+            FrameProfiler.LiveFrameMetrics latest = FrameProfiler.GetLatestFrameMetrics();
+            string msStr = $"Cadence: {latest.RenderCadenceMs:0.0} | CPU: {latest.CpuBusyMs:0.0} | GPU: {(GpuProfiler.TimerSupported ? latest.GpuMs.ToString("0.0") : "n/a")} | Outside: {latest.OutsideMs:0.0} ms";
+            string gpuStatus = $"GPU {GpuProfiler.Status} | draws {latest.Workload.Draws} | sprites {latest.Workload.Sprites} | targets {latest.Workload.Targets} | shaders {latest.Workload.PixelShaders + latest.Workload.VertexShaders} | pending {GpuProfiler.PendingQueries} | dropped {GpuProfiler.DroppedSamples}";
 
             float lineH = _font.LineSpacing;
             // compute header height dynamically to fit two lines + padding (cached)
@@ -152,10 +164,12 @@ namespace Crusaders30XX.ECS.Systems
             var fpsPos = new Vector2(panelX + _headerPadding, panelY + _headerPadding + lineH);
             float fpsWidth = _font.MeasureString(fpsStr).X;
             var msPos = new Vector2(fpsPos.X + fpsWidth + 24f, fpsPos.Y);
+            var statusPos = new Vector2(panelX + _headerPadding, panelY + _headerPadding + lineH * 2);
 
             _spriteBatch.DrawString(_font, title, titlePos, Color.White, 0f, Vector2.Zero, _tableTextScale, SpriteEffects.None, 0f);
             _spriteBatch.DrawString(_font, fpsStr, fpsPos, Color.White, 0f, Vector2.Zero, _tableTextScale, SpriteEffects.None, 0f);
             _spriteBatch.DrawString(_font, msStr, msPos, Color.White, 0f, Vector2.Zero, _tableTextScale, SpriteEffects.None, 0f);
+            _spriteBatch.DrawString(_font, gpuStatus, statusPos, Color.LightGray, 0f, Vector2.Zero, _tableTextScale, SpriteEffects.None, 0f);
 
             // Graph area
             int gx = panelX + AxisLabelWidth + 12;
@@ -173,44 +187,24 @@ namespace Crusaders30XX.ECS.Systems
                 _spriteBatch.DrawString(_font, t.ToString(), labelPos, Color.White, 0f, Vector2.Zero, _tableTextScale, SpriteEffects.None, 0f);
             }
 
-            // Plot wall-clock frame duration (ms); spikes = hitches
-            if (_frameTimes.Count >= 2)
-            {
-                var samples = _frameTimes.Select(t => t > 0 ? Math.Min(GraphMaxFrameMs, t * 1000f) : GraphMaxFrameMs).ToArray();
-                int n = samples.Length;
-                for (int i = 1; i < n; i++)
-                {
-                    float t0 = samples[i - 1];
-                    float t1 = samples[i];
-                    int x0 = gx + (i - 1) * gw / (n - 1);
-                    int x1 = gx + i * gw / (n - 1);
-                    int y0 = gy + gh - (int)(gh * (t0 / GraphMaxFrameMs));
-                    int y1 = gy + gh - (int)(gh * (t1 / GraphMaxFrameMs));
-                    DrawLine(x0, y0, x1, y1, new Color(0, 200, 255, 200));
-                }
-
-                float lastMs = samples[^1];
-                int lx = gx + gw - 2;
-                int ly = gy + gh - (int)(gh * (lastMs / GraphMaxFrameMs));
-                string lastLabel = $"{lastMs:0.0}";
-                _spriteBatch.DrawString(_font, lastLabel, new Vector2(lx - 32, ly - 16), Color.Cyan, 0f, Vector2.Zero, _tableTextScale, SpriteEffects.None, 0f);
-            }
+            DrawGraph(_frameTimes, gx, gy, gw, gh, new Color(0, 200, 255, 200));
+            DrawGraph(_cpuTimes, gx, gy, gw, gh, new Color(255, 210, 60, 210));
+            if (GpuProfiler.TimerSupported) DrawGraph(_gpuTimes, gx, gy, gw, gh, new Color(100, 255, 130, 210));
 
             // Top draw hotspots list (right of graph)
-            var top = FrameProfiler.GetTopSamples(10);
             int listPanelX = panelX + panelW - _sidePanelWidth;
             int listX = listPanelX + _sidePanelPadding;
             int listY = gy;
             int listMaxWidth = _sidePanelWidth - _sidePanelPadding * 2;
             float tableScale = _tableTextScale;
             float tableLineH = _font.LineSpacing * tableScale;
-            DrawStringClippedScaled("Top Draw (ms/f, calls)", new Vector2(listX, listY), Color.White, listMaxWidth, tableScale);
+            DrawStringClippedScaled("Top CPU (ms/f, calls)", new Vector2(listX, listY), Color.White, listMaxWidth, tableScale);
             listY += (int)(tableLineH + 4);
             // Column widths based on font metrics (scaled) - cached by scale
             EnsureTableMetricsCached();
             float col1W = _cachedCol1W;
             float col2W = _cachedCol2W;
-            foreach (var s in top)
+            foreach (var s in _cachedCpuTop)
             {
                 string col1 = $"{s.FrameAvgMs:0.00}";
                 string col2 = $"({s.Calls})";
@@ -220,10 +214,44 @@ namespace Crusaders30XX.ECS.Systems
                 DrawStringClippedScaled(s.Name, new Vector2(listX + col1W + col2W, listY), Color.White, (int)nameMax, tableScale);
                 listY += (int)tableLineH;
             }
+            listY += (int)(tableLineH * 0.5f);
+            DrawStringClippedScaled("Top GPU (ms/f, delayed calls)", new Vector2(listX, listY), Color.LightGreen, listMaxWidth, tableScale);
+            listY += (int)(tableLineH + 4);
+            foreach (var s in _cachedGpuTop)
+            {
+                string col1 = $"{s.FrameAvgMs:0.00}";
+                string col2 = $"({s.Calls})";
+                float nameMax = listMaxWidth - col1W - col2W;
+                _spriteBatch.DrawString(_font, col1, new Vector2(listX, listY), Color.LightGreen, 0f, Vector2.Zero, tableScale, SpriteEffects.None, 0f);
+                _spriteBatch.DrawString(_font, col2, new Vector2(listX + col1W, listY), Color.LightGreen, 0f, Vector2.Zero, tableScale, SpriteEffects.None, 0f);
+                DrawStringClippedScaled(s.Name, new Vector2(listX + col1W + col2W, listY), Color.LightGreen, (int)nameMax, tableScale);
+                listY += (int)tableLineH;
+            }
 
             // Divider between graph and list
             int dividerX = panelX + panelW - _sidePanelWidth - _betweenPanelsGap / 2;
             DrawRect(new Rectangle(dividerX, gy, 2, gh), new Color(255, 255, 255, 16));
+        }
+
+        private void DrawGraph(Queue<float> samples, int gx, int gy, int gw, int gh, Color color)
+        {
+            if (samples.Count < 2) return;
+            int index = 0;
+            float previous = 0;
+            foreach (float raw in samples)
+            {
+                float value = Math.Min(GraphMaxFrameMs, raw);
+                if (index > 0)
+                {
+                    int x0 = gx + (index - 1) * gw / (samples.Count - 1);
+                    int x1 = gx + index * gw / (samples.Count - 1);
+                    int y0 = gy + gh - (int)(gh * (previous / GraphMaxFrameMs));
+                    int y1 = gy + gh - (int)(gh * (value / GraphMaxFrameMs));
+                    DrawLine(x0, y0, x1, y1, color);
+                }
+                previous = value;
+                index++;
+            }
         }
 
         private void DrawStringClipped(string text, Vector2 position, Color color, int maxWidth)
@@ -274,7 +302,7 @@ namespace Crusaders30XX.ECS.Systems
                 _cachedHeaderBaseHeight = _headerBaseHeight;
                 _cachedHeaderPadding = _headerPadding;
                 _cachedLineSpacing = _font.LineSpacing;
-                _cachedHeaderHeight = Math.Max(_headerBaseHeight, (int)(_cachedLineSpacing * 2 + _headerPadding * 2));
+                _cachedHeaderHeight = Math.Max(_headerBaseHeight, (int)(_cachedLineSpacing * 3 + _headerPadding * 2));
             }
             return _cachedHeaderHeight;
         }

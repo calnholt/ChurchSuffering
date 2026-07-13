@@ -137,6 +137,65 @@ public class QuestCardRewardServiceTests
 	}
 
 	[Fact]
+	public void GenerateDeckRewardOffer_after_ten_accepted_mutations_uses_both_offer_compositions()
+	{
+		var entries = Entries(
+			"smite|White",
+			"reckoning|Black",
+			"fervor|Red",
+			"seize|Black");
+
+		var earlyOffer = QuestCardRewardService.GenerateDeckRewardOffer(
+			entries, "sword", 20, restrictToCollection: false, acceptedDeckRewardMutations: 9, random: new Random(3));
+		Assert.Equal(2, earlyOffer.options.Count(option => option.kind == DeckRewardOfferKinds.Exchange));
+		Assert.Equal("smite|White", earlyOffer.options[0].outgoingCardKey);
+		Assert.Equal("reckoning|Black", earlyOffer.options[1].outgoingCardKey);
+
+		var exchangeCounts = new HashSet<int>();
+		for (int seed = 0; seed < 20; seed++)
+		{
+			var offer = QuestCardRewardService.GenerateDeckRewardOffer(
+				entries, "sword", 20, restrictToCollection: false, acceptedDeckRewardMutations: 10, random: new Random(seed));
+			Assert.Equal(3, offer.options.Count);
+			exchangeCounts.Add(offer.options.Count(option => option.kind == DeckRewardOfferKinds.Exchange));
+		}
+
+		Assert.Equal(new[] { 1, 2 }, exchangeCounts.Order());
+	}
+
+	[Fact]
+	public void GenerateDeckRewardOffer_after_ten_accepted_mutations_targets_nonstarters_and_upgraded_starters()
+	{
+		var entries = Entries(
+			"smite|White|Upgraded",
+			"reckoning|Black|Upgraded",
+			"fervor|Red",
+			"seize|Black|Upgraded");
+		bool foundNonStarter = false;
+		bool foundUpgradedStarter = false;
+
+		for (int seed = 0; seed < 100; seed++)
+		{
+			var offer = QuestCardRewardService.GenerateDeckRewardOffer(
+				entries, "sword", 20, restrictToCollection: false, acceptedDeckRewardMutations: 10, random: new Random(seed));
+			foreach (var option in offer.options.Where(option => option.kind == DeckRewardOfferKinds.Exchange))
+			{
+				Assert.False(string.Equals(option.outgoingCardKey, "seize|Black|Upgraded", StringComparison.OrdinalIgnoreCase));
+				if (string.Equals(option.outgoingCardKey, "fervor|Red", StringComparison.OrdinalIgnoreCase))
+					foundNonStarter = true;
+				if (RunDeckService.IsUpgradedCardKey(option.outgoingCardKey))
+				{
+					foundUpgradedStarter = true;
+					Assert.True(RunDeckService.IsUpgradedCardKey(option.incomingCardKey));
+				}
+			}
+		}
+
+		Assert.True(foundNonStarter);
+		Assert.True(foundUpgradedStarter);
+	}
+
+	[Fact]
 	public void ApplyPendingOfferOption_replaces_card_at_same_loadout_position_inherits_restrictions_and_allows_copy_limit_bypass()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
@@ -175,6 +234,7 @@ public class QuestCardRewardServiceTests
 		Assert.True(after[0].countsAsTraded);
 		Assert.Contains(RunScopedStateService.RestrictionFrozen, after[0].restrictions);
 		Assert.Equal(3, DeckRules.CountCardIdInDeck(after.Select(entry => entry.cardKey).ToList(), "fervor"));
+		Assert.Equal(1, SaveCache.GetAcceptedDeckRewardMutationCount());
 		Assert.Null(SaveCache.GetPendingDeckRewardOffer());
 	}
 
@@ -213,6 +273,7 @@ public class QuestCardRewardServiceTests
 		Assert.True(upgradedEntry.isStarter);
 		Assert.True(upgradedEntry.countsAsTraded);
 		Assert.Contains(RunScopedStateService.RestrictionFrozen, upgradedEntry.restrictions);
+		Assert.Equal(1, SaveCache.GetAcceptedDeckRewardMutationCount());
 		var baseCard = Crusaders30XX.ECS.Factories.CardFactory.Create("smite");
 		var upgradedCard = Crusaders30XX.ECS.Factories.CardFactory.Create("smite");
 		upgradedCard.IsUpgraded = true;

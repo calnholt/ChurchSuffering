@@ -128,7 +128,9 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 			equipment.GetComponent<Transform>().Position);
 		var assigned = equipment.GetComponent<AssignedBlockCard>();
 		Assert.NotNull(assigned);
-		Assert.Equal(new Vector2(panelBounds.Center.X, panelBounds.Center.Y), assigned.StartPos);
+		Assert.Equal(
+			new Vector2(panelBounds.Center.X, panelBounds.Center.Y),
+			equipment.GetComponent<AssignedBlockPresentation>().StartPos);
 		Assert.Equal(new Vector2(panelBounds.Center.X, panelBounds.Center.Y), assigned.ReturnTargetPos);
 	}
 
@@ -280,6 +282,31 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 				.GetComponent<EquipmentTooltipState>()
 				.EquipmentEntity);
 		Assert.False(UIElementHighlightSystem.ShouldShowHoverHighlight(ui));
+	}
+
+	[Fact]
+	public void Assigned_equipment_hover_uses_the_shared_equipment_tooltip()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Block);
+		var equipment = AddEquipment(entityManager, player, "knightly_grieves");
+		var ui = equipment.GetComponent<UIElement>();
+		ui.Bounds = new Rectangle(680, 240, 76, 96);
+		ui.TooltipType = TooltipType.Equipment;
+		ui.IsHovered = true;
+		entityManager.AddComponent(equipment, new EquipmentZone { Zone = EquipmentZoneType.AssignedBlock });
+		entityManager.AddComponent(equipment, new AssignedBlockCard { IsEquipment = true });
+
+		var tooltipEntity = entityManager.CreateEntity(EquipmentDisplaySystem.TooltipEntityName);
+		entityManager.AddComponent(tooltipEntity, new EquipmentTooltipState());
+		entityManager.AddComponent(tooltipEntity, new Transform());
+		entityManager.AddComponent(tooltipEntity, new UIElement());
+
+		new EquipmentTooltipDisplaySystem(entityManager, null, null, null).Update(Frame());
+
+		var state = tooltipEntity.GetComponent<EquipmentTooltipState>();
+		Assert.Same(equipment, state.EquipmentEntity);
+		Assert.Same(equipment, state.AnchorEntity);
+		Assert.True(state.TargetVisible);
 	}
 
 	[Fact]

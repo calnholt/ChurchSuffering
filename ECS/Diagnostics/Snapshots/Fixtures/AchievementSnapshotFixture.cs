@@ -56,7 +56,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_title.Update(settle);
 			if (_variant == AchievementSnapshotVariant.Detail)
 			{
-				_description.ShowImmediatelyForSnapshot("red_card_apprentice");
+				_description.ShowImmediatelyForSnapshot("frozen_but_unbroken");
 			}
 		}
 
@@ -69,7 +69,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			}
 			if (_variant == AchievementSnapshotVariant.Detail)
 			{
-				_description.ShowImmediatelyForSnapshot("red_card_apprentice");
+				_description.ShowImmediatelyForSnapshot("frozen_but_unbroken");
 			}
 			_scene.Draw();
 		}

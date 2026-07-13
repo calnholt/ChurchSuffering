@@ -97,6 +97,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			var ui = entity.GetComponent<UIElement>();
 			var abc = entity.GetComponent<AssignedBlockCard>();
+			var assignedPresentation = entity.GetComponent<AssignedBlockPresentation>();
 			var tr = entity.GetComponent<Transform>();
 
 			Vector2 origin;
@@ -104,10 +105,10 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				origin = new Vector2(ui.Bounds.Center.X, ui.Bounds.Top);
 			}
-			else if (abc != null)
+			else if (abc != null && assignedPresentation != null)
 			{
-				float topY = abc.CurrentPos.Y - (FallbackCardH * abc.CurrentScale * 0.5f);
-				origin = new Vector2(abc.CurrentPos.X, topY);
+				float topY = assignedPresentation.RenderPos.Y - (FallbackCardH * assignedPresentation.CurrentScale * 0.5f);
+				origin = new Vector2(assignedPresentation.RenderPos.X, topY);
 			}
 			else
 			{
@@ -262,5 +263,4 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-
 

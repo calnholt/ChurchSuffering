@@ -48,11 +48,10 @@ public sealed class LayeredHolesOverlay
 
 		_effect.CurrentTechnique = _effect.Techniques["SpriteDrawing"];
 
-		Viewport viewport = spriteBatch.GraphicsDevice.Viewport;
 		Matrix projection = Matrix.CreateOrthographicOffCenter(
 			0,
-			viewport.Width,
-			viewport.Height,
+			Game1.VirtualWidth,
+			Game1.VirtualHeight,
 			0,
 			0,
 			1);
@@ -68,7 +67,7 @@ public sealed class LayeredHolesOverlay
 		Set("RimWarpSpeed", RimWarpSpeed);
 		Set("RevealRefract", RevealRefract);
 		Set("RevealDarken", RevealDarken);
-		PopulateHoleData(_holes, GetAspect(viewport));
+		PopulateHoleData(_holes, Game1.VirtualWidth / (double)Game1.VirtualHeight);
 		Set("Holes", _holes);
 		Set("MiddleTexture", MiddleTexture);
 		Set("BottomTexture", BottomTexture);
@@ -153,11 +152,6 @@ public sealed class LayeredHolesOverlay
 		float pickMiddle = Hash11(fid * 17.7d + cycle) <= Saturate(LayerSplit) ? 1f : 0f;
 
 		return new Vector4((float)centerX, (float)centerY, (float)radius, pickMiddle);
-	}
-
-	private static double GetAspect(Viewport viewport)
-	{
-		return viewport.Width / Math.Max((double)viewport.Height, 1d);
 	}
 
 	private static double Hash11(double value)

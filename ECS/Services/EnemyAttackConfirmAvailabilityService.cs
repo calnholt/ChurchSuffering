@@ -70,9 +70,8 @@ namespace Crusaders30XX.ECS.Services
 			if (entityManager == null) return 0;
 
 			return entityManager.GetEntitiesWithComponent<AssignedBlockCard>()
-				.Select(entity => entity.GetComponent<AssignedBlockCard>())
-				.Count(assignment => assignment != null
-					&& assignment.Phase != AssignedBlockCard.PhaseState.Returning);
+				.Count(entity => entity.GetComponent<AssignedBlockPresentation>()?.Phase
+					!= AssignedBlockPresentation.PhaseState.Returning);
 		}
 
 		public static bool IsAnyBlockAssignmentAnimating(EntityManager entityManager)
@@ -80,9 +79,8 @@ namespace Crusaders30XX.ECS.Services
 			if (entityManager == null) return false;
 
 			return entityManager.GetEntitiesWithComponent<AssignedBlockCard>()
-				.Select(entity => entity.GetComponent<AssignedBlockCard>())
-				.Any(assignment => assignment != null
-					&& assignment.Phase != AssignedBlockCard.PhaseState.Idle);
+				.Any(entity => entity.GetComponent<AssignedBlockPresentation>()?.Phase
+					!= AssignedBlockPresentation.PhaseState.Idle);
 		}
 
 		private static bool MeetsAttackBlockRequirement(ConditionType conditionType, int activeBlockCount)

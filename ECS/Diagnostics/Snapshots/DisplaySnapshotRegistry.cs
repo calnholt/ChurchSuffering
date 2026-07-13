@@ -26,6 +26,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new EquipmentTooltipSnapshotFixture());
 			Register(new EnemyDamageMeterSnapshotFixture());
 			Register(new EnemyAttackBannerSnapshotFixture());
+			Register(new AssignedBlockRailSnapshotFixture());
 			Register(new EnemyDefeatBurstSnapshotFixture());
 			Register(new GuardianAngelSnapshotFixture());
 			Register(new PauseMenuSnapshotFixture());
@@ -49,6 +50,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.EncounterRewardModal));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ReplacementModal));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryOverlay));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryEquipmentTooltip));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListTop));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListMiddle));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListBottom));
 			Register(new ClimbHeaderSnapshotFixture());
 			Register(new ClimbResourceAcquisitionSnapshotFixture());
         }

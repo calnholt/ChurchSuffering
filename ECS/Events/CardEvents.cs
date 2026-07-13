@@ -28,6 +28,11 @@ namespace Crusaders30XX.ECS.Events
         public float Alpha { get; set; } = 1f;
         public float Rotation { get; set; } = 0f;
         /// <summary>
+        /// Reuses a renderer-owned base-card surface when the card presentation is static.
+        /// Highlights and status effects are still rendered live.
+        /// </summary>
+        public bool PreferCachedBase { get; set; } = false;
+        /// <summary>
         /// Optional clip rectangle. If set, the card will be clipped to this region using scissor test.
         /// </summary>
         public Rectangle? ClipRect { get; set; }
