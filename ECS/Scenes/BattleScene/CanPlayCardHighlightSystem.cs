@@ -81,17 +81,21 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
             _cachedGlowColor = new Color((byte)hs.GlowColorR, (byte)hs.GlowColorG, (byte)hs.GlowColorB);
 
             // Pre-gather data needed for action phase checks
-            Entity player = null;
-            ActionPoints ap = null;
-            AppliedPassives appliedPassives = null;
-            List<Entity> costEligibleCards = null;
+            int actionPoints = 0;
+            int vigorStacks = 0;
+            bool isSilenced = false;
+            IReadOnlyList<Entity> paymentPool = Array.Empty<Entity>();
 
             if (phase.Sub == SubPhase.Action)
             {
-                player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-                ap = player?.GetComponent<ActionPoints>();
-                appliedPassives = GetComponentHelper.GetAppliedPassives(EntityManager, "Player");
-                costEligibleCards = BuildCostEligibleCards(deck);
+                var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+                actionPoints = player?.GetComponent<ActionPoints>()?.Current ?? 0;
+                vigorStacks = VigorService.GetPlayerVigorStacks(EntityManager);
+                var appliedPassives = GetComponentHelper.GetAppliedPassives(EntityManager, "Player");
+                isSilenced = appliedPassives != null
+                    && appliedPassives.Passives.TryGetValue(AppliedPassiveType.Silenced, out int silencedStacks)
+                    && silencedStacks > 0;
+                paymentPool = deck.Hand.ToArray();
             }
 
             // Check for active attack intent during block phase
@@ -118,7 +122,13 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
 
                 bool canPlay = false;
                 if (phase.Sub == SubPhase.Action)
-                    canPlay = IsPlayableInAction(cardEntity, data, ap, appliedPassives, costEligibleCards);
+                    canPlay = IsPlayableInAction(
+                        cardEntity,
+                        data,
+                        actionPoints,
+                        vigorStacks,
+                        isSilenced,
+                        paymentPool);
                 else if (phase.Sub == SubPhase.Block)
                     canPlay = IsPlayableInBlock(cardEntity, data, activePlannedAttack);
 
@@ -144,49 +154,32 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
         }
 
         // --- Action phase playability check ---
-        private bool IsPlayableInAction(Entity cardEntity, CardData data, ActionPoints ap, AppliedPassives appliedPassives, List<Entity> costEligibleCards)
+        private bool IsPlayableInAction(
+            Entity cardEntity,
+            CardData data,
+            int actionPoints,
+            int vigorStacks,
+            bool isSilenced,
+            IReadOnlyList<Entity> paymentPool)
         {
             var card = data.Card;
+            if (card == null) return false;
             var alternateProfile = AlternateCardPlayService.GetProfile(EntityManager, cardEntity, SubPhase.Action);
-
-            // Relics can't be played
-            if (card.Type == CardType.Relic) return false;
-
-            // Block cards need an alternate play profile during Action phase
-            if (card.Type == CardType.Block && alternateProfile?.AllowsPlay != true) return false;
-
-            // Need AP unless free action
-            bool isFree = card.IsFreeAction || alternateProfile?.IsFreeAction == true;
-            if (!isFree)
-            {
-                int currentAp = ap?.Current ?? 0;
-                if (currentAp <= 0) return false;
-            }
-
-            // Card-specific CanPlay check (now pure bool, safe per-frame)
-            bool skipBlockCanPlay = card.Type == CardType.Block && alternateProfile?.AllowsPlay == true;
-            if (!skipBlockCanPlay && card.CanPlay != null && !card.CanPlay(EntityManager, cardEntity)) return false;
-
             var pledge = cardEntity.GetComponent<Pledge>();
-            if (pledge != null && !pledge.CanPlay) return false;
-
-            // Silenced + pledged can't play
-            if (cardEntity.HasComponent<Pledge>() && appliedPassives != null)
-            {
-                appliedPassives.Passives.TryGetValue(AppliedPassiveType.Silenced, out int silencedStacks);
-                if (silencedStacks > 0) return false;
-            }
-
-            // Check discard costs can be satisfied (after Vigor reduction)
-            var costs = VigorService.GetEffectiveCost(card, VigorService.GetPlayerVigorStacks(EntityManager));
-            if (costs != null && costs.Count > 0)
-            {
-                // Build available cards excluding self
-                var available = costEligibleCards.Where(c => c != cardEntity).ToList();
-                if (!CanSatisfyCosts(costs, available)) return false;
-            }
-
-            return true;
+            var context = new CardPlayContext(
+                cardEntity,
+                card,
+                SubPhase.Action,
+                actionPoints,
+                vigorStacks,
+                false,
+                pledge != null,
+                pledge?.CanPlay ?? true,
+                isSilenced,
+                card.CanPlay?.Invoke(EntityManager, cardEntity) ?? true,
+                alternateProfile,
+                paymentPool);
+            return CardPlayResolver.Resolve(context).IsPlayable;
         }
 
         // --- Block phase playability check ---
@@ -194,57 +187,6 @@ namespace Crusaders30XX.ECS.Scenes.BattleScene
         {
             return activePlannedAttack != null
                 && EnemyBlockerEligibilityService.IsEligibleHandBlocker(EntityManager, cardEntity, activePlannedAttack);
-        }
-
-        // --- Build list of cards eligible to pay costs (excludes weapons, tokens, yellow, pledged) ---
-        private List<Entity> BuildCostEligibleCards(Deck deck)
-        {
-            var result = new List<Entity>();
-            foreach (var c in deck.Hand)
-            {
-                var cd = c.GetComponent<CardData>();
-                if (cd == null) continue;
-                if (cd.Color == CardData.CardColor.Yellow) continue;
-                if (!cd.Card.CanDiscardForCost) continue;
-                if (c.GetComponent<Pledge>() != null) continue;
-                result.Add(c);
-            }
-            return result;
-        }
-
-        // --- Greedy cost satisfaction (mirrors CardPlaySystem.CanSatisfy) ---
-        private bool CanSatisfyCosts(List<string> requiredCosts, List<Entity> candidates)
-        {
-            var remaining = new List<string>(requiredCosts);
-            var used = new HashSet<Entity>();
-
-            // Match specific colors first
-            foreach (var e in candidates)
-            {
-                if (remaining.Count == 0) break;
-                int idx = remaining.FindIndex(r =>
-                    r != "Any" && CardColorQualificationService.IsEligibleForCost(e, r));
-                if (idx >= 0)
-                {
-                    used.Add(e);
-                    remaining.RemoveAt(idx);
-                }
-            }
-
-            // Then satisfy Any with remaining cards
-            foreach (var e in candidates)
-            {
-                if (remaining.Count == 0) break;
-                if (used.Contains(e)) continue;
-                int idx = remaining.FindIndex(r => r == "Any");
-                if (idx >= 0)
-                {
-                    used.Add(e);
-                    remaining.RemoveAt(idx);
-                }
-            }
-
-            return remaining.Count == 0;
         }
 
         // --- Draw glow layers around a card rect ---

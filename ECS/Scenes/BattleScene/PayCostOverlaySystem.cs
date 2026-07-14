@@ -475,15 +475,7 @@ namespace Crusaders30XX.ECS.Systems
             if (deck == null) return;
             if (evt.Card == state.CardToPlay) return;
 
-            var cd = evt.Card.GetComponent<CardData>();
-            if (cd == null) return;
-
-            // Hard guard: weapons and tokens cannot be used to pay costs under any circumstance
-            try
-            {
-                if (!cd.Card.CanDiscardForCost) return;
-            }
-            catch { }
+            if (!CardPlayResolver.IsEligiblePaymentCard(evt.Card)) return;
 
             var alreadySelected = evt.Card.GetComponent<SelectedForPayment>() != null || state.SelectedCards.Contains(evt.Card);
 
@@ -917,16 +909,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private static bool IsCardViableForCosts(Entity card, List<string> remainingCosts)
         {
-            var cd = card.GetComponent<CardData>();
-            if (cd == null) return false;
-            // Disallow using weapons and tokens to pay costs
-            try
-            {
-                if (!cd.Card.CanDiscardForCost) return false;
-            }
-            catch { }
-            // Disallow using pledged cards to pay costs
-            if (card.HasComponent<Pledge>()) return false;
+            if (!CardPlayResolver.IsEligiblePaymentCard(card)) return false;
 
             // Card is viable if it can satisfy at least one remaining requirement
             foreach (var c in remainingCosts)

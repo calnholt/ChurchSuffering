@@ -32,124 +32,6 @@ namespace Crusaders30XX.ECS.Systems
         protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
 
         /// <summary>
-        /// Counts distinct ways to satisfy cost requirements (order-independent multisets).
-        /// Returns the count of distinct solutions, stopping early if count > 1 for optimization.
-        /// </summary>
-        private int CountDistinctSolutions(List<string> requiredCosts, List<Entity> handCards)
-        {
-            // Safety check: exclude Yellow cards
-            var validCards = handCards.Where(e => 
-            {
-                var cd = e.GetComponent<CardData>();
-                return cd != null && cd.Color != CardData.CardColor.Yellow;
-            }).ToList();
-
-            if (requiredCosts.Count == 0)
-                return validCards.Count == 0 ? 1 : 0; // Empty requirement means no cards needed
-
-            int count = 0;
-            HashSet<string> seenSolutions = new HashSet<string>();
-
-            // Recursive helper to count solutions
-            void CountSolutionsRecursive(List<string> remainingCosts, List<Entity> availableCards, HashSet<Entity> usedCards, List<Entity> currentSolution)
-            {
-                // Early exit optimization: if we already found more than 1 solution, stop
-                if (count > 1) return;
-
-                if (remainingCosts.Count == 0)
-                {
-                    // Found a valid solution - create a canonical representation (sorted by entity ID)
-                    var solutionKey = string.Join(",", currentSolution.OrderBy(e => e.Id).Select(e => e.Id.ToString()));
-                    if (!seenSolutions.Contains(solutionKey))
-                    {
-                        seenSolutions.Add(solutionKey);
-                        count++;
-                    }
-                    return;
-                }
-
-                string nextCost = remainingCosts[0];
-                var remainingCostsAfter = remainingCosts.Skip(1).ToList();
-
-                // Find all cards that can satisfy this cost requirement
-                var candidates = availableCards.Where(card => 
-                {
-                    if (usedCards.Contains(card)) return false;
-                    return CardColorQualificationService.IsEligibleForCost(card, nextCost);
-                }).ToList();
-
-                // Try each candidate for this requirement
-                foreach (var candidate in candidates)
-                {
-                    var newUsedCards = new HashSet<Entity>(usedCards) { candidate };
-                    var newSolution = new List<Entity>(currentSolution) { candidate };
-                    CountSolutionsRecursive(remainingCostsAfter, availableCards, newUsedCards, newSolution);
-                    
-                    // Early exit optimization
-                    if (count > 1) return;
-                }
-            }
-
-            CountSolutionsRecursive(requiredCosts, validCards, new HashSet<Entity>(), new List<Entity>());
-            return count;
-        }
-
-        /// <summary>
-        /// Finds the first valid solution for satisfying cost requirements.
-        /// Assumes count == 1, so returns the single solution.
-        /// </summary>
-        private List<Entity> FindFirstSolution(List<string> requiredCosts, List<Entity> handCards)
-        {
-            // Safety check: exclude Yellow cards
-            var validCards = handCards.Where(e => 
-            {
-                var cd = e.GetComponent<CardData>();
-                return cd != null && cd.Color != CardData.CardColor.Yellow;
-            }).ToList();
-
-            if (requiredCosts.Count == 0)
-                return new List<Entity>();
-
-            List<Entity> solution = null;
-
-            // Recursive helper to find first solution
-            bool FindSolutionRecursive(List<string> remainingCosts, List<Entity> availableCards, HashSet<Entity> usedCards, List<Entity> currentSolution)
-            {
-                if (remainingCosts.Count == 0)
-                {
-                    solution = new List<Entity>(currentSolution);
-                    return true; // Found solution
-                }
-
-                string nextCost = remainingCosts[0];
-                var remainingCostsAfter = remainingCosts.Skip(1).ToList();
-
-                // Find all cards that can satisfy this cost requirement
-                var candidates = availableCards.Where(card => 
-                {
-                    if (usedCards.Contains(card)) return false;
-                    return CardColorQualificationService.IsEligibleForCost(card, nextCost);
-                }).ToList();
-
-                // Try each candidate for this requirement
-                foreach (var candidate in candidates)
-                {
-                    var newUsedCards = new HashSet<Entity>(usedCards) { candidate };
-                    var newSolution = new List<Entity>(currentSolution) { candidate };
-                    if (FindSolutionRecursive(remainingCostsAfter, availableCards, newUsedCards, newSolution))
-                    {
-                        return true; // Found solution
-                    }
-                }
-
-                return false; // No solution found
-            }
-
-            FindSolutionRecursive(requiredCosts, validCards, new HashSet<Entity>(), new List<Entity>());
-            return solution ?? new List<Entity>();
-        }
-
-        /// <summary>
         /// Ensures the LastPaymentCache entity exists and returns it.
         /// </summary>
         private LastPaymentCache EnsurePaymentCacheExists()
@@ -171,18 +53,6 @@ namespace Crusaders30XX.ECS.Systems
 
             ComponentLoggerService.LogEntity(evt.Card, "PlayCardRequested received");
 
-            // Only in Action phase
-            var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault().GetComponent<PhaseState>();
-            if (phase.Sub != SubPhase.Action)
-            {
-                LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                {
-                    ["reason"] = "InvalidPhase",
-                    ["phase"] = phase.Sub.ToString()
-                });
-                return;
-            }
-
             var data = evt.Card.GetComponent<CardData>();
             if (data == null) return;
 
@@ -191,218 +61,71 @@ namespace Crusaders30XX.ECS.Systems
             var card = data.Card;
             if (card == null || string.IsNullOrEmpty(card.CardId)) return;
 
+            var phase = EntityManager.GetEntitiesWithComponent<PhaseState>()
+                .FirstOrDefault()
+                ?.GetComponent<PhaseState>();
+            if (phase == null) return;
             var alternateProfile = AlternateCardPlayService.GetProfile(EntityManager, evt.Card, phase.Sub);
-
-            if (card.Type == CardType.Relic)
-            {
-                EventManager.Publish(new CantPlayCardMessage { Message = "Relics can only be discarded to pay for costs!" });
-                return;
-            }
-            if (card.Type == CardType.Block && alternateProfile?.AllowsPlay != true)
-            {
-                EventManager.Publish(new CantPlayCardMessage { Message = "Block cards can only be used to block!" });
-                return;
-            }
-
             var pledge = evt.Card.GetComponent<Pledge>();
-            if (pledge != null && !pledge.CanPlay)
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            var appliedPassives = GetComponentHelper.GetAppliedPassives(EntityManager, "Player");
+            bool isSilenced = appliedPassives != null
+                && appliedPassives.Passives.TryGetValue(AppliedPassiveType.Silenced, out int silencedStacks)
+                && silencedStacks > 0;
+            var deckEntityForCost = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
+            var deck = deckEntityForCost?.GetComponent<Deck>();
+            var context = new CardPlayContext(
+                evt.Card,
+                card,
+                phase.Sub,
+                player?.GetComponent<ActionPoints>()?.Current ?? 0,
+                VigorService.GetPlayerVigorStacks(EntityManager),
+                evt.CostsPaid,
+                pledge != null,
+                pledge?.CanPlay ?? true,
+                isSilenced,
+                card.CanPlay?.Invoke(EntityManager, evt.Card) ?? true,
+                alternateProfile,
+                deck != null ? deck.Hand : Array.Empty<Entity>());
+            var plan = CardPlayResolver.Resolve(context);
+
+            if (!plan.IsPlayable)
             {
-                EventManager.Publish(new CantPlayCardMessage { Message = "You can't play a card you pledged this turn!" });
+                HandleRejectedCardPlay(evt.Card, card, context, plan);
                 return;
             }
 
-            if (evt.Card.HasComponent<Pledge>())
+            if (plan.PaymentDecision == CardPaymentDecision.SelectOneCard)
             {
-                var appliedPassives = GetComponentHelper.GetAppliedPassives(EntityManager, "Player");
-                if (appliedPassives != null
-                    && appliedPassives.Passives.TryGetValue(AppliedPassiveType.Silenced, out int silencedStacks)
-                    && silencedStacks > 0)
+                EventManager.Publish(new OpenPayCostOverlayEvent
                 {
-                    EventManager.Publish(new CantPlayCardMessage { Message = "You cannot play pledged cards because you are silenced!" });
-                    return;
-                }
-            }
-
-            // Weapons can only be played during Action phase (already gated) and cannot be used to pay costs of other cards
-            bool isWeapon = card.IsWeapon;
-
-            // Gate by Action Points unless the card is a free action
-            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-            var ap = player?.GetComponent<ActionPoints>();
-            bool isFree = card.IsFreeAction || alternateProfile?.IsFreeAction == true;
-            if (!isFree)
-            {
-                int currentAp = ap?.Current ?? 0;
-                if (currentAp <= 0)
-                {
-                    LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                    {
-                        ["reason"] = "NoActionPoints",
-                        ["cardId"] = card.CardId,
-                        ["isWeapon"] = isWeapon,
-                        ["isFree"] = isFree,
-                        ["currentAp"] = currentAp
-                    });
-                    EventManager.Publish(new CantPlayCardMessage { Message = "Not enough action points!" });
-                    return;
-                }
-            }
-
-            // Evaluate any additional costs/requirements tied to the card id
-            bool skipBlockCanPlay = card.Type == CardType.Block && alternateProfile?.AllowsPlay == true;
-            if (!skipBlockCanPlay && card.CanPlay(EntityManager, evt.Card) == false)
-            {
-                card.OnCantPlay?.Invoke(EntityManager, evt.Card);
-                LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                {
-                    ["reason"] = "CantPlay",
-                    ["cardId"] = card.CardId
+                    CardToPlay = evt.Card,
+                    RequiredCosts = plan.RequiredCosts.ToList(),
+                    Type = PayCostOverlayType.SelectOneCard,
                 });
                 return;
             }
 
-            // If costs are not yet paid, determine if payment is needed and either auto-resolve or open overlay
-            if (!evt.CostsPaid)
+            if (plan.PaymentDecision == CardPaymentDecision.AutoPay)
             {
-                var deckEntityForCost = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
-                var deck = deckEntityForCost?.GetComponent<Deck>();
-                var cardId = evt.Card.GetComponent<CardData>().Card.CardId;
-                // gonna cloodge this in for now
-                if (card.SpecialAction == "SelectOneCardFromHand")
+                ResolveAutomaticPayment(evt.Card, plan.AutoPayment, deckEntityForCost);
+                return;
+            }
+
+            if (plan.PaymentDecision == CardPaymentDecision.ChooseCostCards)
+            {
+                LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
                 {
-                    EventManager.Publish(new OpenPayCostOverlayEvent { CardToPlay = evt.Card, RequiredCosts = ["Any"], Type = PayCostOverlayType.SelectOneCard });
-                    return;
-                }
-                var requiredCosts = VigorService.GetEffectiveCost(card, VigorService.GetPlayerVigorStacks(EntityManager));
-                if (requiredCosts.Count > 0 && deck != null)
+                    ["reason"] = "MultipleCostSolutions",
+                    ["solutionCount"] = 2
+                });
+                EventManager.Publish(new OpenPayCostOverlayEvent
                 {
-                    // Build hand color multiset excluding the card being played
-                    var handOthers = deck.Hand.Where(c => c != evt.Card).ToList();
-                    // Exclude weapons and tokens from being considered as payment candidates
-                    List<Entity> handNonWeapons = new List<Entity>();
-                    foreach (var e in handOthers)
-                    {
-                        var paymentCard = e.GetComponent<CardData>()?.Card;
-                        if (paymentCard == null || paymentCard.CanDiscardForCost)
-                        {
-                            handNonWeapons.Add(e);
-                        }
-                    }
-
-                    // Exclude Yellow cards - they cannot be discarded/used to pay costs
-                    handNonWeapons = handNonWeapons.Where(e => e.GetComponent<CardData>()?.Color != CardData.CardColor.Yellow).ToList();
-
-                    // Exclude pledged cards - they cannot be used to pay costs
-                    handNonWeapons = handNonWeapons.Where(e => e.GetComponent<Pledge>() == null).ToList();
-
-
-                    // Helper to attempt greedy satisfaction of remaining requirements
-                    bool CanSatisfy(List<string> req, List<Entity> candidates, out List<Entity> picks)
-                    {
-                        picks = new List<Entity>();
-                        var remaining = new List<string>(req);
-                        // Prefer matching specific colors first
-                        foreach (var e in candidates)
-                        {
-                            if (remaining.Count == 0) break;
-                            int idx = remaining.FindIndex(r =>
-                                r != "Any" && CardColorQualificationService.IsEligibleForCost(e, r));
-                            if (idx >= 0)
-                            {
-                                picks.Add(e);
-                                remaining.RemoveAt(idx);
-                            }
-                        }
-                        // Then satisfy Any with remaining cards
-                        foreach (var e in candidates)
-                        {
-                            if (remaining.Count == 0) break;
-                            if (!picks.Contains(e))
-                            {
-                                int idx = remaining.FindIndex(r => r == "Any");
-                                if (idx >= 0)
-                                {
-                                    picks.Add(e);
-                                    remaining.RemoveAt(idx);
-                                }
-                            }
-                        }
-                        return remaining.Count == 0;
-                    }
-
-                    bool canSatisfy = CanSatisfy(requiredCosts, handNonWeapons, out _);
-
-                    if (!canSatisfy)
-                    {
-                        LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                        {
-                            ["reason"] = "CannotSatisfyCost"
-                        });
-                        EventManager.Publish(new CantPlayCardMessage
-                        {
-                            Message = DiscardCostMessageService.GetUnsatisfiableCostMessage(requiredCosts),
-                        });
-                        return;
-                    }
-
-                    // Count distinct ways to satisfy the cost (order-independent)
-                    int solutionCount = CountDistinctSolutions(requiredCosts, handNonWeapons);
-
-                    if (solutionCount == 0)
-                    {
-                        LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                        {
-                            ["reason"] = "NoSolutionForCost"
-                        });
-                        EventManager.Publish(new CantPlayCardMessage
-                        {
-                            Message = DiscardCostMessageService.GetUnsatisfiableCostMessage(requiredCosts),
-                        });
-                        return;
-                    }
-                    else if (solutionCount == 1)
-                    {
-                        // Exactly one way to satisfy cost - auto-pay
-                        var solution = FindFirstSolution(requiredCosts, handNonWeapons);
-                        LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                        {
-                            ["reason"] = "AutoPayCost",
-                            ["paymentCount"] = solution.Count
-                        });
-                        foreach (var c in solution)
-                        {
-                            EventManager.Publish(new CardDiscardedForCostEvent { Card = c });
-                            EventManager.Publish(new CardMoveRequested { Card = c, Deck = deckEntityForCost, Destination = CardZoneType.DiscardPile, Reason = "AutoPayCost" });
-                            var cardData = c.GetComponent<CardData>();
-                            if (cardData != null && cardData.Card.OnDiscardedForCost != null)
-                            {
-                                cardData.Card.OnDiscardedForCost(EntityManager, c);
-                            }
-                        }
-                        
-                        // Populate payment cache so card effects can reference what was paid
-                        var cache = EnsurePaymentCacheExists();
-                        cache.CardPlayed = evt.Card;
-                        cache.PaymentCards = new List<Entity>(solution);
-                        cache.HasData = true;
-
-                        ComponentLoggerService.LogComponent(cache, $"Auto-pay complete, {solution.Count} cards discarded");
-                        
-                        EventManager.Publish(new PlayCardRequested { Card = evt.Card, CostsPaid = true, PaymentCards = new List<Entity>(solution) });
-                        return;
-                    }
-                    else
-                    {
-                        // Multiple ways to satisfy cost - show overlay for player choice
-                        LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                        {
-                            ["reason"] = "MultipleCostSolutions",
-                            ["solutionCount"] = solutionCount
-                        });
-                        EventManager.Publish(new OpenPayCostOverlayEvent { CardToPlay = evt.Card, RequiredCosts = requiredCosts, Type = PayCostOverlayType.ColorDiscard });
-                        return;
-                    }
-                }
+                    CardToPlay = evt.Card,
+                    RequiredCosts = plan.RequiredCosts.ToList(),
+                    Type = PayCostOverlayType.ColorDiscard,
+                });
+                return;
             }
 
             if (card.VisualEffectSequence != null)
@@ -425,13 +148,111 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            ResolveAcceptedCardPlay(evt.Card, evt.PaymentCards, VigorService.GetPlayerVigorStacks(EntityManager), alternateProfile);
+            ResolveAcceptedCardPlay(evt.Card, evt.PaymentCards, context.VigorStacks, plan, alternateProfile);
+        }
+
+        private void HandleRejectedCardPlay(
+            Entity cardEntity,
+            CardBase card,
+            CardPlayContext context,
+            CardPlayPlan plan)
+        {
+            switch (plan.Rejection)
+            {
+                case CardPlayRejection.WrongPhase:
+                    LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["reason"] = "InvalidPhase",
+                        ["phase"] = context.Phase.ToString()
+                    });
+                    break;
+                case CardPlayRejection.IsRelic:
+                    EventManager.Publish(new CantPlayCardMessage { Message = "Relics can only be discarded to pay for costs!" });
+                    break;
+                case CardPlayRejection.BlockWithoutAlternate:
+                    EventManager.Publish(new CantPlayCardMessage { Message = "Block cards can only be used to block!" });
+                    break;
+                case CardPlayRejection.Pledged:
+                    EventManager.Publish(new CantPlayCardMessage { Message = "You can't play a card you pledged this turn!" });
+                    break;
+                case CardPlayRejection.Silenced:
+                    EventManager.Publish(new CantPlayCardMessage { Message = "You cannot play pledged cards because you are silenced!" });
+                    break;
+                case CardPlayRejection.NoActionPoints:
+                    LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["reason"] = "NoActionPoints",
+                        ["cardId"] = card.CardId,
+                        ["isWeapon"] = card.IsWeapon,
+                        ["isFree"] = plan.IsFreeAction,
+                        ["currentAp"] = context.ActionPoints
+                    });
+                    EventManager.Publish(new CantPlayCardMessage { Message = "Not enough action points!" });
+                    break;
+                case CardPlayRejection.CanPlayFalse:
+                    card.OnCantPlay?.Invoke(EntityManager, cardEntity);
+                    LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["reason"] = "CantPlay",
+                        ["cardId"] = card.CardId
+                    });
+                    break;
+                case CardPlayRejection.CostUnsatisfiable:
+                    LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["reason"] = "CannotSatisfyCost"
+                    });
+                    EventManager.Publish(new CantPlayCardMessage
+                    {
+                        Message = DiscardCostMessageService.GetUnsatisfiableCostMessage(plan.RequiredCosts),
+                    });
+                    break;
+            }
+        }
+
+        private void ResolveAutomaticPayment(
+            Entity cardToPlay,
+            IReadOnlyList<Entity> paymentCards,
+            Entity deckEntity)
+        {
+            var solution = paymentCards.ToList();
+            LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
+            {
+                ["reason"] = "AutoPayCost",
+                ["paymentCount"] = solution.Count
+            });
+            foreach (var paymentCard in solution)
+            {
+                EventManager.Publish(new CardDiscardedForCostEvent { Card = paymentCard });
+                EventManager.Publish(new CardMoveRequested
+                {
+                    Card = paymentCard,
+                    Deck = deckEntity,
+                    Destination = CardZoneType.DiscardPile,
+                    Reason = "AutoPayCost",
+                });
+                paymentCard.GetComponent<CardData>()?.Card?.OnDiscardedForCost?.Invoke(EntityManager, paymentCard);
+            }
+
+            var cache = EnsurePaymentCacheExists();
+            cache.CardPlayed = cardToPlay;
+            cache.PaymentCards = new List<Entity>(solution);
+            cache.HasData = true;
+            ComponentLoggerService.LogComponent(cache, $"Auto-pay complete, {solution.Count} cards discarded");
+
+            EventManager.Publish(new PlayCardRequested
+            {
+                Card = cardToPlay,
+                CostsPaid = true,
+                PaymentCards = new List<Entity>(solution),
+            });
         }
 
         private void ResolveAcceptedCardPlay(
             Entity cardEntity,
             List<Entity> paymentCards,
             int vigorStacksAtPlay,
+            CardPlayPlan plan,
             AlternateCardPlayProfile alternateProfile)
         {
             if (cardEntity == null) return;
@@ -445,7 +266,7 @@ namespace Crusaders30XX.ECS.Systems
             AttachPlayStatContext(cardEntity, paymentCards);
             try
             {
-                if (alternateProfile?.TreatsAsAttack == true)
+                if (plan.Mode == CardPlayMode.AlternateAttack)
                 {
                     var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
                     var enemy = EntityManager.GetEntitiesWithComponent<Enemy>().FirstOrDefault();
@@ -501,8 +322,7 @@ namespace Crusaders30XX.ECS.Systems
             var destination = CardZoneType.DiscardPile;
 
             // Consume 1 AP if not a free action
-            bool isFree = card.IsFreeAction || alternateProfile?.IsFreeAction == true;
-            if (!isFree)
+            if (!plan.IsFreeAction)
             {
                 EventManager.Publish(new ModifyActionPointsEvent { Delta = -1 });
                 LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject

@@ -68,6 +68,60 @@ public sealed class CardPlayUpgradeTests : IDisposable
 		Assert.Equal("You need a red card in your hand to pay for the discard cost", message);
 	}
 
+	[Fact]
+	public void Unique_cost_solution_auto_pays_and_completes_paid_reentry_once()
+	{
+		var entityManager = BuildActionBattle(1, "fervor", out var deck);
+		var fervor = AddCard(entityManager, deck, "fervor", CardData.CardColor.Red);
+		var payment = AddCard(entityManager, deck, "smite", CardData.CardColor.Red);
+		_ = new CardPlaySystem(entityManager);
+		int discardedForCost = 0;
+		int played = 0;
+		EventManager.Subscribe<CardDiscardedForCostEvent>(evt =>
+		{
+			if (evt.Card == payment) discardedForCost++;
+		});
+		EventManager.Subscribe<CardPlayedEvent>(evt =>
+		{
+			if (evt.Card == fervor) played++;
+		});
+
+		EventManager.Publish(new PlayCardRequested { Card = fervor });
+
+		Assert.Equal(1, discardedForCost);
+		Assert.Equal(1, played);
+		var cache = entityManager.GetEntitiesWithComponent<LastPaymentCache>()
+			.Single()
+			.GetComponent<LastPaymentCache>();
+		Assert.True(cache.HasData);
+		Assert.Same(fervor, cache.CardPlayed);
+		Assert.Equal(payment, Assert.Single(cache.PaymentCards));
+	}
+
+	[Fact]
+	public void Already_paid_card_play_does_not_require_payment_cards_to_remain_in_hand()
+	{
+		var entityManager = BuildActionBattle(1, "fervor", out var deck);
+		var fervor = AddCard(entityManager, deck, "fervor", CardData.CardColor.Red);
+		_ = new CardPlaySystem(entityManager);
+		int played = 0;
+		string message = null;
+		EventManager.Subscribe<CardPlayedEvent>(evt =>
+		{
+			if (evt.Card == fervor) played++;
+		});
+		EventManager.Subscribe<CantPlayCardMessage>(evt => message = evt.Message);
+
+		EventManager.Publish(new PlayCardRequested
+		{
+			Card = fervor,
+			CostsPaid = true,
+		});
+
+		Assert.Equal(1, played);
+		Assert.Null(message);
+	}
+
 	[Theory]
 	[InlineData(false, true)]
 	[InlineData(true, true)]
