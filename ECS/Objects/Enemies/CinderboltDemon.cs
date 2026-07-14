@@ -44,7 +44,7 @@ public class Cinderbolt : EnemyAttackBase
         Damage = 10;
         OnAttackReveal = (entityManager) =>
         {
-          Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
+          Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager);
           Text = Color.HasValue
             ? $"Gain {Burn} burn if at least one {Color.Value.ToString().ToLower()} card blocks this."
             : $"Gain {Burn} burn if a card of the selected color blocks this. No color is selected.";
@@ -75,7 +75,7 @@ public class InsidiousBolt : EnemyAttackBase
 
     OnAttackReveal = (entityManager) =>
     {
-      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
+      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager);
       Text = Color.HasValue
         ? $"Gain {Scar} scar if at least one {Color.Value.ToString().ToLower()} card blocks this."
         : $"Gain {Scar} scar if a card of the selected color blocks this. No color is selected.";

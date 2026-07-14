@@ -796,7 +796,15 @@ namespace Crusaders30XX.ECS.Systems
 			_enemyDisplaySystem = new EnemyDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_guardianAngelDisplaySystem = new GuardianAngelDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_enemyIntentPipsSystem = new EnemyIntentPipsSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_enemyAttackDisplaySystem = new EnemyAttackDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
+			var enemyAttackResolver = new EnemyAttackResolver(
+				_world.EntityManager,
+				new GraphicsAttackPresentationGate());
+			_enemyAttackDisplaySystem = new EnemyAttackDisplaySystem(
+				_world.EntityManager,
+				_graphicsDevice,
+				_spriteBatch,
+				_imageAssets,
+				enemyAttackResolver);
 			_enemyAttackBannerLateLayoutSystem = new EnemyAttackBannerLateLayoutSystem(_world.EntityManager);
 			_enemyDamageMeterDisplaySystem = new EnemyDamageMeterDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_ambushDisplaySystem = new AmbushDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);

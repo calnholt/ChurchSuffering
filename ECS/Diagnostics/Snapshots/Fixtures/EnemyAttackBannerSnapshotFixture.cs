@@ -60,7 +60,12 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				IsConditionMet = true,
 			});
 
-			_display = new EnemyAttackDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch, ctx.ImageAssets);
+			_display = new EnemyAttackDisplaySystem(
+				ctx.World.EntityManager,
+				ctx.GraphicsDevice,
+				ctx.SpriteBatch,
+				ctx.ImageAssets,
+				new EnemyAttackResolver(ctx.World.EntityManager, new GraphicsAttackPresentationGate()));
 			_layout = new EnemyAttackBannerLateLayoutSystem(ctx.World.EntityManager);
 			Advance(0f);
 			EventManager.Publish(new TriggerEnemyAttackDisplayEvent());

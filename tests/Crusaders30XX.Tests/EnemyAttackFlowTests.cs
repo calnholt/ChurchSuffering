@@ -188,14 +188,8 @@ public class EnemyAttackFlowTests : System.IDisposable
 
 		confirmedSequences.Add(intent.ActiveAttackSequence);
 
-		EventManager.Publish(new ChangeBattlePhaseEvent
-		{
-			Current = SubPhase.EnemyAttack,
-			Previous = SubPhase.Block,
-		});
-		EventManager.Publish(new ResolveAttack());
-		EventManager.Publish(new EnemyAttackImpactNow());
-		EventQueue.EnqueueRule(new QueuedAdvanceToNextPlannedAttackEvent(entityManager));
+		var resolver = new EnemyAttackResolver(entityManager, new ImmediateAttackPresentationGate());
+		resolver.ResolveCurrentAttack();
 	}
 
 	private static void PumpEventQueue()

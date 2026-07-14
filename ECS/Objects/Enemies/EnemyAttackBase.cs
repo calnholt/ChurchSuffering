@@ -26,7 +26,6 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
     public bool IsOneBattleOrLastBattle { get; set; } = false;
     public int Channel { get; set; } = 0;
     public bool IgnoresAegis { get; set; } = false;
-    public static EntityManager EntityManager { get; set; }
     public int? BlockRequiredToPreventEffect { get; protected set; }
     public VisualEffectRecipe AttackEffectRecipe { get; protected set; }
     private VisualEffectSequence _attackEffectSequence;
@@ -87,9 +86,8 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
 
     public void Initialize(EntityManager entityManager)    
     {
-      EntityManager = entityManager;
-      IsOneBattleOrLastBattle = GetComponentHelper.IsLastBattleOfQuest(EntityManager);
-      GetComponentHelper.GetAppliedPassives(EntityManager, "Enemy").Passives.TryGetValue(AppliedPassiveType.Channel, out int count);
+      IsOneBattleOrLastBattle = GetComponentHelper.IsLastBattleOfQuest(entityManager);
+      GetComponentHelper.GetAppliedPassives(entityManager, "Enemy").Passives.TryGetValue(AppliedPassiveType.Channel, out int count);
       Channel = count;
       OnChannelApplied?.Invoke(entityManager);
     }

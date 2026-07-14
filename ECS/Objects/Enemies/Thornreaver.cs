@@ -40,7 +40,7 @@ public class SawtoothRend : EnemyAttackBase
 
     OnAttackReveal = (entityManager) =>
     {
-      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
+      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager);
       Text = Color.HasValue
         ? $"Gain {Bleed} bleed for each {Color.Value.ToString().ToLower()} card that blocks this."
         : $"Gain {Bleed} bleed for each card of the selected color that blocks this. No color is selected.";
