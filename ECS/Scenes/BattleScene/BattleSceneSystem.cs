@@ -82,7 +82,7 @@ namespace Crusaders30XX.ECS.Systems
 		private HPDisplaySystem _hpDisplaySystem;
 		#pragma warning restore CS0618
 		private AppliedPassivesDisplaySystem _appliedPassivesDisplaySystem;
-		private PoisonSystem _poisonSystem;
+		private PoisonedCardManagementSystem _poisonedCardManagementSystem;
 		private PassiveMeterRenderSystem _passiveMeterRenderSystem;
 		private CardGeometrySettingsDebugSystem _cardGeometrySettingsDebugSystem;
 		private HpManagementSystem _hpManagementSystem;
@@ -785,7 +785,7 @@ namespace Crusaders30XX.ECS.Systems
 			_hpDisplaySystem = new HPDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			#pragma warning restore CS0618
 			_appliedPassivesDisplaySystem = new AppliedPassivesDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_poisonSystem = new PoisonSystem(_world.EntityManager);
+			_poisonedCardManagementSystem = new PoisonedCardManagementSystem(_world.EntityManager);
 			_passiveMeterRenderSystem = new PassiveMeterRenderSystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_cardGeometrySettingsDebugSystem = new CardGeometrySettingsDebugSystem(_world.EntityManager);
 			_hpManagementSystem = new HpManagementSystem(_world.EntityManager);
@@ -944,7 +944,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_testFightHpDisplaySystem);
 			_world.AddSystem(_enemyDisplaySystem);
 			_world.AddSystem(_enemyIntentPipsSystem);
-			_world.AddSystem(_poisonSystem);
+			_world.AddSystem(_poisonedCardManagementSystem);
 			_world.AddSystem(_passiveMeterRenderSystem);
 			_world.AddSystem(_enemyIntentPlanningSystem);
 			_world.AddSystem(_enemyAttackProgressManagementSystem);

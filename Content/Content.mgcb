@@ -724,7 +724,7 @@
 /processorParam:TextureFormat=Color
 /build:Ogre.png
 
-#begin Medusa.png
+#begin Azure_Warden.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -734,7 +734,19 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Medusa.png
+/build:Azure_Warden.png
+
+#begin Blighttongue.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Blighttongue.png
 
 #begin Wyvern.png
 /importer:TextureImporter
@@ -2471,11 +2483,11 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/RectangularShockwave.fx
 
-#begin Shaders/Poison.fx
+#begin Shaders/PoisonCard.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:Shaders/Poison.fx
+/build:Shaders/PoisonCard.fx
 
 #begin Shaders/Brittle.fx
 /importer:EffectImporter
@@ -2849,3 +2861,27 @@
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /build:SFX/gem-drop.wav
+
+#begin Hex_Bailiff.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Hex_Bailiff.png
+
+#begin CardArt/hex.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:CardArt/hex.png

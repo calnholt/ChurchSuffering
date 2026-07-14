@@ -20,6 +20,7 @@ Crusaders30XX is a deckbuilder card game where players battle enemies using a ha
 - Some enemy attacks have additional effects that trigger when they deal damage or have special blocking conditions
 - Player decides how to block (or whether to block at all)
 - All attacks resolve
+- If you have Poison, one block-capable card in hand becomes poisoned. Blocking with it costs 1 HP.
 
 ### 3. Action Phase
 
@@ -36,7 +37,8 @@ Crusaders30XX is a deckbuilder card game where players battle enemies using a ha
   - The player has not pledged during this Action phase
   - No card is already pledged
   - The hand contains an eligible card
-- Sealed cards, weapons, block cards, relics, tokens, and cards already pledged cannot be pledged
+- Sealed cards, weapons, block cards, relics, tokens, and cards already pledged cannot be pledged; sealed cards lose one seal when used to block and are freed at zero seals
+- **Hex** temporarily covers an eligible hand card with a free 5-damage, 3-block attack. Hovering Hex previews the covered card. Playing Hex turns that card into a persistent Curse; any unplayed Hex is removed at the end of the player turn.
 - A pledged card does not count towards max hand size
 - A pledged card cannot be played during the Action phase in which it was pledged
 - A pledged card must be played as an action; it cannot block or pay another card's cost
@@ -56,6 +58,16 @@ Crusaders30XX is a deckbuilder card game where players battle enemies using a ha
 - **Victory:** Enemy HP reaches 0
 - **Defeat:** Player HP reaches 0
 - **No reshuffle:** Your deck does not reshuffle when it empties
+
+## Climb Unlock Progression
+
+- New profiles begin with Sword on Easy; Start Climb launches this configuration directly until Dagger is unlocked.
+- The first completed climb unlocks Dagger on Easy and Sword on Normal.
+- Completing Sword on Normal unlocks Sword on Hard.
+- Completing Dagger on Easy unlocks Hammer on Easy and Dagger on Normal.
+- Completing Dagger on Normal unlocks Dagger on Hard.
+- Completing Hammer on Easy unlocks Hammer on Normal; completing Hammer on Normal unlocks Hammer on Hard.
+- Once Dagger is unlocked, Start Climb opens the settings modal and only shows unlocked choices.
 
 ## Quest Structure
 

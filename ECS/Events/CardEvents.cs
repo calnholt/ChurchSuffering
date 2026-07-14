@@ -688,6 +688,8 @@ namespace Crusaders30XX.ECS.Events
     {
         public Entity Card { get; set; }
         public int Amount { get; set; }
+        /// <summary>Number of stacks applied to each selected card. Used by stacked restrictions such as Sealed.</summary>
+        public int StacksPerCard { get; set; } = 1;
         public CardApplicationType Type { get; set; }
         public CardApplicationTarget Target { get; set; }
     }
@@ -695,6 +697,7 @@ namespace Crusaders30XX.ECS.Events
     public class CardRestrictionMutationAnimationRequested
     {
         public Entity TargetCard { get; set; }
+        public int StacksPerCard { get; set; } = 1;
         public CardApplicationType Type { get; set; }
     }
 
@@ -718,7 +721,9 @@ namespace Crusaders30XX.ECS.Events
         Scorched,
         Thorned,
         Colorless,
+        Sealed,
         Cursed,
+        Hex,
     }
 
     public class RemoveRandomCardEvent
@@ -740,31 +745,6 @@ namespace Crusaders30XX.ECS.Events
         Hand,
         Deck,
     }
-
-    public enum SealType
-    {
-        Hand,           // Random from hand
-        TopOfDrawPile,  // Top card(s) of draw pile
-    }
-
-    public class SealCardsEvent
-    {
-        public int Amount { get; set; }
-        public SealType Type { get; set; }
-    }
-
-    /// <summary>
-    /// Modifies seals on all sealed cards. Positive Delta adds seals, negative removes seals.
-    /// </summary>
-    public class ModifySealsEvent
-    {
-        public int Delta { get; set; }
-    }
-
-    /// <summary>
-    /// Shuffles sealed cards from hand back into the draw pile.
-    /// </summary>
-    public class ShuffleSealedIntoDrawPileEvent { }
 
     public class CardPlayedEvent
     {

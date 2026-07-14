@@ -58,7 +58,7 @@ namespace Crusaders30XX.ECS.Services
 			new() { Id = "thorned", Aliases = ["thorned"], Tooltip = "Thorned - When discarded to pay a card cost, gain 1 scar." },
 			new() { Id = "darkness", Aliases = ["darkness"], Tooltip = "X Darkness - The enemy loses X damage when you pledge a card." },
 			new() { Id = "silenced", Aliases = ["silenced"], Tooltip = "X Silenced - You cannot play pledged cards. Remove 1 silenced at the end of your action phase." },
-			new() { Id = "sealed", Aliases = ["seal", "seals", "sealed"], Tooltip = "Sealed - Sealed cards cost HP equal to remaining seals when played or discarded to pay for costs. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed." },
+			new() { Id = "sealed", Aliases = ["seal", "seals", "sealed"], Tooltip = "Sealed - Cannot be pledged. Lose 1 seal when used to block. At 0 seals, the card is freed." },
 		];
 
 		/// <summary>
@@ -133,7 +133,7 @@ namespace Crusaders30XX.ECS.Services
 			if (entity.GetComponent<Sealed>() != null)
 			{
 				shownKeywordIds.Add("sealed");
-				blocks.Add(new TooltipTextBlock("sealed", "This card is sealed - costs HP equal to remaining seals to play. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed. Cannot be pledged."));
+				blocks.Add(new TooltipTextBlock("sealed", "This card is sealed - cannot be pledged. Lose 1 seal when used to block. At 0 seals, the card is freed."));
 			}
 
 			var recoil = entity.GetComponent<Recoil>();
@@ -207,7 +207,7 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Power:
 					return $"{(isPlayer ? "Your" : "The enemy's")} attacks deal +{stacks} damage this battle.";
 				case AppliedPassiveType.Poison:
-					return "Every 60 seconds, lose 1 HP.";
+					return "At the start of each block phase, one card in your hand becomes poisoned. Blocking with it loses 1 HP. At the end of your turn, lose 1 poison.";
 				case AppliedPassiveType.Shield:
 					return "Prevent all damage from the first source each turn.";
 				case AppliedPassiveType.Guard:
@@ -247,7 +247,7 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Silenced:
 					return "You cannot play pledged cards. Remove 1 silenced at the end of your action phase.";
 				case AppliedPassiveType.Sealed:
-					return "Sealed cards cost HP equal to remaining seals when played or discarded to pay for costs. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed.";
+					return "Sealed cards cannot be pledged. Lose 1 seal when used to block. At 0 seals, the card is freed.";
 				case AppliedPassiveType.Plunder:
 					return "At the start of the block phase, steals a card from your deck. Deal enough damage to rescue it.";
 				case AppliedPassiveType.CarpeDiem:

@@ -24,6 +24,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.CrimsonRite, () => new CrimsonRite() },
                 { CardId.Crusade, () => new Crusade() },
                 { CardId.Curse, () => new Curse() },
+                { CardId.Hex, () => new Hex() },
                 { CardId.Dagger, () => new Dagger() },
                 { CardId.DeusVult, () => new DeusVult() },
                 { CardId.DivineProtection, () => new DivineProtection() },
@@ -99,7 +100,7 @@ namespace Crusaders30XX.ECS.Factories
         public static Dictionary<CardId, CardBase> GetAllCards()
         {
             return CardConstructors
-                .Where(entry => entry.Key != CardId.Curse)
+                .Where(entry => entry.Key != CardId.Curse && entry.Key != CardId.Hex)
                 .ToDictionary(
                     entry => entry.Key,
                     entry => entry.Value());

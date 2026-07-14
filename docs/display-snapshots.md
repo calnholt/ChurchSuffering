@@ -390,6 +390,21 @@ Transform variants append their scale, rotation, and optional Frozen state to fi
 
 ---
 
+## `poison-card`
+
+Renders one White card with the `Poisoned` component attached on a high-contrast patterned backdrop.
+
+```bash
+dotnet run -- snapshot poison-card
+dotnet run -- snapshot poison-card fireball
+dotnet run -- snapshot poison-card no-shaders
+dotnet run -- snapshot poison-card --verify
+```
+
+Output: `debug/snapshots/poison-card/<cardId>.png`
+
+---
+
 ## `colorless-card`
 
 Renders Colorless copies of a printed White, Red, and Black card with Red, White, Black, and Any cost pips.
@@ -548,17 +563,23 @@ dotnet run -- snapshot narrative-event-modal --event icebound_tithe --options 2
 
 ## `waystation`
 
-Renders the WayStation hub scene with the map background, Waystation banner, Climb POI, and Achievement POI.
+Renders the WayStation hub scene and climb settings modal progression states. The default variant includes the Achievement POI pending-reward badge; modal variants keep rewards settled. Locked choices are hidden and the remaining weapon and difficulty choices are centered.
 
 ### Commands
 
 ```bash
 dotnet run -- snapshot waystation
+dotnet run -- snapshot waystation modal-first-unlock
+dotnet run -- snapshot waystation modal-hammer
+dotnet run -- snapshot waystation modal-full
+
+./scripts/verify-waystation-snapshots.sh
+./scripts/verify-waystation-snapshots.sh --accept
 ```
 
 ### Output file
 
-`debug/snapshots/waystation/default.png`
+`debug/snapshots/waystation/<variant>.png`
 
 ---
 

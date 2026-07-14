@@ -530,6 +530,7 @@ namespace Crusaders30XX.ECS.Systems
             {
                 AppliedPassiveType.Silenced,
                 AppliedPassiveType.Slow,
+				AppliedPassiveType.Poison,
             };
         }
 
@@ -545,7 +546,6 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Slow,
                 AppliedPassiveType.Inferno,
                 AppliedPassiveType.Stealth,
-                AppliedPassiveType.Poison,
                 AppliedPassiveType.Siphon,
                 AppliedPassiveType.Thorns,
                 AppliedPassiveType.Rage,
@@ -571,6 +571,7 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Bleed,
                 AppliedPassiveType.Shackled,
                 AppliedPassiveType.Fear,
+				AppliedPassiveType.Poison,
             };
         }
 

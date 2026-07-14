@@ -21,7 +21,7 @@ if (GpuProfilingRuntimeOptions.Enabled)
 
 var appArgs = TutorialLaunchOptions.StripLaunchFlag(
     NewGameLaunchOptions.StripLaunchFlag(
-        UnlockLaunchOptions.StripLaunchFlag(
+        UnlockLaunchOptions.StripLaunchFlags(
             GpuProfilingRuntimeOptions.StripLaunchFlag(ShaderRuntimeOptions.StripLaunchFlags(args)))));
 
 DisplaySnapshotLaunchOptions snapshotOptions = null;
@@ -31,7 +31,9 @@ try
 {
     if (CardListProfileLaunchOptions.TryParse(appArgs, out var parsedCardListProfile))
     {
-        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch || UnlockLaunchOptions.UnlockAllCollectionItems)
+        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch ||
+            UnlockLaunchOptions.UnlockAllCollectionItems ||
+            UnlockLaunchOptions.UnlockAllRunSetupOptions)
         {
             throw new CardListProfileSetupException("The new and unlock flags cannot be combined with card-list-profile");
         }
@@ -41,7 +43,9 @@ try
     }
     else if (TestFightLaunchOptions.TryParse(appArgs, out var parsedTestFight))
     {
-        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch || UnlockLaunchOptions.UnlockAllCollectionItems)
+        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch ||
+            UnlockLaunchOptions.UnlockAllCollectionItems ||
+            UnlockLaunchOptions.UnlockAllRunSetupOptions)
         {
             throw new TestFightSetupException(
                 "The new and unlock flags cannot be combined with test-fight because test fights do not modify saves.");
@@ -77,6 +81,12 @@ if (UnlockLaunchOptions.UnlockAllCollectionItems)
 {
     SaveCache.UnlockAllCollectionItems();
     Console.WriteLine("[Launch] Collection unlocked (cards, medals, equipment)");
+}
+
+if (UnlockLaunchOptions.UnlockAllRunSetupOptions)
+{
+    SaveCache.UnlockAllRunSetupOptions();
+    Console.WriteLine("[Launch] Run setup unlocked (weapons, difficulties)");
 }
 
 using var game = new Crusaders30XX.Game1(snapshotOptions, testFightOptions, cardListProfileOptions);

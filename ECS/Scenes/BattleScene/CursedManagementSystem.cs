@@ -51,6 +51,7 @@ namespace Crusaders30XX.ECS.Systems
 			var cards = CardApplicationTargetingService.ResolveCandidates(EntityManager, evt.Card, evt.Target)
 				.Where(CardApplicationTargetingService.IsEligibleForApplication)
 				.Where(card => !card.HasComponent<Cursed>())
+				.Where(card => !card.HasComponent<Hexed>())
 				.Distinct()
 				.OrderBy(_ => Random.Shared.Next())
 				.Take(evt.Amount)
@@ -205,9 +206,9 @@ namespace Crusaders30XX.ECS.Systems
 			int offsetPx = 30)
 		{
 			if (entityManager == null || card == null) return;
-			if (card.HasComponent<Cursed>())
+			if (card.HasComponent<Cursed>() || card.HasComponent<Hexed>())
 			{
-				RefreshCursedCardPresentation(entityManager, card);
+				RefreshCoveredCardPresentation(entityManager, card);
 				var ui = card.GetComponent<UIElement>();
 				if (ui != null)
 				{
@@ -223,6 +224,12 @@ namespace Crusaders30XX.ECS.Systems
 		public static void RefreshCursedCardPresentation(EntityManager entityManager, Entity card)
 		{
 			if (entityManager == null || card == null || !card.HasComponent<Cursed>()) return;
+			RefreshCoveredCardPresentation(entityManager, card);
+		}
+
+		public static void RefreshCoveredCardPresentation(EntityManager entityManager, Entity card)
+		{
+			if (entityManager == null || card == null || (!card.HasComponent<Cursed>() && !card.HasComponent<Hexed>())) return;
 			var original = card.GetComponent<CursedOriginalCard>();
 			if (original == null || string.IsNullOrWhiteSpace(original.CardId)) return;
 

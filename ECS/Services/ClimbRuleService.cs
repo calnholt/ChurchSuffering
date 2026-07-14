@@ -9,6 +9,7 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
+using Crusaders30XX.ECS.Singletons;
 
 namespace Crusaders30XX.ECS.Services
 {
@@ -42,10 +43,15 @@ namespace Crusaders30XX.ECS.Services
 			CardData.CardColor.Black
 		};
 
-		public static ClimbSaveState CreateInitialState(int seed, LoadoutDefinition loadout = null)
+		public static ClimbSaveState CreateInitialState(
+			int seed,
+			LoadoutDefinition loadout = null,
+			RunDifficulty difficulty = RunDifficulty.Easy)
 		{
 			var state = new ClimbSaveState
 			{
+				startingWeaponId = string.IsNullOrWhiteSpace(loadout?.weaponId) ? "sword" : loadout.weaponId,
+				difficulty = difficulty,
 				time = 0,
 				resources = new ClimbResourceSave { red = 1, white = 1, black = 1 },
 				shopSlots = new List<ClimbShopSlotSave>(),

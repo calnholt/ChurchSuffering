@@ -63,12 +63,38 @@ public class WayStationRunSetupTests
 			Assert.NotNull(hp);
 			Assert.Equal(expectedMaxHp, hp.Max);
 			Assert.Equal(expectedMaxHp, hp.Current);
+			Assert.Equal(difficulty, SaveCache.GetClimbState().difficulty);
 			Assert.Same(world.EntityManager.GetEntity("Deck"), player.GetComponent<Player>().DeckEntity);
 			Assert.Empty(world.EntityManager.GetEntitiesWithComponent<QueuedEvents>());
 		}
 		finally
 		{
 			WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+			EventManager.Clear();
+		}
+	}
+
+	[Theory]
+	[InlineData(StartingWeapon.Sword, "sword")]
+	[InlineData(StartingWeapon.Dagger, "dagger")]
+	[InlineData(StartingWeapon.Hammer, "hammer")]
+	public void Depart_persists_the_starting_weapon_for_climb_completion(
+		StartingWeapon weapon,
+		string expectedWeaponId)
+	{
+		EventManager.Clear();
+		try
+		{
+			SaveCache.DeleteSaveFilesIfPresent();
+			WayStationRunSetupSingleton.SelectedWeapon = weapon;
+
+			WayStationRunSetupService.Depart(new World());
+
+			Assert.Equal(expectedWeaponId, SaveCache.GetClimbState().startingWeaponId);
+		}
+		finally
+		{
+			WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
 			EventManager.Clear();
 		}
 	}

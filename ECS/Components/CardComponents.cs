@@ -495,6 +495,12 @@ namespace Crusaders30XX.ECS.Components
         public Entity Owner { get; set; }
     }
 
+    /// <summary>Marks a hand card that will deal 1 damage to its owner when used to block this turn.</summary>
+    public class Poisoned : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
     /// <summary>
     /// Marks a card as frozen. Frozen cards lose frozen when used to block. Frozen cards cannot be played during action phase
     /// </summary>
@@ -537,8 +543,17 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
-    /// Stores the original runtime definition for a card that is currently shown
-    /// and played as Curse.
+    /// Marks a card temporarily covered by Hex. Hex expires at the end of the
+    /// player turn unless it is played, in which case it becomes Cursed.
+    /// </summary>
+    public class Hexed : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
+    /// <summary>
+    /// Stores the original runtime definition for a card currently covered by
+    /// Curse or Hex.
     /// </summary>
     public class CursedOriginalCard : IComponent
     {
@@ -569,13 +584,13 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
-    /// Marks a card as sealed (petrified). Sealed cards cannot be played or pledged, but can block.
-    /// Seals count down: -1 per block, -1 per card played. At 0 seals, card is freed.
+    /// Marks a card as sealed. Sealed cards cannot be pledged and lose one seal when used to block.
+    /// At zero seals, the card is freed.
     /// </summary>
     public class Sealed : IComponent
     {
         public Entity Owner { get; set; }
-        public int Seals { get; set; } = 3;
+        public int Seals { get; set; } = 2;
     }
 
     /// <summary>

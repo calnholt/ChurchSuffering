@@ -578,23 +578,6 @@ namespace Crusaders30XX.ECS.Systems
                     {
                         foreach (var c in state.SelectedCards.ToList())
                         {
-                            // If sealed, apply HP cost and remove seal before discarding
-                            var sealedComp = c.GetComponent<Sealed>();
-                            if (sealedComp != null)
-                            {
-                                var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-                                EventManager.Publish(new ModifyHpRequestEvent
-                                {
-                                    Source = player,
-                                    Target = player,
-                                    Delta = -sealedComp.Seals,
-                                    DamageType = ModifyTypeEnum.Effect,
-                                    IgnoresAegis = true
-                                });
-                                EntityManager.RemoveComponent<Sealed>(c);
-                                LoggingService.Append("PayCostOverlaySystem.sealed", new System.Text.Json.Nodes.JsonObject { ["damage"] = sealedComp.Seals });
-                            }
-
                             EventManager.Publish(new CardDiscardedForCostEvent { Card = c });
                             EventManager.Publish(new CardMoveRequested { Card = c, Deck = deckEntity, Destination = CardZoneType.DiscardPile, Reason = "PayCost" });
                             var card = c.GetComponent<CardData>().Card;

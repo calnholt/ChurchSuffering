@@ -23,6 +23,7 @@ namespace Crusaders30XX.ECS.Systems
 		private sealed class MutationRequest
 		{
 			public Entity TargetCard;
+			public int StacksPerCard;
 			public CardApplicationType Type;
 		}
 
@@ -98,6 +99,7 @@ namespace Crusaders30XX.ECS.Systems
 			_queue.Enqueue(new MutationRequest
 			{
 				TargetCard = evt.TargetCard,
+				StacksPerCard = evt.StacksPerCard,
 				Type = evt.Type,
 			});
 
@@ -123,17 +125,18 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var target = request?.TargetCard;
 			if (target == null || !target.IsActive) return false;
-			if (CardApplicationService.IsApplied(target, request.Type)) return false;
+			if (CardApplicationService.IsApplied(target, request.Type) && request.Type != CardApplicationType.Sealed) return false;
 
 			var (baseCard, finalCard) = CardRestrictionMutationDisplayFactory.CreateDisplayPairFromBattleCard(
 				EntityManager,
 				target,
-				request.Type);
+				request.Type,
+				request.StacksPerCard);
 			if (baseCard == null || finalCard == null)
 			{
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, baseCard);
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, finalCard);
-				CardApplicationService.ApplyRestriction(EntityManager, target, request.Type);
+				CardApplicationService.ApplyRestriction(EntityManager, target, request.Type, request.StacksPerCard);
 				return false;
 			}
 
@@ -149,7 +152,7 @@ namespace Crusaders30XX.ECS.Systems
 				BaseCard = baseCard,
 				FinalCard = finalCard,
 				SfxRestrictionName = CardRestrictionMutationDisplayFactory.ToRestrictionName(request.Type),
-				OnSwap = () => CardApplicationService.ApplyRestriction(EntityManager, target, request.Type),
+				OnSwap = () => CardApplicationService.ApplyRestriction(EntityManager, target, request.Type, request.StacksPerCard),
 			};
 
 			_active = new ActiveMutation

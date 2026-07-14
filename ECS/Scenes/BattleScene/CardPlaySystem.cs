@@ -223,10 +223,6 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            // Capture sealed state before playing (will be used after play resolves to apply HP cost)
-            var sealedComp = evt.Card.GetComponent<Sealed>();
-            int sealCount = sealedComp?.Seals ?? 0;
-
             // Weapons can only be played during Action phase (already gated) and cannot be used to pay costs of other cards
             bool isWeapon = card.IsWeapon;
 
@@ -429,13 +425,12 @@ namespace Crusaders30XX.ECS.Systems
                 }
             }
 
-            ResolveAcceptedCardPlay(evt.Card, evt.PaymentCards, sealCount, VigorService.GetPlayerVigorStacks(EntityManager), alternateProfile);
+            ResolveAcceptedCardPlay(evt.Card, evt.PaymentCards, VigorService.GetPlayerVigorStacks(EntityManager), alternateProfile);
         }
 
         private void ResolveAcceptedCardPlay(
             Entity cardEntity,
             List<Entity> paymentCards,
-            int sealCount,
             int vigorStacksAtPlay,
             AlternateCardPlayProfile alternateProfile)
         {
@@ -489,29 +484,6 @@ namespace Crusaders30XX.ECS.Systems
             });
             if (!playedAsCurse && !GuidedTutorialService.IsActive(EntityManager))
                 EventManager.Publish(new TrackingEvent { Type = card.CardId, Delta = 1 });
-
-            // If the card was sealed, apply HP cost and remove the seal
-            if (sealCount > 0)
-            {
-                var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-                EventManager.Publish(new ModifyHpRequestEvent
-                {
-                    Source = player,
-                    Target = player,
-                    Delta = -sealCount,
-                    DamageType = ModifyTypeEnum.Effect,
-                    IgnoresAegis = true
-                });
-                var sealedComp = cardEntity.GetComponent<Sealed>();
-                if (sealedComp != null)
-                    EntityManager.RemoveComponent<Sealed>(cardEntity);
-                LoggingService.Append("CardPlaySystem.OnPlayCardRequested", new System.Text.Json.Nodes.JsonObject
-                {
-                    ["reason"] = "SealRemoved",
-                    ["cardId"] = card.CardId,
-                    ["sealCost"] = sealCount
-                });
-            }
 
             // Remove Pledge if present when playing
             if (cardEntity.HasComponent<Pledge>())

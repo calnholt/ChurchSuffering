@@ -33,7 +33,9 @@ namespace Crusaders30XX.ECS.Services
 			"wyvern",
 			"sand_golem",
 			"fallen_shepherd",
-			// "medusa",
+			"azure_warden",
+			"blighttongue",
+			"hex_bailiff",
 			// "training_demon", // test-fight only
 			// "ninja",
 		};

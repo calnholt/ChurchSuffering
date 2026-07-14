@@ -165,6 +165,7 @@ public sealed class CardShaderCompositorSystem : Core.System
 			 card.GetComponent<Frozen>() != null ||
 			 card.GetComponent<Thorned>() != null ||
 			 card.GetComponent<Scorched>() != null ||
+			 card.GetComponent<Poisoned>() != null ||
 			 card.GetComponent<Cursed>() != null);
 	}
 

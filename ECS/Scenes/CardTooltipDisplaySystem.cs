@@ -196,6 +196,9 @@ namespace Crusaders30XX.ECS.Systems
 					case RunScopedStateService.RestrictionColorless:
 						EntityManager.AddComponent(cardEntity, new Colorless { Owner = cardEntity });
 						break;
+					case RunScopedStateService.RestrictionSealed:
+						EntityManager.AddComponent(cardEntity, new Sealed { Owner = cardEntity, Seals = 2 });
+						break;
 					case RunScopedStateService.RestrictionCursed:
 						CursedManagementSystem.ApplyCursedRuntime(EntityManager, cardEntity);
 						break;

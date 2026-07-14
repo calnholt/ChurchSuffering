@@ -14,7 +14,8 @@ namespace Crusaders30XX.ECS.Services
 		public static (Entity BaseCard, Entity FinalCard) CreateDisplayPairFromBattleCard(
 			EntityManager entityManager,
 			Entity targetCard,
-			CardApplicationType applicationType)
+			CardApplicationType applicationType,
+			int stacksPerCard = 1)
 		{
 			if (entityManager == null || targetCard == null) return (null, null);
 
@@ -27,6 +28,14 @@ namespace Crusaders30XX.ECS.Services
 
 			var baseCard = CreateDisplayCard(entityManager, cardKey, currentRestrictions);
 			var finalCard = CreateDisplayCard(entityManager, cardKey, finalRestrictions);
+			if (applicationType == CardApplicationType.Sealed)
+			{
+				var currentSeals = targetCard.GetComponent<Sealed>()?.Seals ?? 0;
+				var baseSealed = baseCard?.GetComponent<Sealed>();
+				var finalSealed = finalCard?.GetComponent<Sealed>();
+				if (baseSealed != null) baseSealed.Seals = currentSeals;
+				if (finalSealed != null) finalSealed.Seals = currentSeals + Math.Max(1, stacksPerCard);
+			}
 			return (baseCard, finalCard);
 		}
 
@@ -86,7 +95,9 @@ namespace Crusaders30XX.ECS.Services
 			AddRestrictionIfPresent(card, restrictions, RunScopedStateService.RestrictionScorched, card.HasComponent<Scorched>());
 			AddRestrictionIfPresent(card, restrictions, RunScopedStateService.RestrictionThorned, card.HasComponent<Thorned>());
 			AddRestrictionIfPresent(card, restrictions, RunScopedStateService.RestrictionColorless, card.HasComponent<Colorless>());
+			AddRestrictionIfPresent(card, restrictions, RunScopedStateService.RestrictionSealed, card.HasComponent<Sealed>());
 			AddRestrictionIfPresent(card, restrictions, RunScopedStateService.RestrictionCursed, card.HasComponent<Cursed>());
+			AddRestrictionIfPresent(card, restrictions, HexManagementSystem.RestrictionName, card.HasComponent<Hexed>());
 			return restrictions;
 		}
 
@@ -99,7 +110,9 @@ namespace Crusaders30XX.ECS.Services
 				CardApplicationType.Scorched => RunScopedStateService.RestrictionScorched,
 				CardApplicationType.Thorned => RunScopedStateService.RestrictionThorned,
 				CardApplicationType.Colorless => RunScopedStateService.RestrictionColorless,
+				CardApplicationType.Sealed => RunScopedStateService.RestrictionSealed,
 				CardApplicationType.Cursed => RunScopedStateService.RestrictionCursed,
+				CardApplicationType.Hex => HexManagementSystem.RestrictionName,
 				_ => string.Empty,
 			};
 		}
@@ -113,6 +126,7 @@ namespace Crusaders30XX.ECS.Services
 				RunScopedStateService.RestrictionScorched => SfxTrack.ApplyScorched,
 				RunScopedStateService.RestrictionThorned => SfxTrack.ApplyThorns,
 				RunScopedStateService.RestrictionCursed => SfxTrack.ApplyCurse,
+				HexManagementSystem.RestrictionName => SfxTrack.ApplyCurse,
 				_ => SfxTrack.None,
 			};
 		}
@@ -154,8 +168,14 @@ namespace Crusaders30XX.ECS.Services
 					case RunScopedStateService.RestrictionColorless:
 						if (!card.HasComponent<Colorless>()) entityManager.AddComponent(card, new Colorless { Owner = card });
 						break;
+					case RunScopedStateService.RestrictionSealed:
+						if (!card.HasComponent<Sealed>()) entityManager.AddComponent(card, new Sealed { Owner = card, Seals = 2 });
+						break;
 					case RunScopedStateService.RestrictionCursed:
 						CursedManagementSystem.ApplyCursedRuntime(entityManager, card);
+						break;
+					case HexManagementSystem.RestrictionName:
+						HexManagementSystem.ApplyHexRuntime(entityManager, card);
 						break;
 				}
 			}

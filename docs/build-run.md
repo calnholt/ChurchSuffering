@@ -31,6 +31,10 @@ dotnet run -- card-list-profile profile-gpu --render-scale 2
 dotnet run -- unlock
 dotnet run --launch-profile unlock
 
+# Unlock every starting weapon and difficulty in the current save
+dotnet run -- unlock-run-setup
+dotnet run --launch-profile unlock-run-setup
+
 # Repeated isolated balance fight; tutorials and persistence are disabled
 dotnet run -- test-fight hammer skeleton hard
 

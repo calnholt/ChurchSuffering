@@ -13,7 +13,7 @@ This document summarizes all passive effects in the game. Each passive has a dur
 |---------|--------|
 | **Burn** | At the start of your turn, take damage equal to stacks |
 | **Bleed** (Run) | Lose 1 HP for each color you block with using 2 or more cards (including equipment), then remove one bleed per trigger |
-| **Poison** | Every 60 seconds, lose 1 HP |
+| **Poison** (Run) | At the start of the block phase, one card in your hand becomes poisoned. Blocking with it loses 1 HP; at end of turn, lose 1 poison. |
 | **Frostbite** | At 3 stacks, take 3 damage and lose 3 frostbite |
 
 ---
@@ -71,6 +71,13 @@ This document summarizes all passive effects in the game. Each passive has a dur
 | **SubZero** | At the start of the enemy turn, freeze one card from your hand |
 | **Windchill** | Whenever you block with a frozen card, gain 1 scar |
 | **Frostbite** | At 3 stacks, take 3 damage and lose 3 frostbite |
+
+## Card Restrictions
+
+| Keyword | Effect |
+|---------|--------|
+| **Sealed** | Cannot be pledged. Lose 1 seal when used to block; the card is freed at 0 seals. |
+| **Hex** | Temporarily covers a card. It can be played as a free 5-damage, 3-block attack to curse the covered card; otherwise it is removed at end of turn. |
 
 ---
 

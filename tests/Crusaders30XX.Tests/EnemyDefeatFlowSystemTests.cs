@@ -7,6 +7,7 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Systems;
 using System.Linq;
 using Xunit;
@@ -89,6 +90,13 @@ public class EnemyDefeatFlowSystemTests
 
 		try
 		{
+			SaveCache.DeleteSaveFilesIfPresent();
+			SaveCache.StartNewRun();
+			var climb = SaveCache.GetClimbState();
+			climb.startingWeaponId = "hammer";
+			climb.difficulty = RunDifficulty.Hard;
+			SaveCache.SaveClimbState(climb);
+
 			var world = BuildWorld(out var phaseState, out var enemy);
 			var queued = world.EntityManager.GetEntity("QueuedEvents").GetComponent<QueuedEvents>();
 			queued.IsClimbEncounter = true;
@@ -103,8 +111,10 @@ public class EnemyDefeatFlowSystemTests
 			ShowTransition transition = null;
 			int rewardCount = 0;
 			int musicCount = 0;
+			ClimbCompletedEvent climbCompleted = null;
 			EventManager.Subscribe<ShowTransition>(evt => transition = evt);
 			EventManager.Subscribe<ShowQuestRewardOverlay>(_ => rewardCount++);
+			EventManager.Subscribe<ClimbCompletedEvent>(evt => climbCompleted = evt);
 			EventManager.Subscribe<ChangeMusicTrack>(evt =>
 			{
 				if (evt.Track == MusicTrack.QuestComplete) musicCount++;
@@ -115,6 +125,9 @@ public class EnemyDefeatFlowSystemTests
 			Assert.False(phaseState.DefeatPresentationActive);
 			Assert.Equal(0, rewardCount);
 			Assert.Equal(0, musicCount);
+			Assert.NotNull(climbCompleted);
+			Assert.Equal("hammer", climbCompleted.StartingWeaponId);
+			Assert.Equal(RunDifficulty.Hard, climbCompleted.Difficulty);
 			Assert.Null(transition);
 
 			CompleteVictoryAnimation();
@@ -128,6 +141,7 @@ public class EnemyDefeatFlowSystemTests
 		{
 			EventManager.Clear();
 			EventQueue.Clear();
+			SaveCache.DeleteSaveFilesIfPresent();
 		}
 	}
 

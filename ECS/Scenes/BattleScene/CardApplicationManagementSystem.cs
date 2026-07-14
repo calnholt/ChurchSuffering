@@ -28,11 +28,11 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnApplyCardApplication(ApplyCardApplicationEvent evt)
 		{
-			if (evt.Type == CardApplicationType.Cursed || evt.Amount <= 0) return;
+			if (evt.Type == CardApplicationType.Cursed || evt.Type == CardApplicationType.Hex || evt.Amount <= 0) return;
 
 			var cards = CardApplicationTargetingService.ResolveCandidates(EntityManager, evt.Card, evt.Target)
 				.Where(CardApplicationTargetingService.IsEligibleForApplication)
-				.Where(card => !CardApplicationService.IsApplied(card, evt.Type))
+				.Where(card => evt.Type == CardApplicationType.Sealed || !CardApplicationService.IsApplied(card, evt.Type))
 				.Distinct()
 				.OrderBy(_ => Random.Shared.Next())
 				.Take(evt.Amount)
@@ -56,6 +56,7 @@ namespace Crusaders30XX.ECS.Systems
 				EventManager.Publish(new CardRestrictionMutationAnimationRequested
 				{
 					TargetCard = card,
+					StacksPerCard = Math.Max(1, evt.StacksPerCard),
 					Type = evt.Type,
 				});
 				LoggingService.Append(
@@ -71,13 +72,13 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnRemoveCardApplication(RemoveCardApplication evt)
 		{
-			if (evt?.Card == null || evt.Type == CardApplicationType.Cursed) return;
+			if (evt?.Card == null || evt.Type == CardApplicationType.Cursed || evt.Type == CardApplicationType.Hex) return;
 			CardApplicationService.RemoveRestriction(EntityManager, evt.Card, evt.Type);
 		}
 
 		private void OnRemoveCardApplications(RemoveCardApplications evt)
 		{
-			if (evt == null || evt.Type == CardApplicationType.Cursed || evt.Amount <= 0) return;
+			if (evt == null || evt.Type == CardApplicationType.Cursed || evt.Type == CardApplicationType.Hex || evt.Amount <= 0) return;
 
 			var cards = CardApplicationTargetingService.ResolveCandidates(EntityManager, null, evt.Target)
 				.Where(CardApplicationTargetingService.IsNonWeaponCard)

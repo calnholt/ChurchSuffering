@@ -81,6 +81,11 @@ namespace Crusaders30XX.ECS.Data.Achievements
             Register(new Relentless());
             Register(new FadedSpectrum());
             Register(new MasterArtificer());
+
+            foreach (var achievement in ClimbAchievementCatalog.CreateAll())
+            {
+                Register(achievement);
+            }
         }
 
         /// <summary>

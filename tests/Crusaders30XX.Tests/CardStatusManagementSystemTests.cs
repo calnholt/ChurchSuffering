@@ -170,7 +170,7 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	{
 		Assert.Contains("X Darkness - The enemy loses X damage", TooltipTextService.GetKeywordTooltip("Gain darkness."));
 		Assert.Contains("X Silenced - You cannot play pledged cards", TooltipTextService.GetKeywordTooltip("Gain silenced."));
-		Assert.Contains("Sealed - Sealed cards cost HP", TooltipTextService.GetKeywordTooltip("Add 2 seals."));
+		Assert.Contains("Sealed - Cannot be pledged. Lose 1 seal when used to block.", TooltipTextService.GetKeywordTooltip("Add 2 seals."));
 	}
 
 	private static Entity CreateCard(EntityManager entityManager, string name)

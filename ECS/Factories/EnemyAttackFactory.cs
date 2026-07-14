@@ -82,13 +82,9 @@ namespace Crusaders30XX.ECS.Factories
                 { EnemyAttackId.StoneBarrage, () => new StoneBarrage() },
                 { EnemyAttackId.EarthenWall, () => new EarthenWall() },
                 { EnemyAttackId.HaveNoMercy, () => new HaveNoMercy() },
-                { EnemyAttackId.Gaze, () => new Gaze() },
-                { EnemyAttackId.BasiliskGlare, () => new BasiliskGlare() },
-                { EnemyAttackId.SerpentStrike, () => new SerpentStrike() },
-                { EnemyAttackId.PetrifyingGaze, () => new PetrifyingGaze() },
-                { EnemyAttackId.StoneSkin, () => new StoneSkin() },
-                { EnemyAttackId.VipersCurse, () => new VipersCurse() },
-                { EnemyAttackId.CrumblingStone, () => new CrumblingStone() },
+                { EnemyAttackId.WardenSeal, () => new WardenSeal() },
+				{ EnemyAttackId.VenomLash, () => new VenomLash() },
+				{ EnemyAttackId.ToxicDeluge, () => new ToxicDeluge() },
                 { EnemyAttackId.WyvernStrike, () => new WyvernStrike() },
                 { EnemyAttackId.WyvernThreat, () => new WyvernThreat() },
                 { EnemyAttackId.FallenShepherdPhase1, () => new FallenShepherdPhase1() },
@@ -103,6 +99,7 @@ namespace Crusaders30XX.ECS.Factories
                 { EnemyAttackId.FallenShepherdPurgeTheHeretic, () => new FallenShepherdPurgeTheHeretic() },
                 { EnemyAttackId.FallenShepherdFearTheShepherd, () => new FallenShepherdFearTheShepherd() },
                 { EnemyAttackId.FallenShepherdFinalSermon, () => new FallenShepherdFinalSermon() },
+                { EnemyAttackId.WritOfMalice, () => new WritOfMalice() },
             };
 
         public static EnemyAttackBase Create(EnemyAttackId attackId)

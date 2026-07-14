@@ -49,6 +49,8 @@ public static class EnemyAttackTextHelper
           return $"This attack must be blocked with exactly {amount} card{(amount > 1 ? "s" : "")}/equipment.";
         case EnemyAttackTextType.Burn:
           return $"Gain {amount} burn.";
+		case EnemyAttackTextType.Poison:
+		  return $"Gain {amount} poison.";
         case EnemyAttackTextType.Scar:
           return $"Gain {amount} scar{(amount > 1 ? "s" : "")}.";
         case EnemyAttackTextType.Armor:

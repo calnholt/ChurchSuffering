@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Singletons;
 
 namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 22;
+		public const int CURRENT_VERSION = 24;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -66,11 +67,18 @@ namespace Crusaders30XX.ECS.Data.Save
 	{
 		public int climbAttempts { get; set; }
 		public int climbCompletions { get; set; }
+		public List<CompletedClimbSave> completedClimbs { get; set; } = new List<CompletedClimbSave>();
 		public int deferredNpcDialogueCounter { get; set; }
 		public bool pendingNpcDialogueOffer { get; set; }
 		public List<string> purchasedMedalIds { get; set; } = new List<string>();
 		public Dictionary<string, List<string>> completedDialogueSegments { get; set; } = new Dictionary<string, List<string>>();
 		public WayStationVisitSave currentVisit { get; set; } = new WayStationVisitSave();
+	}
+
+	public class CompletedClimbSave
+	{
+		public string startingWeaponId { get; set; } = "sword";
+		public RunDifficulty difficulty { get; set; } = RunDifficulty.Easy;
 	}
 
 	public class WayStationVisitSave
@@ -92,6 +100,8 @@ namespace Crusaders30XX.ECS.Data.Save
 
 	public class ClimbSaveState
 	{
+		public string startingWeaponId { get; set; } = "sword";
+		public RunDifficulty difficulty { get; set; } = RunDifficulty.Easy;
 		public int time { get; set; }
 		public ClimbResourceSave resources { get; set; } = new ClimbResourceSave();
 		public List<ClimbShopSlotSave> shopSlots { get; set; } = new List<ClimbShopSlotSave>();

@@ -247,7 +247,7 @@ Predictable rotation between attack types across turns.
 
 **Core fantasy**: Your cards don't work the way you want
 
-**Examples**: Glacial Guardian (freezes hand), Sorcerer (mills deck), Shadow (silences), Medusa (petrifies)
+**Examples**: Glacial Guardian (freezes hand), Sorcerer (mills deck), Shadow (silences), Azure Warden (seals)
 
 **Design notes**:
 - Restrict, don't remove - afflicted cards should still be able to do SOMETHING

@@ -39,6 +39,7 @@ public class Game1 : Game
     private BrittleDisplaySystem _brittleDisplaySystem;
     private ScorchedDisplaySystem _scorchedDisplaySystem;
     private CursedDisplaySystem _cursedDisplaySystem;
+	private PoisonCardDisplaySystem _poisonCardDisplaySystem;
     private CardSheenDisplaySystem _cardSheenDisplaySystem;
     private SealDisplaySystem _sealDisplaySystem;
     private PlayerInputSystem _playerInputSystem;
@@ -46,6 +47,7 @@ public class Game1 : Game
     private UIInteractionSystem _uiInteractionSystem;
 	private CardApplicationManagementSystem _cardApplicationManagementSystem;
 	private CursedManagementSystem _cursedManagementSystem;
+	private HexManagementSystem _hexManagementSystem;
 	private DeckManagementSystem _deckManagementSystem;
 
     private DrippingBloodDisplaySystem _drippingBloodDisplaySystem;
@@ -103,7 +105,6 @@ public class Game1 : Game
     // Shockwave integration
     private ShockwaveDisplaySystem _shockwaveSystem;
     private RectangularShockwaveDisplaySystem _rectangularShockwaveSystem;
-    private PoisonDamageDisplaySystem _poisonSystem;
     private AlertDisplaySystem _alertDisplaySystem;
     private RenderTarget2D _sceneRt;
     private RenderTarget2D _ppA;
@@ -230,6 +231,7 @@ public class Game1 : Game
         _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _scorchedDisplaySystem = new ScorchedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _cursedDisplaySystem = new CursedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
+		_poisonCardDisplaySystem = new PoisonCardDisplaySystem(_world.EntityManager, Content);
         _cardSheenDisplaySystem = new CardSheenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         var sealTexture = _imageAssets.GetRequiredTexture("seal");
         _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
@@ -253,6 +255,7 @@ public class Game1 : Game
         _locationNameDisplaySystem = new LocationNameDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
 		_cardApplicationManagementSystem = new CardApplicationManagementSystem(_world.EntityManager);
 		_cursedManagementSystem = new CursedManagementSystem(_world.EntityManager);
+		_hexManagementSystem = new HexManagementSystem(_world.EntityManager);
 		_deckManagementSystem = new DeckManagementSystem(_world.EntityManager);
         _profilerSystem = new ProfilerSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _cursorDisplaySystem = new CursorDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
@@ -287,6 +290,7 @@ public class Game1 : Game
         }
 		_world.AddSystem(_cardApplicationManagementSystem);
 		_world.AddSystem(_cursedManagementSystem);
+		_world.AddSystem(_hexManagementSystem);
 		_world.AddSystem(_deckManagementSystem);
         _world.AddSystem(_debugMenuSystem);
         _world.AddSystem(_entityListOverlaySystem);
@@ -298,6 +302,7 @@ public class Game1 : Game
         _world.AddSystem(_brittleDisplaySystem);
         _world.AddSystem(_scorchedDisplaySystem);
         _world.AddSystem(_cursedDisplaySystem);
+		_world.AddSystem(_poisonCardDisplaySystem);
         _world.AddSystem(_cardSheenDisplaySystem);
         _world.AddSystem(_sealDisplaySystem);
         _world.AddSystem(_dialogDisplaySystem);
@@ -345,8 +350,6 @@ public class Game1 : Game
         _world.AddSystem(_shockwaveSystem);
         _rectangularShockwaveSystem = new RectangularShockwaveDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _world.AddSystem(_rectangularShockwaveSystem);
-        _poisonSystem = new PoisonDamageDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _world.AddSystem(_poisonSystem);
         _world.AddSystem(new CursorEmptySelectDisplaySystem(_world.EntityManager, GraphicsDevice));
         _world.AddSystem(new UISelectDisplaySystem(_world.EntityManager, GraphicsDevice));
         _world.AddSystem(new JigglePulseDisplaySystem(_world.EntityManager));
@@ -522,22 +525,14 @@ public class Game1 : Game
 
     private bool TryCompositeDrawEffects(out Texture2D finalTexture)
     {
-        bool hasPoison = _poisonSystem != null && _poisonSystem.HasActivePoison;
         bool hasCircularWaves = _shockwaveSystem != null && _shockwaveSystem.HasActiveWaves;
         bool hasRectangularWaves = _rectangularShockwaveSystem != null && _rectangularShockwaveSystem.HasActiveWaves;
 
         finalTexture = _sceneRt;
 
-        if (ShaderRuntimeOptions.ShadersEnabled && (hasPoison || hasCircularWaves || hasRectangularWaves))
+        if (ShaderRuntimeOptions.ShadersEnabled && (hasCircularWaves || hasRectangularWaves))
         {
             EnsurePostProcessTargets();
-            if (hasPoison)
-            {
-                RenderTarget2D next = (hasCircularWaves || hasRectangularWaves) ? _ppB : _ppA;
-                _poisonSystem.Composite(finalTexture, _ppA, next);
-                finalTexture = next;
-            }
-
             if (hasCircularWaves)
             {
                 RenderTarget2D dest = (finalTexture == _ppA) ? _ppB : _ppA;

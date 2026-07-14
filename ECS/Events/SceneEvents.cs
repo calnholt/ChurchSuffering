@@ -1,5 +1,6 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Singletons;
 using System.Collections.Generic;
 using System;
 
@@ -118,6 +119,13 @@ namespace Crusaders30XX.ECS.Events
 		public int TimeReached { get; set; }
 		public bool Abandoned { get; set; }
 		public bool CompletedFinalBoss { get; set; }
+	}
+
+	/// <summary>Published once after the final boss is defeated in a completed climb.</summary>
+	public class ClimbCompletedEvent
+	{
+		public string StartingWeaponId { get; set; } = "sword";
+		public RunDifficulty Difficulty { get; set; } = RunDifficulty.Easy;
 	}
 
 	public class ShowNarrativeEventOverlay
