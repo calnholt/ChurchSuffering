@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Content;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Rendering;
  
 using System;
 using Crusaders30XX.ECS.Scenes.BattleScene;
@@ -53,6 +54,7 @@ namespace Crusaders30XX.ECS.Systems
 		private ModularEffectScreenDisplaySystem _modularEffectScreenDisplaySystem;
 		private ModularEffectPrimitiveDisplaySystem _modularEffectPrimitiveDisplaySystem;
 		private ModularEffectParticleDisplaySystem _modularEffectParticleDisplaySystem;
+		private ModularEffectRenderResources _modularEffectRenderResources;
 		private CardModularEffectsDebugSystem _cardModularEffectsDebugSystem;
 		private EquipmentModularEffectsDebugSystem _equipmentModularEffectsDebugSystem;
 		private MedalModularEffectsDebugSystem _medalModularEffectsDebugSystem;
@@ -756,9 +758,10 @@ namespace Crusaders30XX.ECS.Systems
 			_playerTemperanceActivationDisplaySystem = new PlayerTemperanceActivationDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_modularEffectCoordinatorSystem = new ModularEffectCoordinatorSystem(_world.EntityManager);
 			_modularEffectActorPresentationSystem = new ModularEffectActorPresentationSystem(_world.EntityManager);
-			_modularEffectScreenDisplaySystem = new ModularEffectScreenDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_modularEffectPrimitiveDisplaySystem = new ModularEffectPrimitiveDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
-			_modularEffectParticleDisplaySystem = new ModularEffectParticleDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
+			_modularEffectRenderResources = new ModularEffectRenderResources(_graphicsDevice, _imageAssets.GetPixel(Color.White));
+			_modularEffectScreenDisplaySystem = new ModularEffectScreenDisplaySystem(_world.EntityManager, _spriteBatch, _modularEffectRenderResources);
+			_modularEffectPrimitiveDisplaySystem = new ModularEffectPrimitiveDisplaySystem(_world.EntityManager, _spriteBatch, _modularEffectRenderResources);
+			_modularEffectParticleDisplaySystem = new ModularEffectParticleDisplaySystem(_world.EntityManager, _spriteBatch, _modularEffectRenderResources);
 			_cardModularEffectsDebugSystem = new CardModularEffectsDebugSystem(_world.EntityManager);
 			_equipmentModularEffectsDebugSystem = new EquipmentModularEffectsDebugSystem(_world.EntityManager);
 			_medalModularEffectsDebugSystem = new MedalModularEffectsDebugSystem(_world.EntityManager);

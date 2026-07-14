@@ -99,6 +99,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 	public sealed class VisualEffectRecipe
 	{
 		private VisualEffectModule[] _modules = Array.Empty<VisualEffectModule>();
+		private ulong _moduleMask;
 
 		public string Id { get; init; } = string.Empty;
 		public VisualEffectTimingProfile Timing { get; init; } = VisualEffectTimingProfile.SnapImpact;
@@ -134,7 +135,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			ImpactSfxPitch = source.ImpactSfxPitch;
 			ImpactRumbleProfile = source.ImpactRumbleProfile;
 			ImpactRumbleScale = source.ImpactRumbleScale;
-			_modules = NormalizeModules(modules);
+			SetModules(modules);
 		}
 
 		public VisualEffectRecipe Clone()
@@ -172,6 +173,12 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			return new VisualEffectRecipe(this, modules ?? Array.Empty<VisualEffectModule>());
 		}
 
+		public bool HasModule(VisualEffectModule module)
+		{
+			int bit = (int)module;
+			return bit is >= 0 and < 64 && (_moduleMask & (1UL << bit)) != 0;
+		}
+
 		public VisualEffectRecipe WithStartSfx(SfxTrack track, float volume = 0.5f, float pitch = 0f)
 		{
 			return Copy(startSfx: track, startSfxVolume: volume, startSfxPitch: pitch);
@@ -203,7 +210,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 			RumbleProfile? impactRumbleProfile = null,
 			float? impactRumbleScale = null)
 		{
-			return new VisualEffectRecipe
+			var copy = new VisualEffectRecipe
 			{
 				Id = id ?? Id,
 				Timing = timing ?? Timing,
@@ -218,9 +225,21 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				StartSfxPitch = startSfxPitch ?? StartSfxPitch,
 				ImpactSfxPitch = impactSfxPitch ?? ImpactSfxPitch,
 				ImpactRumbleProfile = impactRumbleProfile ?? ImpactRumbleProfile,
-				ImpactRumbleScale = impactRumbleScale ?? ImpactRumbleScale,
-				_modules = NormalizeModules(_modules)
+				ImpactRumbleScale = impactRumbleScale ?? ImpactRumbleScale
 			};
+			copy.SetModules(_modules);
+			return copy;
+		}
+
+		private void SetModules(IEnumerable<VisualEffectModule> modules)
+		{
+			_modules = NormalizeModules(modules);
+			_moduleMask = 0;
+			foreach (var module in _modules)
+			{
+				int bit = (int)module;
+				if (bit is >= 0 and < 64) _moduleMask |= 1UL << bit;
+			}
 		}
 
 		private static VisualEffectModule[] NormalizeModules(IEnumerable<VisualEffectModule> modules)

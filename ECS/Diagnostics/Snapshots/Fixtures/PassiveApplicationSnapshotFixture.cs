@@ -4,6 +4,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -74,7 +75,8 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					IsPreview = true,
 					SourceKind = VisualEffectSourceKind.EnemyAttack,
 				});
-				_attackDisplay = new ModularEffectPrimitiveDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
+				var resources = new ModularEffectRenderResources(ctx.GraphicsDevice, ctx.ImageAssets.GetPixel(Color.White));
+				_attackDisplay = new ModularEffectPrimitiveDisplaySystem(ctx.World.EntityManager, ctx.SpriteBatch, resources);
 			}
 
 			_statusDisplay.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(SampleSeconds())));

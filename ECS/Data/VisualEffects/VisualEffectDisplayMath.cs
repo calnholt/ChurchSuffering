@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Microsoft.Xna.Framework;
 
@@ -11,7 +10,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 		{
 			if (effect == null) return 0f;
 			float elapsed = Math.Max(0f, effect.ElapsedSeconds);
-			if (!effect.Recipe.Modules.Contains(VisualEffectModule.HitStop)) return elapsed;
+			if (!effect.Recipe.HasModule(VisualEffectModule.HitStop)) return elapsed;
 
 			float start = Math.Max(0f, effect.Timing.HitStopStartSeconds);
 			float duration = Math.Max(0f, effect.Timing.HitStopDurationSeconds);

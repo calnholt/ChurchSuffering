@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
@@ -21,25 +20,6 @@ namespace Crusaders30XX.ECS.Systems
 		private static readonly Color Steel = new(143, 150, 160);
 		private static readonly Color RockDark = new(43, 36, 33);
 
-		private static readonly Vector2[] SwordArcMask =
-		{
-			new(0.00f, 0.48f),
-			new(0.10f, 0.30f),
-			new(0.48f, 0.40f),
-			new(0.94f, 0.00f),
-			new(1.00f, 0.14f),
-			new(0.58f, 0.62f),
-			new(0.12f, 0.72f)
-		};
-
-		private static readonly Vector2[] JaggedShardMask =
-		{
-			new(0.50f, 0.00f),
-			new(1.00f, 0.76f),
-			new(0.62f, 1.00f),
-			new(0.00f, 0.42f)
-		};
-
 		private static readonly Vector2[] CrackMask =
 		{
 			new(0.00f, 0.50f),
@@ -59,33 +39,11 @@ namespace Crusaders30XX.ECS.Systems
 			new(0.00f, 0.82f)
 		};
 
-		private static readonly Vector2[] HammerHeadMask =
-		{
-			new(0.24f, 0.00f),
-			new(0.76f, 0.00f),
-			new(0.94f, 0.08f),
-			new(1.00f, 0.24f),
-			new(0.78f, 0.34f),
-			new(0.68f, 0.40f),
-			new(0.68f, 0.60f),
-			new(0.78f, 0.66f),
-			new(1.00f, 0.76f),
-			new(0.94f, 0.92f),
-			new(0.76f, 1.00f),
-			new(0.24f, 1.00f),
-			new(0.06f, 0.92f),
-			new(0.00f, 0.76f),
-			new(0.22f, 0.66f),
-			new(0.32f, 0.60f),
-			new(0.32f, 0.40f),
-			new(0.22f, 0.34f),
-			new(0.00f, 0.24f),
-			new(0.06f, 0.08f)
-		};
-
-		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
+		private readonly ModularEffectRenderResources _resources;
 		private readonly Texture2D _pixel;
+		private Texture2D _editableRingMask;
+		private float _ringThickness = 5f;
 
 		[DebugEditable(DisplayName = "Primitive Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float PrimitiveAlpha { get; set; } = 1.0f;
@@ -100,7 +58,18 @@ namespace Crusaders30XX.ECS.Systems
 		public float SlashThicknessScale { get; set; } = 1.0f;
 
 		[DebugEditable(DisplayName = "Ring Thickness", Step = 1f, Min = 1f, Max = 40f)]
-		public float RingThickness { get; set; } = 5f;
+		public float RingThickness
+		{
+			get => _ringThickness;
+			set
+			{
+				_ringThickness = Math.Max(1f, value);
+				if (_resources != null)
+				{
+					_editableRingMask = _resources.GetEditableRingMask(_ringThickness);
+				}
+			}
+		}
 
 		[DebugEditable(DisplayName = "Beam Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float BeamAlpha { get; set; } = 0.74f;
@@ -126,12 +95,12 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Hammer Follow-through Degrees", Step = 1f, Min = 0f, Max = 45f)]
 		public float HammerFollowThroughDegrees { get; set; } = 18f;
 
-		public ModularEffectPrimitiveDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(entityManager)
+		public ModularEffectPrimitiveDisplaySystem(EntityManager entityManager, SpriteBatch spriteBatch, ModularEffectRenderResources resources) : base(entityManager)
 		{
-			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_resources = resources ?? throw new ArgumentNullException(nameof(resources));
+			_pixel = resources.Pixel;
+			_editableRingMask = resources.DefaultRingMask;
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities() => Array.Empty<Entity>();
@@ -139,46 +108,41 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void Draw()
 		{
-			foreach (var effect in GetActiveEffects())
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>())
 			{
-				var modules = effect.Recipe.Modules;
-				if (modules.Contains(VisualEffectModule.SwordArc)) DrawSwordArc(effect);
-				if (modules.Contains(VisualEffectModule.CrossSlash)) DrawCrossSlash(effect);
-				if (modules.Contains(VisualEffectModule.ClawSlash)) DrawClawSlash(effect);
-				if (modules.Contains(VisualEffectModule.Bite)) DrawBite(effect);
-				if (modules.Contains(VisualEffectModule.RockBlast)) DrawRockBlast(effect);
-				if (modules.Contains(VisualEffectModule.HammerArc)) DrawHammerArc(effect);
-				if (modules.Contains(VisualEffectModule.CrossBloom)) DrawCrossBloom(effect);
-				if (modules.Contains(VisualEffectModule.Ring)) DrawRing(effect);
-				if (modules.Contains(VisualEffectModule.Halo)) DrawHalo(effect);
-				if (modules.Contains(VisualEffectModule.Beam)) DrawBeam(effect);
-				if (modules.Contains(VisualEffectModule.Rays)) DrawRays(effect);
-				if (modules.Contains(VisualEffectModule.Cracks)) DrawCracks(effect);
-				if (modules.Contains(VisualEffectModule.HitFlash)) DrawHitFlash(effect);
-				if (modules.Contains(VisualEffectModule.ArrowShot)) DrawArrowShot(effect);
-				if (modules.Contains(VisualEffectModule.ThrownBladeVolley)) DrawThrownBladeVolley(effect);
-				if (modules.Contains(VisualEffectModule.EnergyBolt)) DrawEnergyBolt(effect);
-				if (modules.Contains(VisualEffectModule.SpinSlash)) DrawSpinSlash(effect);
-				if (modules.Contains(VisualEffectModule.FlameBurst)) DrawFlameBurst(effect);
-				if (modules.Contains(VisualEffectModule.FrostBurst)) DrawFrostBurst(effect);
-				if (modules.Contains(VisualEffectModule.ShadowTendrils)) DrawShadowTendrils(effect);
-				if (modules.Contains(VisualEffectModule.PoisonCloud)) DrawPoisonCloud(effect);
-				if (modules.Contains(VisualEffectModule.ShieldWard)) DrawShieldWard(effect);
-				if (modules.Contains(VisualEffectModule.ShieldShatter)) DrawShieldShatter(effect);
-				if (modules.Contains(VisualEffectModule.SoulSiphon)) DrawSoulSiphon(effect);
-				if (modules.Contains(VisualEffectModule.ResourceMotes)) DrawResourceMotes(effect);
-				if (modules.Contains(VisualEffectModule.SealStamp)) DrawSealStamp(effect);
-				if (modules.Contains(VisualEffectModule.FrostBind)) DrawFrostBind(effect);
-				if (modules.Contains(VisualEffectModule.BrittleFracture)) DrawBrittleFracture(effect);
-				if (modules.Contains(VisualEffectModule.ColorDrain)) DrawColorDrain(effect);
+				var effect = entity.GetComponent<ActiveVisualEffect>();
+				if (effect == null || effect.ElapsedSeconds < 0f) continue;
+				var recipe = effect.Recipe;
+				if (recipe.HasModule(VisualEffectModule.SwordArc)) DrawSwordArc(effect);
+				if (recipe.HasModule(VisualEffectModule.CrossSlash)) DrawCrossSlash(effect);
+				if (recipe.HasModule(VisualEffectModule.ClawSlash)) DrawClawSlash(effect);
+				if (recipe.HasModule(VisualEffectModule.Bite)) DrawBite(effect);
+				if (recipe.HasModule(VisualEffectModule.RockBlast)) DrawRockBlast(effect);
+				if (recipe.HasModule(VisualEffectModule.HammerArc)) DrawHammerArc(effect);
+				if (recipe.HasModule(VisualEffectModule.CrossBloom)) DrawCrossBloom(effect);
+				if (recipe.HasModule(VisualEffectModule.Ring)) DrawRing(effect);
+				if (recipe.HasModule(VisualEffectModule.Halo)) DrawHalo(effect);
+				if (recipe.HasModule(VisualEffectModule.Beam)) DrawBeam(effect);
+				if (recipe.HasModule(VisualEffectModule.Rays)) DrawRays(effect);
+				if (recipe.HasModule(VisualEffectModule.Cracks)) DrawCracks(effect);
+				if (recipe.HasModule(VisualEffectModule.HitFlash)) DrawHitFlash(effect);
+				if (recipe.HasModule(VisualEffectModule.ArrowShot)) DrawArrowShot(effect);
+				if (recipe.HasModule(VisualEffectModule.ThrownBladeVolley)) DrawThrownBladeVolley(effect);
+				if (recipe.HasModule(VisualEffectModule.EnergyBolt)) DrawEnergyBolt(effect);
+				if (recipe.HasModule(VisualEffectModule.SpinSlash)) DrawSpinSlash(effect);
+				if (recipe.HasModule(VisualEffectModule.FlameBurst)) DrawFlameBurst(effect);
+				if (recipe.HasModule(VisualEffectModule.FrostBurst)) DrawFrostBurst(effect);
+				if (recipe.HasModule(VisualEffectModule.ShadowTendrils)) DrawShadowTendrils(effect);
+				if (recipe.HasModule(VisualEffectModule.PoisonCloud)) DrawPoisonCloud(effect);
+				if (recipe.HasModule(VisualEffectModule.ShieldWard)) DrawShieldWard(effect);
+				if (recipe.HasModule(VisualEffectModule.ShieldShatter)) DrawShieldShatter(effect);
+				if (recipe.HasModule(VisualEffectModule.SoulSiphon)) DrawSoulSiphon(effect);
+				if (recipe.HasModule(VisualEffectModule.ResourceMotes)) DrawResourceMotes(effect);
+				if (recipe.HasModule(VisualEffectModule.SealStamp)) DrawSealStamp(effect);
+				if (recipe.HasModule(VisualEffectModule.FrostBind)) DrawFrostBind(effect);
+				if (recipe.HasModule(VisualEffectModule.BrittleFracture)) DrawBrittleFracture(effect);
+				if (recipe.HasModule(VisualEffectModule.ColorDrain)) DrawColorDrain(effect);
 			}
-		}
-
-		private IEnumerable<ActiveVisualEffect> GetActiveEffects()
-		{
-			return EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>()
-				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null && e.ElapsedSeconds >= 0f);
 		}
 
 		private void DrawSwordArc(ActiveVisualEffect effect)
@@ -194,7 +158,7 @@ namespace Crusaders30XX.ECS.Systems
 			float rotation = MathHelper.ToRadians(-28f * Math.Sign(effect.DirectionSign == 0 ? 1 : effect.DirectionSign));
 			var axis = new Vector2(MathF.Cos(rotation), MathF.Sin(rotation));
 			var center = effect.ImpactAnchor + axis * travel;
-			var mask = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 280, 64, "modular_fx_sword_arc", SwordArcMask);
+			var mask = _resources.SwordArcMask;
 
 			DrawMask(mask, center, colors.Glow * (alpha * GlowAlpha), rotation, new Vector2(scaleX * 1.24f, 2.2f));
 			DrawMask(mask, center, colors.Highlight * alpha, rotation, new Vector2(scaleX, 1.28f));
@@ -259,7 +223,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (alpha <= 0f) return;
 
 			float scale = recovery <= 0f ? MathHelper.Lerp(1.48f, 1f, VisualEffectDisplayMath.EaseOutCubic(approach)) : MathHelper.Lerp(1f, 1.24f, recovery);
-			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 310, 270, 7f);
+			var ring = _resources.BiteRingMask;
 			DrawMask(ring, effect.ImpactAnchor, colors.Primary * (alpha * 0.44f), 0f, new Vector2(scale));
 			DrawMask(ring, effect.ImpactAnchor, Color.Black * (alpha * 0.26f), 0f, new Vector2(scale * 0.9f));
 
@@ -282,7 +246,7 @@ namespace Crusaders30XX.ECS.Systems
 			DrawSoftCircle(effect.ImpactAnchor, 220f * scale, colors.Primary, alpha * 0.68f, 0.0f, 0.64f);
 			DrawSoftCircle(effect.ImpactAnchor, 130f * scale, colors.Highlight, alpha * 0.88f, 0.0f, 0.42f);
 
-			var chunk = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 42, 38, "modular_fx_rock_chunk", JaggedShardMask);
+			var chunk = _resources.RockChunkMask;
 			var variation = new VisualEffectVariation(effect);
 			float chunkT = 0.20f + VisualEffectDisplayMath.EaseOutCubic(recovery) * 0.80f;
 			for (int i = 0; i < 5; i++)
@@ -363,7 +327,7 @@ namespace Crusaders30XX.ECS.Systems
 			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
 			float scale = recovery <= 0f ? MathHelper.Lerp(0.18f, 1.1f, VisualEffectDisplayMath.EaseOutCubic(approach)) : MathHelper.Lerp(1.1f, 5.8f, VisualEffectDisplayMath.EaseOutCubic(recovery));
-			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 80, 80, RingThickness);
+			var ring = _editableRingMask;
 			DrawMask(ring, effect.ImpactAnchor, Color.White * alpha, 0f, new Vector2(scale));
 			DrawMask(ring, effect.ImpactAnchor, colors.Primary * (alpha * 0.42f), 0f, new Vector2(scale * 1.18f));
 		}
@@ -377,7 +341,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (alpha <= 0f) return;
 			float y = MathHelper.Lerp(30f, -70f, VisualEffectDisplayMath.EaseOutCubic(VisualEffectDisplayMath.Progress(effect)));
 			float scale = MathHelper.Lerp(0.65f, 1.4f, VisualEffectDisplayMath.EaseOutBack(approach));
-			var halo = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 230, 58, 7f);
+			var halo = _resources.HaloRingMask;
 			var center = effect.ImpactAnchor + new Vector2(0f, -190f + y);
 			DrawMask(halo, center, colors.Glow * (alpha * 0.38f), 0f, new Vector2(scale * 1.22f));
 			DrawMask(halo, center, colors.Highlight * alpha, 0f, new Vector2(scale));
@@ -490,7 +454,7 @@ namespace Crusaders30XX.ECS.Systems
 			var colors = Colors(effect);
 			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
-			var blade = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 68, 24, "modular_fx_thrown_blade", SwordArcMask);
+			var blade = _resources.ThrownBladeMask;
 			for (int i = 0; i < 5; i++)
 			{
 				float local = MathHelper.Clamp((approach - i * 0.075f) / 0.70f, 0f, 1f);
@@ -609,11 +573,7 @@ namespace Crusaders30XX.ECS.Systems
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
 			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (recovery <= 0f ? approach : 1f - recovery);
 			float scale = MathHelper.Lerp(0.55f, 1.18f, VisualEffectDisplayMath.EaseOutBack(approach));
-			var shield = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 250, 300, "modular_fx_shield", new[]
-			{
-				new Vector2(0.5f, 0f), new Vector2(0.95f, 0.16f), new Vector2(0.86f, 0.67f),
-				new Vector2(0.5f, 1f), new Vector2(0.14f, 0.67f), new Vector2(0.05f, 0.16f)
-			});
+			var shield = _resources.ShieldMask;
 			DrawMask(shield, effect.ImpactAnchor, colors.Glow * (alpha * 0.20f), 0f, new Vector2(scale * 1.16f));
 			DrawMask(shield, effect.ImpactAnchor, colors.Primary * (alpha * 0.34f), 0f, new Vector2(scale));
 			DrawMask(shield, effect.ImpactAnchor, colors.Highlight * (alpha * 0.22f), 0f, new Vector2(scale * 0.82f));
@@ -624,7 +584,7 @@ namespace Crusaders30XX.ECS.Systems
 			var colors = Colors(effect);
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
 			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (1f - recovery);
-			var fragment = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 42, 54, "modular_fx_shield_fragment", JaggedShardMask);
+			var fragment = _resources.ShieldFragmentMask;
 			for (int i = 0; i < 11; i++)
 			{
 				float angle = i * MathHelper.TwoPi / 11f + 0.2f;
@@ -673,7 +633,7 @@ namespace Crusaders30XX.ECS.Systems
 			float recovery = VisualEffectDisplayMath.RecoveryProgress(effect);
 			float alpha = PrimitiveAlpha * effect.Recipe.Intensity * (1f - recovery);
 			float scale = MathHelper.Lerp(2.2f, 1f, VisualEffectDisplayMath.EaseOutBack(approach));
-			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 220, 220, 10f);
+			var ring = _resources.SealRingMask;
 			DrawMask(ring, effect.ImpactAnchor, colors.Primary * alpha, 0f, new Vector2(scale));
 			for (int i = 0; i < 4; i++)
 			{
@@ -721,7 +681,7 @@ namespace Crusaders30XX.ECS.Systems
 			for (int i = 0; i < 4; i++)
 			{
 				float scale = MathHelper.Lerp(2.6f + i * 0.34f, 0.45f + i * 0.12f, VisualEffectDisplayMath.EaseOutCubic(p));
-				var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 190, 190, 8f);
+				var ring = _resources.ColorDrainRingMask;
 				DrawMask(ring, effect.ImpactAnchor, (i % 2 == 0 ? colors.Primary : colors.Shadow) * (alpha * (1f - i * 0.14f)), 0f, new Vector2(scale));
 			}
 			DrawSoftCircle(effect.ImpactAnchor, 310f, colors.Shadow, alpha * p * 0.28f, 0f, 0.82f);
@@ -757,14 +717,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawToothRow(Vector2 center, bool top, float alpha, VisualEffectColors colors)
 		{
-			var tooth = PrimitiveTextureFactory.GetAntialiasedPolygonMask(
-				_graphicsDevice,
-				26,
-				52,
-				top ? "modular_fx_tooth_top" : "modular_fx_tooth_bottom",
-				top
-					? new[] { new Vector2(0.10f, 0f), new Vector2(0.90f, 0f), new Vector2(0.50f, 1f) }
-					: new[] { new Vector2(0.50f, 0f), new Vector2(0.90f, 1f), new Vector2(0.10f, 1f) });
+			var tooth = top ? _resources.ToothTopMask : _resources.ToothBottomMask;
 			for (int i = 0; i < 8; i++)
 			{
 				float x = (i - 3.5f) * 31f;
@@ -798,7 +751,7 @@ namespace Crusaders30XX.ECS.Systems
 			DrawRotatedRect(pommelCenter, new Vector2(30f, 40f) * scale, RockDark * alpha, rotation);
 
 			var headCenter = pivot + Rotate(new Vector2(270f, 0f) * scale, rotation);
-			var headMask = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 108, 180, "modular_fx_hammer_head", HammerHeadMask);
+			var headMask = _resources.HammerHeadMask;
 			DrawMask(headMask, headCenter, Cream * (alpha * 0.18f), rotation, new Vector2(scale * 1.08f));
 			DrawMask(headMask, headCenter, RockDark * alpha, rotation, new Vector2(scale));
 			DrawMask(headMask, headCenter, Steel * (alpha * 0.70f), rotation, new Vector2(scale * 0.84f));
@@ -841,9 +794,9 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawSoftCircle(Vector2 center, float diameter, Color color, float alpha, float innerStop, float outerStop)
 		{
-			int size = Math.Max(1, (int)MathF.Round(diameter));
-			var texture = PrimitiveTextureFactory.GetSoftRadialCircle(_graphicsDevice, size, innerStop, outerStop);
-			DrawMask(texture, center, color * alpha, 0f, Vector2.One);
+			var texture = _resources.GetRadialMask(innerStop, outerStop);
+			float scale = Math.Max(1f, diameter) / texture.Width;
+			DrawMask(texture, center, color * alpha, 0f, new Vector2(scale));
 		}
 
 		private void DrawMask(Texture2D texture, Vector2 center, Color color, float rotation, Vector2 scale)

@@ -16,7 +16,10 @@ namespace Crusaders30XX.ECS.Systems
 	[DebugTab("Modular Effect Coordinator")]
 	public sealed class ModularEffectCoordinatorSystem : Core.System
 	{
-		private readonly List<VisualEffectRequested> _pendingRejectedGameplayRequests = new();
+		private List<VisualEffectRequested> _pendingRejectedGameplayRequests = new();
+		private List<VisualEffectRequested> _processingRejectedGameplayRequests = new();
+		private readonly List<Entity> _updateEntityBuffer = new();
+		private readonly List<Entity> _cleanupEntityBuffer = new();
 
 		[DebugEditable(DisplayName = "Global Intensity Multiplier", Step = 0.01f, Min = 0f, Max = 4f)]
 		public float GlobalIntensityMultiplier { get; set; } = 1.0f;
@@ -46,7 +49,9 @@ namespace Crusaders30XX.ECS.Systems
 			if (!IsActive) return;
 			FlushRejectedGameplayRequests();
 			float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-			foreach (var entity in GetRelevantEntities().ToList())
+			_updateEntityBuffer.Clear();
+			_updateEntityBuffer.AddRange(GetRelevantEntities());
+			foreach (var entity in _updateEntityBuffer)
 			{
 				var active = entity.GetComponent<ActiveVisualEffect>();
 				if (active == null) continue;
@@ -136,21 +141,25 @@ namespace Crusaders30XX.ECS.Systems
 
 		private bool TryReserveCapacity(VisualEffectRequested request)
 		{
-			var active = GetRelevantEntities()
-				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null)
-				.ToList();
-			if (active.Count < Math.Max(1, MaxConcurrentEffects)) return true;
-			if (request.IsPreview) return false;
-
-			var oldestPreview = GetRelevantEntities()
-				.Select(e => (entity: e, effect: e.GetComponent<ActiveVisualEffect>()))
-				.Where(pair => pair.effect?.IsPreview == true)
-				.OrderBy(pair => pair.effect.ElapsedSeconds)
-				.FirstOrDefault();
-			if (oldestPreview.entity != null)
+			int activeCount = 0;
+			Entity oldestPreviewEntity = null;
+			float oldestPreviewElapsed = float.MaxValue;
+			foreach (var entity in GetRelevantEntities())
 			{
-				EntityManager.DestroyEntity(oldestPreview.entity.Id);
+				var effect = entity.GetComponent<ActiveVisualEffect>();
+				if (effect == null) continue;
+				activeCount++;
+				if (effect.IsPreview && effect.ElapsedSeconds < oldestPreviewElapsed)
+				{
+					oldestPreviewEntity = entity;
+					oldestPreviewElapsed = effect.ElapsedSeconds;
+				}
+			}
+			if (activeCount < Math.Max(1, MaxConcurrentEffects)) return true;
+			if (request.IsPreview) return false;
+			if (oldestPreviewEntity != null)
+			{
+				EntityManager.DestroyEntity(oldestPreviewEntity.Id);
 			}
 			return true;
 		}
@@ -178,7 +187,7 @@ namespace Crusaders30XX.ECS.Systems
 				});
 			}
 
-			if (active.Recipe.Modules.Contains(VisualEffectModule.Shockwave))
+			if (active.Recipe.HasModule(VisualEffectModule.Shockwave))
 			{
 				EventManager.Publish(new ShockwaveEvent
 				{
@@ -220,15 +229,20 @@ namespace Crusaders30XX.ECS.Systems
 		private void OnEnemyDamageApplied(EnemyDamageAppliedEvent evt)
 		{
 			if (evt == null || evt.TotalDamage <= 0 || evt.FinalDamage > 0) return;
-			var active = GetRelevantEntities()
-				.Select(entity => entity.GetComponent<ActiveVisualEffect>())
-				.Where(effect => effect != null
-					&& effect.SourceKind == VisualEffectSourceKind.EnemyAttack
-					&& effect.DrivesGameplayImpact
-					&& effect.ImpactPublished
-					&& !effect.CompletionPublished)
-				.OrderByDescending(effect => effect.ElapsedSeconds)
-				.FirstOrDefault();
+			ActiveVisualEffect active = null;
+			foreach (var entity in GetRelevantEntities())
+			{
+				var candidate = entity.GetComponent<ActiveVisualEffect>();
+				if (candidate == null
+					|| candidate.SourceKind != VisualEffectSourceKind.EnemyAttack
+					|| !candidate.DrivesGameplayImpact
+					|| !candidate.ImpactPublished
+					|| candidate.CompletionPublished)
+				{
+					continue;
+				}
+				if (active == null || candidate.ElapsedSeconds > active.ElapsedSeconds) active = candidate;
+			}
 			if (active == null) return;
 
 			active.SuppressImpactSfx = true;
@@ -285,7 +299,10 @@ namespace Crusaders30XX.ECS.Systems
 		private void FlushRejectedGameplayRequests()
 		{
 			if (_pendingRejectedGameplayRequests.Count == 0) return;
-			foreach (var request in _pendingRejectedGameplayRequests.ToList())
+			(_processingRejectedGameplayRequests, _pendingRejectedGameplayRequests) =
+				(_pendingRejectedGameplayRequests, _processingRejectedGameplayRequests);
+			_pendingRejectedGameplayRequests.Clear();
+			foreach (var request in _processingRejectedGameplayRequests)
 			{
 				if (request.SourceKind == VisualEffectSourceKind.EnemyAttack && request.DrivesGameplayImpact)
 				{
@@ -303,7 +320,7 @@ namespace Crusaders30XX.ECS.Systems
 				EventManager.Publish(new VisualEffectImpactReached { RequestId = request.RequestId, IsPreview = false });
 				EventManager.Publish(new VisualEffectCompleted { RequestId = request.RequestId, IsPreview = false });
 			}
-			_pendingRejectedGameplayRequests.Clear();
+			_processingRejectedGameplayRequests.Clear();
 		}
 
 		private bool TryResolveAnchor(Entity entity, out Vector2 anchor)
@@ -325,7 +342,9 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void ClearActiveEffects()
 		{
-			foreach (var entity in GetRelevantEntities().ToList())
+			_cleanupEntityBuffer.Clear();
+			_cleanupEntityBuffer.AddRange(GetRelevantEntities());
+			foreach (var entity in _cleanupEntityBuffer)
 			{
 				EntityManager.DestroyEntity(entity.Id);
 			}

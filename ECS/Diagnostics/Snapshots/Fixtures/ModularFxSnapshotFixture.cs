@@ -3,6 +3,7 @@ using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.VisualEffects;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -104,9 +105,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				DisplayName = _moduleSlug ?? _presetSlug
 			});
 
-			_screenDisplay = new ModularEffectScreenDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
-			_primitiveDisplay = new ModularEffectPrimitiveDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
-			_particleDisplay = new ModularEffectParticleDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
+			var resources = new ModularEffectRenderResources(ctx.GraphicsDevice, ctx.ImageAssets.GetPixel(Color.White));
+			_screenDisplay = new ModularEffectScreenDisplaySystem(ctx.World.EntityManager, ctx.SpriteBatch, resources);
+			_primitiveDisplay = new ModularEffectPrimitiveDisplaySystem(ctx.World.EntityManager, ctx.SpriteBatch, resources);
+			_particleDisplay = new ModularEffectParticleDisplaySystem(ctx.World.EntityManager, ctx.SpriteBatch, resources);
 			_actorDisplay = new ModularEffectActorPresentationSystem(ctx.World.EntityManager);
 			var sampleTime = new GameTime(TimeSpan.Zero, TimeSpan.Zero);
 			_actorDisplay.Update(sampleTime);
