@@ -43,16 +43,17 @@ namespace Crusaders30XX.ECS.Systems
         // TODO: Caches populate on first use; if systems are added/removed at runtime or their reflected members change dynamically, we can add an explicit invalidation later.
         
 		// Caches to avoid repeated reflection and list building every frame
-		private List<(string name, Core.System sys)> _annotatedSystemsCache;
-		private readonly Dictionary<Type, List<(string label, Func<object> get, Action<object> set, Type type, DebugEditableAttribute attr)>> _editableMembersCache
-			= new();
+		private List<(string name, object sys)> _annotatedSystemsCache;
+		private readonly Dictionary<object, List<(string label, Func<object> get, Action<object> set, Type type, DebugEditableAttribute attr)>> _editableMembersCache
+			= new(ReferenceEqualityComparer.Instance);
 		private readonly Dictionary<Type, List<(string label, MethodInfo method)>> _debugActionsCache
 			= new();
 		private readonly Dictionary<Type, List<(string label, MethodInfo method, DebugActionIntAttribute meta, int current)>> _debugActionsIntCache
 			= new();
 		private readonly Dictionary<Type, List<(string label, MethodInfo method)>> _debugActionListsCache
 			= new();
-		private readonly Dictionary<Type, Dictionary<string, object>> _bootSnapshots = new();
+		private readonly Dictionary<object, Dictionary<string, object>> _bootSnapshots
+			= new(ReferenceEqualityComparer.Instance);
 
         // Editable layout and behavior settings
 		[DebugEditable(DisplayName = "Margin", Step = 1, Min = 0, Max = 200)]
@@ -762,24 +763,22 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			foreach (var (_, sys) in GetAnnotatedSystemsCached())
 			{
-				var type = sys.GetType();
-				if (_bootSnapshots.ContainsKey(type)) continue;
+				if (_bootSnapshots.ContainsKey(sys)) continue;
 				var snap = new Dictionary<string, object>();
 				foreach (var (label, get, _, _, _) in GetEditableMembers(sys))
 				{
 					snap[label] = get();
 				}
-				_bootSnapshots[type] = snap;
+				_bootSnapshots[sys] = snap;
 			}
 		}
 
-		private string BuildSettingsExport(Core.System system)
+		private string BuildSettingsExport(object system)
         {
             CaptureMissingBootSnapshots();
             var sb = new StringBuilder();
             string systemName = system.GetType().Name;
-            var systemType = system.GetType();
-            _bootSnapshots.TryGetValue(systemType, out var baseline);
+            _bootSnapshots.TryGetValue(system, out var baseline);
             bool anyChanged = false;
             var members = GetEditableMembers(system);
             foreach (var (label, get, _, memberType, _attr) in members)
@@ -819,7 +818,7 @@ namespace Crusaders30XX.ECS.Systems
 			return Equals(current, baseline);
 		}
 
-		private List<(string name, Core.System sys)> GetAnnotatedSystemsCached()
+		private List<(string name, object sys)> GetAnnotatedSystemsCached()
 		{
 			if (_annotatedSystemsCache == null)
 			{
@@ -831,16 +830,15 @@ namespace Crusaders30XX.ECS.Systems
 			return _annotatedSystemsCache;
 		}
 
-		private List<(string label, Func<object> get, Action<object> set, Type type, DebugEditableAttribute attr)> GetEditableMembersCached(Core.System system)
+		private List<(string label, Func<object> get, Action<object> set, Type type, DebugEditableAttribute attr)> GetEditableMembersCached(object system)
 		{
-			var type = system.GetType();
-			if (_editableMembersCache.TryGetValue(type, out var cached)) return cached;
+			if (_editableMembersCache.TryGetValue(system, out var cached)) return cached;
 			var computed = GetEditableMembers(system);
-			_editableMembersCache[type] = computed;
+			_editableMembersCache[system] = computed;
 			return computed;
 		}
 
-		private List<(string label, MethodInfo method)> GetDebugActionsCached(Core.System system)
+		private List<(string label, MethodInfo method)> GetDebugActionsCached(object system)
 		{
 			var type = system.GetType();
 			if (_debugActionsCache.TryGetValue(type, out var cached)) return cached;
@@ -849,7 +847,7 @@ namespace Crusaders30XX.ECS.Systems
 			return computed;
 		}
 
-        private static List<(string label, MethodInfo method)> GetDebugActions(Core.System system)
+        private static List<(string label, MethodInfo method)> GetDebugActions(object system)
         {
             var actions = new List<(string, MethodInfo)>();
             var t = system.GetType();
@@ -863,7 +861,7 @@ namespace Crusaders30XX.ECS.Systems
             return actions;
         }
 
-		private List<(string label, List<DebugNamedAction> actions)> GetDebugActionLists(Core.System system)
+		private List<(string label, List<DebugNamedAction> actions)> GetDebugActionLists(object system)
 		{
 			var type = system.GetType();
 			if (!_debugActionListsCache.TryGetValue(type, out var methods))
@@ -893,7 +891,7 @@ namespace Crusaders30XX.ECS.Systems
 			return result;
 		}
 
-		private static List<(string label, MethodInfo method)> GetDebugActionListMethods(Core.System system)
+		private static List<(string label, MethodInfo method)> GetDebugActionListMethods(object system)
 		{
 			var list = new List<(string, MethodInfo)>();
 			var t = system.GetType();
@@ -908,7 +906,7 @@ namespace Crusaders30XX.ECS.Systems
 			return list;
 		}
 
-        private List<(string label, MethodInfo method, DebugActionIntAttribute meta, int current)> GetDebugActionsIntCached(Core.System system)
+        private List<(string label, MethodInfo method, DebugActionIntAttribute meta, int current)> GetDebugActionsIntCached(object system)
         {
             var type = system.GetType();
             if (_debugActionsIntCache.TryGetValue(type, out var cached)) return cached;
@@ -917,7 +915,7 @@ namespace Crusaders30XX.ECS.Systems
             return computed;
         }
 
-        private static List<(string label, MethodInfo method, DebugActionIntAttribute meta, int current)> GetDebugActionsInt(Core.System system)
+        private static List<(string label, MethodInfo method, DebugActionIntAttribute meta, int current)> GetDebugActionsInt(object system)
         {
             var list = new List<(string, MethodInfo, DebugActionIntAttribute, int)>();
             var t = system.GetType();
@@ -1035,20 +1033,35 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        private static IEnumerable<(string name, Core.System sys)> GetAnnotatedSystems(IEnumerable<Core.System> systems)
+        private static IEnumerable<(string name, object sys)> GetAnnotatedSystems(IEnumerable<Core.System> systems)
         {
             foreach (var s in systems)
             {
-                var attr = s.GetType().GetCustomAttribute<DebugTabAttribute>();
-                if (attr != null)
+                foreach (object candidate in GetDebugCandidates(s))
                 {
-                    yield return (string.IsNullOrWhiteSpace(attr.Name) ? s.GetType().Name : attr.Name, s);
+                    var attr = candidate.GetType().GetCustomAttribute<DebugTabAttribute>();
+                    if (attr != null)
+                    {
+                        yield return (
+                            string.IsNullOrWhiteSpace(attr.Name) ? candidate.GetType().Name : attr.Name,
+                            candidate);
+                    }
                 }
             }
         }
 
+        private static IEnumerable<object> GetDebugCandidates(Core.System system)
+        {
+            yield return system;
+            if (system is not IDebugInspectableChildren provider) yield break;
+            foreach (object child in provider.GetDebugInspectableChildren())
+            {
+                if (child != null) yield return child;
+            }
+        }
+
         private static List<(string label, Func<object> get, Action<object> set, Type type, DebugEditableAttribute attr)>
-            GetEditableMembers(Core.System system)
+            GetEditableMembers(object system)
         {
             var list = new List<(string, Func<object>, Action<object>, Type, DebugEditableAttribute)>();
             var t = system.GetType();

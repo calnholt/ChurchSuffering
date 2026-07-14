@@ -33,14 +33,6 @@ public class Game1 : Game
     private TransitionDisplaySystem _transitionDisplaySystem;
     private SceneLoadingCoordinatorSystem _sceneLoadingCoordinatorSystem;
     private CardDisplaySystem _cardDisplaySystem;
-    private CardShaderCompositorSystem _cardShaderCompositorSystem;
-    private FrozenDisplaySystem _frozenDisplaySystem;
-    private ThornedDisplaySystem _thornedDisplaySystem;
-    private BrittleDisplaySystem _brittleDisplaySystem;
-    private ScorchedDisplaySystem _scorchedDisplaySystem;
-    private CursedDisplaySystem _cursedDisplaySystem;
-	private PoisonCardDisplaySystem _poisonCardDisplaySystem;
-    private CardSheenDisplaySystem _cardSheenDisplaySystem;
     private SealDisplaySystem _sealDisplaySystem;
     private PlayerInputSystem _playerInputSystem;
     private ControllerRumbleSystem _controllerRumbleSystem;
@@ -224,15 +216,20 @@ public class Game1 : Game
         _debugMenuSystem = new DebugMenuSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _world.SystemManager);
         _entityListOverlaySystem = new EntityListOverlaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _transitionDisplaySystem = new TransitionDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _cardDisplaySystem = new CardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
-        _cardShaderCompositorSystem = new CardShaderCompositorSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _frozenDisplaySystem = new FrozenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _thornedDisplaySystem = new ThornedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _scorchedDisplaySystem = new ScorchedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _cursedDisplaySystem = new CursedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-		_poisonCardDisplaySystem = new PoisonCardDisplaySystem(_world.EntityManager, Content);
-        _cardSheenDisplaySystem = new CardSheenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        ICardOverlayPass[] cardOverlayPasses = CardOverlayPassCatalog.Create(
+            _world.EntityManager,
+            Content);
+        var cardRenderPipeline = new CardRenderPipeline(
+            _world.EntityManager,
+            GraphicsDevice,
+            _spriteBatch,
+            cardOverlayPasses);
+        _cardDisplaySystem = new CardDisplaySystem(
+            _world.EntityManager,
+            GraphicsDevice,
+            _spriteBatch,
+            _imageAssets,
+            cardRenderPipeline);
         var sealTexture = _imageAssets.GetRequiredTexture("seal");
         _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
         _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
@@ -296,14 +293,6 @@ public class Game1 : Game
         _world.AddSystem(_entityListOverlaySystem);
         _world.AddSystem(_transitionDisplaySystem);
         _world.AddSystem(_cardDisplaySystem);
-        _world.AddSystem(_cardShaderCompositorSystem);
-        _world.AddSystem(_frozenDisplaySystem);
-        _world.AddSystem(_thornedDisplaySystem);
-        _world.AddSystem(_brittleDisplaySystem);
-        _world.AddSystem(_scorchedDisplaySystem);
-        _world.AddSystem(_cursedDisplaySystem);
-		_world.AddSystem(_poisonCardDisplaySystem);
-        _world.AddSystem(_cardSheenDisplaySystem);
         _world.AddSystem(_sealDisplaySystem);
         _world.AddSystem(_dialogDisplaySystem);
         _world.AddSystem(new ModalAnimationSystem(_world.EntityManager), SystemUpdatePhase.Input);

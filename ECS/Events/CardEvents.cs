@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Crusaders30XX.ECS.Components;
 using static Crusaders30XX.ECS.Systems.MustBeBlockedSystem;
-using Crusaders30XX.ECS.Rendering;
 
 namespace Crusaders30XX.ECS.Events
 {
@@ -46,33 +45,6 @@ namespace Crusaders30XX.ECS.Events
         public Entity Card { get; set; }
         public Vector2 Position { get; set; }
         public float Scale { get; set; } = 1f;
-    }
-
-    /// <summary>
-    /// Event published immediately before the base card art is rendered.
-    /// </summary>
-    public class CardBaseRenderStartedEvent
-    {
-        public Entity Card { get; set; }
-        public Vector2 Position { get; set; }
-        public float Scale { get; set; } = 1f;
-        public float Rotation { get; set; }
-    }
-
-    /// <summary>
-    /// Event published immediately after the base card art is rendered.
-    /// </summary>
-    public class CardBaseRenderCompletedEvent
-    {
-        public Entity Card { get; set; }
-        public Vector2 Position { get; set; }
-        public float Scale { get; set; } = 1f;
-        public float Rotation { get; set; }
-    }
-
-    internal sealed class CardShaderPassEvent
-    {
-        public CardShaderPassContext Context { get; init; }
     }
 
     /// <summary>

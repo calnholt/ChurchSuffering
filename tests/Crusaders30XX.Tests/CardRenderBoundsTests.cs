@@ -1,12 +1,12 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Systems;
+using Crusaders30XX.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
 
-public sealed class CardShaderCompositorTests
+public sealed class CardRenderBoundsTests
 {
 	[Fact]
 	public void Cursed_only_surface_stays_close_to_the_card_bounds()
@@ -14,11 +14,15 @@ public sealed class CardShaderCompositorTests
 		(EntityManager entityManager, Entity card) = CreateCard();
 		entityManager.AddComponent(card, new Cursed());
 
-		CardShaderCompositorSystem.CardSurfaceBounds bounds =
-			CardShaderCompositorSystem.CalculateSurfaceBounds(entityManager, card, new Vector2(960, 540), 1f, 0f);
+		Rectangle bounds = CardRenderBoundsService.GetBounds(
+			entityManager,
+			card,
+			new Vector2(960, 540),
+			1f,
+			0f);
 
-		Assert.InRange(bounds.Size.X, CardGeometrySettings.DefaultWidth, CardGeometrySettings.DefaultWidth + 10);
-		Assert.InRange(bounds.Size.Y, CardGeometrySettings.DefaultHeight, CardGeometrySettings.DefaultHeight + 10);
+		Assert.InRange(bounds.Width, CardGeometrySettings.DefaultWidth, CardGeometrySettings.DefaultWidth + 10);
+		Assert.InRange(bounds.Height, CardGeometrySettings.DefaultHeight, CardGeometrySettings.DefaultHeight + 10);
 	}
 
 	[Fact]
@@ -28,12 +32,16 @@ public sealed class CardShaderCompositorTests
 		entityManager.AddComponent(card, new Frozen());
 		entityManager.AddComponent(card, new Brittle());
 
-		CardShaderCompositorSystem.CardSurfaceBounds bounds =
-			CardShaderCompositorSystem.CalculateSurfaceBounds(entityManager, card, new Vector2(960, 540), 1f, 0f);
+		Rectangle bounds = CardRenderBoundsService.GetBounds(
+			entityManager,
+			card,
+			new Vector2(960, 540),
+			1f,
+			0f);
 
-		Assert.True(bounds.Size.X > CardGeometrySettings.DefaultWidth + 100);
-		Assert.True(bounds.Size.Y > CardGeometrySettings.DefaultHeight * 2.5f);
-		Assert.True(bounds.Origin.Y < 540 - CardGeometrySettings.DefaultHeight);
+		Assert.True(bounds.Width > CardGeometrySettings.DefaultWidth + 100);
+		Assert.True(bounds.Height > CardGeometrySettings.DefaultHeight * 2.5f);
+		Assert.True(bounds.Y < 540 - CardGeometrySettings.DefaultHeight);
 	}
 
 	[Fact]
@@ -42,13 +50,21 @@ public sealed class CardShaderCompositorTests
 		(EntityManager entityManager, Entity card) = CreateCard();
 		entityManager.AddComponent(card, new Scorched());
 
-		CardShaderCompositorSystem.CardSurfaceBounds unrotated =
-			CardShaderCompositorSystem.CalculateSurfaceBounds(entityManager, card, new Vector2(960, 540), 1f, 0f);
-		CardShaderCompositorSystem.CardSurfaceBounds rotated =
-			CardShaderCompositorSystem.CalculateSurfaceBounds(entityManager, card, new Vector2(960, 540), 1f, MathHelper.PiOver2);
+		Rectangle unrotated = CardRenderBoundsService.GetBounds(
+			entityManager,
+			card,
+			new Vector2(960, 540),
+			1f,
+			0f);
+		Rectangle rotated = CardRenderBoundsService.GetBounds(
+			entityManager,
+			card,
+			new Vector2(960, 540),
+			1f,
+			MathHelper.PiOver2);
 
-		Assert.InRange(rotated.Size.X, unrotated.Size.Y - 2f, unrotated.Size.Y + 2f);
-		Assert.InRange(rotated.Size.Y, unrotated.Size.X - 2f, unrotated.Size.X + 2f);
+		Assert.InRange(rotated.Width, unrotated.Height - 2, unrotated.Height + 2);
+		Assert.InRange(rotated.Height, unrotated.Width - 2, unrotated.Width + 2);
 	}
 
 	private static (EntityManager EntityManager, Entity Card) CreateCard()

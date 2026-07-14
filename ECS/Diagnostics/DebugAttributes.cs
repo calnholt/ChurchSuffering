@@ -1,7 +1,13 @@
 using System;
+using System.Collections.Generic;
 
 namespace Crusaders30XX.Diagnostics
 {
+    internal interface IDebugInspectableChildren
+    {
+        IEnumerable<object> GetDebugInspectableChildren();
+    }
+
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class DebugTabAttribute : Attribute
     {
@@ -75,4 +81,3 @@ namespace Crusaders30XX.Diagnostics
 		}
 	}
 }
-

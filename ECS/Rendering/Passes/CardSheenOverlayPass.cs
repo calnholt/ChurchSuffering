@@ -1,33 +1,26 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems;
+namespace Crusaders30XX.ECS.Rendering;
 
 [DebugTab("Card Sheen")]
-public sealed class CardSheenDisplaySystem : Core.System
+internal sealed class CardSheenOverlayPass : ICardOverlayPass, ICardOverlaySnapshotTimeControl
 {
-	private const int RenderPriority = -200;
-
-	private readonly GraphicsDevice _graphicsDevice;
-	private readonly SpriteBatch _spriteBatch;
+	private readonly EntityManager _entityManager;
 	private readonly ContentManager _content;
-	private readonly Texture2D _pixel;
 
 	private Effect _effect;
 	private CardSheenOverlay _overlay;
 	private bool _failed;
 	private float _timeSeconds;
-	private readonly HashSet<int> _locallyCompositedCards = new();
 
 	[DebugEditable(DisplayName = "Angle Degrees", Step = 1f, Min = 0f, Max = 360f)]
 	public float AngleDegrees { get; set; } = 105f;
@@ -62,87 +55,59 @@ public sealed class CardSheenDisplaySystem : Core.System
 	[DebugEditable(DisplayName = "Core Strength", Step = 0.01f, Min = 0f, Max = 1f)]
 	public float CoreStrength { get; set; } = 0.55f;
 
-	public CardSheenDisplaySystem(
+	public CardSheenOverlayPass(
 		EntityManager entityManager,
-		GraphicsDevice graphicsDevice,
-		SpriteBatch spriteBatch,
-		ContentManager content,
-		ImageAssetService imageAssets)
-		: base(entityManager)
+		ContentManager content)
 	{
-		_graphicsDevice = graphicsDevice;
-		_spriteBatch = spriteBatch;
+		_entityManager = entityManager;
 		_content = content;
-		_pixel = imageAssets.GetPixel(Color.White);
-
-		EventManager.Subscribe<CardBaseRenderCompletedEvent>(OnCardBaseRenderCompleted, RenderPriority);
-		EventManager.Subscribe<CardShaderPassEvent>(OnCardShaderPass, 50);
-		EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCaches);
 	}
 
-	protected override IEnumerable<Entity> GetRelevantEntities()
-	{
-		return EntityManager.GetEntitiesWithComponent<CardSheen>();
-	}
+	public string Name => "CardSheen";
 
-	protected override void UpdateEntity(Entity entity, GameTime gameTime)
-	{
-		var sheen = entity.GetComponent<CardSheen>();
-		if (sheen == null) return;
-		if (!sheen.IsActive)
-		{
-			sheen.HasActivationTime = false;
-			return;
-		}
-
-		if (!sheen.HasActivationTime)
-		{
-			sheen.ActivationTimeSeconds = _timeSeconds;
-			sheen.HasActivationTime = true;
-		}
-	}
-
-	public override void Update(GameTime gameTime)
+	public void Update(GameTime gameTime)
 	{
 		_timeSeconds += MathHelper.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
-		base.Update(gameTime);
+		foreach (Entity entity in _entityManager.GetEntitiesWithComponent<CardSheen>())
+		{
+			var sheen = entity.GetComponent<CardSheen>();
+			if (sheen == null) continue;
+			if (!sheen.IsActive)
+			{
+				sheen.HasActivationTime = false;
+				continue;
+			}
+
+			if (!sheen.HasActivationTime)
+			{
+				sheen.ActivationTimeSeconds = _timeSeconds;
+				sheen.HasActivationTime = true;
+			}
+		}
 
 		if (!ShaderRuntimeOptions.ShadersEnabled || _failed || _overlay != null) return;
-		foreach (var entity in GetRelevantEntities())
+		foreach (var entity in _entityManager.GetEntitiesWithComponent<CardSheen>())
 		{
 			EnsureLoaded();
 			return;
 		}
 	}
 
-	private void OnCardBaseRenderCompleted(CardBaseRenderCompletedEvent evt)
+	public bool AppliesTo(Entity card)
 	{
-		if (evt?.Card != null && _locallyCompositedCards.Remove(evt.Card.Id)) return;
-		if (!ShaderRuntimeOptions.ShadersEnabled || _overlay?.IsAvailable != true || evt?.Card == null) return;
-		var sheen = evt.Card.GetComponent<CardSheen>();
-		if (sheen?.IsActive != true || !sheen.HasActivationTime) return;
-
-		var geometry = CardGeometryService.GetVisualGeometry(
-			EntityManager,
-			evt.Card,
-			evt.Position,
-			evt.Scale,
-			evt.Rotation);
-
-		ConfigureOverlay(sheen, evt.Scale);
-
-		DrawOverlay(geometry.Center, new Vector2(geometry.Bounds.Width, geometry.Bounds.Height), evt.Rotation);
+		if (!ShaderRuntimeOptions.ShadersEnabled || _failed || card == null) return false;
+		CardSheen sheen = card.GetComponent<CardSheen>();
+		return sheen?.IsActive == true && sheen.HasActivationTime;
 	}
 
-	private void OnCardShaderPass(CardShaderPassEvent evt)
+	public void Render(CardOverlayPassContext context)
 	{
-		CardShaderPassContext context = evt?.Context;
 		if (context == null || !ShaderRuntimeOptions.ShadersEnabled || !EnsureLoaded()) return;
 		CardSheen sheen = context.Card.GetComponent<CardSheen>();
 		if (sheen?.IsActive != true || !sheen.HasActivationTime) return;
 
 		CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
-			EntityManager,
+			_entityManager,
 			context.Card,
 			context.Position,
 			context.Scale,
@@ -158,7 +123,6 @@ public sealed class CardSheenDisplaySystem : Core.System
 			_overlay.DrawComposite(spriteBatch, source, size);
 			_overlay.End(spriteBatch);
 		});
-		_locallyCompositedCards.Add(context.Card.Id);
 	}
 
 	private void ConfigureOverlay(CardSheen sheen, float scale)
@@ -177,59 +141,6 @@ public sealed class CardSheenDisplaySystem : Core.System
 		_overlay.CoreColor = new Vector3(1f, 254f / 255f, 240f / 255f) * CoreStrength;
 	}
 
-	private void DrawOverlay(Vector2 center, Vector2 size, float rotation)
-	{
-		var state = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
-		Texture previousTexture = _graphicsDevice.Textures[0];
-		bool sceneBatchEnded = false;
-		bool effectBatchBegun = false;
-		try
-		{
-			_spriteBatch.End();
-			sceneBatchEnded = true;
-			_overlay.Begin(_spriteBatch);
-			effectBatchBegun = true;
-			_overlay.Draw(_spriteBatch, _pixel, center, size, rotation);
-			_overlay.End(_spriteBatch);
-			effectBatchBegun = false;
-		}
-		catch (Exception exception)
-		{
-			LoggingService.Append("CardSheenDisplaySystem.DrawOverlay", new JsonObject
-			{
-				["error"] = "Failed to draw card sheen",
-				["exception"] = exception.Message,
-			});
-			_failed = true;
-		}
-		finally
-		{
-			if (effectBatchBegun)
-			{
-				try { _spriteBatch.End(); }
-				catch { }
-			}
-
-			if (sceneBatchEnded)
-			{
-				_graphicsDevice.BlendState = state.BlendState;
-				_graphicsDevice.SamplerStates[0] = state.SamplerState;
-				_graphicsDevice.DepthStencilState = state.DepthStencilState;
-				_graphicsDevice.RasterizerState = state.RasterizerState;
-				_graphicsDevice.ScissorRectangle = state.ScissorRectangle;
-				_graphicsDevice.Textures[0] = previousTexture;
-				SpriteBatchRenderTargetCompositor.RestoreSpriteBatch(
-					_graphicsDevice,
-					_spriteBatch,
-					state);
-				// Prime MonoGame's stock SpriteEffect after leaving a custom effect batch.
-				// Without this near-transparent draw, DrawString can retain the prior pixel shader
-				// when several sheen passes occur back-to-back.
-				_spriteBatch.Draw(_pixel, Vector2.Zero, new Color(0, 0, 0, 1));
-			}
-		}
-	}
-
 	private bool EnsureLoaded()
 	{
 		if (!ShaderRuntimeOptions.ShadersEnabled || _failed) return false;
@@ -241,7 +152,7 @@ public sealed class CardSheenDisplaySystem : Core.System
 		}
 		catch (Exception exception)
 		{
-			LoggingService.Append("CardSheenDisplaySystem.EnsureLoaded", new JsonObject
+			LoggingService.Append("CardSheenOverlayPass.EnsureLoaded", new JsonObject
 			{
 				["error"] = "Failed to load shader",
 				["exception"] = exception.Message,
@@ -251,10 +162,12 @@ public sealed class CardSheenDisplaySystem : Core.System
 		}
 	}
 
-	private void OnDeleteCaches(DeleteCachesEvent evt)
+	public void Reset()
 	{
 		_effect = null;
 		_overlay = null;
 		_failed = false;
 	}
+
+	public void SetSnapshotTime(float timeSeconds) => _timeSeconds = Math.Max(0f, timeSeconds);
 }

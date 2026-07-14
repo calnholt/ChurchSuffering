@@ -1,25 +1,20 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems;
+namespace Crusaders30XX.ECS.Rendering;
 
 [DebugTab("Frozen Display")]
-public sealed class FrozenDisplaySystem : Core.System
+internal sealed class FrozenOverlayPass : ICardOverlayPass, ICardOverlaySnapshotTimeControl
 {
-    private const int PassPriority = 90;
-
-    private readonly GraphicsDevice _graphicsDevice;
-    private readonly SpriteBatch _spriteBatch;
+    private readonly EntityManager _entityManager;
     private readonly ContentManager _content;
 
     private Effect _effect;
@@ -183,26 +178,17 @@ public sealed class FrozenDisplaySystem : Core.System
     [DebugEditable(DisplayName = "Breath Color B", Step = 0.01f, Min = 0f, Max = 1f)]
     public float BreathColorB { get; set; } = 1f;
 
-    public FrozenDisplaySystem(
+    public FrozenOverlayPass(
         EntityManager entityManager,
-        GraphicsDevice graphicsDevice,
-        SpriteBatch spriteBatch,
         ContentManager content)
-        : base(entityManager)
     {
-        _graphicsDevice = graphicsDevice;
-        _spriteBatch = spriteBatch;
+        _entityManager = entityManager;
         _content = content;
-
-        EventManager.Subscribe<CardShaderPassEvent>(OnShaderPass, PassPriority);
     }
 
-    protected override IEnumerable<Entity> GetRelevantEntities()
-    {
-        return EntityManager.GetEntitiesWithComponent<Frozen>();
-    }
+    public string Name => "Frozen";
 
-    public override void Update(GameTime gameTime)
+    public void Update(GameTime gameTime)
     {
         if (!ShaderRuntimeOptions.ShadersEnabled || _failed) return;
 
@@ -210,13 +196,8 @@ public sealed class FrozenDisplaySystem : Core.System
         if (_overlay == null && HasFrozenCards()) EnsureLoaded();
     }
 
-    protected override void UpdateEntity(Entity entity, GameTime gameTime)
+    public void Render(CardOverlayPassContext context)
     {
-    }
-
-    private void OnShaderPass(CardShaderPassEvent evt)
-    {
-        CardShaderPassContext context = evt?.Context;
         if (context == null || !ShouldRender(context.Card) || !EnsureLoaded()) return;
         ConfigureOverlay(context);
         context.Apply("Frozen", (spriteBatch, source) =>
@@ -227,9 +208,9 @@ public sealed class FrozenDisplaySystem : Core.System
         });
     }
 
-    private void ConfigureOverlay(CardShaderPassContext context)
+    private void ConfigureOverlay(CardOverlayPassContext context)
     {
-        CardGeometrySettings settings = CardGeometryService.GetSettings(EntityManager);
+        CardGeometrySettings settings = CardGeometryService.GetSettings(_entityManager);
         float safeScale = Math.Max(0.001f, context.Scale);
         float width = (settings?.CardWidth ?? CardGeometrySettings.DefaultWidth) * safeScale;
         float height = (settings?.CardHeight ?? CardGeometrySettings.DefaultHeight) * safeScale;
@@ -282,6 +263,8 @@ public sealed class FrozenDisplaySystem : Core.System
         _overlay.BreathColor = new Vector3(BreathColorR, BreathColorG, BreathColorB);
     }
 
+    public bool AppliesTo(Entity card) => ShouldRender(card);
+
     private bool ShouldRender(Entity card)
     {
         return ShaderRuntimeOptions.ShadersEnabled &&
@@ -292,7 +275,7 @@ public sealed class FrozenDisplaySystem : Core.System
 
     private bool HasFrozenCards()
     {
-        foreach (var _ in EntityManager.GetEntitiesWithComponent<Frozen>()) return true;
+        foreach (var _ in _entityManager.GetEntitiesWithComponent<Frozen>()) return true;
         return false;
     }
 
@@ -307,7 +290,7 @@ public sealed class FrozenDisplaySystem : Core.System
             }
             catch (Exception exception)
             {
-                LoggingService.Append("FrozenDisplaySystem.EnsureLoaded", new JsonObject
+                LoggingService.Append("FrozenOverlayPass.EnsureLoaded", new JsonObject
                 {
                     ["error"] = "Failed to load shader",
                     ["exception"] = exception.Message
@@ -321,4 +304,12 @@ public sealed class FrozenDisplaySystem : Core.System
         return _overlay.IsAvailable;
     }
 
+    public void Reset()
+    {
+        _effect = null;
+        _overlay = null;
+        _failed = false;
+    }
+
+    public void SetSnapshotTime(float timeSeconds) => _timeSeconds = Math.Max(0f, timeSeconds);
 }

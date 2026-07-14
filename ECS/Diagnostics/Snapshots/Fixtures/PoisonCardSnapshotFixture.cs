@@ -15,7 +15,7 @@ public sealed class PoisonCardSnapshotFixture : IDisplaySnapshotFixture
 
     private Entity _cardEntity;
     private Texture2D _pixel;
-    private PoisonCardDisplaySystem _poisonDisplay;
+    private CardDisplaySystem _cardDisplay;
     private string _cardId = DefaultCardId;
 
     public string Id => "poison-card";
@@ -31,9 +31,9 @@ public sealed class PoisonCardSnapshotFixture : IDisplaySnapshotFixture
         }
 
         DestroyCard(ctx);
-        _poisonDisplay = ctx.World.GetSystem<PoisonCardDisplaySystem>() ??
-            throw new DisplaySnapshotSetupException("PoisonCardDisplaySystem is not registered");
-        _poisonDisplay.SetSnapshotTime(1.25f);
+        _cardDisplay = ctx.World.GetSystem<CardDisplaySystem>() ??
+            throw new DisplaySnapshotSetupException("CardDisplaySystem is not registered");
+        _cardDisplay.SetPoisonOverlaySnapshotTime(1.25f);
 
         _cardEntity = EntityFactory.CreateCardFromDefinition(
             ctx.World.EntityManager,
@@ -58,7 +58,7 @@ public sealed class PoisonCardSnapshotFixture : IDisplaySnapshotFixture
     public void Draw(DisplaySnapshotContext ctx)
     {
         DrawBackdrop(ctx);
-        _poisonDisplay.SetSnapshotTime(1.25f);
+        _cardDisplay.SetPoisonOverlaySnapshotTime(1.25f);
         EventManager.Publish(new CardRenderScaledEvent
         {
             Card = _cardEntity,

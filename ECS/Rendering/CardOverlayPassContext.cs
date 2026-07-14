@@ -7,14 +7,14 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Crusaders30XX.ECS.Rendering;
 
-internal sealed class CardShaderPassContext
+internal sealed class CardOverlayPassContext
 {
 	private readonly GraphicsDevice _graphicsDevice;
 	private readonly SpriteBatch _spriteBatch;
 	private RenderTarget2D _source;
 	private RenderTarget2D _destination;
 
-	public CardShaderPassContext(
+	public CardOverlayPassContext(
 		GraphicsDevice graphicsDevice,
 		SpriteBatch spriteBatch,
 		Entity card,
@@ -52,6 +52,10 @@ internal sealed class CardShaderPassContext
 	{
 		if (drawPass == null || _source == null || _destination == null) return;
 
+		// A target commonly becomes the next pass's destination after being sampled by the
+		// previous pass. Explicitly unbind slot zero before rebinding it for rendering;
+		// DesktopGL otherwise exhibits intermittent read/write feedback across long chains.
+		_graphicsDevice.Textures[0] = null;
 		_graphicsDevice.SetRenderTarget(_destination);
 		_graphicsDevice.Clear(Color.Transparent);
 		try
@@ -63,7 +67,7 @@ internal sealed class CardShaderPassContext
 		catch (Exception exception)
 		{
 			try { _spriteBatch.End(); } catch { }
-			LoggingService.Append("CardShaderPassContext.Apply", new JsonObject
+			LoggingService.Append("CardOverlayPassContext.Apply", new JsonObject
 			{
 				["pass"] = passName ?? string.Empty,
 				["exception"] = exception.Message,

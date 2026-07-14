@@ -1,24 +1,19 @@
 using System;
-using System.Collections.Generic;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems;
+namespace Crusaders30XX.ECS.Rendering;
 
 [DebugTab("Brittle Display")]
-public class BrittleDisplaySystem : Core.System
+internal sealed class BrittleOverlayPass : ICardOverlayPass, ICardOverlaySnapshotTimeControl
 {
-    private const int PassPriority = 100;
-
-    private readonly GraphicsDevice _graphicsDevice;
-    private readonly SpriteBatch _spriteBatch;
+    private readonly EntityManager _entityManager;
     private readonly ContentManager _content;
 
     private Effect _effect;
@@ -47,23 +42,15 @@ public class BrittleDisplaySystem : Core.System
     [DebugEditable(DisplayName = "Hole Darken", Step = 0.05f, Min = 0f, Max = 1.5f)]
     public float HoleDarken { get; set; } = 1f;
 
-    public BrittleDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content)
-        : base(entityManager)
+    public BrittleOverlayPass(EntityManager entityManager, ContentManager content)
     {
-        _graphicsDevice = graphicsDevice;
-        _spriteBatch = spriteBatch;
+        _entityManager = entityManager;
         _content = content;
-
-        EventManager.Subscribe<CardShaderPassEvent>(OnShaderPass, PassPriority);
-        EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCachesEvent);
     }
 
-    protected override IEnumerable<Entity> GetRelevantEntities()
-    {
-        return EntityManager.GetEntitiesWithComponent<Brittle>();
-    }
+    public string Name => "Brittle";
 
-    public override void Update(GameTime gameTime)
+    public void Update(GameTime gameTime)
     {
         if (!ShaderRuntimeOptions.ShadersEnabled || _failed) return;
 
@@ -74,26 +61,21 @@ public class BrittleDisplaySystem : Core.System
         }
     }
 
-    protected override void UpdateEntity(Entity entity, GameTime gameTime)
-    {
-    }
-
-    private void OnDeleteCachesEvent(DeleteCachesEvent evt)
+    public void Reset()
     {
         _effect = null;
         _overlay = null;
         _failed = false;
     }
 
-    private void OnShaderPass(CardShaderPassEvent evt)
+    public void Render(CardOverlayPassContext context)
     {
-        CardShaderPassContext context = evt?.Context;
         if (context == null || !ShouldRender(context.Card)) return;
         if (!EnsureLoaded()) return;
 
         float safeScale = Math.Max(0.001f, context.Scale);
         Vector2 center = CardGeometryService.GetVisualGeometry(
-            EntityManager,
+            _entityManager,
             context.Card,
             context.Position,
             safeScale,
@@ -120,6 +102,8 @@ public class BrittleDisplaySystem : Core.System
         });
     }
 
+    public bool AppliesTo(Entity card) => ShouldRender(card);
+
     private bool ShouldRender(Entity card)
     {
         return ShaderRuntimeOptions.ShadersEnabled &&
@@ -131,7 +115,7 @@ public class BrittleDisplaySystem : Core.System
 
     private bool HasAnyBrittleCards()
     {
-        foreach (var _ in EntityManager.GetEntitiesWithComponent<Brittle>())
+        foreach (var _ in _entityManager.GetEntitiesWithComponent<Brittle>())
         {
             return true;
         }
@@ -150,7 +134,7 @@ public class BrittleDisplaySystem : Core.System
             }
             catch (Exception e)
             {
-                LoggingService.Append("BrittleDisplaySystem.EnsureLoaded", new System.Text.Json.Nodes.JsonObject
+                LoggingService.Append("BrittleOverlayPass.EnsureLoaded", new System.Text.Json.Nodes.JsonObject
                 {
                     ["error"] = "Failed to load shader",
                     ["exception"] = e.Message
@@ -165,4 +149,5 @@ public class BrittleDisplaySystem : Core.System
         return _overlay.IsAvailable;
     }
 
+    public void SetSnapshotTime(float timeSeconds) => _timeSeconds = Math.Max(0f, timeSeconds);
 }

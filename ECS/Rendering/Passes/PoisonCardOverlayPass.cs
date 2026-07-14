@@ -1,23 +1,20 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems;
+namespace Crusaders30XX.ECS.Rendering;
 
 [DebugTab("Poison Card Display")]
-public sealed class PoisonCardDisplaySystem : Core.System
+internal sealed class PoisonCardOverlayPass : ICardOverlayPass, ICardOverlaySnapshotTimeControl
 {
-    private const int PassPriority = 55;
-
+    private readonly EntityManager _entityManager;
     private readonly ContentManager _content;
 
     private Effect _effect;
@@ -112,20 +109,15 @@ public sealed class PoisonCardDisplaySystem : Core.System
     [DebugEditable(DisplayName = "Rim Intensity", Step = 0.01f, Min = 0f, Max = 2f)]
     public float RimIntensity { get; set; } = 0.28f;
 
-    public PoisonCardDisplaySystem(EntityManager entityManager, ContentManager content)
-        : base(entityManager)
+    public PoisonCardOverlayPass(EntityManager entityManager, ContentManager content)
     {
+        _entityManager = entityManager;
         _content = content;
-        EventManager.Subscribe<CardShaderPassEvent>(OnShaderPass, PassPriority);
-        EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCachesEvent);
     }
 
-    protected override IEnumerable<Entity> GetRelevantEntities()
-    {
-        return EntityManager.GetEntitiesWithComponent<Poisoned>();
-    }
+    public string Name => "Poison";
 
-    public override void Update(GameTime gameTime)
+    public void Update(GameTime gameTime)
     {
         if (!ShaderRuntimeOptions.ShadersEnabled || _failed) return;
 
@@ -133,13 +125,8 @@ public sealed class PoisonCardDisplaySystem : Core.System
         if (_overlay == null && HasPoisonedCards()) EnsureLoaded();
     }
 
-    protected override void UpdateEntity(Entity entity, GameTime gameTime)
+    public void Render(CardOverlayPassContext context)
     {
-    }
-
-    private void OnShaderPass(CardShaderPassEvent evt)
-    {
-        CardShaderPassContext context = evt?.Context;
         if (context == null || !ShouldRender(context.Card) || !EnsureLoaded()) return;
 
         ConfigureOverlay(context);
@@ -151,7 +138,7 @@ public sealed class PoisonCardDisplaySystem : Core.System
         });
     }
 
-    private void ConfigureOverlay(CardShaderPassContext context)
+    private void ConfigureOverlay(CardOverlayPassContext context)
     {
         float reachMin = Math.Max(0.01f, BlobReachMin);
         float thresholdLow = Math.Max(0f, ThresholdLow);
@@ -184,6 +171,8 @@ public sealed class PoisonCardDisplaySystem : Core.System
         _overlay.RimIntensity = Math.Max(0f, RimIntensity);
     }
 
+    public bool AppliesTo(Entity card) => ShouldRender(card);
+
     private bool ShouldRender(Entity card)
     {
         return ShaderRuntimeOptions.ShadersEnabled &&
@@ -194,7 +183,7 @@ public sealed class PoisonCardDisplaySystem : Core.System
 
     private bool HasPoisonedCards()
     {
-        foreach (var _ in EntityManager.GetEntitiesWithComponent<Poisoned>()) return true;
+        foreach (var _ in _entityManager.GetEntitiesWithComponent<Poisoned>()) return true;
         return false;
     }
 
@@ -211,7 +200,7 @@ public sealed class PoisonCardDisplaySystem : Core.System
         }
         catch (Exception exception)
         {
-            LoggingService.Append("PoisonCardDisplaySystem.EnsureLoaded", new JsonObject
+            LoggingService.Append("PoisonCardOverlayPass.EnsureLoaded", new JsonObject
             {
                 ["error"] = exception.Message,
             });
@@ -220,14 +209,14 @@ public sealed class PoisonCardDisplaySystem : Core.System
         }
     }
 
-    private void OnDeleteCachesEvent(DeleteCachesEvent evt)
+    public void Reset()
     {
         _effect = null;
         _overlay = null;
         _failed = false;
     }
 
-    internal void SetSnapshotTime(float timeSeconds)
+    public void SetSnapshotTime(float timeSeconds)
     {
         _timeSeconds = Math.Max(0f, timeSeconds);
     }

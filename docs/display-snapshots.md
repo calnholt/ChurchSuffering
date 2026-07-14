@@ -58,6 +58,10 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `brittle-card` | Brittle card shader | One brittle card on a patterned backdrop for shader debugging |
 | `frozen-card` | Frozen card shader | One frozen card on a patterned backdrop, optionally composed with Brittle |
 | `thorned-card` | Thorned card shader | One thorned card on a patterned backdrop, optionally composed with Frozen |
+| `scorched-card` | Scorched card shader | One scorched card on a patterned backdrop |
+| `cursed-card` | Cursed card shader | One cursed card on a patterned backdrop |
+| `poison-card` | Poison card shader | One poisoned card on a patterned backdrop |
+| `card-render-pipeline` | Card render pipeline | Ordered all-status and sheen composition variants |
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
 | `booster-pack-opening` | Booster pack opening display | Phase-driven pack summon, rupture, reward travel, sheen, and ready states |
@@ -402,6 +406,34 @@ dotnet run -- snapshot poison-card --verify
 ```
 
 Output: `debug/snapshots/poison-card/<cardId>.png`
+
+---
+
+## `scorched-card` and `cursed-card`
+
+Render one White card with the selected status shader on the shared patterned shader-debug backdrop.
+
+```bash
+dotnet run -- snapshot scorched-card
+dotnet run -- snapshot scorched-card strike --scale 0.6 --rotation -25
+dotnet run -- snapshot cursed-card
+dotnet run -- snapshot cursed-card strike --scale 0.6 --rotation -25
+```
+
+Transform variants append their scale and rotation under `debug/snapshots/<fixture-id>/`.
+
+---
+
+## `card-render-pipeline`
+
+Locks the production pass order and the unified sheen path. Variants are `all-statuses`, `sheen-only`, and `all-statuses-sheen`.
+
+```bash
+./scripts/verify-card-render-pipeline-snapshots.sh --verify
+./scripts/verify-card-render-pipeline-snapshots.sh --accept
+```
+
+Approved images are stored under `tests/VisualBaselines/card-render-pipeline/`.
 
 ---
 
