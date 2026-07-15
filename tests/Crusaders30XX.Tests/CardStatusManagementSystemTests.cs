@@ -152,6 +152,31 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	}
 
 	[Fact]
+	public void Poisoned_card_tooltip_describes_status_effect()
+	{
+		var entityManager = new EntityManager();
+		var card = CreateCard(entityManager, "StatusCard");
+		entityManager.AddComponent(card, new Poisoned { Owner = card });
+
+		var tooltip = TooltipTextService.BuildCardTooltip(card, "Strike");
+
+		Assert.Contains("This card is poisoned - when used to block, lose 1 HP.", tooltip);
+	}
+
+	[Fact]
+	public void Poisoned_card_tooltip_block_is_registered()
+	{
+		var entityManager = new EntityManager();
+		var card = CreateCard(entityManager, "StatusCard");
+		entityManager.AddComponent(card, new Poisoned { Owner = card });
+
+		var blocks = TooltipTextService.BuildTooltipBlocks(card, string.Empty);
+
+		Assert.Equal(["poisoned"], blocks.Select(block => block.Id).ToArray());
+		Assert.Contains("This card is poisoned - when used to block, lose 1 HP.", blocks[0].Text);
+	}
+
+	[Fact]
 	public void Keyword_tooltip_blocks_are_recursive_and_deduplicated()
 	{
 		var sharpenBlocks = TooltipTextService.GetKeywordTooltipBlocks("Gain 5 sharpen.");

@@ -1,6 +1,5 @@
 UX
 - improve applied passive animations
-- improve remiel in battle text
 - make fixed buttons used throughout (just a fex styles used consistently)
 - make climb column buttons more thematic
 - recoil shader
@@ -12,7 +11,6 @@ bugs
 Gameplay
 - maybe remove istoken/isweapon and make as components?
 - make hand display agnostic of carddata, probably involves refactoring some components and data objects
-- darkness X - for x turns, one card in hand becomes shrouded in darkess during the enemy turn, lifts during action phase, cards in darkness block for 3 and ignore color gains and play restrictions, hide discard pile
 - reclaim - return X random cards from graveyard to deck, shuffle deck
 
 cards
@@ -32,12 +30,7 @@ weapons
 
 tech debt
 - researching removing isclicked and ishovered from UIElement, handle through PlayerInputEvent + enity ids
-- Fable - screen sizes
 - remove relic?
-
-
-persistent card states:
-- update sealed to reduce on block and other cards played, can be pledged
 
 keywords
 - indulgence for additional cost?
@@ -50,7 +43,7 @@ bugs:
 - 
 
 
-git checkout main && git pull origin main && git merge development && git push origin main
+git checkout main && git pull origin main && git merge development && git push origin main && git checkout development
 
 MUST FOLLOW - Style: Anime. Solid flat color fills, 2-tone cel-shading at most (base + one shadow). Bold clean outlines. Low detail, strong silhouette. Read him at a glance, not up close. No glow effects, no rendering, no texture noise. White background color for easy cropping. 
 

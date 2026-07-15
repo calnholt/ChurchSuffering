@@ -464,6 +464,8 @@ namespace Crusaders30XX.ECS.Events
         Climb = 11,
         VolcanoBattle = 12,
         GothicBattle = 13,
+        Title = 14,
+        WayStation = 15,
     }
 
     /// <summary>

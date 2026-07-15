@@ -210,8 +210,8 @@ namespace Crusaders30XX.ECS.Systems
 		private MusicTrack ResolveMusicTrack(SceneId scene)
 		{
 			if (scene == SceneId.Climb) return MusicTrack.Climb;
-			if (scene == SceneId.Achievement) return MusicTrack.Achievements;
-			if (scene == SceneId.WayStation || scene == SceneId.TitleMenu) return MusicTrack.Customize;
+			if (scene == SceneId.TitleMenu) return MusicTrack.Title;
+			if (scene == SceneId.WayStation) return MusicTrack.WayStation;
 			if (scene != SceneId.Battle) return MusicTrack.None;
 			var queued = EntityManager.GetEntitiesWithComponent<QueuedEvents>()
 				.FirstOrDefault()?.GetComponent<QueuedEvents>();

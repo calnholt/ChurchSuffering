@@ -126,13 +126,6 @@ float2 WarpField(float2 p, float t)
     return float2(c, d) - 0.5;
 }
 
-float3 SampleLayer(sampler2D layerSampler, float2 uv, float3 placeholder)
-{
-    float3 tex = tex2D(layerSampler, uv).rgb;
-    float hasTex = step(0.01, dot(tex, float3(1.0, 1.0, 1.0)));
-    return lerp(placeholder, tex, hasTex);
-}
-
 float4 SpritePixelShader(VSOutput input) : COLOR0
 {
     float2 uv = input.TexCoord;
@@ -140,12 +133,7 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
     float aspect = viewport.x / viewport.y;
     float2 auv = float2(uv.x * aspect, uv.y);
 
-    float3 phTop = lerp(float3(0.85, 0.55, 0.30), float3(0.55, 0.20, 0.15), uv.y);
-    float3 phMid = lerp(float3(0.10, 0.30, 0.55), float3(0.20, 0.65, 0.80), uv.x)
-        * (0.75 + 0.25 * step(0.5, frac(uv.x * 8.0)) * step(0.5, frac(uv.y * 8.0)));
-    float3 phBot = lerp(float3(0.10, 0.20, 0.10), float3(0.30, 0.55, 0.25), Fbm(auv * 4.0));
-
-    float3 col = SampleLayer(TextureSampler, uv, phTop);
+    float3 col = tex2D(TextureSampler, uv).rgb;
 
     float rimWarpScale = max(RimWarpScale, 0.001);
     float2 disp = WarpField(auv * rimWarpScale, Time * RimWarpSpeed) * RimWarpAmp;
@@ -179,8 +167,8 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
 
         float rim = m * (1.0 - m) * 4.0;
         float2 revealUv = uv + dispUv * RevealRefract * rim;
-        float3 middle = SampleLayer(MiddleTextureSampler, revealUv, phMid);
-        float3 bottom = SampleLayer(BottomTextureSampler, revealUv, phBot);
+        float3 middle = tex2D(MiddleTextureSampler, revealUv).rgb;
+        float3 bottom = tex2D(BottomTextureSampler, revealUv).rgb;
         float3 revealed = lerp(bottom, middle, saturate(hole.w));
         revealed *= 1.0 - saturate(RevealDarken);
 

@@ -56,6 +56,7 @@ namespace Crusaders30XX.ECS.Services
 			new() { Id = "brittle", Aliases = ["brittle"], Tooltip = "Brittle - If you block an attack with only this card, mill 1." },
 			new() { Id = "scorched", Aliases = ["scorched"], Tooltip = "Scorched - When pledged, lose 1 HP." },
 			new() { Id = "thorned", Aliases = ["thorned"], Tooltip = "Thorned - When discarded to pay a card cost, gain 1 scar." },
+			new() { Id = "poisoned", Aliases = ["poisoned"], Tooltip = "Poisoned - When used to block, lose 1 HP." },
 			new() { Id = "darkness", Aliases = ["darkness"], Tooltip = "X Darkness - The enemy loses X damage when you pledge a card." },
 			new() { Id = "silenced", Aliases = ["silenced"], Tooltip = "X Silenced - You cannot play pledged cards. Remove 1 silenced at the end of your action phase." },
 			new() { Id = "sealed", Aliases = ["seal", "seals", "sealed"], Tooltip = "Sealed - Cannot be pledged. Lose 1 seal when used to block. At 0 seals, the card is freed." },
@@ -111,6 +112,7 @@ namespace Crusaders30XX.ECS.Services
 			AddStatusBlock<Brittle>(entity, blocks, shownKeywordIds, "brittle", "This card is brittle - if you block an attack with only this card, mill 1. Lasts for the rest of the climb.");
 			AddStatusBlock<Scorched>(entity, blocks, shownKeywordIds, "scorched", "This card is scorched - when pledged, lose 1 HP. Lasts for the rest of the climb.");
 			AddStatusBlock<Thorned>(entity, blocks, shownKeywordIds, "thorned", "This card is thorned - when discarded to pay a card cost, gain 1 scar. Lasts for the rest of the climb.");
+			AddStatusBlock<Poisoned>(entity, blocks, shownKeywordIds, "poisoned", "This card is poisoned - when used to block, lose 1 HP.");
 
 			if (entity.GetComponent<Colorless>() != null && !ShouldSuppressColorlessStatus(entityManager))
 				blocks.Add(new TooltipTextBlock("colorless", ColorlessStatus));

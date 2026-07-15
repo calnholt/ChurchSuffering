@@ -25,8 +25,6 @@
      iChannel1 = middle image (revealed by some holes)
      iChannel2 = bottom image (revealed by the others)
 
-   No textures bound? Each layer falls back to a distinct procedural
-   pattern so the compositing is visible immediately.
    ────────────────────────────────────────────────────────────── */
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -118,14 +116,6 @@ vec2 warpField(vec2 p, float t)
     return vec2(c, d) - 0.5;
 }
 
-// Sample a layer; if no texture is bound, fall back to a procedural pattern.
-vec3 sampleLayer(sampler2D ch, vec2 uv, vec3 placeholder)
-{
-    vec3 t = texture(ch, uv).rgb;
-    float hasTex = step(0.01, dot(t, vec3(1.0)));  // ~0 when channel is empty/black
-    return mix(placeholder, t, hasTex);
-}
-
 // ═══════════════════════════════════════════════════════════════════════
 // MAIN IMAGE
 // ═══════════════════════════════════════════════════════════════════════
@@ -136,13 +126,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float aspect = iResolution.x / iResolution.y;
     vec2 auv = vec2(uv.x * aspect, uv.y);  // aspect-corrected, for round circles + noise
 
-    // ── procedural placeholders (distinct per layer so reveals are obvious) ──
-    vec3 phTop = mix(vec3(0.85, 0.55, 0.30), vec3(0.55, 0.20, 0.15), uv.y);  // warm top
-    vec3 phMid = mix(vec3(0.10, 0.30, 0.55), vec3(0.20, 0.65, 0.80), uv.x)  // cool blue, gridded
-        * (0.75 + 0.25 * step(0.5, fract(uv.x * 8.0)) * step(0.5, fract(uv.y * 8.0)));
-    vec3 phBot = mix(vec3(0.10, 0.20, 0.10), vec3(0.30, 0.55, 0.25), fbm(auv * 4.0));  // mottled green
-
-    vec3 layer0 = sampleLayer(iChannel0, uv, phTop);
+    vec3 layer0 = texture(iChannel0, uv).rgb;
     // (middle/bottom sampled per-hole below, possibly with refracted uv)
     vec3 col = layer0;
 
@@ -194,8 +178,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         // per-hole layer pick (middle vs bottom), re-rolled each respawn
         float pick = hash11(fid * 17.7 + cycle);
         vec3 revealed = (pick < LAYER_SPLIT)
-            ? sampleLayer(iChannel1, ruv, phMid)
-            : sampleLayer(iChannel2, ruv, phBot);
+            ? texture(iChannel1, ruv).rgb
+            : texture(iChannel2, ruv).rgb;
         revealed *= (1.0 - REVEAL_DARKEN);
 
         col = mix(col, revealed, m);

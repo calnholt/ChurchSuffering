@@ -2645,6 +2645,16 @@
 /processor:SongProcessor
 /build:Music/victory.ogg
 
+#begin Music/title.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/build:Music/title.ogg
+
+#begin Music/waystation.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/build:Music/waystation.ogg
+
 #---------------------------------- SFX ---------------------------------#
 
 #begin SFX/Bag Handle 1-5.ogg
