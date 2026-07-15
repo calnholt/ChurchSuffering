@@ -38,19 +38,19 @@ namespace Crusaders30XX.ECS.Systems
 		public float TimeScale { get; set; } = 0.5f;
 
 		[DebugEditable(DisplayName = "Hole Count", Step = 1, Min = 1, Max = 30)]
-		public int HoleCount { get; set; } = 5;
+		public int HoleCount { get; set; } = 10;
 
 		[DebugEditable(DisplayName = "Period Min", Step = 0.01f, Min = 0.01f, Max = 60f)]
-		public float HolePeriodMin { get; set; } = 10f;
+		public float HolePeriodMin { get; set; } = 11f;
 
 		[DebugEditable(DisplayName = "Period Max", Step = 0.01f, Min = 0.01f, Max = 60f)]
 		public float HolePeriodMax { get; set; } = 20f;
 
 		[DebugEditable(DisplayName = "Life Min", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float HoleLifeMin { get; set; } = 0.45f;
+		public float HoleLifeMin { get; set; } = 0.8f;
 
 		[DebugEditable(DisplayName = "Life Max", Step = 0.01f, Min = 0.01f, Max = 1f)]
-		public float HoleLifeMax { get; set; } = 0.75f;
+		public float HoleLifeMax { get; set; } = 1f;
 
 		[DebugEditable(DisplayName = "Open Frac", Step = 0.01f, Min = 0.01f, Max = 1f)]
 		public float HoleOpenFrac { get; set; } = 0.45f;
@@ -74,22 +74,22 @@ namespace Crusaders30XX.ECS.Systems
 		public float HoleMargin { get; set; } = 0.02f;
 
 		[DebugEditable(DisplayName = "Hole Feather", Step = 0.01f, Min = 0.001f, Max = 0.20f)]
-		public float HoleFeather { get; set; } = 0.071f;
+		public float HoleFeather { get; set; } = 0.111f;
 
 		[DebugEditable(DisplayName = "Feather Vary", Step = 0.01f, Min = 0f, Max = 1f)]
 		public float FeatherVary { get; set; } = 0.70f;
 
 		[DebugEditable(DisplayName = "Rim Warp Amp", Step = 0.01f, Min = 0f, Max = 1f)]
-		public float RimWarpAmp { get; set; } = 0f;
+		public float RimWarpAmp { get; set; } = 0.38f;
 
 		[DebugEditable(DisplayName = "Rim Warp Scale", Step = 0.01f, Min = 0.01f, Max = 20f)]
 		public float RimWarpScale { get; set; } = 2.13f;
 
 		[DebugEditable(DisplayName = "Rim Warp Speed", Step = 0.01f, Min = 0f, Max = 2f)]
-		public float RimWarpSpeed { get; set; } = 0.35f;
+		public float RimWarpSpeed { get; set; } = 0.42f;
 
 		[DebugEditable(DisplayName = "Reveal Refract", Step = 0.01f, Min = 0f, Max = 2f)]
-		public float RevealRefract { get; set; } = 0f;
+		public float RevealRefract { get; set; } = 0.03f;
 
 		[DebugEditable(DisplayName = "Reveal Darken", Step = 0.01f, Min = 0f, Max = 1f)]
 		public float RevealDarken { get; set; } = 0f;
