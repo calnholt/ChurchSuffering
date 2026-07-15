@@ -265,11 +265,33 @@ namespace Crusaders30XX.ECS.Systems
                 if (equipped?.EquippedOwner != query.Owner) continue;
                 if (equipped.Medal is not ICardStatModifierProvider provider) continue;
 
-                foreach (var modifier in provider.GetStatModifiers(query) ?? Array.Empty<CardStatModifier>())
-                {
-                    if (modifier == null || modifier.Delta == 0) continue;
-                    result.Modifiers.Add(modifier);
-                }
+                AddProviderModifiers(provider, query, result);
+            }
+
+            var player = query.Owner.GetComponent<Player>();
+            var deck = player?.DeckEntity?.GetComponent<Deck>()
+                ?? query.EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
+            if (deck?.Hand == null) return;
+
+            foreach (var handCard in deck.Hand
+                .Where(card => card != null)
+                .Distinct()
+                .OrderBy(card => card.Id))
+            {
+                if (handCard.GetComponent<CardData>()?.Card is not ICardStatModifierProvider provider) continue;
+                AddProviderModifiers(provider, query, result);
+            }
+        }
+
+        private static void AddProviderModifiers(
+            ICardStatModifierProvider provider,
+            CardStatQuery query,
+            CardStatResult result)
+        {
+            foreach (var modifier in provider.GetStatModifiers(query) ?? Array.Empty<CardStatModifier>())
+            {
+                if (modifier == null || modifier.Delta == 0) continue;
+                result.Modifiers.Add(modifier);
             }
         }
 

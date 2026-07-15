@@ -75,6 +75,7 @@ namespace Crusaders30XX.ECS.Systems
                 [CardId.Sacrifice] = ["Give only what you must!", "Let this gift bring hope!"],
                 [CardId.SerpentCrush] = ["No room left to slither!", "Pin that serpent down!"],
                 [CardId.Seize] = ["Take the opening!", "Ours now!"],
+                [CardId.ShieldbearersVigil] = ["Your shield steadies every hand!", "Stand watch. We guard together!"],
                 [CardId.ShieldOfFaith] = ["Faith before fear!", "That shield is more than steel!"],
                 [CardId.Smite] = ["A bright little thunderbolt!", "Smite with purpose!"],
                 [CardId.Stab] = ["Right where it hurts!", "A quick point well made!"],

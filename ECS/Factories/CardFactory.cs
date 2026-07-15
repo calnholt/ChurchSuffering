@@ -61,6 +61,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.Sacrifice, () => new Sacrifice() },
                 { CardId.SerpentCrush, () => new SerpentCrush() },
                 { CardId.Seize, () => new Seize() },
+                { CardId.ShieldbearersVigil, () => new ShieldbearersVigil() },
                 { CardId.ShieldOfFaith, () => new ShieldOfFaith() },
                 { CardId.Smite, () => new Smite() },
                 { CardId.Stab, () => new Stab() },
