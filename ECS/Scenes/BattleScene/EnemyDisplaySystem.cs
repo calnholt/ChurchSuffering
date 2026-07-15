@@ -133,7 +133,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (_enemyTexture != null && _loadedAssetName == assetName) return _enemyTexture;
 
 			_loadedAssetName = assetName;
-			_enemyTexture = _imageAssets.GetTextureOrFallback(assetName, "Skeleton");
+			_enemyTexture = _imageAssets.GetTextureOrFallback(assetName, "Enemies/Skeleton");
 			return _enemyTexture;
 		}
 	}

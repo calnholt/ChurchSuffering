@@ -54,7 +54,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
 			_playerTexture = ctx.ImageAssets.GetRequiredTexture("crusader_hammer");
-			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Skeleton");
+			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Enemies/Skeleton");
 
 			_player = CreateActor(ctx, "SnapshotPlayer", PlayerAnchor, isPlayer: true, _playerTexture, 0.36f);
 			_enemy = CreateActor(ctx, "Enemy", EnemyAnchor, isPlayer: false, _enemyTexture, 0.62f);

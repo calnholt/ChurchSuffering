@@ -28,7 +28,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		{
 			_variant = ParseVariant(args ?? Array.Empty<string>());
 			_background = ctx.Content.Load<Texture2D>("Battle_Backgrounds/gothic-battle-background");
-			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Ogre");
+			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Enemies/Ogre");
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
 

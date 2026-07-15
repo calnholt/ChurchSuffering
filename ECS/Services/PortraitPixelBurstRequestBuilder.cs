@@ -52,12 +52,12 @@ namespace Crusaders30XX.ECS.Services
 			var queued = queuedEntity?.GetComponent<QueuedEvents>();
 			if (queued?.Events == null || queued.Events.Count == 0 || queued.CurrentIndex < 0 || queued.CurrentIndex >= queued.Events.Count)
 			{
-				return imageAssets.TryGetTexture("Skeleton");
+				return imageAssets.TryGetTexture("Enemies/Skeleton");
 			}
 
 			string enemyId = queued.Events[queued.CurrentIndex].EventId;
 			string assetName = EnemyPortraitContent.ToAssetName(enemyId);
-			return imageAssets.GetTextureOrFallback(assetName, "Skeleton");
+			return imageAssets.GetTextureOrFallback(assetName, "Enemies/Skeleton");
 		}
 	}
 }

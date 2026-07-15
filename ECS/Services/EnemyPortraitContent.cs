@@ -11,6 +11,8 @@ namespace Crusaders30XX.ECS.Services
 	/// </summary>
 	public static class EnemyPortraitContent
 	{
+		private const string PortraitFolder = "Enemies";
+
 		private static readonly HashSet<string> PortraitEnemyIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			"demon",
@@ -44,11 +46,12 @@ namespace Crusaders30XX.ECS.Services
 		{
 			if (string.IsNullOrEmpty(enemyId)) return string.Empty;
 			var parts = enemyId.Split('_');
-			return string.Join("_", parts.Select(p =>
+			var joined = string.Join("_", parts.Select(p =>
 			{
 				if (string.IsNullOrEmpty(p)) return p;
 				return char.ToUpperInvariant(p[0]) + p.Substring(1);
 			}));
+			return $"{PortraitFolder}/{joined}";
 		}
 
 		public static bool HasPortrait(string enemyId) =>
