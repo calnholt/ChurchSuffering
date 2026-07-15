@@ -109,6 +109,15 @@ There are three card colors, each with distinct blocking mechanics:
 - Block for **+1 compared to red/white counterparts**
 - Do not grant any resource when blocking
 
+### Dual Color Modification
+
+- Dual Color is a permanent, run-scoped card modification that adds a second Red, White, or Black color
+- A Dual Color card qualifies as either of its colors for costs, blocking restrictions, color counts, achievements, medals, enemy effects, and other color-triggered effects
+- One Dual Color card still pays only one discard-cost slot; it cannot satisfy two costs by itself
+- Blocking counts the physical card and its block value once, while applying each color's blocking benefit once
+- A card with Black as either color receives the intrinsic +1 block bonus
+- Colorless temporarily suppresses both colors and their benefits without removing the Dual Color modification
+
 ### Colorless Restriction
 
 - Colorless is a run-long restriction, not a fourth card color

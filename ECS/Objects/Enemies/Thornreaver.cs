@@ -48,8 +48,7 @@ public class SawtoothRend : EnemyAttackBase
 
     OnBlockProcessed = (entityManager, card) =>
     {
-      var color = CardColorQualificationService.GetQualifiedColor(card);
-      if (color == Color)
+      if (Color.HasValue && CardColorQualificationService.QualifiesAs(card, Color.Value))
       {
         EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Bleed, Delta = Bleed });
       }

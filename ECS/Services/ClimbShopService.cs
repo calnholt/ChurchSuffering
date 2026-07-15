@@ -224,6 +224,7 @@ namespace Crusaders30XX.ECS.Services
 				out _)) return false;
 			EventManager.Publish(new ClimbCardUpgradeAnimationRequested
 			{
+				DeckEntryId = slot.deckEntryId,
 				BaseCardKey = current,
 				UpgradedCardKey = upgraded,
 			});

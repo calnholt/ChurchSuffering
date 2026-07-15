@@ -75,8 +75,7 @@ public class StoneBarrage : EnemyAttackBase
 
         OnBlockProcessed = (entityManager, card) =>
         {
-            var color = CardColorQualificationService.GetQualifiedColor(card);
-            if (color == Color)
+			if (Color.HasValue && CardColorQualificationService.QualifiesAs(card, Color.Value))
             {
                 EventManager.Publish(new ApplyPassiveEvent
                 {

@@ -311,11 +311,11 @@ namespace Crusaders30XX.ECS.Systems
                     }
 
                     int blockVal = BlockValueService.GetTotalBlockValue(card);
-                    string color = CardColorQualificationService.GetQualifiedColor(card)?.ToString();
+					var colors = CardColorQualificationService.GetQualifiedColors(card);
                     EventManager.Publish(new BlockAssignmentAdded
                     {
                         Card = card,
-                        Color = color,
+						Colors = colors,
                         DeltaBlock = blockVal
                     });
                 }

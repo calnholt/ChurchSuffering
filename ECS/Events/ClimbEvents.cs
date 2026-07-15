@@ -92,6 +92,7 @@ namespace Crusaders30XX.ECS.Events
 
 	public class ClimbCardUpgradeAnimationRequested
 	{
+		public string DeckEntryId { get; set; } = string.Empty;
 		public string BaseCardKey { get; set; } = string.Empty;
 		public string UpgradedCardKey { get; set; } = string.Empty;
 	}

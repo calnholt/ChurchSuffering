@@ -40,6 +40,7 @@ namespace Crusaders30XX.ECS.Services
 				if (existingByEntryId.TryGetValue(entry.entryId, out var existing)
 					&& string.Equals(existing.GetComponent<RunDeckCard>()?.CardKey, entry.cardKey, StringComparison.OrdinalIgnoreCase))
 				{
+					SynchronizeDualColor(entityManager, existing, entry);
 					continue;
 				}
 
@@ -280,7 +281,43 @@ namespace Crusaders30XX.ECS.Services
 					cardData.Card.IsStarter = true;
 				}
 			}
+			SynchronizeDualColor(entityManager, entity, entry);
 			return entity;
+		}
+
+		private static void SynchronizeDualColor(
+			EntityManager entityManager,
+			Entity card,
+			LoadoutCardEntry entry)
+		{
+			if (entityManager == null || card == null || entry == null) return;
+			var data = card.GetComponent<CardData>();
+			bool hasValidSecondary = Enum.TryParse(
+				entry.secondaryColor,
+				ignoreCase: true,
+				out CardData.CardColor secondaryColor)
+				&& CardColorQualificationService.IsPlayableColor(secondaryColor)
+				&& CardColorQualificationService.IsPlayableColor(data?.Color)
+				&& data.Color != secondaryColor;
+
+			var dualColor = card.GetComponent<DualColor>();
+			if (!hasValidSecondary)
+			{
+				if (dualColor != null) entityManager.RemoveComponent<DualColor>(card);
+				return;
+			}
+
+			if (dualColor == null)
+			{
+				entityManager.AddComponent(card, new DualColor
+				{
+					Owner = card,
+					SecondaryColor = secondaryColor,
+				});
+				return;
+			}
+
+			dualColor.SecondaryColor = secondaryColor;
 		}
 
 		private static List<LoadoutCardEntry> BuildDesiredEntries(LoadoutDefinition loadout)

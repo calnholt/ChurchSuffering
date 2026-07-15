@@ -56,7 +56,7 @@ public class FrostEaterTests : IDisposable
         {
             Card = frozenBlocker,
             DeltaBlock = 2,
-            Color = "White",
+            Colors = [CardData.CardColor.White],
         });
 
         for (int i = 0; i < 10; i++)
@@ -75,7 +75,7 @@ public class FrostEaterTests : IDisposable
         {
             Card = frozenBlocker,
             DeltaBlock = -2,
-            Color = "White",
+            Colors = [CardData.CardColor.White],
         });
 
         Assert.Equal(0, progress.AssignedBlockTotal);
@@ -92,8 +92,8 @@ public class FrostEaterTests : IDisposable
         var firstBlocker = CreateAssignedBlocker(entityManager, "FirstFrozenBlocker", blockAmount: 1, frozen: true);
         var secondBlocker = CreateAssignedBlocker(entityManager, "SecondFrozenBlocker", blockAmount: 1, frozen: true);
 
-        EventManager.Publish(new BlockAssignmentAdded { Card = firstBlocker, DeltaBlock = 1, Color = "White" });
-        EventManager.Publish(new BlockAssignmentAdded { Card = secondBlocker, DeltaBlock = 1, Color = "White" });
+        EventManager.Publish(new BlockAssignmentAdded { Card = firstBlocker, DeltaBlock = 1, Colors = [CardData.CardColor.White] });
+        EventManager.Publish(new BlockAssignmentAdded { Card = secondBlocker, DeltaBlock = 1, Colors = [CardData.CardColor.White] });
         progressSystem.Update(new GameTime());
 
         Assert.True(EnemyAttackFlowService.TryGetCurrentProgress(entityManager, out var progress));
@@ -117,7 +117,7 @@ public class FrostEaterTests : IDisposable
         {
             Card = frozenBlocker,
             DeltaBlock = 2,
-            Color = "White",
+            Colors = [CardData.CardColor.White],
         });
         progressSystem.Update(new GameTime());
         EventManager.Publish(new ResolveAttack());

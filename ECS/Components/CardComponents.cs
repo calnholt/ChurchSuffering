@@ -574,6 +574,15 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
+    /// Gives a card a second playable color while retaining its printed color.
+    /// </summary>
+    public class DualColor : IComponent
+    {
+        public Entity Owner { get; set; }
+        public CardData.CardColor SecondaryColor { get; set; }
+    }
+
+    /// <summary>
     /// Marks a card with recoil stacks. If the card is not used to block the current attack,
     /// the player takes damage equal to Stacks. Removed each attack resolve.
     /// </summary>

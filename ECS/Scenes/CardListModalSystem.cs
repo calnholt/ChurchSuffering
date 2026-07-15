@@ -1291,9 +1291,9 @@ namespace Crusaders30XX.ECS.Systems
             _orderedCards.AddRange(OrderCardsForPresentation(modal?.Cards));
             _ledgerSummary = new CardLedgerSummary(
                 _orderedCards.Count,
-                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.White),
-                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Red),
-                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Black));
+				_orderedCards.Count(card => CardColorQualificationService.QualifiesAs(card, CardData.CardColor.White)),
+				_orderedCards.Count(card => CardColorQualificationService.QualifiesAs(card, CardData.CardColor.Red)),
+				_orderedCards.Count(card => CardColorQualificationService.QualifiesAs(card, CardData.CardColor.Black)));
             _visibleCards.Clear();
         }
 

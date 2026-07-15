@@ -11,6 +11,7 @@ internal readonly record struct CardBaseRenderModel(
     string DisplayText,
     string Costs,
     CardData.CardColor Color,
+	CardData.CardColor? SecondaryColor,
     CardType Type,
     int PrintedDamage,
     int PrintedBlock,

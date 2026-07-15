@@ -6,6 +6,7 @@ namespace Crusaders30XX.ECS.Data.Loadouts
 	{
 		public string entryId { get; set; } = string.Empty;
 		public string cardKey { get; set; } = string.Empty;
+		public string secondaryColor { get; set; } = string.Empty;
 		public bool isStarter { get; set; }
 		public bool countsAsTraded { get; set; }
 		public List<string> restrictions { get; set; } = new();
@@ -27,4 +28,3 @@ namespace Crusaders30XX.ECS.Data.Loadouts
 		public List<string> medalIds { get; set; } = new();
 	}
 }
-

@@ -364,8 +364,7 @@ namespace Crusaders30XX.ECS.Systems
                             BlockAmount = BlockValueService.GetTotalBlockValue(evt.Card),
                             AssignedAtTicks = DateTime.UtcNow.Ticks,
                             IsEquipment = false,
-                            ColorKey = NormalizeColorKey(
-                                CardColorQualificationService.GetQualifiedColor(evt.Card)?.ToString()),
+							ColorKeys = CardColorQualificationService.GetQualifiedColors(evt.Card).ToList(),
                             Tooltip = ResolveCardName(cd),
                             DisplayBgColor = bg,
                             DisplayFgColor = fg
@@ -677,18 +676,6 @@ namespace Crusaders30XX.ECS.Systems
                 || destination == CardZoneType.DiscardPile
                 || destination == CardZoneType.DrawPile
                 || destination == CardZoneType.ExhaustPile;
-        }
-
-        private static string NormalizeColorKey(string c)
-        {
-            if (string.IsNullOrWhiteSpace(c)) return string.Empty;
-            switch (c.Trim().ToLowerInvariant())
-            {
-                case "r": case "red": return "Red";
-                case "w": case "white": return "White";
-                case "b": case "black": return "Black";
-                default: return char.ToUpperInvariant(c[0]) + c.Substring(1);
-            }
         }
 
         private static Microsoft.Xna.Framework.Color ResolveCardBgColor(CardData.CardColor color)

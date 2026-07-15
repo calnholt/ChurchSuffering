@@ -79,6 +79,12 @@ namespace Crusaders30XX.ECS.Events
         public string Command { get; set; }
     }
 
+    public class ApplyDualColorEvent
+    {
+        public Entity Card { get; set; }
+        public CardData.CardColor SecondaryColor { get; set; }
+    }
+
     /// <summary>
     /// Increases or decreases the player's Courage by Delta
     /// </summary>

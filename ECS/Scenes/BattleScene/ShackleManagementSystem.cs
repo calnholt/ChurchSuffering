@@ -93,7 +93,7 @@ namespace Crusaders30XX.ECS.Systems
 					if (card.GetComponent<AssignedBlockCard>() != null) continue;
 
 					int blockVal = BlockValueService.GetTotalBlockValue(card);
-					string color = CardColorQualificationService.GetQualifiedColor(card)?.ToString();
+					var colors = CardColorQualificationService.GetQualifiedColors(card);
 
 					var t = card.GetComponent<Transform>();
 					if (t != null)
@@ -116,7 +116,7 @@ namespace Crusaders30XX.ECS.Systems
 					EventManager.Publish(new BlockAssignmentAdded 
 					{ 
 						Card = card, 
-						Color = color, 
+						Colors = colors,
 						DeltaBlock = blockVal 
 					});
 				}

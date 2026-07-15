@@ -38,6 +38,7 @@ public class Game1 : Game
     private ControllerRumbleSystem _controllerRumbleSystem;
     private UIInteractionSystem _uiInteractionSystem;
 	private CardApplicationManagementSystem _cardApplicationManagementSystem;
+	private DualColorManagementSystem _dualColorManagementSystem;
 	private CursedManagementSystem _cursedManagementSystem;
 	private HexManagementSystem _hexManagementSystem;
 	private DeckManagementSystem _deckManagementSystem;
@@ -251,6 +252,7 @@ public class Game1 : Game
         _cardTooltipDisplaySystem = new CardTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _locationNameDisplaySystem = new LocationNameDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
 		_cardApplicationManagementSystem = new CardApplicationManagementSystem(_world.EntityManager);
+		_dualColorManagementSystem = new DualColorManagementSystem(_world.EntityManager);
 		_cursedManagementSystem = new CursedManagementSystem(_world.EntityManager);
 		_hexManagementSystem = new HexManagementSystem(_world.EntityManager);
 		_deckManagementSystem = new DeckManagementSystem(_world.EntityManager);
@@ -286,6 +288,7 @@ public class Game1 : Game
                 CardUsageTelemetryRuntime.Store));
         }
 		_world.AddSystem(_cardApplicationManagementSystem);
+		_world.AddSystem(_dualColorManagementSystem);
 		_world.AddSystem(_cursedManagementSystem);
 		_world.AddSystem(_hexManagementSystem);
 		_world.AddSystem(_deckManagementSystem);

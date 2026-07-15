@@ -52,8 +52,7 @@ public class Cinderbolt : EnemyAttackBase
 
         OnBlockProcessed = (entityManager, card) =>
         {
-          var color = CardColorQualificationService.GetQualifiedColor(card);
-          if (color == Color && !AppliedBurn)
+		  if (Color.HasValue && CardColorQualificationService.QualifiesAs(card, Color.Value) && !AppliedBurn)
           {
             EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Burn, Delta = Burn });
             AppliedBurn = true;
@@ -83,8 +82,7 @@ public class InsidiousBolt : EnemyAttackBase
 
     OnBlockProcessed = (entityManager, card) =>
     {
-      var color = CardColorQualificationService.GetQualifiedColor(card);
-      if (color == Color && !AppliedScar)
+	  if (Color.HasValue && CardColorQualificationService.QualifiesAs(card, Color.Value) && !AppliedScar)
       {
         EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Scar, Delta = Scar });
         AppliedScar = true;

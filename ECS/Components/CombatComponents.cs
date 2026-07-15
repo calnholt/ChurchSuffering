@@ -137,7 +137,7 @@ namespace Crusaders30XX.ECS.Components
 		public long AssignedAtTicks { get; set; }
 		// Display data (self-contained; systems shouldn't need to inspect card/equipment):
 		public bool IsEquipment { get; set; } = false;
-		public string ColorKey { get; set; } = "White"; // "Red" | "White" | "Black"
+		public List<CardData.CardColor> ColorKeys { get; set; } = new();
 		public string Tooltip { get; set; } = string.Empty;
 		public Color DisplayBgColor { get; set; } = Color.White;
 		public Color DisplayFgColor { get; set; } = Color.Black;

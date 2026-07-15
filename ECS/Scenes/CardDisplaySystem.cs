@@ -490,9 +490,9 @@ namespace Crusaders30XX.ECS.Systems
             var ui = card.GetComponent<UIElement>();
             EventManager.Publish(new HighlightRenderEvent { Entity = card, Transform = transform, UI = ui });
 
-            _pipeline.Render(
-                new CardRenderRequest(card, position, scale, rotation),
-                () =>
+			_pipeline.Render(
+				new CardRenderRequest(card, position, scale, rotation),
+				() =>
             {
                 if (cachedBase != null)
                 {
@@ -508,10 +508,18 @@ namespace Crusaders30XX.ECS.Systems
                         0f);
                 }
                 else
-                {
-                    DrawCard(card, position);
-                }
-            });
+				{
+					DrawCard(card, position);
+				}
+			},
+			() =>
+			{
+				var secondaryColor = card.GetComponent<DualColor>();
+				if (secondaryColor != null)
+				{
+					DrawCard(card, position, secondaryColor.SecondaryColor);
+				}
+			});
         }
 
         private CachedCardSurface GetOrCreateCachedBase(Entity card, Vector2 position, float scale, float rotation)
@@ -620,6 +628,7 @@ namespace Crusaders30XX.ECS.Systems
                 card.GetDisplayText() ?? string.Empty,
                 string.Join("|", card.Cost ?? new List<string>()),
                 data.Color,
+				entity.GetComponent<DualColor>()?.SecondaryColor,
                 card.Type,
                 card.Damage,
                 card.Block,
@@ -749,7 +758,10 @@ namespace Crusaders30XX.ECS.Systems
             return _pipeline.Passes.Cast<object>();
         }
 
-        public void DrawCard(Entity entity, Vector2 position)
+		public void DrawCard(
+			Entity entity,
+			Vector2 position,
+			CardData.CardColor? paletteColorOverride = null)
         {
             var cardData = entity.GetComponent<CardData>();
             var transform = entity.GetComponent<Transform>();
@@ -760,7 +772,7 @@ namespace Crusaders30XX.ECS.Systems
             float rotation = transform?.Rotation ?? 0f;
             CardBase card = cardData.Card;
             bool hasDef = card != null;
-            var cc = cardData.Color;
+			var cc = paletteColorOverride ?? cardData.Color;
             bool isColorless = entity.HasComponent<Colorless>();
 
             var rect = CardGeometryService.GetVisualRect(settings, position, vs);
@@ -1173,7 +1185,9 @@ namespace Crusaders30XX.ECS.Systems
             bool suppressDelta = entity.HasComponent<SuppressStatDeltaDisplay>();
 
             int printedBlock = card.Block;
-            int blackCardBlockBonus = GetBlackCardBlockBonus(entity);
+			int blackCardBlockBonus = CardColorQualificationService.QualifiesAs(
+				entity,
+				CardData.CardColor.Black) ? 1 : 0;
             int blockValue = suppressDelta
                 ? printedBlock + blackCardBlockBonus
                 : BlockValueService.GetTotalBlockValue(entity);
@@ -1603,23 +1617,6 @@ namespace Crusaders30XX.ECS.Systems
             {
                 return Math.Max(0, card.Damage);
             }
-        }
-
-        private static int GetBlackCardBlockBonus(Entity entity)
-        {
-            if (entity.HasComponent<Colorless>()) return 0;
-            var modifiedBlock = entity.GetComponent<ModifiedBlock>();
-            if (modifiedBlock?.Modifications == null) return 0;
-
-            int bonus = 0;
-            foreach (var mod in modifiedBlock.Modifications)
-            {
-                if (mod.Reason == "Black card")
-                {
-                    bonus += mod.Delta;
-                }
-            }
-            return bonus;
         }
 
         private Color ColorlessBackground => new(

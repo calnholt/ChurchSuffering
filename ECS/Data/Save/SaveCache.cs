@@ -1212,6 +1212,24 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
+		public static bool SetRunDeckEntrySecondaryColor(
+			string loadoutId,
+			string entryId,
+			string secondaryColor)
+		{
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				if (entry == null) return false;
+				entry.secondaryColor = secondaryColor?.Trim() ?? string.Empty;
+				Persist();
+				return true;
+			}
+		}
+
 		public static bool TryRemoveRunDeckEntry(
 			string loadoutId,
 			string entryId,
@@ -2088,6 +2106,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				entryId = AllocateRunDeckEntryIdLocked(),
 				cardKey = cardKey?.Trim() ?? string.Empty,
+				secondaryColor = string.Empty,
 				isStarter = isStarter,
 				countsAsTraded = countsAsTraded,
 				restrictions = new List<string>(),
@@ -2115,6 +2134,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				entryId = entry.entryId ?? string.Empty,
 				cardKey = entry.cardKey ?? string.Empty,
+				secondaryColor = entry.secondaryColor ?? string.Empty,
 				isStarter = entry.isStarter,
 				countsAsTraded = entry.countsAsTraded,
 				restrictions = CloneStringList(entry.restrictions),

@@ -90,7 +90,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				Card = card,
 				DeltaBlock = -assignment.BlockAmount,
-				Color = assignment.ColorKey,
+				Colors = assignment.ColorKeys,
 			});
 			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Equip, Volume = 0.5f, Pitch = -0.5f });
 		}

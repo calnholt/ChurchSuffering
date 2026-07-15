@@ -109,6 +109,7 @@ namespace Crusaders30XX.ECS.Systems
 			_queue.Enqueue(new CardAnimRequest
 			{
 				Mode = ClimbCardAnimMode.Upgrade,
+				DeckEntryId = evt.DeckEntryId,
 				BaseCardKey = evt.BaseCardKey,
 				UpgradedCardKey = evt.UpgradedCardKey,
 			});
@@ -145,18 +146,20 @@ namespace Crusaders30XX.ECS.Systems
 			var request = _queue.Dequeue();
 			Entity baseCard;
 			Entity finalCard;
+			CardData.CardColor? secondaryColor = ResolveSecondaryColor(request.DeckEntryId);
 			if (request.Mode == ClimbCardAnimMode.Mutation)
 			{
 				(baseCard, finalCard) = CardRestrictionMutationDisplayFactory.CreateDisplayPairFromKeys(
 					EntityManager,
 					request.MutationCardKey,
 					request.CurrentRestrictionNames,
-					request.RestrictionName);
+					request.RestrictionName,
+					secondaryColor);
 			}
 			else
 			{
-				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey);
-				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey);
+				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey, secondaryColor: secondaryColor);
+				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey, secondaryColor: secondaryColor);
 			}
 
 			if (baseCard == null || finalCard == null)
@@ -192,6 +195,16 @@ namespace Crusaders30XX.ECS.Systems
 
 			_animator.Start(animation);
 			BlockInput();
+		}
+
+		private static CardData.CardColor? ResolveSecondaryColor(string entryId)
+		{
+			if (string.IsNullOrWhiteSpace(entryId)) return null;
+			var entry = SaveCache.GetRunDeckEntry(RunDeckService.PrimaryLoadoutId, entryId);
+			return Enum.TryParse(entry?.secondaryColor, true, out CardData.CardColor color)
+				&& CardColorQualificationService.IsPlayableColor(color)
+				? color
+				: null;
 		}
 
 		private void CompleteActiveAnimation()

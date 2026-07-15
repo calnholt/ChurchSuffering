@@ -41,7 +41,7 @@ public class EnemyAttackFlowTests : System.IDisposable
 		{
 			Card = card,
 			DeltaBlock = 3,
-			Color = "Red",
+			Colors = [CardData.CardColor.Red],
 		});
 		progressSystem.Update(new GameTime());
 

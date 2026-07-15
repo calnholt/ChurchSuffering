@@ -63,6 +63,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `poison-card` | Poison card shader | One poisoned card on a patterned backdrop |
 | `card-render-pipeline` | Card render pipeline | Ordered all-status and sheen composition variants |
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
+| `dual-color-card` | Card display | Dual-color diagonal split pairings, including black secondary block bonuses |
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
 | `booster-pack-opening` | Booster pack opening display | Phase-driven pack summon, rupture, reward travel, sheen, and ready states |
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
@@ -447,6 +448,19 @@ dotnet run -- snapshot colorless-card --verify
 ```
 
 Output: `debug/snapshots/colorless-card/all-printed-colors.png`
+
+---
+
+## `dual-color-card`
+
+Renders White/Black, Red/Black, and Black/White Strike cards with a hard top-left-to-bottom-right split. The black-secondary variants also lock the visible +1 block value on the printed-color half.
+
+```bash
+dotnet run -- snapshot dual-color-card
+dotnet run -- snapshot dual-color-card --verify
+```
+
+Output: `debug/snapshots/dual-color-card/pairings.png`
 
 ---
 

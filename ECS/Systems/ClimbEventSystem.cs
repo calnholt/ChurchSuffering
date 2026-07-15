@@ -260,6 +260,7 @@ namespace Crusaders30XX.ECS.Systems
 					string baseKey = RunDeckService.BuildCardKey(cardId, color, isUpgraded: false);
 					EventManager.Publish(new ClimbCardUpgradeAnimationRequested
 					{
+						DeckEntryId = result.UpgradedEntryId,
 						BaseCardKey = baseKey,
 						UpgradedCardKey = result.UpgradedCardKey,
 					});

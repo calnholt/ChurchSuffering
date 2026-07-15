@@ -354,10 +354,6 @@ namespace Crusaders30XX.ECS.Factories
             }
             var modifiedBlock = new ModifiedBlock { Modifications = new List<Modification>() };
             entityManager.AddComponent(entity, modifiedBlock);
-            if (color == CardData.CardColor.Black)
-            {
-                modifiedBlock.Modifications.Add(new Modification { Delta = 1, Reason = "Black card" });
-            }
             if (card.Type == CardType.Attack)
             {
                 entityManager.AddComponent(entity, new ModifiedDamage { Modifications = new List<Modification>() });
@@ -699,6 +695,15 @@ namespace Crusaders30XX.ECS.Factories
             {
                 entityManager.AddComponent(clonedEntity, new Colorless { Owner = clonedEntity });
             }
+			var sourceDualColor = sourceEntity.GetComponent<DualColor>();
+			if (sourceDualColor != null)
+			{
+				entityManager.AddComponent(clonedEntity, new DualColor
+				{
+					Owner = clonedEntity,
+					SecondaryColor = sourceDualColor.SecondaryColor,
+				});
+			}
             if (sourceEntity.HasComponent<Cursed>())
             {
                 entityManager.AddComponent(clonedEntity, new Cursed { Owner = clonedEntity });

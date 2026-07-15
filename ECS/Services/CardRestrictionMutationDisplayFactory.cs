@@ -26,8 +26,9 @@ namespace Crusaders30XX.ECS.Services
 			var finalRestrictions = new List<string>(currentRestrictions);
 			AddRestriction(finalRestrictions, ToRestrictionName(applicationType));
 
-			var baseCard = CreateDisplayCard(entityManager, cardKey, currentRestrictions);
-			var finalCard = CreateDisplayCard(entityManager, cardKey, finalRestrictions);
+			var secondaryColor = targetCard.GetComponent<DualColor>()?.SecondaryColor;
+			var baseCard = CreateDisplayCard(entityManager, cardKey, currentRestrictions, secondaryColor);
+			var finalCard = CreateDisplayCard(entityManager, cardKey, finalRestrictions, secondaryColor);
 			if (applicationType == CardApplicationType.Sealed)
 			{
 				var currentSeals = targetCard.GetComponent<Sealed>()?.Seals ?? 0;
@@ -43,21 +44,23 @@ namespace Crusaders30XX.ECS.Services
 			EntityManager entityManager,
 			string cardKey,
 			IReadOnlyList<string> currentRestrictionNames,
-			string newRestrictionName)
+			string newRestrictionName,
+			CardData.CardColor? secondaryColor = null)
 		{
 			if (entityManager == null || string.IsNullOrWhiteSpace(cardKey)) return (null, null);
 
 			var finalRestrictions = new List<string>(currentRestrictionNames ?? new List<string>());
 			AddRestriction(finalRestrictions, newRestrictionName);
-			var baseCard = CreateDisplayCard(entityManager, cardKey, currentRestrictionNames);
-			var finalCard = CreateDisplayCard(entityManager, cardKey, finalRestrictions);
+			var baseCard = CreateDisplayCard(entityManager, cardKey, currentRestrictionNames, secondaryColor);
+			var finalCard = CreateDisplayCard(entityManager, cardKey, finalRestrictions, secondaryColor);
 			return (baseCard, finalCard);
 		}
 
 		public static Entity CreateDisplayCard(
 			EntityManager entityManager,
 			string cardKey,
-			IReadOnlyList<string> restrictionNames = null)
+			IReadOnlyList<string> restrictionNames = null,
+			CardData.CardColor? secondaryColor = null)
 		{
 			if (!RunDeckService.TryParseCardKey(cardKey, out var cardId, out var color, out var isUpgraded)) return null;
 			var entity = EntityFactory.CreateCardFromDefinition(
@@ -68,6 +71,14 @@ namespace Crusaders30XX.ECS.Services
 				index: 0,
 				isUpgraded: isUpgraded);
 			if (entity == null) return null;
+			if (secondaryColor.HasValue)
+			{
+				entityManager.AddComponent(entity, new DualColor
+				{
+					Owner = entity,
+					SecondaryColor = secondaryColor.Value,
+				});
+			}
 
 			var ui = entity.GetComponent<UIElement>();
 			if (ui != null)

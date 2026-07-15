@@ -29,7 +29,7 @@ public sealed class ColorlessCardTests
 		var card = CreateCard(entityManager, printedColor);
 		entityManager.AddComponent(card, new Colorless());
 
-		Assert.Null(CardColorQualificationService.GetQualifiedColor(card));
+		Assert.Empty(CardColorQualificationService.GetQualifiedColors(card));
 		Assert.False(CardColorQualificationService.IsEligibleForCost(card, "Red"));
 		Assert.False(CardColorQualificationService.IsEligibleForCost(card, "White"));
 		Assert.False(CardColorQualificationService.IsEligibleForCost(card, "Black"));
@@ -46,7 +46,9 @@ public sealed class ColorlessCardTests
 
 		entityManager.RemoveComponent<Colorless>(card);
 
-		Assert.Equal(CardData.CardColor.Red, CardColorQualificationService.GetQualifiedColor(card));
+		Assert.Equal(
+			[CardData.CardColor.Red],
+			CardColorQualificationService.GetQualifiedColors(card));
 		Assert.True(CardColorQualificationService.IsEligibleForCost(card, "Red"));
 	}
 
@@ -71,7 +73,6 @@ public sealed class ColorlessCardTests
 		var entityManager = new EntityManager();
 		var card = CreateCard(entityManager, CardData.CardColor.Black);
 		var modified = card.GetComponent<ModifiedBlock>();
-		modified.Modifications.Add(new Modification { Delta = 1, Reason = "Black card" });
 		modified.Modifications.Add(new Modification { Delta = 2, Reason = "Test bonus" });
 
 		Assert.Equal(card.GetComponent<CardData>().Card.Block + 3, BlockValueService.GetTotalBlockValue(card));
@@ -141,7 +142,7 @@ public sealed class ColorlessCardTests
 			{
 				Card = card,
 				DeltaBlock = 3,
-				Color = CardColorQualificationService.GetQualifiedColor(card)?.ToString(),
+				Colors = CardColorQualificationService.GetQualifiedColors(card),
 			});
 
 			var progress = entityManager.GetEntitiesWithComponent<EnemyAttackProgress>()

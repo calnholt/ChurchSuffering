@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
@@ -7,19 +9,32 @@ namespace Crusaders30XX.ECS.Services
 {
 	public static class CardColorQualificationService
 	{
-		public static CardData.CardColor? GetQualifiedColor(Entity card)
+		private static readonly IReadOnlyList<CardData.CardColor> NoColors = Array.Empty<CardData.CardColor>();
+
+		public static bool IsPlayableColor(CardData.CardColor? color)
 		{
-			if (card == null || card.HasComponent<Colorless>()) return null;
+			return color is CardData.CardColor.Red or CardData.CardColor.White or CardData.CardColor.Black;
+		}
+
+		public static IReadOnlyList<CardData.CardColor> GetQualifiedColors(Entity card)
+		{
+			if (card == null || card.HasComponent<Colorless>()) return NoColors;
 
 			var color = card.GetComponent<CardData>()?.Color;
-			return color is CardData.CardColor.Red or CardData.CardColor.White or CardData.CardColor.Black
-				? color
-				: null;
+			if (!IsPlayableColor(color)) return NoColors;
+
+			var secondaryColor = card.GetComponent<DualColor>()?.SecondaryColor;
+			if (!IsPlayableColor(secondaryColor) || secondaryColor == color)
+			{
+				return new[] { color.Value };
+			}
+
+			return new[] { color.Value, secondaryColor.Value };
 		}
 
 		public static bool QualifiesAs(Entity card, CardData.CardColor color)
 		{
-			return GetQualifiedColor(card) == color;
+			return GetQualifiedColors(card).Contains(color);
 		}
 
 		public static bool IsEligibleForCost(Entity card, string cost)
