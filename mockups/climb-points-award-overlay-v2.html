@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Climb Points Award Overlay v2</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: ClimbEndedEvent -> bank pendingClimbPoints -> show on WayStation arrival.
+    - Point rules remain identical to CollectionProgressionRules.CalculateClimbPoints.
+    - V2 direction: milestones form a bottom-to-top ascent trail, then converge into
+      the awarded-total crest. The motion reinforces that these points came from progress.
+    - Scene bg: waystation.png. All overlay decoration is primitive-friendly: gradients,
+      lines, rings, diamonds, text, and particles; no additional art dependency.
+    - Suggested SFX: low arrival swell, one stone/metal tick per milestone, bright total hit.
+    - Target duration: 2.8-4.2 seconds depending on earned tier count.
+  */
+
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0b;
+    --black-2: #121214;
+    --black-3: #1d1b1c;
+    --black-4: #30292a;
+    --ink-red: #24070d;
+    --blood: #8d1428;
+    --red: #d42b45;
+    --gold-dark: #8f6928;
+    --gold: #e8c45d;
+    --gold-hot: #fff1ac;
+    --bone: #f2ede3;
+    --ash: #b7ada3;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --ease-slam: cubic-bezier(0.2, 1.35, 0.4, 1);
+    --ease-rise: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    overflow-x: auto;
+    background: var(--black-0);
+    color: var(--bone);
+    font-family: 'Chakra Petch', sans-serif;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    margin-bottom: 4px;
+    color: #fff;
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+  }
+
+  .page-header p {
+    max-width: 1040px;
+    margin-bottom: 16px;
+    color: var(--ash);
+    font-size: 0.85rem;
+    letter-spacing: 0.45px;
+    line-height: 1.55;
+  }
+
+  .page-header code,
+  .impl-notes code {
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--black-3);
+    color: #d5a9b0;
+    font-size: 0.72rem;
+  }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .controls-row label {
+    margin-right: 4px;
+    color: var(--ash);
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .chip-btn,
+  .action-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--black-4);
+    border-radius: 4px;
+    background: var(--black-2);
+    color: var(--bone);
+    font-family: inherit;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: 150ms ease;
+  }
+
+  .chip-btn:hover,
+  .action-btn:hover {
+    border-color: var(--red);
+    background: var(--black-3);
+  }
+
+  .chip-btn.is-active,
+  .action-btn.is-primary {
+    border-color: var(--red);
+    background: rgba(141, 20, 40, 0.35);
+    color: #fff;
+  }
+
+  .status-bar {
+    margin-top: 8px;
+    color: var(--ash);
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+  }
+
+  .status-bar strong { color: var(--gold); font-weight: 600; }
+
+  .page-main { padding: 28px 40px 60px; }
+
+  .viewport-scaler {
+    position: relative;
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1320px);
+    min-height: 320px;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--black-4);
+    background: var(--black-2);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.72);
+  }
+
+  .viewport {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--game-w);
+    height: var(--game-h);
+    overflow: hidden;
+    transform-origin: top center;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/waystation.png') center / cover no-repeat;
+    transform: scale(1.015);
+    transition: transform 900ms var(--ease-rise), filter 400ms ease;
+  }
+
+  .viewport.is-playing .bg-scene {
+    transform: scale(1);
+    filter: saturate(0.72) contrast(1.08);
+  }
+
+  .scene-dim,
+  .scene-vignette,
+  .scene-radiance {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .scene-dim {
+    z-index: 2;
+    opacity: 0;
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.84), rgba(4, 1, 2, 0.72) 36%, rgba(14, 4, 6, 0.62) 64%, rgba(0, 0, 0, 0.84)),
+      rgba(0, 0, 0, 0.32);
+    transition: opacity 320ms ease;
+  }
+
+  .scene-vignette {
+    z-index: 3;
+    opacity: 0;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, transparent 24%, transparent 72%, rgba(0, 0, 0, 0.88) 100%),
+      radial-gradient(ellipse at center, transparent 25%, rgba(0, 0, 0, 0.55) 100%);
+    transition: opacity 400ms ease;
+  }
+
+  .scene-radiance {
+    z-index: 4;
+    opacity: 0;
+    background:
+      radial-gradient(circle at 50% 31%, rgba(232, 196, 93, 0.17), transparent 18%),
+      linear-gradient(106deg, transparent 42%, rgba(232, 196, 93, 0.045) 49%, transparent 55%),
+      linear-gradient(74deg, transparent 44%, rgba(212, 43, 69, 0.035) 50%, transparent 57%);
+    transition: opacity 700ms ease;
+  }
+
+  .viewport.is-playing .scene-dim,
+  .viewport.is-playing .scene-vignette,
+  .viewport.is-playing .scene-radiance { opacity: 1; }
+
+  .award-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .award-overlay.is-playing {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .frame-line {
+    position: absolute;
+    left: 118px;
+    right: 118px;
+    height: 1px;
+    opacity: 0;
+    background: linear-gradient(90deg, transparent, rgba(232, 196, 93, 0.3) 18%, rgba(232, 196, 93, 0.58) 50%, rgba(232, 196, 93, 0.3) 82%, transparent);
+    transform: scaleX(0.2);
+  }
+
+  .frame-line.is-top { top: 67px; }
+  .frame-line.is-bottom { bottom: 67px; }
+
+  .award-overlay.is-playing .frame-line {
+    animation: frame-open 700ms var(--ease-rise) 80ms forwards;
+  }
+
+  @keyframes frame-open {
+    to { opacity: 1; transform: scaleX(1); }
+  }
+
+  .intro-copy {
+    position: absolute;
+    top: 92px;
+    left: 0;
+    right: 0;
+    text-align: center;
+  }
+
+  .intro-kicker {
+    margin-bottom: 8px;
+    opacity: 0;
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    transform: translateY(-8px);
+  }
+
+  .intro-title {
+    opacity: 0;
+    color: #fff;
+    font-family: 'New Rocker', cursive;
+    font-size: 53px;
+    font-weight: 400;
+    letter-spacing: 5px;
+    line-height: 1;
+    text-shadow: 0 5px 24px rgba(0, 0, 0, 0.9);
+    transform: scale(1.08);
+  }
+
+  .award-overlay.is-playing .intro-kicker {
+    animation: intro-rise 450ms ease 150ms forwards;
+  }
+
+  .award-overlay.is-playing .intro-title {
+    animation: title-settle 600ms var(--ease-slam) 210ms forwards;
+  }
+
+  @keyframes intro-rise {
+    to { opacity: 0.8; transform: translateY(0); }
+  }
+
+  @keyframes title-settle {
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .total-crest {
+    position: absolute;
+    top: 216px;
+    left: 50%;
+    width: 272px;
+    height: 210px;
+    opacity: 0.22;
+    transform: translateX(-50%) scale(0.84);
+    transition: opacity 350ms ease;
+  }
+
+  .crest-diamond,
+  .crest-diamond::before,
+  .crest-diamond::after {
+    position: absolute;
+    content: '';
+    transform: rotate(45deg);
+  }
+
+  .crest-diamond {
+    top: 22px;
+    left: 63px;
+    width: 146px;
+    height: 146px;
+    border: 1px solid rgba(232, 196, 93, 0.88);
+    background: linear-gradient(135deg, rgba(50, 6, 14, 0.94), rgba(8, 7, 7, 0.96));
+    box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.75), 0 0 0 8px rgba(141, 20, 40, 0.17);
+  }
+
+  .crest-diamond::before {
+    inset: 12px;
+    border: 1px solid rgba(232, 196, 93, 0.42);
+    transform: none;
+  }
+
+  .crest-diamond::after {
+    inset: -13px;
+    border: 1px solid rgba(212, 43, 69, 0.36);
+    transform: none;
+  }
+
+  .crest-wing {
+    position: absolute;
+    top: 92px;
+    width: 82px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold));
+  }
+
+  .crest-wing::after {
+    position: absolute;
+    top: -5px;
+    width: 11px;
+    height: 11px;
+    border: 1px solid var(--gold);
+    content: '';
+    transform: rotate(45deg);
+  }
+
+  .crest-wing.is-left { left: 0; }
+  .crest-wing.is-right { right: 0; transform: scaleX(-1); }
+  .crest-wing::after { right: -1px; }
+
+  .crest-copy {
+    position: absolute;
+    z-index: 2;
+    top: 48px;
+    left: 0;
+    right: 0;
+    text-align: center;
+  }
+
+  .total-number {
+    color: var(--gold-hot);
+    font-family: 'New Rocker', cursive;
+    font-size: 82px;
+    line-height: 0.94;
+    text-shadow: 0 0 30px rgba(232, 196, 93, 0.36), 0 4px 0 rgba(77, 4, 14, 0.62);
+  }
+
+  .total-label {
+    margin-top: 12px;
+    color: var(--bone);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .total-crest.is-revealed {
+    opacity: 1;
+    animation: crest-arrive 760ms var(--ease-slam) forwards;
+  }
+
+  @keyframes crest-arrive {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.58) rotate(-3deg); filter: brightness(2.2); }
+    48% { opacity: 1; transform: translateX(-50%) scale(1.1) rotate(1deg); filter: brightness(1.55); }
+    100% { opacity: 1; transform: translateX(-50%) scale(1) rotate(0); filter: brightness(1); }
+  }
+
+  .shockwave {
+    position: absolute;
+    top: 305px;
+    left: 50%;
+    width: 220px;
+    height: 220px;
+    border: 2px solid rgba(255, 241, 172, 0.65);
+    border-radius: 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+    pointer-events: none;
+  }
+
+  .shockwave.is-visible { animation: shockwave 780ms ease-out forwards; }
+
+  @keyframes shockwave {
+    0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.35); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(3.35); }
+  }
+
+  .ascent-route {
+    position: absolute;
+    top: 445px;
+    left: 50%;
+    width: 940px;
+    height: 460px;
+    transform: translateX(-50%);
+  }
+
+  .route-rail {
+    position: absolute;
+    top: 2px;
+    bottom: 4px;
+    left: 50%;
+    width: 2px;
+    opacity: 0.5;
+    background: rgba(183, 173, 163, 0.18);
+    transform: translateX(-50%);
+  }
+
+  .route-rail::before,
+  .route-rail::after {
+    position: absolute;
+    left: 50%;
+    width: 9px;
+    height: 9px;
+    border: 1px solid rgba(232, 196, 93, 0.34);
+    content: '';
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .route-rail::before { top: -7px; }
+  .route-rail::after { bottom: -7px; }
+
+  .route-fill {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    width: 3px;
+    height: 0;
+    background: linear-gradient(0deg, var(--blood), var(--red) 50%, var(--gold));
+    box-shadow: 0 0 12px rgba(212, 43, 69, 0.75), 0 0 28px rgba(232, 196, 93, 0.28);
+    transform: translateX(-50%);
+    transition: height 390ms var(--ease-rise);
+  }
+
+  .route-row {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 92px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .route-row.is-earned { animation: row-in 560ms var(--ease-rise) forwards; }
+
+  @keyframes row-in {
+    0% { opacity: 0; transform: translateY(26px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .route-node {
+    position: absolute;
+    top: 32px;
+    left: 50%;
+    z-index: 3;
+    width: 27px;
+    height: 27px;
+    border: 2px solid var(--gold);
+    background: var(--ink-red);
+    box-shadow: 0 0 0 7px rgba(141, 20, 40, 0.36), 0 0 24px rgba(232, 196, 93, 0.5);
+    transform: translateX(-50%) rotate(45deg) scale(0.15);
+  }
+
+  .route-row.is-earned .route-node { animation: node-hit 520ms var(--ease-slam) 80ms forwards; }
+
+  .route-node::before {
+    position: absolute;
+    inset: 6px;
+    background: var(--gold-hot);
+    content: '';
+  }
+
+  @keyframes node-hit {
+    0% { transform: translateX(-50%) rotate(45deg) scale(0.15); filter: brightness(2); }
+    62% { transform: translateX(-50%) rotate(45deg) scale(1.28); filter: brightness(1.65); }
+    100% { transform: translateX(-50%) rotate(45deg) scale(1); filter: brightness(1); }
+  }
+
+  .node-ring {
+    position: absolute;
+    top: 21px;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    border: 1px solid rgba(232, 196, 93, 0.72);
+    border-radius: 50%;
+    opacity: 0;
+    transform: translateX(-50%) scale(0.3);
+  }
+
+  .route-row.is-earned .node-ring { animation: node-ring 580ms ease-out 90ms forwards; }
+
+  @keyframes node-ring {
+    0% { opacity: 0.75; transform: translateX(-50%) scale(0.3); }
+    100% { opacity: 0; transform: translateX(-50%) scale(2); }
+  }
+
+  .route-card {
+    position: absolute;
+    top: 4px;
+    width: 390px;
+    min-height: 78px;
+    padding: 13px 18px;
+    border: 1px solid rgba(183, 173, 163, 0.24);
+    background: linear-gradient(90deg, rgba(13, 10, 11, 0.94), rgba(31, 7, 12, 0.8));
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(3px);
+  }
+
+  .route-card::after {
+    position: absolute;
+    top: 50%;
+    width: 55px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(232, 196, 93, 0.45), transparent);
+    content: '';
+  }
+
+  .route-row.is-left .route-card {
+    right: calc(50% + 52px);
+    padding-right: 82px;
+    border-right: 2px solid var(--blood);
+    text-align: right;
+    transform: translateX(-24px);
+  }
+
+  .route-row.is-left .route-card::after {
+    right: -56px;
+    transform: translateY(-50%);
+  }
+
+  .route-row.is-right .route-card {
+    left: calc(50% + 52px);
+    padding-left: 82px;
+    border-left: 2px solid var(--blood);
+    text-align: left;
+    transform: translateX(24px);
+  }
+
+  .route-row.is-right .route-card::after {
+    left: -56px;
+    transform: translateY(-50%) scaleX(-1);
+  }
+
+  .route-row.is-earned .route-card { animation: card-land 620ms var(--ease-rise) 40ms forwards; }
+
+  @keyframes card-land { to { transform: translateX(0); } }
+
+  .tier-name {
+    color: var(--bone);
+    font-family: 'New Rocker', cursive;
+    font-size: 25px;
+    letter-spacing: 1.5px;
+    line-height: 1.05;
+  }
+
+  .tier-req {
+    margin-top: 6px;
+    color: var(--ash);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .tier-points {
+    position: absolute;
+    top: 50%;
+    color: var(--gold-hot);
+    font-family: 'New Rocker', cursive;
+    font-size: 42px;
+    line-height: 1;
+    text-shadow: 0 0 18px rgba(232, 196, 93, 0.36);
+    transform: translateY(-50%);
+  }
+
+  .is-left .tier-points { right: 18px; }
+  .is-right .tier-points { left: 18px; }
+
+  .empty-state {
+    position: absolute;
+    top: 560px;
+    left: 50%;
+    width: 620px;
+    padding: 26px 34px;
+    border-top: 1px solid rgba(183, 173, 163, 0.22);
+    border-bottom: 1px solid rgba(183, 173, 163, 0.22);
+    opacity: 0;
+    background: rgba(7, 7, 8, 0.62);
+    color: var(--ash);
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-align: center;
+    text-transform: uppercase;
+    transform: translateX(-50%) translateY(12px);
+  }
+
+  .empty-state strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--bone);
+    font-family: 'New Rocker', cursive;
+    font-size: 29px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: none;
+  }
+
+  .empty-state.is-visible { animation: empty-rise 500ms ease forwards; }
+
+  @keyframes empty-rise {
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  .particle-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .spark {
+    position: absolute;
+    top: 305px;
+    left: 50%;
+    width: 3px;
+    height: 18px;
+    border-radius: 2px;
+    opacity: 0;
+    background: linear-gradient(var(--gold-hot), transparent);
+    box-shadow: 0 0 8px var(--gold);
+    transform-origin: 50% 0;
+  }
+
+  .particle-layer.is-bursting .spark {
+    animation: spark-burst 900ms cubic-bezier(0.1, 0.7, 0.2, 1) var(--delay) forwards;
+  }
+
+  @keyframes spark-burst {
+    0% { opacity: 1; transform: rotate(var(--angle)) translateY(0) scaleY(0.5); }
+    100% { opacity: 0; transform: rotate(var(--angle)) translateY(var(--distance)) scaleY(1.3); }
+  }
+
+  .input-hint {
+    position: absolute;
+    bottom: 88px;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    color: rgba(242, 237, 227, 0.44);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .input-hint.is-visible { animation: hint-in 350ms ease forwards; }
+
+  @keyframes hint-in { to { opacity: 1; } }
+
+  .impl-notes {
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 28px auto 0;
+    padding: 20px 24px;
+    border: 1px solid var(--black-4);
+    background: var(--black-1);
+    color: var(--ash);
+    font-size: 0.75rem;
+    line-height: 1.65;
+  }
+
+  .impl-notes h2 {
+    margin-bottom: 10px;
+    color: #fff;
+    font-family: 'New Rocker', cursive;
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+
+  .impl-notes .section { margin-top: 14px; }
+  .impl-notes strong { color: var(--bone); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 1ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Climb Points Award Overlay — v2</h1>
+  <p>
+    A more directional award sequence: milestone cards ignite from the bottom of an ascent trail,
+    feed into a crest, and resolve with the total climb points awarded. The visual language stays
+    primitive-friendly for MonoGame while adding clearer hierarchy, progression, and payoff.
+  </p>
+  <div class="controls-row">
+    <label>Scenario</label>
+    <button type="button" class="chip-btn" data-scenario="time0">Time 0 (+0)</button>
+    <button type="button" class="chip-btn is-active" data-scenario="partial">Time 12 (+1)</button>
+    <button type="button" class="chip-btn" data-scenario="mid">Time 20 (+4)</button>
+    <button type="button" class="chip-btn" data-scenario="deep">Time 26 (+9)</button>
+    <button type="button" class="chip-btn" data-scenario="victory">Victory (+12)</button>
+    <button type="button" class="chip-btn" data-scenario="abandoned">Abandoned (+0)</button>
+    <button type="button" class="action-btn is-primary" id="replay-btn">Replay Animation</button>
+  </div>
+  <p class="status-bar" id="status-bar">Ready</p>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler">
+    <div class="viewport" id="viewport">
+      <div class="bg-scene"></div>
+      <div class="scene-dim"></div>
+      <div class="scene-vignette"></div>
+      <div class="scene-radiance"></div>
+
+      <section class="award-overlay" id="award-overlay" aria-label="Climb points awarded">
+        <div class="frame-line is-top"></div>
+        <div class="frame-line is-bottom"></div>
+
+        <header class="intro-copy">
+          <p class="intro-kicker" id="intro-kicker">Returned to the Waystation</p>
+          <h2 class="intro-title" id="intro-title">The Climb Remembers</h2>
+        </header>
+
+        <div class="shockwave" id="shockwave"></div>
+        <div class="particle-layer" id="particle-layer" aria-hidden="true"></div>
+
+        <div class="total-crest" id="total-crest">
+          <span class="crest-wing is-left"></span>
+          <span class="crest-wing is-right"></span>
+          <div class="crest-diamond"></div>
+          <div class="crest-copy">
+            <div class="total-number" id="total-number">+0</div>
+            <div class="total-label">Climb points awarded</div>
+          </div>
+        </div>
+
+        <div class="ascent-route" id="ascent-route">
+          <div class="route-rail"></div>
+          <div class="route-fill" id="route-fill"></div>
+          <div id="route-rows"></div>
+        </div>
+
+        <div class="empty-state" id="empty-state">
+          <strong id="empty-title">No threshold reached</strong>
+          <span id="empty-detail">Continue climbing to earn climb points</span>
+        </div>
+
+        <p class="input-hint" id="input-hint">Click anywhere to continue</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="impl-notes">
+    <h2>V2 implementation notes</h2>
+    <div><strong>Visual thesis</strong> — The reward breakdown now behaves like an ascent. Each earned threshold lights one higher node, making cumulative progress readable before the total resolves.</div>
+    <div class="section"><strong>Motion order</strong> — Scene settles, title appears, route grows bottom-to-top, milestone cards land on alternating sides, then the crest slams in with a count-up, ring, and short particle burst.</div>
+    <div class="section"><strong>MonoGame-friendly construction</strong> — Background dim/vignette, two frame rules, a center rail, bordered cards, diamond nodes, crest diamonds, expanding ring, and 18 short line particles. Only the existing Waystation image and project fonts are required.</div>
+    <div class="section"><strong>Timing</strong> — First tier at 620ms, additional tiers every 410ms, total 520ms after the last tier, 1.35s hold. A player input after the total reveal dismisses immediately; earlier input completes the sequence.</div>
+    <div class="section"><strong>Point rules</strong> — Time 8+ = +1 | Time 16+ = +3 | Time 24+ = +5 | Final boss = +3 | Abandoned = 0.</div>
+  </div>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+  const TIER_START_MS = 620;
+  const TIER_STAGGER_MS = 410;
+  const TOTAL_AFTER_LAST_MS = 520;
+  const TOTAL_ANIM_MS = 760;
+  const HOLD_MS = 1350;
+
+  const TIERS = [
+    { id: 'shop1', timeThreshold: 8, points: 1, name: 'First Threshold', req: 'First shop refresh reached | time 8+' },
+    { id: 'shop2', timeThreshold: 16, points: 3, name: 'Second Threshold', req: 'Second shop refresh reached | time 16+' },
+    { id: 'shop3', timeThreshold: 24, points: 5, name: 'Third Threshold', req: 'Third shop refresh reached | time 24+' },
+    { id: 'boss', requiresBoss: true, points: 3, name: 'Final Judgment', req: 'Final boss defeated' },
+  ];
+
+  const SCENARIOS = {
+    time0: { time: 0, boss: false, abandoned: false, label: 'Time 0', desc: 'no reward threshold reached' },
+    partial: { time: 12, boss: false, abandoned: false, label: 'Time 12', desc: 'first threshold reached' },
+    mid: { time: 20, boss: false, abandoned: false, label: 'Time 20', desc: 'two thresholds reached' },
+    deep: { time: 26, boss: false, abandoned: false, label: 'Time 26', desc: 'all time thresholds reached' },
+    victory: { time: 32, boss: true, abandoned: false, label: 'Time 32 + boss', desc: 'full clear' },
+    abandoned: { time: 18, boss: false, abandoned: true, label: 'Abandoned at time 18', desc: 'no progress banked' },
+  };
+
+  let activeScenario = 'partial';
+  let playing = false;
+  let totalRevealed = false;
+  let animationRun = 0;
+  let timers = [];
+
+  function calculateClimbPoints(time, completedBoss, abandoned) {
+    if (abandoned) return 0;
+    let points = 0;
+    if (time >= 8) points += 1;
+    if (time >= 16) points += 3;
+    if (time >= 24) points += 5;
+    if (completedBoss) points += 3;
+    return points;
+  }
+
+  function getEarnedTiers(scenario) {
+    if (scenario.abandoned) return [];
+    return TIERS.filter(tier => tier.requiresBoss ? scenario.boss : scenario.time >= tier.timeThreshold);
+  }
+
+  function clearTimers() {
+    timers.forEach(timer => clearTimeout(timer));
+    timers = [];
+  }
+
+  function schedule(callback, delay) {
+    timers.push(setTimeout(callback, delay));
+  }
+
+  function buildParticles() {
+    const layer = document.getElementById('particle-layer');
+    layer.innerHTML = '';
+    for (let i = 0; i < 18; i += 1) {
+      const spark = document.createElement('span');
+      const angle = (360 / 18) * i + (i % 2 ? 4 : -3);
+      const distance = 145 + (i % 5) * 24;
+      spark.className = 'spark';
+      spark.style.setProperty('--angle', `${angle}deg`);
+      spark.style.setProperty('--distance', `${distance}px`);
+      spark.style.setProperty('--delay', `${(i % 3) * 22}ms`);
+      layer.appendChild(spark);
+    }
+  }
+
+  function buildRoute(earned) {
+    const container = document.getElementById('route-rows');
+    container.innerHTML = '';
+    const bottomInset = earned.length === 1 ? 172 : 20;
+    const spacing = earned.length > 1 ? Math.min(112, 414 / (earned.length - 1)) : 0;
+
+    earned.forEach((tier, index) => {
+      const row = document.createElement('div');
+      row.className = `route-row ${index % 2 === 0 ? 'is-left' : 'is-right'}`;
+      row.dataset.tier = tier.id;
+      row.style.bottom = `${bottomInset + index * spacing}px`;
+      row.innerHTML = `
+        <div class="node-ring"></div>
+        <div class="route-node"></div>
+        <div class="route-card">
+          <div class="tier-name">${tier.name}</div>
+          <div class="tier-req">${tier.req}</div>
+          <div class="tier-points">+${tier.points}</div>
+        </div>`;
+      container.appendChild(row);
+    });
+  }
+
+  function resetAnimationState() {
+    clearTimers();
+    totalRevealed = false;
+    document.getElementById('total-crest').classList.remove('is-revealed');
+    document.getElementById('shockwave').classList.remove('is-visible');
+    document.getElementById('particle-layer').classList.remove('is-bursting');
+    document.getElementById('empty-state').classList.remove('is-visible');
+    document.getElementById('input-hint').classList.remove('is-visible');
+    document.getElementById('route-fill').style.height = '0px';
+    document.querySelectorAll('.route-row').forEach(row => row.classList.remove('is-earned'));
+  }
+
+  function revealTotal(total, runToken = animationRun) {
+    totalRevealed = true;
+    const crest = document.getElementById('total-crest');
+    const number = document.getElementById('total-number');
+    crest.classList.add('is-revealed');
+    document.getElementById('shockwave').classList.add('is-visible');
+    document.getElementById('particle-layer').classList.add('is-bursting');
+
+    const startedAt = performance.now();
+    const countDuration = 580;
+    function count(now) {
+      if (runToken !== animationRun) return;
+      const progress = Math.min(1, (now - startedAt) / countDuration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      number.textContent = `+${Math.round(total * eased)}`;
+      if (progress < 1 && playing && runToken === animationRun) requestAnimationFrame(count);
+    }
+    requestAnimationFrame(count);
+
+    schedule(() => document.getElementById('input-hint').classList.add('is-visible'), 620);
+  }
+
+  function finishAnimation() {
+    clearTimers();
+    const overlay = document.getElementById('award-overlay');
+    const viewport = document.getElementById('viewport');
+    overlay.style.transition = 'opacity 300ms ease';
+    overlay.style.opacity = '0';
+    schedule(() => {
+      overlay.classList.remove('is-playing');
+      viewport.classList.remove('is-playing');
+      overlay.style.opacity = '';
+      overlay.style.transition = '';
+      playing = false;
+      totalRevealed = false;
+    }, 310);
+  }
+
+  function completeImmediately() {
+    const scenario = SCENARIOS[activeScenario];
+    const earned = getEarnedTiers(scenario);
+    clearTimers();
+    earned.forEach(rowTier => {
+      document.querySelector(`.route-row[data-tier="${rowTier.id}"]`)?.classList.add('is-earned');
+    });
+    const lastRouteHeight = earned.length === 1
+      ? 221
+      : earned.length > 1
+        ? 66 + (earned.length - 1) * Math.min(112, 414 / (earned.length - 1))
+        : 0;
+    document.getElementById('route-fill').style.height = `${lastRouteHeight}px`;
+    if (!earned.length) document.getElementById('empty-state').classList.add('is-visible');
+    revealTotal(calculateClimbPoints(scenario.time, scenario.boss, scenario.abandoned));
+  }
+
+  function playAnimation() {
+    const scenario = SCENARIOS[activeScenario];
+    const earned = getEarnedTiers(scenario);
+    const total = calculateClimbPoints(scenario.time, scenario.boss, scenario.abandoned);
+    const overlay = document.getElementById('award-overlay');
+    const viewport = document.getElementById('viewport');
+
+    if (playing) clearTimers();
+    const runToken = ++animationRun;
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+    buildRoute(earned);
+    buildParticles();
+    resetAnimationState();
+    document.getElementById('total-number').textContent = '+0';
+    document.getElementById('intro-title').textContent = scenario.abandoned ? 'The Climb Is Forfeit' : 'The Climb Remembers';
+    document.getElementById('intro-kicker').textContent = scenario.boss ? 'A victorious return' : 'Returned to the Waystation';
+    document.getElementById('empty-title').textContent = scenario.abandoned
+      ? 'No progress was banked'
+      : 'No threshold reached';
+    document.getElementById('empty-detail').textContent = scenario.abandoned
+      ? 'Abandoned climbs award no climb points'
+      : 'Continue climbing to earn climb points';
+
+    overlay.classList.remove('is-playing');
+    viewport.classList.remove('is-playing');
+    void overlay.offsetWidth;
+    overlay.classList.add('is-playing');
+    viewport.classList.add('is-playing');
+    playing = true;
+
+    if (earned.length) {
+      earned.forEach((tier, index) => {
+        schedule(() => {
+          document.querySelector(`.route-row[data-tier="${tier.id}"]`)?.classList.add('is-earned');
+          const targetHeight = earned.length === 1 ? 221 : 66 + index * Math.min(112, 414 / (earned.length - 1));
+          document.getElementById('route-fill').style.height = `${targetHeight}px`;
+        }, TIER_START_MS + index * TIER_STAGGER_MS);
+      });
+    } else {
+      schedule(() => document.getElementById('empty-state').classList.add('is-visible'), TIER_START_MS);
+    }
+
+    const lastTierDelay = earned.length
+      ? TIER_START_MS + (earned.length - 1) * TIER_STAGGER_MS
+      : TIER_START_MS;
+    const totalDelay = lastTierDelay + TOTAL_AFTER_LAST_MS;
+    schedule(() => revealTotal(total, runToken), totalDelay);
+    schedule(finishAnimation, totalDelay + TOTAL_ANIM_MS + HOLD_MS);
+  }
+
+  function setScenario(id) {
+    activeScenario = id;
+    const scenario = SCENARIOS[id];
+    const total = calculateClimbPoints(scenario.time, scenario.boss, scenario.abandoned);
+    document.querySelectorAll('.chip-btn[data-scenario]').forEach(button => {
+      button.classList.toggle('is-active', button.dataset.scenario === id);
+    });
+    document.getElementById('status-bar').innerHTML =
+      `Ready — <strong>${scenario.label}</strong>, +${total} climb point${total === 1 ? '' : 's'} (${scenario.desc}).`;
+  }
+
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const viewport = document.getElementById('viewport');
+    if (!scaler || !viewport) return;
+    const scale = scaler.clientWidth / GAME_W;
+    viewport.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  document.querySelectorAll('.chip-btn[data-scenario]').forEach(button => {
+    button.addEventListener('click', () => {
+      setScenario(button.dataset.scenario);
+      playAnimation();
+    });
+  });
+
+  document.getElementById('replay-btn').addEventListener('click', playAnimation);
+  document.getElementById('award-overlay').addEventListener('click', () => {
+    if (!playing) return;
+    if (totalRevealed) finishAnimation();
+    else completeImmediately();
+  });
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', () => {
+    fitViewport();
+    setScenario('partial');
+    setTimeout(playAnimation, 350);
+  });
+  fitViewport();
+</script>
+</body>
+</html>

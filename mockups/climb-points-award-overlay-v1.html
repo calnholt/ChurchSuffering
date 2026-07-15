@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Climb Points Award Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Trigger: ClimbEndedEvent → bank pendingClimbPoints → show overlay on WayStation arrival
+    - Points: CollectionProgressionRules.CalculateClimbPoints(time, completedBoss, abandoned)
+      · time >= 8  → +1   (FirstShopRefreshTime)
+      · time >= 16 → +3   (SecondShopRefreshTime)
+      · time >= 24 → +5   (ThirdShopRefreshTime)
+      · completedFinalBoss → +3
+      · abandoned → 0 total
+    - Scene bg: waystation.png; overlay dim rgba(0,0,0,0.72)
+    - Fonts: TitleFont (New Rocker), Chakra Petch body
+    - Gate Slam layout: tier names slam in staggered; gold flash on total
+    - Duration ~3.6s; block input until complete or skippable after total reveal
+  */
+  :root {
+    --black-0: #050505;
+    --black-1: #0a0a0a;
+    --black-2: #141414;
+    --black-3: #1e1e1e;
+    --black-4: #2a2a2a;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-3: #c41e3a;
+    --gold: #e8c84a;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --overlay-ms: 3600;
+    --ease-slam: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black-0);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--black-4);
+    background: var(--black-1);
+  }
+
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 4px;
+  }
+
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    max-width: 960px;
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+
+  .page-header code {
+    font-size: 0.72rem;
+    background: var(--black-3);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #c8a0a8;
+  }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .controls-row label {
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    margin-right: 4px;
+  }
+
+  .chip-btn, .action-btn {
+    padding: 8px 14px;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .chip-btn:hover, .action-btn:hover:not(:disabled) {
+    background: var(--black-3);
+    border-color: var(--red-3);
+  }
+
+  .chip-btn.is-active {
+    background: rgba(139, 0, 0, 0.35);
+    border-color: var(--red-3);
+    color: var(--white-1);
+  }
+
+  .action-btn.is-primary {
+    background: rgba(139, 0, 0, 0.35);
+    border-color: var(--red-3);
+  }
+
+  .status-bar {
+    margin-top: 8px;
+    font-size: 0.72rem;
+    color: var(--white-3);
+    letter-spacing: 0.5px;
+  }
+
+  .status-bar strong { color: var(--gold); font-weight: 600; }
+
+  .page-main { padding: 28px 40px 60px; }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--black-2);
+    border: 1px solid var(--black-4);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/waystation.png') center / cover no-repeat;
+  }
+
+  .bg-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .viewport.is-playing .bg-dim { opacity: 1; }
+
+  .award-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .award-overlay.is-playing {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .panel-c {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 120px;
+  }
+
+  .panel-c .overlay-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 56px;
+    letter-spacing: 4px;
+    color: var(--white-1);
+    margin-bottom: 48px;
+    opacity: 0;
+    transform: scale(1.15);
+  }
+
+  .award-overlay.is-playing .panel-c .overlay-title {
+    animation: title-slam 0.5s var(--ease-slam) 0.1s forwards;
+  }
+
+  @keyframes title-slam {
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .slam-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 36px;
+  }
+
+  .slam-tier {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    opacity: 0;
+    transform: translateY(30px) scale(0.85);
+  }
+
+  .slam-tier.is-earned {
+    animation: tier-slam 0.55s var(--ease-slam) forwards;
+  }
+
+  @keyframes tier-slam {
+    0% { opacity: 0; transform: translateY(30px) scale(0.85); }
+    60% { opacity: 1; transform: translateY(-4px) scale(1.04); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .slam-tier .slam-name {
+    font-family: 'New Rocker', cursive;
+    font-size: 36px;
+    color: var(--white-1);
+    letter-spacing: 2px;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  .slam-tier .slam-plus {
+    font-family: 'New Rocker', cursive;
+    font-size: 42px;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(232, 200, 74, 0.5);
+    min-width: 80px;
+  }
+
+  .slam-tier .slam-req {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    margin-top: 2px;
+  }
+
+  .slam-empty {
+    font-size: 15px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    opacity: 0;
+  }
+
+  .award-overlay.is-playing .slam-empty.is-visible {
+    animation: fade-up 0.4s ease 0.5s forwards;
+  }
+
+  .slam-total {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  .award-overlay.is-playing .slam-total.is-visible {
+    animation: total-explode 0.65s var(--ease-slam) forwards;
+  }
+
+  @keyframes total-explode {
+    0% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 1; transform: scale(1.12); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .slam-total .total-num {
+    font-family: 'New Rocker', cursive;
+    font-size: 88px;
+    line-height: 1;
+    color: var(--gold);
+    text-shadow:
+      0 0 40px rgba(232, 200, 74, 0.55),
+      0 4px 0 rgba(139, 0, 0, 0.4);
+  }
+
+  .slam-total .total-caption {
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    margin-top: 8px;
+  }
+
+  .slam-flash {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 45%, rgba(232, 200, 74, 0.18), transparent 55%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .award-overlay.is-playing .slam-flash.is-visible {
+    animation: flash-pulse 0.6s ease forwards;
+  }
+
+  @keyframes flash-pulse {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hint-bar {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.3);
+    z-index: 40;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .impl-notes {
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 28px auto 0;
+    padding: 20px 24px;
+    background: var(--black-1);
+    border: 1px solid var(--black-4);
+    font-size: 0.75rem;
+    color: var(--white-3);
+    line-height: 1.65;
+  }
+
+  .impl-notes h2 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1rem;
+    color: var(--white-1);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+
+  .impl-notes .section { margin-top: 14px; }
+  .impl-notes strong { color: var(--white-2); }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Climb Points Award Overlay</h1>
+  <p>
+    Quick animation overlay shown after a climb ends and the player returns to the Waystation.
+    Points mirror <code>CollectionProgressionRules.CalculateClimbPoints</code> — shop refresh milestones at
+    time 8 / 16 / 24 (+1 / +3 / +5) plus +3 for defeating the final boss. Abandoned climbs award nothing.
+    Banked points appear as <code>pendingClimbPoints</code> until claimed on the Achievements screen.
+  </p>
+  <div class="controls-row">
+    <label>Scenario</label>
+    <button type="button" class="chip-btn is-active" data-scenario="partial">Time 12 (+1)</button>
+    <button type="button" class="chip-btn" data-scenario="mid">Time 20 (+4)</button>
+    <button type="button" class="chip-btn" data-scenario="deep">Time 26 (+9)</button>
+    <button type="button" class="chip-btn" data-scenario="victory">Victory (+12)</button>
+    <button type="button" class="action-btn is-primary" id="replay-btn">Replay Animation</button>
+  </div>
+  <p class="status-bar" id="status-bar">Ready — <strong>Time 12</strong>, +1 climb point (first shop refresh reached).</p>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler">
+    <div class="viewport" id="viewport">
+      <div class="bg-scene"></div>
+      <div class="bg-dim"></div>
+
+      <div class="award-overlay" id="award-overlay">
+        <div class="slam-flash" id="slam-flash"></div>
+        <div class="panel-c">
+          <h2 class="overlay-title">Climb Progress</h2>
+          <div class="slam-stack" id="slam-stack"></div>
+          <p class="slam-empty" id="slam-empty">No milestones reached</p>
+          <div class="slam-total" id="total-c">
+            <div class="total-num" id="total-value-c">+0</div>
+            <div class="total-caption">Climb points earned</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint-bar">Click Replay or change scenario to preview</div>
+    </div>
+  </div>
+
+  <div class="impl-notes">
+    <h2>Implementation notes</h2>
+    <div><strong>Trigger</strong> — Publish after <code>ClimbEndedEvent</code> when routing to WayStation (<code>WayStationArrivalKind.ReturnedFromFailedClimb</code> or victory). Overlay blocks POI input until animation completes (~3.6s) or player skips.</div>
+    <div class="section"><strong>Point tiers</strong> (cumulative caps from <code>CollectionProgressionRules</code>)</div>
+    <div>
+      Time &ge; 8 &rarr; +1 &nbsp;|&nbsp; Time &ge; 16 &rarr; +3 &nbsp;|&nbsp; Time &ge; 24 &rarr; +5 &nbsp;|&nbsp; Final boss &rarr; +3 &nbsp;|&nbsp; Abandoned &rarr; 0
+    </div>
+    <div class="section"><strong>Animation timeline</strong> (scales with earned tiers)</div>
+    <div>
+      Dim fade &nbsp;·&nbsp; title slam &nbsp;·&nbsp; only earned tiers reveal staggered (~420ms apart) &nbsp;·&nbsp; total slams ~380ms after last tier lands &nbsp;·&nbsp; dismiss after brief hold
+    </div>
+    <div class="section"><strong>System</strong> — <code>ClimbPointsAwardOverlayDisplaySystem</code> on WayStation scene; read <code>ClimbEndedEvent</code> payload already persisted to <code>pendingClimbPoints</code>.</div>
+  </div>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+  const TIER_START_MS = 500;
+  const TIER_STAGGER_MS = 420;
+  const TIER_ANIM_MS = 550;
+  const TOTAL_AFTER_LAST_TIER_MS = 380;
+  const OVERLAY_HOLD_MS = 900;
+
+  const TIERS = [
+    { id: 'shop1', timeThreshold: 8,  points: 1, name: 'First Shop Refresh',  req: 'Climb time 8+' },
+    { id: 'shop2', timeThreshold: 16, points: 3, name: 'Second Shop Refresh', req: 'Climb time 16+' },
+    { id: 'shop3', timeThreshold: 24, points: 5, name: 'Third Shop Refresh',  req: 'Climb time 24+' },
+    { id: 'boss',  requiresBoss: true, points: 3, name: 'Final Judgment',      req: 'Defeat final boss' },
+  ];
+
+  const SCENARIOS = {
+    partial: { time: 12, boss: false, abandoned: false, label: 'Time 12', desc: '+1 climb point (first shop refresh)' },
+    mid:     { time: 20, boss: false, abandoned: false, label: 'Time 20', desc: '+4 climb points (two shop refreshes)' },
+    deep:    { time: 26, boss: false, abandoned: false, label: 'Time 26', desc: '+9 climb points (three shop refreshes)' },
+    victory: { time: 32, boss: true,  abandoned: false, label: 'Time 32 + boss', desc: '+12 climb points (full clear)' },
+  };
+
+  let activeScenario = 'partial';
+  let playing = false;
+  let animTimers = [];
+
+  function calculateClimbPoints(time, completedBoss, abandoned) {
+    if (abandoned) return 0;
+    let points = 0;
+    if (time >= 8)  points += 1;
+    if (time >= 16) points += 3;
+    if (time >= 24) points += 5;
+    if (completedBoss) points += 3;
+    return points;
+  }
+
+  function getEarnedTiers(time, completedBoss, abandoned) {
+    if (abandoned) return [];
+    return TIERS.filter(t => {
+      if (t.requiresBoss) return completedBoss;
+      return time >= t.timeThreshold;
+    });
+  }
+
+  function clearTimers() {
+    animTimers.forEach(t => clearTimeout(t));
+    animTimers = [];
+  }
+
+  function buildSlamStack(earned) {
+    const el = document.getElementById('slam-stack');
+    el.innerHTML = '';
+    earned.forEach(tier => {
+      const row = document.createElement('div');
+      row.className = 'slam-tier';
+      row.dataset.tier = tier.id;
+      row.innerHTML = `
+        <div>
+          <div class="slam-name">${tier.name}</div>
+          <div class="slam-req">${tier.req}</div>
+        </div>
+        <div class="slam-plus">+${tier.points}</div>`;
+      el.appendChild(row);
+    });
+  }
+
+  function getTotalRevealDelay(earnedCount) {
+    if (earnedCount <= 0) return TIER_START_MS + 200;
+    const lastTierStart = TIER_START_MS + (earnedCount - 1) * TIER_STAGGER_MS;
+    return lastTierStart + TIER_ANIM_MS + TOTAL_AFTER_LAST_TIER_MS;
+  }
+
+  function resetAnimState() {
+    document.querySelectorAll('.slam-tier').forEach(s => {
+      s.classList.remove('is-earned');
+      s.style.animation = 'none';
+      void s.offsetWidth;
+      s.style.animation = '';
+    });
+    ['total-c', 'slam-empty', 'slam-flash'].forEach(id => {
+      document.getElementById(id)?.classList.remove('is-visible');
+    });
+    const title = document.querySelector('.panel-c .overlay-title');
+    if (title) {
+      title.style.animation = 'none';
+      void title.offsetWidth;
+      title.style.animation = '';
+    }
+  }
+
+  function playAnimation() {
+    if (playing) return;
+    const scenario = SCENARIOS[activeScenario];
+    const earned = getEarnedTiers(scenario.time, scenario.boss, scenario.abandoned);
+    const total = calculateClimbPoints(scenario.time, scenario.boss, scenario.abandoned);
+
+    clearTimers();
+    resetAnimState();
+    buildSlamStack(earned);
+    document.getElementById('total-value-c').textContent = `+${total}`;
+
+    const totalDelay = getTotalRevealDelay(earned.length);
+    const overlayDuration = totalDelay + 650 + OVERLAY_HOLD_MS;
+
+    const viewport = document.getElementById('viewport');
+    const overlay = document.getElementById('award-overlay');
+    overlay.classList.remove('is-playing');
+    viewport.classList.remove('is-playing');
+    void overlay.offsetWidth;
+    overlay.classList.add('is-playing');
+    viewport.classList.add('is-playing');
+    playing = true;
+
+    earned.forEach((tier, i) => {
+      animTimers.push(setTimeout(() => {
+        document.querySelectorAll(`.slam-tier[data-tier="${tier.id}"]`).forEach(el => {
+          el.classList.add('is-earned');
+        });
+      }, TIER_START_MS + i * TIER_STAGGER_MS));
+    });
+
+    animTimers.push(setTimeout(() => {
+      document.getElementById('total-c')?.classList.add('is-visible');
+      document.getElementById('slam-flash')?.classList.add('is-visible');
+      if (total === 0) document.getElementById('slam-empty')?.classList.add('is-visible');
+    }, totalDelay));
+
+    animTimers.push(setTimeout(() => {
+      overlay.classList.remove('is-playing');
+      viewport.classList.remove('is-playing');
+      playing = false;
+    }, overlayDuration));
+  }
+
+  function setScenario(id) {
+    activeScenario = id;
+    const s = SCENARIOS[id];
+    const total = calculateClimbPoints(s.time, s.boss, s.abandoned);
+    document.querySelectorAll('.chip-btn[data-scenario]').forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.scenario === id);
+    });
+    document.getElementById('status-bar').innerHTML =
+      `Ready — <strong>${s.label}</strong>, +${total} climb point${total === 1 ? '' : 's'} (${s.desc}).`;
+  }
+
+  function fitViewport() {
+    const scaler = document.querySelector('.viewport-scaler');
+    const vp = document.getElementById('viewport');
+    if (!scaler || !vp) return;
+    const scale = scaler.clientWidth / GAME_W;
+    vp.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  document.querySelectorAll('.chip-btn[data-scenario]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setScenario(btn.dataset.scenario);
+      playAnimation();
+    });
+  });
+
+  document.getElementById('replay-btn').addEventListener('click', playAnimation);
+
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('load', () => {
+    fitViewport();
+    setScenario('partial');
+    setTimeout(playAnimation, 400);
+  });
+  fitViewport();
+</script>
+</body>
+</html>
