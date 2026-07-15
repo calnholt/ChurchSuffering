@@ -97,6 +97,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
 | `climb-header` | Climb scene | Compact resources, preview badges, pulse, and Run Overview control |
 | `climb-resource-acquisition` | Climb scene | Gem fall, pouch catch, and earned-resource pulse |
+| `climb-points-award` | WayStation return overlay | Climb threshold ascent, total crest, zero, and abandoned variants |
 
 ---
 
@@ -129,6 +130,20 @@ dotnet run -- snapshot climb-resource-acquisition pulse --verify
 ```
 
 Approved images are stored under `tests/VisualBaselines/climb-resource-acquisition/`.
+
+---
+
+## `climb-points-award`
+
+Renders the production Waystation return overlay at fixed animation samples and for every climb-point outcome represented by the source mockup.
+
+```bash
+dotnet run -- snapshot climb-points-award victory-ready --verify
+./scripts/verify-climb-points-award-snapshots.sh
+./scripts/verify-climb-points-award-snapshots.sh --accept
+```
+
+Approved images are stored under `tests/VisualBaselines/climb-points-award/`.
 
 ---
 

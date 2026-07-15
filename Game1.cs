@@ -51,6 +51,7 @@ public class Game1 : Game
     private WayStationDialogueSystem _wayStationDialogueSystem;
     private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModalSystem;
     private WayStationSaintsMedalsModalSystem _wayStationSaintsMedalsModalSystem;
+	private ClimbPointsAwardDisplaySystem _climbPointsAwardDisplaySystem;
     private BattleSceneSystem _battleSceneSystem;
     private ClimbSceneSystem _climbSceneSystem;
     private AchievementSceneSystem _achievementSceneSystem;
@@ -210,6 +211,7 @@ public class Game1 : Game
         _wayStationDialogueSystem = new WayStationDialogueSystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationClimbSettingsModalSystem = new WayStationClimbSettingsModalSystem(_world, _spriteBatch, _imageAssets);
         _wayStationSaintsMedalsModalSystem = new WayStationSaintsMedalsModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+		_climbPointsAwardDisplaySystem = new ClimbPointsAwardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _achievementSceneSystem = new AchievementSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
@@ -276,6 +278,7 @@ public class Game1 : Game
         _world.AddSystem(_wayStationDialogueSystem);
         _world.AddSystem(_wayStationClimbSettingsModalSystem);
         _world.AddSystem(_wayStationSaintsMedalsModalSystem);
+		_world.AddSystem(_climbPointsAwardDisplaySystem);
         _world.AddSystem(_battleSceneSystem);
         _world.AddSystem(_climbSceneSystem);
         _world.AddSystem(_achievementSceneSystem);
@@ -652,6 +655,7 @@ public class Game1 : Game
         FrameProfiler.Measure("HintTooltipDisplaySystem.Draw", _hintTooltipDisplaySystem.Draw);
         FrameProfiler.Measure("CardTooltipDisplaySystem.Draw", _cardTooltipDisplaySystem.Draw);
         FrameProfiler.Measure("AlertDisplaySystem.Draw", _alertDisplaySystem.Draw);
+		FrameProfiler.Measure("ClimbPointsAwardDisplaySystem.Draw", _climbPointsAwardDisplaySystem.Draw);
         FrameProfiler.Measure("ProfilerSystem.Draw", _profilerSystem.Draw);
         FrameProfiler.Measure("DebugMenuSystem.Draw", _debugMenuSystem.Draw);
         FrameProfiler.Measure("EntityListOverlaySystem.Draw", _entityListOverlaySystem.Draw);

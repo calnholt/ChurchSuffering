@@ -1961,6 +1961,15 @@ namespace Crusaders30XX.ECS.Data.Save
 				totalPoints = Math.Max(0, collection.totalPoints),
 				pendingClimbPoints = Math.Max(0, collection.pendingClimbPoints),
 				processedRewardLevels = Math.Max(0, collection.processedRewardLevels),
+				pendingClimbPointAward = collection.pendingClimbPointAward == null
+					? null
+					: new PendingClimbPointAwardSave
+					{
+						timeReached = Math.Max(0, collection.pendingClimbPointAward.timeReached),
+						abandoned = collection.pendingClimbPointAward.abandoned,
+						completedFinalBoss = collection.pendingClimbPointAward.completedFinalBoss,
+						pointsAwarded = Math.Max(0, collection.pendingClimbPointAward.pointsAwarded),
+					},
 				pendingBoosterPacks = new List<BoosterPackSave>(),
 			};
 			foreach (var pack in collection.pendingBoosterPacks ?? new List<BoosterPackSave>())

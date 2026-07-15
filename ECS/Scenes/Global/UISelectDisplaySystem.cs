@@ -38,6 +38,7 @@ public class UISelectDisplaySystem : Core.System
         
         var uiElement = e.TopEntity.GetComponent<UIElement>();
         if (uiElement == null) return;
+		if (uiElement.IsPreventDefaultClick) return;
         
         // Only trigger for interactable UI elements
         if (!uiElement.IsInteractable) return;
@@ -113,4 +114,3 @@ public class UISelectDisplaySystem : Core.System
     [DebugEditable(DisplayName = "Shading Intensity", Step = 0.05f, Min = 0f, Max = 1.0f)]
     public float ShadingIntensity { get; set; } = 0.6f;
 }
-

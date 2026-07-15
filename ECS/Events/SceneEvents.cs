@@ -121,6 +121,11 @@ namespace Crusaders30XX.ECS.Events
 		public bool CompletedFinalBoss { get; set; }
 	}
 
+	public class ClimbPointsAwardOverlayDismissedEvent
+	{
+		public bool WasAuthoritative { get; set; }
+	}
+
 	/// <summary>Published once after the final boss is defeated in a completed climb.</summary>
 	public class ClimbCompletedEvent
 	{

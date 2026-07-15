@@ -59,6 +59,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListBottom));
 			Register(new ClimbHeaderSnapshotFixture());
 			Register(new ClimbResourceAcquisitionSnapshotFixture());
+			Register(new ClimbPointsAwardSnapshotFixture());
         }
 
         public static void Register(IDisplaySnapshotFixture fixture)

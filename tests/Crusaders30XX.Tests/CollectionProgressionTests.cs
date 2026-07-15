@@ -122,6 +122,71 @@ public sealed class CollectionProgressionTests : IDisposable
 	}
 
 	[Theory]
+	[InlineData(0, false, false, 0)]
+	[InlineData(12, false, false, 1)]
+	[InlineData(20, false, false, 4)]
+	[InlineData(26, false, false, 9)]
+	[InlineData(32, true, false, 12)]
+	[InlineData(18, false, true, 0)]
+	public void Collection_system_persists_each_climb_award_presentation(
+		int time,
+		bool completed,
+		bool abandoned,
+		int expectedPoints)
+	{
+		_ = new CollectionProgressionSystem(new EntityManager());
+
+		EventManager.Publish(new ClimbEndedEvent
+		{
+			TimeReached = time,
+			CompletedFinalBoss = completed,
+			Abandoned = abandoned,
+		});
+
+		var collection = SaveCache.GetCollection();
+		Assert.Equal(expectedPoints, collection.pendingClimbPoints);
+		Assert.NotNull(collection.pendingClimbPointAward);
+		Assert.Equal(time, collection.pendingClimbPointAward.timeReached);
+		Assert.Equal(completed, collection.pendingClimbPointAward.completedFinalBoss);
+		Assert.Equal(abandoned, collection.pendingClimbPointAward.abandoned);
+		Assert.Equal(expectedPoints, collection.pendingClimbPointAward.pointsAwarded);
+	}
+
+	[Fact]
+	public void Authoritative_overlay_dismissal_clears_only_presentation_payload()
+	{
+		_ = new CollectionProgressionSystem(new EntityManager());
+		EventManager.Publish(new ClimbEndedEvent
+		{
+			TimeReached = 20,
+			CompletedFinalBoss = false,
+			Abandoned = false,
+		});
+
+		EventManager.Publish(new ClimbPointsAwardOverlayDismissedEvent { WasAuthoritative = true });
+
+		var collection = SaveCache.GetCollection();
+		Assert.Equal(4, collection.pendingClimbPoints);
+		Assert.Null(collection.pendingClimbPointAward);
+	}
+
+	[Fact]
+	public void Debug_overlay_dismissal_does_not_clear_authoritative_payload()
+	{
+		_ = new CollectionProgressionSystem(new EntityManager());
+		EventManager.Publish(new ClimbEndedEvent
+		{
+			TimeReached = 12,
+			CompletedFinalBoss = false,
+			Abandoned = false,
+		});
+
+		EventManager.Publish(new ClimbPointsAwardOverlayDismissedEvent { WasAuthoritative = false });
+
+		Assert.NotNull(SaveCache.GetCollection().pendingClimbPointAward);
+	}
+
+	[Theory]
 	[InlineData(0, 20)]
 	[InlineData(19, 20)]
 	[InlineData(20, 70)]
