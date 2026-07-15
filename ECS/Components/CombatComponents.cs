@@ -213,4 +213,13 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 	}
+
+	/// <summary>
+	/// Overrides the stable card zone used when an assigned blocker finishes resolving.
+	/// </summary>
+	public class AssignedBlockDestinationOverride : IComponent
+	{
+		public Entity Owner { get; set; }
+		public CardZoneType Destination { get; set; } = CardZoneType.DiscardPile;
+	}
 }

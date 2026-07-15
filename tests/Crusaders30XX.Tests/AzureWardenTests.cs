@@ -61,20 +61,10 @@ public sealed class AzureWardenTests
             entityManager.AddComponent(card, new Sealed { Owner = card, Seals = 2 });
             _ = new SealManagementSystem(entityManager);
 
-            EventManager.Publish(new CardMoved
-            {
-                Card = card,
-                From = CardZoneType.AssignedBlock,
-                To = CardZoneType.DiscardPile,
-            });
+            EventManager.Publish(new CardBlockedEvent { Card = card });
             Assert.Equal(1, card.GetComponent<Sealed>()?.Seals);
 
-            EventManager.Publish(new CardMoved
-            {
-                Card = card,
-                From = CardZoneType.AssignedBlock,
-                To = CardZoneType.DiscardPile,
-            });
+            EventManager.Publish(new CardBlockedEvent { Card = card });
             Assert.Null(card.GetComponent<Sealed>());
         }
         finally

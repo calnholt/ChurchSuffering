@@ -221,6 +221,8 @@ namespace Crusaders30XX.ECS.Systems
                 [EnemyAttackId.FallenShepherdPurgeTheHeretic] = ["He has named us for the fire!", "His judgment is false. Stand firm!"],
                 [EnemyAttackId.FallenShepherdFearTheShepherd] = ["Fear is the only crook he has left!", "We bow to no false shepherd!"],
                 [EnemyAttackId.FallenShepherdFinalSermon] = ["His final sermon ends here!", "Let truth have the last word!"],
+                [EnemyAttackId.ChronoSlice] = ["That blade is cutting through time!", "Guard carefully. It will bury the first card!"],
+                [EnemyAttackId.AeonWard] = ["The ice is hardening around him!", "Strike through that frozen ward!"],
             };
 
         public static string GetMessage(GuardianAmbientMessageType type) => Select($"ambient:{type}", AmbientMessages[type]);

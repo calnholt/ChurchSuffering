@@ -17,11 +17,11 @@ namespace Crusaders30XX.ECS.Systems
     {
         public TemperanceManagerSystem(EntityManager entityManager) : base(entityManager)
         {
-            EventManager.Subscribe<CardMoved>(OnCardMoved);
+            EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
             EventManager.Subscribe<ModifyTemperanceEvent>(OnModifyTemperance);
             EventManager.Subscribe<SetTemperanceEvent>(OnSetTemperanceEvent);
             EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
-            LoggingService.Append("TemperanceManagerSystem.ctor", new System.Text.Json.Nodes.JsonObject { ["message"] = "subscribed to CardMoved, ModifyTemperanceEvent" });
+            LoggingService.Append("TemperanceManagerSystem.ctor", new System.Text.Json.Nodes.JsonObject { ["message"] = "subscribed to CardBlockedEvent, ModifyTemperanceEvent" });
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -31,24 +31,18 @@ namespace Crusaders30XX.ECS.Systems
 
         protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
 
-        private void OnCardMoved(CardMoved evt)
+        private void OnCardBlocked(CardBlockedEvent evt)
         {
-            LoggingService.Append("TemperanceManagerSystem.OnCardMoved", new System.Text.Json.Nodes.JsonObject
+            LoggingService.Append("TemperanceManagerSystem.OnCardBlocked", new System.Text.Json.Nodes.JsonObject
             {
-                ["from"] = evt.From.ToString(),
-                ["to"] = evt.To.ToString(),
                 ["cardId"] = evt.Card?.Id ?? -1
             });
-            // When assigned blocks land in discard, grant Temperance for white cards
-            if (evt.To == CardZoneType.DiscardPile && evt.From == CardZoneType.AssignedBlock) {
-              if (!CardColorQualificationService.QualifiesAs(evt.Card, CardData.CardColor.White)) return;
-              var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-              if (player == null) return;
-              var t = player.GetComponent<Temperance>();
-              if (t == null) { t = new Temperance(); EntityManager.AddComponent(player, t); }
-              EventManager.Publish(new ModifyTemperanceEvent { Delta = 1 });
-              TryTriggerTemperanceAbility(player, t);
-            }
+            if (!CardColorQualificationService.QualifiesAs(evt.Card, CardData.CardColor.White)) return;
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            if (player == null) return;
+            var t = player.GetComponent<Temperance>();
+            if (t == null) { t = new Temperance(); EntityManager.AddComponent(player, t); }
+            EventManager.Publish(new ModifyTemperanceEvent { Delta = 1 });
         }
 
         private void OnModifyTemperance(ModifyTemperanceEvent evt)

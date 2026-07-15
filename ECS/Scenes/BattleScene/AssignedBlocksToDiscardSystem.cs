@@ -155,13 +155,9 @@ namespace Crusaders30XX.ECS.Systems
                 else
                 {
                     var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
-                    // If the card exhausts on block, route to Exhaust instead of Discard and remove the marker
-                    var exhaustOnBlock = entity.GetComponent<ExhaustOnBlock>();
-                    var destination = (exhaustOnBlock != null) ? CardZoneType.ExhaustPile : CardZoneType.DiscardPile;
-                    if (exhaustOnBlock != null)
-                    {
-                        EntityManager.RemoveComponent<ExhaustOnBlock>(entity);
-                    }
+                    var destination = flight.Destination;
+                    EntityManager.RemoveComponent<AssignedBlockDestinationOverride>(entity);
+                    EntityManager.RemoveComponent<ExhaustOnBlock>(entity);
                     var cardData = entity.GetComponent<CardData>();
                     cardData.Card.OnBlock?.Invoke(EntityManager, entity);
                     EventManager.Publish(new CardBlockedEvent { Card = entity });
@@ -174,7 +170,7 @@ namespace Crusaders30XX.ECS.Systems
                         Card = entity,
                         Deck = deckEntity,
                         Destination = destination,
-                        Reason = destination == CardZoneType.ExhaustPile ? "AssignedBlockToExhaust" : "AssignedBlockToDiscard"
+                        Reason = AssignedBlockDestinationService.GetMoveReason(destination)
                     });
                     // Remove animation component
                     EntityManager.RemoveComponent<CardToDiscardFlight>(entity);
@@ -220,13 +216,6 @@ namespace Crusaders30XX.ECS.Systems
             var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
             if (deckEntity == null) return;
 
-            // Compute discard target rect center from DiscardPileDisplaySystem layout
-            int h = Game1.VirtualHeight;
-            int panelW = 60; // defaults in DiscardPileDisplaySystem
-            int panelH = 80;
-            int margin = 20;
-            var discardTarget = new Vector2(margin + panelW * 0.5f, h - margin - panelH * 0.5f);
-
             var assigned = EntityManager.GetEntitiesWithComponent<AssignedBlockCard>()
                 .OrderBy(e => e.GetComponent<AssignedBlockCard>().AssignedAtTicks)
                 .ToList();
@@ -241,8 +230,10 @@ namespace Crusaders30XX.ECS.Systems
 				float startScale = presentation?.CurrentScale ?? t?.Scale.X ?? 1f;
 				if (t == null) { t = new Transform(); EntityManager.AddComponent(card, t); t.Position = startPos; t.Scale = new Vector2(startScale, startScale); }
 
-                // For equipment, fly back to its saved return target (left panel), else fly to discard
-                Vector2 targetPos = abc.IsEquipment && abc.ReturnTargetPos != Vector2.Zero ? abc.ReturnTargetPos : discardTarget;
+                var destination = AssignedBlockDestinationService.Resolve(card);
+                Vector2 targetPos = abc.IsEquipment && abc.ReturnTargetPos != Vector2.Zero
+                    ? abc.ReturnTargetPos
+                    : ResolvePileTarget(destination);
                 var flight = new CardToDiscardFlight
                 {
                     StartPos = startPos,
@@ -252,11 +243,24 @@ namespace Crusaders30XX.ECS.Systems
                     ArcHeightPx = ArcHeightPx,
                     StartScale = startScale,
                     EndScale = EndScale,
+                    Destination = destination,
                 };
                 EntityManager.AddComponent(card, flight);
             }
 
             _phaseElapsed = 0f; // reset auto-advance timer
+        }
+
+        private Vector2 ResolvePileTarget(CardZoneType destination)
+        {
+            if (destination == CardZoneType.DrawPile)
+            {
+                var drawPileRoot = EntityManager.GetEntity("UI_DrawPileRoot")?.GetComponent<Transform>();
+                return drawPileRoot?.Position ?? new Vector2(Game1.VirtualWidth - 60f, Game1.VirtualHeight - 60f);
+            }
+
+            var discardPileRoot = EntityManager.GetEntity("UI_DiscardPileRoot")?.GetComponent<Transform>();
+            return discardPileRoot?.Position ?? new Vector2(60f, Game1.VirtualHeight - 60f);
         }
     }
 }

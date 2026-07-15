@@ -41,6 +41,13 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void ResolveCurrentAttack()
 		{
+			EnemyAttackFlowService.TryGetCurrentEnemyAttack(
+				_entityManager,
+				out var enemy,
+				out var intent,
+				out var planned);
+			planned?.AttackDefinition?.OnBlocksConfirmed?.Invoke(_entityManager);
+
 			EventManager.Publish(new ChangeBattlePhaseEvent
 			{
 				Current = SubPhase.EnemyAttack,
@@ -51,11 +58,6 @@ namespace Crusaders30XX.ECS.Systems
 			EventQueue.EnqueueRule(new QueuedResolveAttackEvent());
 			EventQueue.EnqueueRule(_presentationGate.CreateAbsorbWait());
 
-			EnemyAttackFlowService.TryGetCurrentEnemyAttack(
-				_entityManager,
-				out var enemy,
-				out var intent,
-				out var planned);
 			foreach (var step in _presentationGate.BuildImpactSteps(
 				_entityManager,
 				enemy,

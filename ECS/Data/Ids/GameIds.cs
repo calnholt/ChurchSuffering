@@ -166,6 +166,7 @@ public enum EnemyId
     Wyvern,
     FallenShepherd,
     TrainingDemon,
+    FrostboundAeon,
 }
 
 public enum EnemyAttackId
@@ -258,6 +259,8 @@ public enum EnemyAttackId
     FallenShepherdFearTheShepherd,
     FallenShepherdFinalSermon,
     WritOfMalice,
+    ChronoSlice,
+    AeonWard,
 }
 
 public static class GameIdExtensions
@@ -429,6 +432,7 @@ public static class GameIdExtensions
         EnemyId.Wyvern => "wyvern",
         EnemyId.FallenShepherd => "fallen_shepherd",
         EnemyId.TrainingDemon => "training_demon",
+        EnemyId.FrostboundAeon => "frostbound_aeon",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 
@@ -522,6 +526,8 @@ public static class GameIdExtensions
         EnemyAttackId.FallenShepherdFearTheShepherd => "fallen_shepherd_fear_the_shepherd",
         EnemyAttackId.FallenShepherdFinalSermon => "fallen_shepherd_final_sermon",
         EnemyAttackId.WritOfMalice => "writ_of_malice",
+        EnemyAttackId.ChronoSlice => "chrono_slice",
+        EnemyAttackId.AeonWard => "aeon_ward",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 

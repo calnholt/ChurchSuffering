@@ -1,7 +1,0 @@
-interface:
-  display_name: "Enemy Brainstorm"
-  short_description: "Brainstorm Crusaders30XX enemies"
-  default_prompt: "Use $enemy-brainstorm to brainstorm a Crusaders30XX enemy concept with attack pattern, conditions, and health tier."
-
-policy:
-  allow_implicit_invocation: true

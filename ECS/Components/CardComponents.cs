@@ -1092,7 +1092,7 @@ namespace Crusaders30XX.ECS.Components
 
 } 
 
-// New component used to animate assigned block cards flying to the discard pile
+    // Component used to animate assigned block cards flying to their resolution destination.
 namespace Crusaders30XX.ECS.Components
 {
     /// <summary>
@@ -1154,6 +1154,7 @@ namespace Crusaders30XX.ECS.Components
         public float StartScale { get; set; } = 0.35f;
         public float EndScale { get; set; } = 0.3f;
         public bool Completed { get; set; }
+        public CardZoneType Destination { get; set; } = CardZoneType.DiscardPile;
     }
 
     /// <summary>

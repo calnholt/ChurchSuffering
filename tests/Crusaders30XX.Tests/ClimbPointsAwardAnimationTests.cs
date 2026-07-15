@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Crusaders30XX.Diagnostics;
+using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Systems;
 using Xunit;
@@ -73,5 +74,151 @@ public sealed class ClimbPointsAwardAnimationTests
 			.ToArray();
 
 		Assert.Equal(expected.OrderBy(name => name, StringComparer.Ordinal), actual);
+	}
+
+	[Theory]
+	[InlineData(0, 0f)]
+	[InlineData(1, 0.25f)]
+	[InlineData(4, 1f)]
+	public void Progress_cap_scales_with_earned_tier_count(int earnedTierCount, float expectedCap)
+	{
+		Assert.Equal(expectedCap, ClimbPointsAwardAnimationService.GetProgressCap(earnedTierCount), 3);
+	}
+
+	[Fact]
+	public void Buildup_rumble_is_zero_before_tier_start_and_at_crest_reveal()
+	{
+		var settings = ClimbPointsAwardRumbleSettings.Default;
+		const int earnedTierCount = 4;
+
+		Assert.Equal(
+			ClimbPointsAwardRumbleSample.Zero,
+			ClimbPointsAwardAnimationService.SampleRumble(
+				ClimbPointsAwardAnimationService.TierStartSeconds - 0.01f,
+				earnedTierCount,
+				settings));
+		Assert.Equal(
+			ClimbPointsAwardRumbleSample.Zero,
+			ClimbPointsAwardAnimationService.SampleRumble(
+				ClimbPointsAwardAnimationService.GetCrestRevealSeconds(earnedTierCount),
+				earnedTierCount,
+				settings));
+	}
+
+	[Fact]
+	public void Buildup_rumble_increases_monotonically_during_route_reveal()
+	{
+		var settings = ClimbPointsAwardRumbleSettings.Default;
+		const int earnedTierCount = 4;
+		float start = ClimbPointsAwardAnimationService.TierStartSeconds + 0.05f;
+		float end = ClimbPointsAwardAnimationService.GetCrestRevealSeconds(earnedTierCount) - 0.01f;
+		float early = ClimbPointsAwardAnimationService.SampleRumble(start, earnedTierCount, settings).LowFrequency;
+		float late = ClimbPointsAwardAnimationService.SampleRumble(end, earnedTierCount, settings).LowFrequency;
+
+		Assert.True(early > 0f);
+		Assert.True(late > early);
+	}
+
+	[Fact]
+	public void Partial_climb_buildup_stays_below_full_victory_intensity()
+	{
+		var settings = ClimbPointsAwardRumbleSettings.Default;
+		float relativeProgress = 0.5f;
+		float oneTierEnd = ClimbPointsAwardAnimationService.GetCrestRevealSeconds(1);
+		float oneTierTime = ClimbPointsAwardAnimationService.TierStartSeconds
+			+ (oneTierEnd - ClimbPointsAwardAnimationService.TierStartSeconds) * relativeProgress;
+		float fourTierEnd = ClimbPointsAwardAnimationService.GetCrestRevealSeconds(4);
+		float fourTierTime = ClimbPointsAwardAnimationService.TierStartSeconds
+			+ (fourTierEnd - ClimbPointsAwardAnimationService.TierStartSeconds) * relativeProgress;
+
+		float oneTier = ClimbPointsAwardAnimationService.SampleRumble(oneTierTime, 1, settings).LowFrequency;
+		float fourTier = ClimbPointsAwardAnimationService.SampleRumble(fourTierTime, 4, settings).LowFrequency;
+
+		Assert.True(oneTier > 0f);
+		Assert.True(fourTier > oneTier);
+	}
+
+	[Fact]
+	public void Tier_pulse_rumble_peaks_near_node_slam_times()
+	{
+		var settings = ClimbPointsAwardRumbleSettings.Default;
+		const int earnedTierCount = 4;
+		float firstSlam = ClimbPointsAwardAnimationService.GetTierNodeSlamSeconds(0);
+		float peak = ClimbPointsAwardAnimationService.SampleRumble(firstSlam, earnedTierCount, settings).HighFrequency;
+		float before = ClimbPointsAwardAnimationService.SampleRumble(firstSlam - 0.02f, earnedTierCount, settings).HighFrequency;
+		float after = ClimbPointsAwardAnimationService.SampleRumble(
+			firstSlam + settings.TierPulseDurationSeconds + 0.01f,
+			earnedTierCount,
+			settings).HighFrequency;
+
+		Assert.True(peak > before);
+		Assert.True(peak > after);
+	}
+
+	[Fact]
+	public void Abandoned_rumble_stays_within_empty_pulse_ceiling()
+	{
+		var settings = ClimbPointsAwardRumbleSettings.Default;
+		float pulse = ClimbPointsAwardAnimationService.SampleRumble(
+			ClimbPointsAwardAnimationService.TierStartSeconds,
+			0,
+			settings).LowFrequency;
+
+		Assert.True(pulse > 0f);
+		Assert.True(pulse <= settings.EmptyPulseLow + 0.0001f);
+	}
+
+	[Fact]
+	public void GetCrossedFinaleMilestones_fires_crest_and_count_up_boundaries()
+	{
+		const int earnedTierCount = 4;
+		float crest = ClimbPointsAwardAnimationService.GetCrestRevealSeconds(earnedTierCount);
+		float countUp = ClimbPointsAwardAnimationService.GetCountUpCompleteSeconds(earnedTierCount);
+
+		var crestCrossing = ClimbPointsAwardAnimationService.GetCrossedFinaleMilestones(
+			crest - 0.01f,
+			crest + 0.01f,
+			earnedTierCount).ToArray();
+		var countUpCrossing = ClimbPointsAwardAnimationService.GetCrossedFinaleMilestones(
+			countUp - 0.01f,
+			countUp + 0.01f,
+			earnedTierCount).ToArray();
+
+		Assert.Single(crestCrossing);
+		Assert.Equal(ClimbPointsAwardRumbleMilestoneKind.CrestReveal, crestCrossing[0].Kind);
+		Assert.Single(countUpCrossing);
+		Assert.Equal(ClimbPointsAwardRumbleMilestoneKind.CountUpComplete, countUpCrossing[0].Kind);
+	}
+
+	[Fact]
+	public void GetCrossedFinaleMilestones_skips_zero_tier_runs()
+	{
+		Assert.Empty(ClimbPointsAwardAnimationService.GetCrossedFinaleMilestones(0f, 3f, 0));
+	}
+
+	[Fact]
+	public void Finale_profiles_and_scales_scale_with_progress_cap()
+	{
+		Assert.Equal(
+			RumbleProfile.MediumImpact,
+			ClimbPointsAwardAnimationService.GetFinaleRumbleProfile(
+				ClimbPointsAwardRumbleMilestoneKind.CrestReveal,
+				0.5f));
+		Assert.Equal(
+			RumbleProfile.AchievementUnlock,
+			ClimbPointsAwardAnimationService.GetFinaleRumbleProfile(
+				ClimbPointsAwardRumbleMilestoneKind.CountUpComplete,
+				1f));
+		Assert.Equal(
+			RumbleProfile.HeavyImpact,
+			ClimbPointsAwardAnimationService.GetFinaleRumbleProfile(
+				ClimbPointsAwardRumbleMilestoneKind.CountUpComplete,
+				0.5f));
+		Assert.True(ClimbPointsAwardAnimationService.GetFinaleRumbleScale(
+			ClimbPointsAwardRumbleMilestoneKind.CountUpComplete,
+			0.5f)
+			> ClimbPointsAwardAnimationService.GetFinaleRumbleScale(
+				ClimbPointsAwardRumbleMilestoneKind.CrestReveal,
+				0.5f));
 	}
 }

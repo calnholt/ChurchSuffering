@@ -25,7 +25,7 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Subscribe<BlockAssignmentAdded>(OnBlockAssignmentAdded);
 			EventManager.Subscribe<UnassignCardAsBlockRequested>(OnUnassignCardAsBlockRequested);
 			EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged);
-			EventManager.Subscribe<CardMoved>(OnCardMoved);
+			EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
 			EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCaches);
 			EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
 			EventManager.Subscribe<EnemyPhaseResetEvent>(_ => ClearEnemyTurnShackles());
@@ -187,15 +187,12 @@ namespace Crusaders30XX.ECS.Systems
 			_shacklesAppliedThisEnemyTurn = false;
 		}
 
-		private void OnCardMoved(CardMoved evt)
+		private void OnCardBlocked(CardBlockedEvent evt)
 		{
-			if ((evt.To == CardZoneType.DiscardPile || evt.To == CardZoneType.ExhaustPile) && evt.From == CardZoneType.AssignedBlock)
+			if (evt.Card?.GetComponent<Shackle>() != null && !_blockedWithShackledCard)
 			{
-				if (evt.Card.GetComponent<Shackle>() != null && !_blockedWithShackledCard)
-				{
-					EventManager.Publish(new ApplyPassiveEvent { Target = EntityManager.GetEntity("Player"), Type = AppliedPassiveType.Shackled, Delta = -1 });
-					_blockedWithShackledCard = true;
-				}
+				EventManager.Publish(new ApplyPassiveEvent { Target = EntityManager.GetEntity("Player"), Type = AppliedPassiveType.Shackled, Delta = -1 });
+				_blockedWithShackledCard = true;
 			}
 		}
 

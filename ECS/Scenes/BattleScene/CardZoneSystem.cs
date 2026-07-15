@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Systems
         public CardZoneSystem(EntityManager entityManager) : base(entityManager)
         {
             EventManager.Subscribe<CardMoveRequested>(OnCardMoveRequested);
-            EventManager.Subscribe<CardMoved>(OnCardMoved);
+            EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
             EventManager.Subscribe<CardMoveFinalizeRequested>(OnCardMoveFinalizeRequested);
             EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
@@ -40,15 +40,12 @@ namespace Crusaders30XX.ECS.Systems
 			deck.Hand.Add(evt.Card);
 		}
 
-        private void OnCardMoved(CardMoved evt)
+        private void OnCardBlocked(CardBlockedEvent evt)
         {
-            if (evt.From == CardZoneType.AssignedBlock && (evt.To == CardZoneType.DiscardPile || evt.To == CardZoneType.ExhaustPile))
+            var attackDef = GetComponentHelper.GetPlannedAttack(EntityManager);
+            if (attackDef != null && attackDef.OnBlockProcessed != null)
             {
-                var attackDef = GetComponentHelper.GetPlannedAttack(EntityManager);
-                if (attackDef != null && attackDef.OnBlockProcessed != null)
-                {
-                    attackDef.OnBlockProcessed(EntityManager, evt.Card);
-                }
+                attackDef.OnBlockProcessed(EntityManager, evt.Card);
             }
         }
 

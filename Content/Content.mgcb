@@ -592,6 +592,18 @@
 /processorParam:TextureFormat=Color
 /build:Enemies/Fallen_Shepherd.png
 
+#begin Enemies/Frostbound_Aeon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Enemies/Frostbound_Aeon.png
+
 #begin Enemies/Berserker.png
 /importer:TextureImporter
 /processor:TextureProcessor

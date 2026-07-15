@@ -100,6 +100,8 @@ namespace Crusaders30XX.ECS.Factories
                 { EnemyAttackId.FallenShepherdFearTheShepherd, () => new FallenShepherdFearTheShepherd() },
                 { EnemyAttackId.FallenShepherdFinalSermon, () => new FallenShepherdFinalSermon() },
                 { EnemyAttackId.WritOfMalice, () => new WritOfMalice() },
+                { EnemyAttackId.ChronoSlice, () => new ChronoSlice() },
+                { EnemyAttackId.AeonWard, () => new AeonWard() },
             };
 
         public static EnemyAttackBase Create(EnemyAttackId attackId)

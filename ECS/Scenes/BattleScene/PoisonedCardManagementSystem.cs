@@ -18,7 +18,7 @@ public sealed class PoisonedCardManagementSystem : Core.System
     public PoisonedCardManagementSystem(EntityManager entityManager) : base(entityManager)
     {
         EventManager.Subscribe<ChangeBattlePhaseEvent>(OnPhaseChanged, priority: 10);
-        EventManager.Subscribe<CardMoved>(OnCardMoved);
+        EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
         EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
         EventManager.Subscribe<EnemyPhaseResetEvent>(_ => Clear());
         EventManager.Subscribe<DeleteCachesEvent>(_ => Clear());
@@ -66,11 +66,9 @@ public sealed class PoisonedCardManagementSystem : Core.System
         EntityManager.AddComponent(card, new Poisoned { Owner = card });
     }
 
-    private void OnCardMoved(CardMoved evt)
+    private void OnCardBlocked(CardBlockedEvent evt)
     {
         if (evt?.Card?.GetComponent<Poisoned>() == null ||
-            evt.From != CardZoneType.AssignedBlock ||
-            (evt.To != CardZoneType.DiscardPile && evt.To != CardZoneType.ExhaustPile) ||
             !_damagedCardIds.Add(evt.Card.Id)) return;
 
         var player = EntityManager.GetEntity("Player");

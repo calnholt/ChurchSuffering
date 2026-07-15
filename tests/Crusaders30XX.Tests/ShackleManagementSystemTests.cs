@@ -79,6 +79,24 @@ public class ShackleManagementSystemTests : System.IDisposable
 		Assert.Equal(0, CountShackled(entityManager));
 	}
 
+	[Fact]
+	public void Blocking_with_shackled_card_reduces_shackled_regardless_of_destination()
+	{
+		var entityManager = BuildWorld(out var player);
+		var card = entityManager.GetEntitiesWithComponent<CardData>().First();
+		entityManager.AddComponent(card, new Shackle { Owner = card });
+		_ = new ShackleManagementSystem(entityManager);
+		ApplyPassiveEvent applied = null;
+		EventManager.Subscribe<ApplyPassiveEvent>(evt => applied = evt);
+
+		EventManager.Publish(new CardBlockedEvent { Card = card });
+
+		Assert.NotNull(applied);
+		Assert.Same(player, applied.Target);
+		Assert.Equal(AppliedPassiveType.Shackled, applied.Type);
+		Assert.Equal(-1, applied.Delta);
+	}
+
 	private static EntityManager BuildWorld(out Entity player)
 	{
 		var entityManager = new EntityManager();

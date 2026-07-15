@@ -90,12 +90,7 @@ public sealed class DualColorCardTests : IDisposable
 			SecondaryColor = CardData.CardColor.White,
 		});
 
-		EventManager.Publish(new CardMoved
-		{
-			Card = card,
-			From = CardZoneType.AssignedBlock,
-			To = CardZoneType.DiscardPile,
-		});
+		EventManager.Publish(new CardBlockedEvent { Card = card });
 
 		Assert.Equal(1, player.GetComponent<Courage>().Amount);
 		Assert.Equal(1, player.GetComponent<Temperance>().Amount);

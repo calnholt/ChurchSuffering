@@ -211,7 +211,6 @@ public class Game1 : Game
         _wayStationDialogueSystem = new WayStationDialogueSystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationClimbSettingsModalSystem = new WayStationClimbSettingsModalSystem(_world, _spriteBatch, _imageAssets);
         _wayStationSaintsMedalsModalSystem = new WayStationSaintsMedalsModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
-		_climbPointsAwardDisplaySystem = new ClimbPointsAwardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _achievementSceneSystem = new AchievementSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
@@ -237,6 +236,12 @@ public class Game1 : Game
         _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
         _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         var playerInputAdapter = new MonoGamePlayerInputAdapter();
+		_climbPointsAwardDisplaySystem = new ClimbPointsAwardDisplaySystem(
+			_world.EntityManager,
+			GraphicsDevice,
+			_spriteBatch,
+			_imageAssets,
+			playerInputAdapter);
         _playerInputSystem = new PlayerInputSystem(
             _world.EntityManager,
             playerInputAdapter);

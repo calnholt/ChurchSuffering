@@ -36,7 +36,7 @@ public sealed class VisualEffectSequenceAuthoringTests
 	public void Every_registered_enemy_attack_has_one_gameplay_driving_beat()
 	{
 		var attacks = EnemyAttackFactory.GetAllAttacks().Values.ToList();
-		Assert.Equal(88, attacks.Count);
+		Assert.Equal(90, attacks.Count);
 		Assert.All(EnemyAttackFactory.GetAllAttacks().Keys, id => Assert.True(VisualEffectSequenceAuthoring.HasExplicitEnemyAttackChoreography(id), $"Missing explicit choreography for {id}."));
 		Assert.All(attacks, attack =>
 		{

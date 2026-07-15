@@ -39,6 +39,7 @@ namespace Crusaders30XX.ECS.Factories
                 { EnemyId.Wyvern, () => new Wyvern() },
                 { EnemyId.FallenShepherd, () => new FallenShepherd() },
                 { EnemyId.TrainingDemon, () => new TrainingDemon() },
+                { EnemyId.FrostboundAeon, () => new FrostboundAeon() },
             };
 
         public static EnemyBase Create(EnemyId enemyId)

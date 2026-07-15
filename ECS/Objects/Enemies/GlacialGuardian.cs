@@ -20,7 +20,7 @@ public class GlacialGuardian : EnemyBase
 
     OnStartOfBattle = (entityManager) =>
     {
-      EventManager.Subscribe<CardMoved>(OnCardMoved, priority: 10);
+      EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked, priority: 10);
       EventQueueBridge.EnqueueTriggerAction("GlacialGuardian.OnCreate", () =>
       {
         EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Windchill, Delta = 1 });
@@ -33,9 +33,9 @@ public class GlacialGuardian : EnemyBase
     return ArrayUtils.TakeRandomWithoutReplacement(new List<EnemyAttackId> { EnemyAttackId.GlacialStrike, EnemyAttackId.GlacialBlast }, 1);
   }
 
-  private void OnCardMoved(CardMoved evt)
+  private void OnCardBlocked(CardBlockedEvent evt)
   {
-    if ((evt.To == CardZoneType.DiscardPile || evt.To == CardZoneType.ExhaustPile) && evt.From == CardZoneType.AssignedBlock && evt.Card.GetComponent<Frozen>() != null)
+    if (evt.Card?.GetComponent<Frozen>() != null)
     {
       EventManager.Publish(new ApplyPassiveEvent { Target = EntityManager.GetEntity("Player"), Type = AppliedPassiveType.Scar, Delta = 1 });
     }
@@ -43,7 +43,7 @@ public class GlacialGuardian : EnemyBase
 
   public override void Dispose()
   {
-    EventManager.Unsubscribe<CardMoved>(OnCardMoved);
+    EventManager.Unsubscribe<CardBlockedEvent>(OnCardBlocked);
     base.Dispose();
   }
 }

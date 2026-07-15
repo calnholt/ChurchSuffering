@@ -98,12 +98,7 @@ public sealed class ColorlessCardTests
 			var card = CreateCard(entityManager, CardData.CardColor.Red);
 			entityManager.AddComponent(card, new Colorless());
 
-			EventManager.Publish(new CardMoved
-			{
-				Card = card,
-				From = CardZoneType.AssignedBlock,
-				To = CardZoneType.DiscardPile,
-			});
+			EventManager.Publish(new CardBlockedEvent { Card = card });
 
 			Assert.Equal(0, player.GetComponent<Courage>().Amount);
 			Assert.Equal(0, player.GetComponent<Temperance>().Amount);

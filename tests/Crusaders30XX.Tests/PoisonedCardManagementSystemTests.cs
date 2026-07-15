@@ -27,7 +27,7 @@ public sealed class PoisonedCardManagementSystemTests : System.IDisposable
         var poisoned = em.GetEntitiesWithComponent<Poisoned>().Single();
         ModifyHpRequestEvent damage = null;
         EventManager.Subscribe<ModifyHpRequestEvent>(evt => damage = evt);
-        EventManager.Publish(new CardMoved { Card=poisoned, From=CardZoneType.AssignedBlock, To=CardZoneType.DiscardPile });
+        EventManager.Publish(new CardBlockedEvent { Card = poisoned });
         Assert.Equal(-1, damage.Delta);
         EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.EnemyEnd });
         Assert.Empty(em.GetEntitiesWithComponent<Poisoned>());

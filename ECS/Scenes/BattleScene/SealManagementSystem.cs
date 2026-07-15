@@ -15,7 +15,7 @@ namespace Crusaders30XX.ECS.Systems
 	{
 		public SealManagementSystem(EntityManager entityManager) : base(entityManager)
 		{
-			EventManager.Subscribe<CardMoved>(OnCardMoved);
+			EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -26,23 +26,18 @@ namespace Crusaders30XX.ECS.Systems
 		protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
 
 		/// <summary>
-		/// When a sealed card is used to block (moves from AssignedBlock to DiscardPile), it loses 1 seal.
+		/// When a sealed card is used to block, it loses 1 seal regardless of its destination.
 		/// </summary>
-		private void OnCardMoved(CardMoved evt)
+		private void OnCardBlocked(CardBlockedEvent evt)
 		{
-			LoggingService.Append("SealManagementSystem.OnCardMoved", new System.Text.Json.Nodes.JsonObject
+			LoggingService.Append("SealManagementSystem.OnCardBlocked", new System.Text.Json.Nodes.JsonObject
 			{
 				["cardId"] = evt.Card?.Id ?? -1,
-				["from"] = evt.From.ToString(),
-				["to"] = evt.To.ToString()
 			});
-			if (evt.From == CardZoneType.AssignedBlock && evt.To == CardZoneType.DiscardPile)
+			var sealedComp = evt.Card?.GetComponent<Sealed>();
+			if (sealedComp != null)
 			{
-				var sealedComp = evt.Card.GetComponent<Sealed>();
-				if (sealedComp != null)
-				{
-					RemoveSeals(evt.Card, 1, "used to block");
-				}
+				RemoveSeals(evt.Card, 1, "used to block");
 			}
 		}
 

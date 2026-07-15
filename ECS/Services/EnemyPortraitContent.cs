@@ -38,6 +38,7 @@ namespace Crusaders30XX.ECS.Services
 			"azure_warden",
 			"blighttongue",
 			"hex_bailiff",
+			"frostbound_aeon",
 			// "training_demon", // test-fight only
 			// "ninja",
 		};

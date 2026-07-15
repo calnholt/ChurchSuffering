@@ -6,6 +6,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Input;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Singletons;
@@ -20,6 +21,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 	private const string OverlayEntityName = "ClimbPointsAwardOverlay";
 	private const string BlockerEntityName = "ClimbPointsAwardBlocker";
 	private const string ContextId = "overlay.climb-points-award";
+	private const string RumbleChannelId = "climb-points-award";
 	private const int ZOrder = 60500;
 	private const float SparkDurationSeconds = 0.900f;
 	private const float ShockwaveDurationSeconds = 0.780f;
@@ -37,6 +39,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 	private readonly float[] _titleGlyphWidths;
 	private readonly float[] _bodyGlyphWidths;
 	private readonly float[] _tierRequirementScales;
+	private readonly IPlayerInputSource _inputSource;
 
 	private Texture2D _vignetteMask;
 	private Texture2D _radianceMask;
@@ -54,15 +57,50 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 	[DebugEditable(DisplayName = "Route Card Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
 	public float RouteCardAlpha { get; set; } = 0.94f;
 
+	[DebugEditable(DisplayName = "Rumble Buildup Low", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleBuildupLow { get; set; } = 0.28f;
+
+	[DebugEditable(DisplayName = "Rumble Buildup High", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleBuildupHigh { get; set; } = 0.42f;
+
+	[DebugEditable(DisplayName = "Rumble Tier Pulse Low", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleTierPulseLow { get; set; } = 0.10f;
+
+	[DebugEditable(DisplayName = "Rumble Tier Pulse High", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleTierPulseHigh { get; set; } = 0.16f;
+
+	[DebugEditable(DisplayName = "Rumble Tier Pulse Duration (s)", Step = 0.01f, Min = 0.01f, Max = 1f)]
+	public float RumbleTierPulseDurationSeconds { get; set; } = 0.060f;
+
+	[DebugEditable(DisplayName = "Rumble Empty Pulse Low", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleEmptyPulseLow { get; set; } = 0.06f;
+
+	[DebugEditable(DisplayName = "Rumble Empty Pulse High", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleEmptyPulseHigh { get; set; } = 0.10f;
+
+	[DebugEditable(DisplayName = "Rumble Empty Pulse Duration (s)", Step = 0.01f, Min = 0.01f, Max = 1f)]
+	public float RumbleEmptyPulseDurationSeconds { get; set; } = 0.080f;
+
+	[DebugEditable(DisplayName = "Rumble Buildup Trigger", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleBuildupTrigger { get; set; } = 0.14f;
+
+	[DebugEditable(DisplayName = "Rumble Tier Pulse Trigger", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleTierPulseTrigger { get; set; } = 0.06f;
+
+	[DebugEditable(DisplayName = "Rumble Empty Pulse Trigger", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float RumbleEmptyPulseTrigger { get; set; } = 0.04f;
+
 	public ClimbPointsAwardDisplaySystem(
 		EntityManager entityManager,
 		GraphicsDevice graphicsDevice,
 		SpriteBatch spriteBatch,
-		ImageAssetService imageAssets)
+		ImageAssetService imageAssets,
+		IPlayerInputSource inputSource = null)
 		: base(entityManager)
 	{
 		_graphicsDevice = graphicsDevice;
 		_spriteBatch = spriteBatch;
+		_inputSource = inputSource;
 		_background = imageAssets.GetRequiredTexture("waystation");
 		_pixel = imageAssets.GetPixel(Color.White);
 		_titleFont = FontSingleton.TitleFont;
@@ -94,6 +132,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 		var state = GetState();
 		if (state?.IsOpen != true)
 		{
+			StopRumble();
 			SetInputActive(false);
 			return;
 		}
@@ -106,20 +145,27 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 		{
 			case ClimbPointsAwardOverlayPhase.Playing:
 			{
+				state.PreviousElapsedSeconds = state.ElapsedSeconds;
 				state.ElapsedSeconds += delta;
 				int earned = ClimbPointsAwardAnimationService.GetEarnedTierCount(GetScenario(state));
+				UpdateRumble(state, earned);
 				if (state.ElapsedSeconds >= ClimbPointsAwardAnimationService.GetReadySeconds(earned))
 					state.Phase = ClimbPointsAwardOverlayPhase.Ready;
 				break;
 			}
 			case ClimbPointsAwardOverlayPhase.Ready:
+				StopRumble();
 				state.ElapsedSeconds += delta;
 				break;
 			case ClimbPointsAwardOverlayPhase.Exiting:
+				StopRumble();
 				state.ElapsedSeconds += delta;
 				state.ExitElapsedSeconds += delta;
 				if (state.ExitElapsedSeconds >= ClimbPointsAwardAnimationService.ExitFadeSeconds)
 					FinishDismissal(state);
+				break;
+			default:
+				StopRumble();
 				break;
 		}
 	}
@@ -229,7 +275,9 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 			completedFinalBoss,
 			abandoned);
 		state.ElapsedSeconds = 0f;
+		state.PreviousElapsedSeconds = 0f;
 		state.ExitElapsedSeconds = 0f;
+		state.RumbleFinaleFlags = ClimbPointsAwardRumbleFinaleFlags.None;
 		state.Phase = authoritative
 			? ClimbPointsAwardOverlayPhase.AwaitingTransition
 			: ClimbPointsAwardOverlayPhase.Playing;
@@ -240,10 +288,13 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 	private void FinishDismissal(ClimbPointsAwardOverlayState state)
 	{
 		bool authoritative = state.IsAuthoritative;
+		StopRumble();
 		state.Phase = ClimbPointsAwardOverlayPhase.Hidden;
 		state.IsAuthoritative = false;
 		state.ElapsedSeconds = 0f;
+		state.PreviousElapsedSeconds = 0f;
 		state.ExitElapsedSeconds = 0f;
+		state.RumbleFinaleFlags = ClimbPointsAwardRumbleFinaleFlags.None;
 		SetInputActive(false);
 		if (authoritative)
 		{
@@ -332,6 +383,82 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 			state.TimeReached,
 			state.CompletedFinalBoss,
 			state.Abandoned);
+
+	private ClimbPointsAwardRumbleSettings BuildRumbleSettings() =>
+		new(
+			RumbleBuildupLow,
+			RumbleBuildupHigh,
+			RumbleTierPulseLow,
+			RumbleTierPulseHigh,
+			RumbleTierPulseDurationSeconds,
+			RumbleEmptyPulseLow,
+			RumbleEmptyPulseHigh,
+			RumbleEmptyPulseDurationSeconds,
+			RumbleBuildupTrigger,
+			RumbleTierPulseTrigger,
+			RumbleEmptyPulseTrigger);
+
+	private void UpdateRumble(ClimbPointsAwardOverlayState state, int earnedTierCount)
+	{
+		if (_inputSource == null) return;
+
+		PlayerInputFrame frame = PlayerInputService.GetFrame(EntityManager);
+		if (!frame.IsGamepadConnected || !frame.IsWindowActive)
+		{
+			StopRumble();
+			return;
+		}
+
+		ClimbPointsAwardRumbleSample sample = ClimbPointsAwardAnimationService.SampleRumble(
+			state.ElapsedSeconds,
+			earnedTierCount,
+			BuildRumbleSettings());
+		_inputSource.SetRumbleChannel(RumbleChannelId, new RumbleMotorState(
+			sample.LowFrequency,
+			sample.HighFrequency,
+			sample.LeftTrigger,
+			sample.RightTrigger));
+
+		float progressCap = ClimbPointsAwardAnimationService.GetProgressCap(earnedTierCount);
+		foreach (var milestone in ClimbPointsAwardAnimationService.GetCrossedFinaleMilestones(
+			state.PreviousElapsedSeconds,
+			state.ElapsedSeconds,
+			earnedTierCount))
+		{
+			ClimbPointsAwardRumbleFinaleFlags flag = milestone.Kind switch
+			{
+				ClimbPointsAwardRumbleMilestoneKind.CrestReveal => ClimbPointsAwardRumbleFinaleFlags.CrestReveal,
+				ClimbPointsAwardRumbleMilestoneKind.CountUpComplete => ClimbPointsAwardRumbleFinaleFlags.CountUpComplete,
+				_ => ClimbPointsAwardRumbleFinaleFlags.None,
+			};
+			if (flag == ClimbPointsAwardRumbleFinaleFlags.None
+				|| state.RumbleFinaleFlags.HasFlag(flag))
+			{
+				continue;
+			}
+
+			state.RumbleFinaleFlags |= flag;
+			RumbleProfile profile = ClimbPointsAwardAnimationService.GetFinaleRumbleProfile(
+				milestone.Kind,
+				progressCap);
+			float scale = ClimbPointsAwardAnimationService.GetFinaleRumbleScale(
+				milestone.Kind,
+				progressCap);
+			if (profile == RumbleProfile.None || scale <= 0f) continue;
+
+			EventManager.Publish(new RumbleRequested
+			{
+				Profile = profile,
+				Scale = scale,
+				Group = RumbleGroup.Default,
+			});
+		}
+	}
+
+	private void StopRumble()
+	{
+		_inputSource?.ClearRumbleChannel(RumbleChannelId);
+	}
 
 	private void EnsureRenderResources()
 	{
