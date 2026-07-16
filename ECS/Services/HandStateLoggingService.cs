@@ -81,6 +81,7 @@ namespace Crusaders30XX.ECS.Services
             var cardData = card?.GetComponent<CardData>();
             var transform = card?.GetComponent<Transform>();
             var ui = card?.GetComponent<UIElement>();
+            var inputContext = card?.GetComponent<InputContextMember>();
 
             return new JsonObject
             {
@@ -97,7 +98,12 @@ namespace Crusaders30XX.ECS.Services
                 ["uiBounds"] = BuildRectangle(ui?.Bounds),
                 ["uiEventType"] = ui?.EventType.ToString() ?? "None",
                 ["isInteractable"] = ui?.IsInteractable ?? false,
-                ["suppressCount"] = ui?.SuppressCount ?? 0
+                ["suppressCount"] = ui?.SuppressCount ?? 0,
+                ["isHidden"] = ui?.IsHidden ?? false,
+                ["uiLayerType"] = ui?.LayerType.ToString() ?? UILayerType.Default.ToString(),
+                ["isPreventDefaultClick"] = ui?.IsPreventDefaultClick ?? false,
+                ["inputContextId"] = inputContext?.ContextId ?? string.Empty,
+                ["zOrder"] = transform?.ZOrder ?? 0
             };
         }
 

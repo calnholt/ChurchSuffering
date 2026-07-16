@@ -46,6 +46,36 @@ public sealed class CardListPresentationTests
     }
 
     [Fact]
+    public void Releasing_modal_card_restores_gameplay_visibility_and_membership()
+    {
+        var entityManager = new EntityManager();
+        Entity card = Card(entityManager, "Hidden", CardData.CardColor.Black);
+        entityManager.AddComponent(card, new UIElement
+        {
+            Bounds = new Rectangle(100, 100, 200, 300),
+            IsInteractable = true,
+            IsHovered = true,
+            IsClicked = true,
+            IsHidden = true,
+            LayerType = UILayerType.Overlay,
+        });
+        entityManager.AddComponent(card, new InputContextMember { ContextId = "overlay.card-list" });
+        entityManager.AddComponent(card, new CardListModalSelectionMetadata());
+
+        CardListModalSystem.ReleaseCardFromModal(entityManager, card);
+
+        UIElement ui = card.GetComponent<UIElement>();
+        Assert.False(card.HasComponent<InputContextMember>());
+        Assert.False(card.HasComponent<CardListModalSelectionMetadata>());
+        Assert.False(ui.IsHidden);
+        Assert.False(ui.IsInteractable);
+        Assert.False(ui.IsHovered);
+        Assert.False(ui.IsClicked);
+        Assert.Equal(UILayerType.Default, ui.LayerType);
+        Assert.Equal(Rectangle.Empty, ui.Bounds);
+    }
+
+    [Fact]
     public void Shader_bounds_include_brittle_overflow_beyond_base_card()
     {
         var entityManager = new EntityManager();

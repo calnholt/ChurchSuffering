@@ -11,6 +11,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
             Slot = EquipmentSlot.Arms;
             Block = 2;
             Color = CardData.CardColor.Black;
+            FlavorText = "Standard issue of the order. Proofed for the grip that does not slip.";
             CanActivate = () => false;
         }
     }

@@ -11,6 +11,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
             Slot = EquipmentSlot.Head;
             Block = 2;
             Color = CardData.CardColor.Black;
+            FlavorText = "Standard issue of the order. Keeps rank heads down when arrows find the sky.";
             CanActivate = () => false;
         }
     }

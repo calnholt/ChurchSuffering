@@ -262,6 +262,10 @@ namespace Crusaders30XX.ECS.Systems
         {
             CardTransientStateService.ClearHandVisibilityFilters(EntityManager, card);
             CardTransientStateService.ClearAssignedBlockHotKey(EntityManager, card);
+            if (card.HasComponent<InputContextMember>())
+            {
+                EntityManager.RemoveComponent<InputContextMember>(card);
+            }
 
             var transform = card.GetComponent<Transform>();
             if (transform != null)
@@ -288,6 +292,8 @@ namespace Crusaders30XX.ECS.Systems
                 ui.IsInteractable = true;
                 ui.IsHovered = false;
                 ui.IsClicked = false;
+                ui.IsHidden = false;
+                ui.LayerType = UILayerType.Default;
                 ui.EventType = UIElementEventType.CardClicked;
             }
 

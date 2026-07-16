@@ -38,6 +38,7 @@ namespace Crusaders30XX.ECS.Systems
         private readonly Texture2D _pixel;
         private readonly RasterizerState _scissorRasterizer;
         private readonly Dictionary<int, bool> _previousCardHoverHighlight = new();
+        private readonly HashSet<int> _modalCardIds = new();
         private readonly HashSet<int> _inventoryAuxCardIds = new();
         private readonly EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
         private readonly List<Entity> _orderedCards = new();
@@ -137,7 +138,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<OpenCardListModalEvent>(OpenModal);
             EventManager.Subscribe<CloseCardListModalEvent>(_ => CloseModal());
             EventManager.Subscribe<CardListModalCardSelectedEvent>(OnCardSelected);
-            EventManager.Subscribe<DeleteCachesEvent>(_ => ClearPresentationCache());
+            EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCaches);
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -783,7 +784,9 @@ namespace Crusaders30XX.ECS.Systems
         private void OpenModal(OpenCardListModalEvent evt)
         {
             RestoreModalHoverHighlightState();
+            ReleaseTrackedModalCards();
             CleanupOverlayTooltipEntities();
+            CleanupInventoryAuxCards();
 
             var entity = EntityManager.GetEntitiesWithComponent<CardListModal>().FirstOrDefault();
             if (entity == null)
@@ -812,7 +815,7 @@ namespace Crusaders30XX.ECS.Systems
             EnsureModalRoot(entity, modal);
             foreach (Entity card in modal.Cards)
             {
-                InputContextService.EnsureMember(EntityManager, card, ContextId);
+                TrackModalCard(card);
                 EnsureCardTooltip(card);
             }
         }
@@ -854,24 +857,7 @@ namespace Crusaders30XX.ECS.Systems
 
             modal.IsOpen = false;
             modal.SelectedCardIndex = -1;
-            foreach (var card in modal.Cards ?? new List<Entity>())
-            {
-                InputContextService.RemoveMember(EntityManager, card, ContextId);
-                var ui = card.GetComponent<UIElement>();
-                if (ui != null)
-                {
-                    ui.LayerType = UILayerType.Default;
-                    ui.IsInteractable = false;
-                    ui.IsHovered = false;
-                    ui.IsClicked = false;
-                    ui.Bounds = Rectangle.Empty;
-                }
-
-                if (card.GetComponent<CardListModalSelectionMetadata>() != null)
-                {
-                    EntityManager.RemoveComponent<CardListModalSelectionMetadata>(card);
-                }
-            }
+            ReleaseTrackedModalCards();
 
             RestoreModalHoverHighlightState();
             modal.IsSelectable = false;
@@ -1001,7 +987,7 @@ namespace Crusaders30XX.ECS.Systems
                 ui.Bounds = interactable ? visual : Rectangle.Empty;
                 ui.TooltipPosition = TooltipPosition.Right;
                 ApplyModalHoverHighlightState(card, ui, modal);
-                InputContextService.EnsureMember(EntityManager, card, ContextId);
+                TrackModalCard(card);
                 EnsureCardTooltip(card);
             }
         }
@@ -1035,7 +1021,7 @@ namespace Crusaders30XX.ECS.Systems
                         ui.IsHidden = ui.Bounds == Rectangle.Empty;
                     }
 
-                    InputContextService.EnsureMember(EntityManager, weapon, ContextId);
+                    TrackModalCard(weapon);
                     _inventoryAuxCardIds.Add(weapon.Id);
                     EnsureCardTooltip(weapon);
                     continue;
@@ -1172,10 +1158,71 @@ namespace Crusaders30XX.ECS.Systems
                     ui.IsHovered = false;
                     ui.IsClicked = false;
                     ui.IsInteractable = false;
+                    ui.IsHidden = false;
                     ui.LayerType = UILayerType.Default;
                 }
             }
             _inventoryAuxCardIds.Clear();
+        }
+
+        private void TrackModalCard(Entity card)
+        {
+            if (card == null) return;
+            _modalCardIds.Add(card.Id);
+            InputContextService.EnsureMember(EntityManager, card, ContextId);
+        }
+
+        private void ReleaseTrackedModalCards()
+        {
+            foreach (int id in _modalCardIds.ToList())
+            {
+                ReleaseCardFromModal(EntityManager, EntityManager.GetEntity(id));
+            }
+            _modalCardIds.Clear();
+        }
+
+        internal static void ReleaseCardFromModal(EntityManager entityManager, Entity card)
+        {
+            if (entityManager == null || card == null) return;
+
+            InputContextService.RemoveMember(entityManager, card, ContextId);
+            var ui = card.GetComponent<UIElement>();
+            if (ui != null)
+            {
+                ui.LayerType = UILayerType.Default;
+                ui.IsInteractable = false;
+                ui.IsHovered = false;
+                ui.IsClicked = false;
+                ui.IsHidden = false;
+                ui.Bounds = Rectangle.Empty;
+            }
+
+            if (card.GetComponent<CardListModalSelectionMetadata>() != null)
+            {
+                entityManager.RemoveComponent<CardListModalSelectionMetadata>(card);
+            }
+        }
+
+        private void OnDeleteCaches(DeleteCachesEvent _)
+        {
+            var modal = EntityManager.GetEntitiesWithComponent<CardListModal>()
+                .FirstOrDefault()
+                ?.GetComponent<CardListModal>();
+            if (modal != null)
+            {
+                modal.IsOpen = false;
+                modal.SelectedCardIndex = -1;
+                modal.IsSelectable = false;
+                modal.SelectionContext = string.Empty;
+                modal.Mode = CardListModalMode.Auto;
+            }
+
+            ReleaseTrackedModalCards();
+            CleanupInventoryAuxCards();
+            CleanupOverlayTooltipEntities();
+            RestoreModalHoverHighlightState();
+            SetCloseButtonActive(false);
+            ClearPresentationCache();
         }
 
         private Entity EnsureTooltipEntity(string key, Rectangle bounds, Rectangle buildClip, TooltipType type, string tooltip, string tooltipKeywordSource)
