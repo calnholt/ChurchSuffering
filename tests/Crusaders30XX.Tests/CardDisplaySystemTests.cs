@@ -19,6 +19,12 @@ public sealed class CardDisplaySystemTests
 		Assert.False(new CardRenderScaledEvent().PreferCachedBase);
 	}
 
+	[Fact]
+	public void CardRenderEvent_does_not_prefer_cached_base_by_default()
+	{
+		Assert.False(new CardRenderEvent().PreferCachedBase);
+	}
+
 	[Theory]
 	[InlineData(1f, 0, true)]
 	[InlineData(0.5f, 0, false)]

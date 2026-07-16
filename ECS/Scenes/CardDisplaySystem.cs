@@ -30,6 +30,9 @@ namespace Crusaders30XX.ECS.Systems
         private CardGeometrySettings _settings;
         private int _cacheRenderWidth;
         private int _cacheRenderHeight;
+        private long _baseCacheHits;
+        private long _baseCacheMisses;
+        private long _baseCacheBypasses;
         private const long BaseSurfaceCacheBudgetBytes = 64L * 1024L * 1024L;
 
         internal readonly struct CardDescriptionTextLayout
@@ -230,7 +233,7 @@ namespace Crusaders30XX.ECS.Systems
             _cacheRenderHeight = Game1.Display.RenderHeight;
 
             LoadTypeIconTextures();
-            EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent);
+            EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent, CardRenderEvent.BaseRendererPriority);
             EventManager.Subscribe<CardRenderScaledEvent>(OnCardRenderScaledEvent);
             EventManager.Subscribe<CardRenderScaledRotatedEvent>(OnCardRenderScaledRotatedEvent);
             EventManager.Subscribe<DeleteCachesEvent>(_ => ResetRenderResources());
@@ -402,11 +405,19 @@ namespace Crusaders30XX.ECS.Systems
         private void OnCardRenderEvent(CardRenderEvent evt)
         {
             var transform = evt.Card.GetComponent<Transform>();
+            CachedCardSurface cached = evt.PreferCachedBase
+                ? GetOrCreateCachedBase(
+                    evt.Card,
+                    evt.Position,
+                    transform?.Scale.X ?? 1f,
+                    transform?.Rotation ?? 0f)
+                : RecordBaseCacheBypass();
             RenderCard(
                 evt.Card,
                 evt.Position,
                 transform?.Scale.X ?? 1f,
-                transform?.Rotation ?? 0f);
+                transform?.Rotation ?? 0f,
+                cached);
         }
 
         private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
@@ -428,7 +439,7 @@ namespace Crusaders30XX.ECS.Systems
                         transform.Rotation = evt.Rotation;
                         CachedCardSurface cached = evt.PreferCachedBase
                             ? GetOrCreateCachedBase(evt.Card, evt.Position, evt.Scale, evt.Rotation)
-                            : null;
+                            : RecordBaseCacheBypass();
                         RenderCard(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
                     }
                     finally
@@ -448,7 +459,7 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     CachedCardSurface cached = evt.PreferCachedBase
                         ? GetOrCreateCachedBase(evt.Card, evt.Position, evt.Scale, evt.Rotation)
-                        : null;
+                        : RecordBaseCacheBypass();
                     RenderCard(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
                 }
             }
@@ -524,23 +535,25 @@ namespace Crusaders30XX.ECS.Systems
 
         private CachedCardSurface GetOrCreateCachedBase(Entity card, Vector2 position, float scale, float rotation)
         {
-            if (!CanCacheBase(card, scale)) return null;
+            if (!CanCacheBase(card, scale)) return RecordBaseCacheBypass();
             EnsureCacheMatchesRenderScale();
 
-            CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
+            Rectangle logicalBounds = CardRenderBoundsService.GetBaseBounds(
                 EntityManager,
                 card,
                 position,
                 scale,
                 rotation);
-            Rectangle logicalBounds = geometry.Bounds;
             int physicalWidth = Math.Max(1, (int)MathF.Ceiling(logicalBounds.Width * Game1.Display.RenderScaleX));
             int physicalHeight = Math.Max(1, (int)MathF.Ceiling(logicalBounds.Height * Game1.Display.RenderScaleY));
             CardBaseRenderModel model = CreateRenderModel(card, scale, rotation, physicalWidth, physicalHeight);
             if (_baseSurfaceCache.TryGet(model, out CachedCardSurface cached) && !cached.Texture.IsDisposed)
             {
+                _baseCacheHits++;
                 return new CachedCardSurface(cached.Texture, logicalBounds);
             }
+
+            _baseCacheMisses++;
 
             if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
                 _graphicsDevice,
@@ -590,6 +603,24 @@ namespace Crusaders30XX.ECS.Systems
             _baseSurfaceCache.Add(model, cached, physicalWidth * (long)physicalHeight * 4L);
             return cached;
         }
+
+        private CachedCardSurface RecordBaseCacheBypass()
+        {
+            _baseCacheBypasses++;
+            return null;
+        }
+
+        internal void ResetBaseCacheDiagnostics()
+        {
+            _baseCacheHits = 0;
+            _baseCacheMisses = 0;
+            _baseCacheBypasses = 0;
+        }
+
+        internal CardBaseCacheDiagnostics GetBaseCacheDiagnostics() => new(
+            _baseCacheHits,
+            _baseCacheMisses,
+            _baseCacheBypasses);
 
         private bool CanCacheBase(Entity card, float scale)
         {
@@ -643,6 +674,7 @@ namespace Crusaders30XX.ECS.Systems
                 alternate?.TreatsAsAttack == true,
                 alternate?.AttackDamage ?? 0,
                 alternate?.IsFreeAction == true,
+                phase?.Sub ?? SubPhase.StartBattle,
                 GetStyleFingerprint(),
                 scale,
                 rotation,

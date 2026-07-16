@@ -186,6 +186,7 @@ namespace Crusaders30XX.ECS.Systems
 		private RenderTarget2D _bgRt;
 		private RenderTarget2D _bgTemp;
 		private RasterizerState _rasterizerState;
+		private SpriteBatchPassController _spriteBatchPasses;
 
 
 		public BattleSceneSystem(EntityManager em, SystemManager sm, World world, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager content, ImageAssetService imageAssets) : base(em)
@@ -316,6 +317,8 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void Draw()
 		{
+			FrameProfiler.Measure("Battle.BackgroundCompositePass", () =>
+			{
 			EnsureBackgroundTargets();
 			// End the current SpriteBatch to draw backgrounds to a separate render target
 			_spriteBatch.End();
@@ -404,6 +407,7 @@ namespace Crusaders30XX.ECS.Systems
 			
 			// Resume SpriteBatch for remaining UI drawing
 			_spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, _rasterizerState, null, Game1.Display.SpriteBatchTransform);
+			});
 			
 			// If there will be dialog to show for the quest, skip drawing battle UI (overlay is drawn globally)
 			bool willShowDialog = EntityManager.GetEntitiesWithComponent<QueuedEvents>().FirstOrDefault()?.GetComponent<PendingQuestDialog>()?.WillShowDialog ?? false;
@@ -411,6 +415,8 @@ namespace Crusaders30XX.ECS.Systems
 				.FirstOrDefault()?.GetComponent<DialogOverlayState>()?.IsActive ?? false;
 			if (willShowDialog || encounterDialogueActive) return;
 			if (RewardModalDisplaySystem.ShouldSuppressBattleSceneDisplay(EntityManager)) return;
+			_spriteBatchPasses.RunDeferred("Battle.OrdinaryUiPass", () =>
+			{
 			FrameProfiler.Measure("PlayerDisplaySystem.Draw", _playerDisplaySystem.Draw);
 			FrameProfiler.Measure("GuardianAngelDisplaySystem.Draw", _guardianAngelDisplaySystem.Draw);
 			FrameProfiler.Measure("EnemyDisplaySystem.Draw", _enemyDisplaySystem.Draw);
@@ -418,8 +424,14 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("ModularEffectScreenDisplaySystem.Draw", _modularEffectScreenDisplaySystem.Draw);
 			FrameProfiler.Measure("ModularEffectPrimitiveDisplaySystem.Draw", _modularEffectPrimitiveDisplaySystem.Draw);
 			FrameProfiler.Measure("ModularEffectParticleDisplaySystem.Draw", _modularEffectParticleDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunIsolatedImmediate("Battle.CardStatusPass", () =>
+			{
 			FrameProfiler.Measure("PlunderDisplaySystem.Draw", _plunderDisplaySystem.Draw);
 			FrameProfiler.Measure("PlunderSnatchDisplaySystem.Draw", _plunderSnatchDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunDeferred("Battle.OrdinaryUiPass", () =>
+			{
 			FrameProfiler.Measure("ActiveCharacterIndicatorDisplaySystem.Draw", _activeCharacterIndicatorDisplaySystem.Draw);
 			FrameProfiler.Measure("EnemyIntentPipsSystem.Draw", _enemyIntentPipsSystem.Draw);
 			FrameProfiler.Measure("AmbushDisplaySystem.Draw", _ambushDisplaySystem.Draw);
@@ -428,8 +440,14 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("PassiveApplicationAnimationDisplaySystem.Draw", _passiveApplicationAnimationDisplaySystem.Draw);
 			FrameProfiler.Measure("StunnedOverlaySystem.Draw", _stunnedOverlaySystem.Draw);
 			FrameProfiler.Measure("UIElementHighlightSystem.Draw", _uiElementHighlightSystem.Draw);
+			});
+			_spriteBatchPasses.RunIsolatedImmediate("Battle.CardStatusPass", () =>
+			{
 			FrameProfiler.Measure("AssignedBlockCardsDisplaySystem.Draw", _assignedBlockCardsDisplaySystem.Draw);
 			FrameProfiler.Measure("ExhaustOnBlockDisplaySystem.Draw", _exhaustOnBlockDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunDeferred("Battle.OrdinaryUiPass", () =>
+			{
 			FrameProfiler.Measure("PlayerWispParticleSystem.Draw", _playerWispParticleSystem.Draw);
 			FrameProfiler.Measure("PlayerTemperanceActivationDisplaySystem.Draw", _playerTemperanceActivationDisplaySystem.Draw);
 			FrameProfiler.Measure("PlayerHudRootDisplaySystem.Draw", _playerHudRootDisplaySystem.Draw);
@@ -444,10 +462,25 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("PassiveMeterRenderSystem.Draw", _passiveMeterRenderSystem.Draw);
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawBackdrop", _payCostOverlaySystem.DrawBackdrop);
 			FrameProfiler.Measure("EnemyAttackDisplaySystem.Draw", _enemyAttackDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunIsolatedImmediate("Battle.CardStatusPass", () =>
+			{
 			FrameProfiler.Measure("EnemyDamageMeterDisplaySystem.Draw", _enemyDamageMeterDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunDeferred("Battle.OrdinaryUiPass", () =>
+			{
 			FrameProfiler.Measure("EndTurnDisplaySystem.Draw", _endTurnDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunDeferred("Battle.HandPass", () =>
+			{
 			FrameProfiler.Measure("HandDisplaySystem.DrawHand", _handDisplaySystem.DrawHand);
+			});
+			_spriteBatchPasses.RunIsolatedImmediate("Battle.CardStatusPass", () =>
+			{
 			FrameProfiler.Measure("CardMoveDisplaySystem.DrawAlpha", _cardMoveDisplaySystem.DrawAlpha);
+			});
+			_spriteBatchPasses.RunDeferred("Battle.OrdinaryUiPass", () =>
+			{
 			FrameProfiler.Measure("CardPlayedAnimationSystem.Draw", _cardPlayedAnimationSystem.Draw);
 			FrameProfiler.Measure("EquipmentDisplaySystem.Draw", _equipmentDisplaySystem.Draw);
 			FrameProfiler.Measure("EquipmentTooltipDisplaySystem.Draw", _equipmentTooltipDisplaySystem.Draw);
@@ -463,9 +496,21 @@ namespace Crusaders30XX.ECS.Systems
 					() => _pileColorCountDisplaySystem.Draw(showDrawPile, showDiscardPile));
 			FrameProfiler.Measure("ShuffleDeckDisplaySystem.Draw", _shuffleDeckDisplaySystem.Draw);
 			if (showDiscardPile) FrameProfiler.Measure("DiscardPileDisplaySystem.Draw", _discardPileDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunIsolatedImmediate("Battle.CardStatusPass", () =>
+			{
 			FrameProfiler.Measure("MillCardSystem.Draw", _millCardSystem.Draw);
+			});
+			_spriteBatchPasses.RunDeferred("Battle.OrdinaryUiPass", () =>
+			{
 			FrameProfiler.Measure("BattleCardMutationDisplaySystem.Draw", _battleCardMutationDisplaySystem.Draw);
+			});
+			_spriteBatchPasses.RunIsolatedImmediate("Battle.CardStatusPass", () =>
+			{
 			FrameProfiler.Measure("PayCostOverlaySystem.DrawForeground", _payCostOverlaySystem.DrawForeground);
+			});
+			_spriteBatchPasses.RunDeferred("Battle.OrdinaryUiPass", () =>
+			{
 			FrameProfiler.Measure("CantPlayCardMessageSystem.Draw", _cantPlayCardMessageSystem.Draw);
 			FrameProfiler.Measure("DiscardSpecificCardHighlightSystem.Draw", _discardSpecificCardHighlightSystem.Draw);
 			FrameProfiler.Measure("IntimidateDisplaySystem.Draw", _intimidateDisplaySystem.Draw);
@@ -474,6 +519,7 @@ namespace Crusaders30XX.ECS.Systems
 			FrameProfiler.Measure("DamageModificationDisplaySystem.Draw", _damageModificationDisplaySystem.Draw);
 		if (_tutorialRetryDisplaySystem != null) FrameProfiler.Measure("TutorialRetryDisplaySystem.Draw", _tutorialRetryDisplaySystem.Draw);
 		if (_tutorialDisplaySystem != null) FrameProfiler.Measure("TutorialDisplaySystem.Draw", _tutorialDisplaySystem.Draw);
+			});
 		}
 
 		private void CreateBattleSceneEntities() {
@@ -891,6 +937,7 @@ namespace Crusaders30XX.ECS.Systems
 			// Bloodshot effect system and render targets for background compositing
 			_bloodshotDisplaySystem = new BloodshotDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, _content);
 			_rasterizerState = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
+			_spriteBatchPasses = new SpriteBatchPassController(_spriteBatch, _rasterizerState);
 			
 		// Register
 			_world.AddSystem(_handDisplaySystem);

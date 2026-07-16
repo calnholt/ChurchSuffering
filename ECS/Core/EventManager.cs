@@ -91,6 +91,51 @@ namespace Crusaders30XX.ECS.Core
                 }
             }
         }
+
+        /// <summary>
+        /// Publishes handlers in their normal priority order while allowing the caller to
+        /// measure the high- and low-priority portions independently.
+        /// </summary>
+        public static void PublishPartitioned<T>(
+            T eventData,
+            int highPriorityMinimum,
+            Action<Action> measureHighPriority,
+            Action<Action> measureLowPriority) where T : class
+        {
+            if (!_eventHandlers.TryGetValue(typeof(T), out HandlerCollection collection)) return;
+            PrioritizedHandler[] handlers = collection.OrderedSnapshot;
+            InvokeMeasured(
+                measureHighPriority,
+                () => InvokeHandlers(handlers, eventData, handler => handler.Priority >= highPriorityMinimum));
+            InvokeMeasured(
+                measureLowPriority,
+                () => InvokeHandlers(handlers, eventData, handler => handler.Priority < highPriorityMinimum));
+        }
+
+        private static void InvokeMeasured(Action<Action> measure, Action action)
+        {
+            if (measure != null) measure(action);
+            else action();
+        }
+
+        private static void InvokeHandlers<T>(
+            PrioritizedHandler[] handlers,
+            T eventData,
+            Func<PrioritizedHandler, bool> include) where T : class
+        {
+            foreach (PrioritizedHandler prioritizedHandler in handlers)
+            {
+                if (!include(prioritizedHandler)) continue;
+                try
+                {
+                    ((Action<T>)prioritizedHandler.Handler)(eventData);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in event handler: {ex}");
+                }
+            }
+        }
         
         /// <summary>
         /// Clear all event handlers (useful for cleanup)

@@ -87,6 +87,13 @@ namespace Crusaders30XX.Diagnostics
             "Game1.Draw.ShaderComposite",
             "Game1.Draw.Present",
             "BattleSceneSystem.Draw",
+            "Battle.BackgroundCompositePass",
+            "Battle.OrdinaryUiPass",
+            "Battle.CardStatusPass",
+            "Battle.HandPass",
+            "Battle.HandBaseCards",
+            "Battle.HandDecorations",
+            "Battle.GlobalOverlays",
             "ModularEffectScreenDisplaySystem.Draw",
             "ModularEffectPrimitiveDisplaySystem.Draw",
             "HandDisplaySystem.DrawHand",
@@ -339,6 +346,22 @@ namespace Crusaders30XX.Diagnostics
                     return false;
                 }
                 stats = ToStats(name, accumulator);
+                return true;
+            }
+        }
+
+        public static bool TryGetAverageDrawCalls(string name, out double drawCalls)
+        {
+            lock (Sync)
+            {
+                if (!WorkloadSession.TryGetValue(name, out WorkloadAccumulator accumulator) ||
+                    accumulator.Samples <= 0)
+                {
+                    drawCalls = 0;
+                    return false;
+                }
+
+                drawCalls = accumulator.Total.Draws / (double)accumulator.Samples;
                 return true;
             }
         }

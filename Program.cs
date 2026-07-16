@@ -27,9 +27,29 @@ var appArgs = TutorialLaunchOptions.StripLaunchFlag(
 DisplaySnapshotLaunchOptions snapshotOptions = null;
 TestFightLaunchOptions testFightOptions = null;
 CardListProfileLaunchOptions cardListProfileOptions = null;
+BattleRenderProfileLaunchOptions battleRenderProfileOptions = null;
 try
 {
-    if (CardListProfileLaunchOptions.TryParse(appArgs, out var parsedCardListProfile))
+    if (BattleRenderProfileLaunchOptions.TryParse(appArgs, out var parsedBattleRenderProfile))
+    {
+        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch ||
+            UnlockLaunchOptions.UnlockAllCollectionItems ||
+            UnlockLaunchOptions.UnlockAllRunSetupOptions)
+        {
+            throw new BattleRenderProfileSetupException(
+                "The new and unlock flags cannot be combined with battle-render-profile");
+        }
+        battleRenderProfileOptions = parsedBattleRenderProfile;
+        testFightOptions = new TestFightLaunchOptions
+        {
+            WeaponId = "hammer",
+            EnemyId = "skeleton",
+            Difficulty = Crusaders30XX.ECS.Singletons.RunDifficulty.Hard,
+        };
+        TutorialLaunchOptions.ForceSkip();
+        Console.WriteLine("[Launch] Battle render profile: fixed skeleton battle, 1920x1080, 180 warm-up + 300 measured frames");
+    }
+    else if (CardListProfileLaunchOptions.TryParse(appArgs, out var parsedCardListProfile))
     {
         if (NewGameLaunchOptions.DeleteSaveBeforeLaunch ||
             UnlockLaunchOptions.UnlockAllCollectionItems ||
@@ -60,7 +80,7 @@ try
         snapshotOptions = parsed;
     }
 }
-catch (Exception ex) when (ex is DisplaySnapshotSetupException or TestFightSetupException or CardListProfileSetupException)
+catch (Exception ex) when (ex is DisplaySnapshotSetupException or TestFightSetupException or CardListProfileSetupException or BattleRenderProfileSetupException)
 {
     Console.Error.WriteLine($"[Launch] {ex.Message}");
     Environment.ExitCode = 1;
@@ -89,5 +109,9 @@ if (UnlockLaunchOptions.UnlockAllRunSetupOptions)
     Console.WriteLine("[Launch] Run setup unlocked (weapons, difficulties)");
 }
 
-using var game = new Crusaders30XX.Game1(snapshotOptions, testFightOptions, cardListProfileOptions);
+using var game = new Crusaders30XX.Game1(
+    snapshotOptions,
+    testFightOptions,
+    cardListProfileOptions,
+    battleRenderProfileOptions);
 game.Run();

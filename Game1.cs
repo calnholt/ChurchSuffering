@@ -84,10 +84,14 @@ public class Game1 : Game
     private readonly DisplaySnapshotLaunchOptions _snapshotOptions;
     private readonly TestFightLaunchOptions _testFightOptions;
     private readonly CardListProfileLaunchOptions _cardListProfileOptions;
+    private readonly BattleRenderProfileLaunchOptions _battleRenderProfileOptions;
 #if DEBUG
     private int _cardListProfileRenderedFrames;
     private int _cardListProfileSettleFrames;
     private int _cardListProfileMaxVisible;
+    private int _battleRenderProfileRenderedFrames;
+    private int _battleRenderProfileSettleFrames;
+    private bool _battleRenderProfilePrepared;
 #endif
 #if DEBUG
     private bool _writePerfReportOnExit;
@@ -124,11 +128,13 @@ public class Game1 : Game
     public Game1(
         DisplaySnapshotLaunchOptions snapshotOptions = null,
         TestFightLaunchOptions testFightOptions = null,
-        CardListProfileLaunchOptions cardListProfileOptions = null)
+        CardListProfileLaunchOptions cardListProfileOptions = null,
+        BattleRenderProfileLaunchOptions battleRenderProfileOptions = null)
     {
         _snapshotOptions = snapshotOptions;
         _testFightOptions = testFightOptions;
         _cardListProfileOptions = cardListProfileOptions;
+        _battleRenderProfileOptions = battleRenderProfileOptions;
         if (_testFightOptions != null)
         {
             TestFightRuntime.Configure(_testFightOptions);
@@ -141,7 +147,7 @@ public class Game1 : Game
         _graphics.PreferredBackBufferWidth = VirtualWidth;
         _graphics.PreferredBackBufferHeight = VirtualHeight;
 #if DEBUG
-        if (_cardListProfileOptions != null)
+        if (_cardListProfileOptions != null || _battleRenderProfileOptions != null)
         {
             _graphics.SynchronizeWithVerticalRetrace = false;
             IsFixedTimeStep = false;
@@ -169,7 +175,8 @@ public class Game1 : Game
     {
         LoggingService.Initialize();
         CardUsageTelemetryRuntime.Initialize(
-            _snapshotOptions == null && _testFightOptions == null && _cardListProfileOptions == null);
+            _snapshotOptions == null && _testFightOptions == null && _cardListProfileOptions == null &&
+            _battleRenderProfileOptions == null);
         CalculateRenderDestination();
         // Initialize ECS World
         _world = new World();
@@ -189,7 +196,7 @@ public class Game1 : Game
         FontSingleton.Initialize(Content);
 
         // Initialize Achievement system
-        if (_testFightOptions == null && _cardListProfileOptions == null)
+        if (_testFightOptions == null && _cardListProfileOptions == null && _battleRenderProfileOptions == null)
         {
             AchievementManager.Initialize(_world.EntityManager);
         }
@@ -372,6 +379,10 @@ public class Game1 : Game
 
         if (_testFightOptions != null)
         {
+            if (_battleRenderProfileOptions != null)
+            {
+                TestFightRuntime.SetDeckSeedProviderForTests(() => 30030);
+            }
             TestFightSetupService.PrepareWorld(_world);
             EventManager.Publish(new ShowTransition
             {
@@ -390,11 +401,12 @@ public class Game1 : Game
     
     protected override void Update(GameTime gameTime)
     {
-        bool skipProfile = _snapshotHost?.IsActive == true || IsCardListProfileSettling();
+        bool skipProfile = _snapshotHost?.IsActive == true || IsProfileSettling();
         FrameProfiler.BeginUpdateIteration(skipProfile);
 
 #if DEBUG
         UpdateCardListProfileScroll();
+        PrepareBattleRenderProfileIfReady();
 #endif
 
 #if DEBUG
@@ -475,7 +487,7 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
 #if DEBUG
-        FrameProfiler.BeginRenderFrame(_snapshotHost?.IsActive == true || IsCardListProfileSettling());
+        FrameProfiler.BeginRenderFrame(_snapshotHost?.IsActive == true || IsProfileSettling());
         try
         {
             FrameProfiler.MeasureInclusive("Game1.Draw.Commands", () => DrawGame(gameTime));
@@ -484,6 +496,7 @@ public class Game1 : Game
         {
             FrameProfiler.EndRenderFrame();
             AdvanceCardListProfile();
+            AdvanceBattleRenderProfile();
         }
 #else
         DrawGame(gameTime);
@@ -643,6 +656,20 @@ public class Game1 : Game
                 break;
             }
         }
+        if (scene.Current == SceneId.Battle)
+        {
+            FrameProfiler.Measure("Battle.GlobalOverlays", DrawGlobalOverlays);
+        }
+        else
+        {
+            DrawGlobalOverlays();
+        }
+        // Cursor blur trail (additive pass before cursor) - skip in card debug mode
+        DrawCursor();
+    }
+
+    private void DrawGlobalOverlays()
+    {
         FrameProfiler.Measure("HotKeySystem.Draw", _hotKeySystem.Draw);
         FrameProfiler.Measure("HotKeyProgressRingSystem.Draw", _hotKeyProgressRingSystem.Draw);
         FrameProfiler.Measure("LocationNameDisplaySystem.Draw", _locationNameDisplaySystem.Draw);
@@ -670,8 +697,6 @@ public class Game1 : Game
         FrameProfiler.Measure("GameOverOverlayDisplaySystem.Draw", _gameOverOverlayDisplaySystem.Draw);
         FrameProfiler.Measure("TransitionDisplaySystem.Draw", _transitionDisplaySystem.Draw);
         FrameProfiler.Measure("UIElementBorderDebugSystem.Draw", _uiElementBorderDebugSystem.Draw);
-        // Cursor blur trail (additive pass before cursor) — skip in card debug mode
-        DrawCursor();
     }
 
     private bool IsBackgroundOnlyClimbDialogue(SceneState scene)
@@ -794,8 +819,141 @@ public class Game1 : Game
         Environment.ExitCode = pass ? 0 : 1;
         Exit();
     }
+
+    private void PrepareBattleRenderProfileIfReady()
+    {
+        if (_battleRenderProfileOptions == null || _battleRenderProfilePrepared) return;
+        SceneId scene = _world.EntityManager.GetEntitiesWithComponent<SceneState>()
+            .FirstOrDefault()?.GetComponent<SceneState>()?.Current ?? SceneId.None;
+        var deck = _world.EntityManager.GetEntity("Deck")?.GetComponent<Deck>();
+        if (scene != SceneId.Battle || deck?.Cards == null || deck.Cards.Count < 5 ||
+            _world.EntityManager.GetEntity("Enemy") == null)
+        {
+            return;
+        }
+
+        Entity[] cards = deck.Cards
+            .Where(card => card.GetComponent<CardData>()?.Card?.IsWeapon != true)
+            .OrderBy(card => card.GetComponent<CardData>()?.Card?.CardId)
+            .ThenBy(card => card.Id)
+            .Take(5)
+            .ToArray();
+        if (cards.Length != 5)
+        {
+            throw new BattleRenderProfileSetupException(
+                $"Expected at least five non-weapon cards but found {cards.Length}");
+        }
+
+        deck.Hand.Clear();
+        deck.DrawPile.Clear();
+        deck.DiscardPile.Clear();
+        deck.ExhaustPile.Clear();
+        deck.Hand.AddRange(cards);
+        deck.DrawPile.AddRange(deck.Cards.Where(card => !cards.Contains(card) &&
+            card.GetComponent<CardData>()?.Card?.IsWeapon != true));
+
+        _world.EntityManager.AddComponent(cards[1], new Frozen());
+        _world.EntityManager.AddComponent(cards[2], new Pledge { CanPlay = true });
+        _world.EntityManager.AddComponent(cards[3], new Shackle());
+        foreach (Entity card in cards)
+        {
+            var ui = card.GetComponent<UIElement>();
+            if (ui != null)
+            {
+                ui.IsHidden = false;
+                ui.IsInteractable = false;
+                ui.IsHovered = false;
+                ui.IsClicked = false;
+            }
+        }
+
+        var phase = _world.EntityManager.GetEntity("PhaseState")?.GetComponent<PhaseState>();
+        if (phase != null)
+        {
+            phase.Main = MainPhase.PlayerTurn;
+            phase.Sub = SubPhase.Action;
+            phase.TurnNumber = 1;
+        }
+        EventManager.Publish(new SetActionPointsEvent { Amount = 2 });
+        EventManager.Publish(new SetCourageEvent { Amount = 3 });
+        EventManager.Publish(new SetTemperanceEvent { Amount = 2 });
+        GpuProfiler.ResumeCapture();
+        _battleRenderProfilePrepared = true;
+        Console.WriteLine($"[BattleRenderProfile] prepared {cards.Length} hand cards at {Display.RenderWidth}x{Display.RenderHeight}");
+    }
+
+    private void AdvanceBattleRenderProfile()
+    {
+        if (_battleRenderProfileOptions == null || !_battleRenderProfilePrepared) return;
+        _battleRenderProfileRenderedFrames++;
+
+        if (_battleRenderProfileRenderedFrames == BattleRenderProfileLaunchOptions.WarmupFrames)
+        {
+            FrameProfiler.ResetSession();
+            GpuProfiler.Reset();
+            _cardDisplaySystem.ResetBaseCacheDiagnostics();
+            Console.WriteLine("[BattleRenderProfile] warm-up complete; measuring 300 frames");
+            return;
+        }
+
+        int measurementEnd = BattleRenderProfileLaunchOptions.WarmupFrames +
+            BattleRenderProfileLaunchOptions.MeasuredFrames;
+        if (_battleRenderProfileRenderedFrames == measurementEnd)
+        {
+            GpuProfiler.PauseCapture();
+            Console.WriteLine($"[BattleRenderProfile] measurement complete; resolving {GpuProfiler.PendingQueries} query pairs without blocking");
+            return;
+        }
+
+        if (_battleRenderProfileRenderedFrames <= measurementEnd) return;
+        _battleRenderProfileSettleFrames++;
+        if (GpuProfiler.PendingQueries == 0 ||
+            _battleRenderProfileSettleFrames >= BattleRenderProfileLaunchOptions.MaxQuerySettleFrames)
+        {
+            FinishBattleRenderProfile();
+        }
+    }
+
+    private void FinishBattleRenderProfile()
+    {
+        const string battleScope = "BattleSceneSystem.Draw";
+        const string handScope = "HandDisplaySystem.DrawHand";
+        bool hasBattleCpu = FrameProfiler.TryGetSessionStats(battleScope, gpu: false, out var battleCpu);
+        bool hasBattleGpu = FrameProfiler.TryGetSessionStats(battleScope, gpu: true, out var battleGpu);
+        bool hasHandCpu = FrameProfiler.TryGetSessionStats(handScope, gpu: false, out var handCpu);
+        bool hasHandGpu = FrameProfiler.TryGetSessionStats(handScope, gpu: true, out var handGpu);
+        bool hasBattleDraws = FrameProfiler.TryGetAverageDrawCalls(battleScope, out double battleDraws);
+        bool hasHandDraws = FrameProfiler.TryGetAverageDrawCalls(handScope, out double handDraws);
+        bool pass = GpuProfiler.TimerSupported && hasBattleCpu && hasBattleGpu && hasHandCpu && hasHandGpu &&
+            hasBattleDraws && hasHandDraws;
+        const string reportPath = "logs/battle-render-profile-report.txt";
+        FrameProfiler.WriteReport(reportPath, FrameProfiler.ActiveSceneId, ShaderRuntimeOptions.ShadersEnabled);
+        CardBaseCacheDiagnostics cache = _cardDisplaySystem.GetBaseCacheDiagnostics();
+        File.AppendAllText(
+            reportPath,
+            $"{Environment.NewLine}=== Card base cache ==={Environment.NewLine}" +
+            $"Hits: {cache.Hits}{Environment.NewLine}" +
+            $"Misses: {cache.Misses}{Environment.NewLine}" +
+            $"Bypasses: {cache.Bypasses}{Environment.NewLine}");
+        Console.WriteLine($"[BattleRenderProfile] battle CPU avg={(hasBattleCpu ? battleCpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasBattleCpu ? battleCpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] battle GPU avg={(hasBattleGpu ? battleGpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasBattleGpu ? battleGpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] hand CPU avg={(hasHandCpu ? handCpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasHandCpu ? handCpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] hand GPU avg={(hasHandGpu ? handGpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasHandGpu ? handGpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] draw calls battle={(hasBattleDraws ? battleDraws.ToString("0.0") : "n/a")}, hand={(hasHandDraws ? handDraws.ToString("0.0") : "n/a")}");
+        Console.WriteLine($"[BattleRenderProfile] card base cache hits={cache.Hits}, misses={cache.Misses}, bypasses={cache.Bypasses}");
+        Console.WriteLine($"[BattleRenderProfile] pending={GpuProfiler.PendingQueries}, report={reportPath}");
+        Console.WriteLine($"[BattleRenderProfile] {(pass ? "PASS" : "FAIL")}");
+        Environment.ExitCode = pass ? 0 : 1;
+        Exit();
+    }
+
+    private bool IsProfileSettling() => IsCardListProfileSettling() ||
+        (_battleRenderProfileOptions != null && _battleRenderProfilePrepared &&
+         _battleRenderProfileRenderedFrames >= BattleRenderProfileLaunchOptions.WarmupFrames +
+             BattleRenderProfileLaunchOptions.MeasuredFrames);
 #else
     private bool IsCardListProfileSettling() => false;
+    private bool IsProfileSettling() => false;
 #endif
 
 	protected override void UnloadContent()
@@ -861,7 +1019,10 @@ public class Game1 : Game
         DisplayMetrics nextDisplay = DisplayMetrics.Calculate(
             presentation.BackBufferWidth,
             presentation.BackBufferHeight,
-            _cardListProfileOptions?.RenderScale ?? (_snapshotOptions == null ? null : _snapshotOptions.RenderScaleOverride ?? 1f));
+            _cardListProfileOptions?.RenderScale ??
+            (_battleRenderProfileOptions == null
+                ? (_snapshotOptions == null ? null : _snapshotOptions.RenderScaleOverride ?? 1f)
+                : BattleRenderProfileLaunchOptions.RenderScale));
         if (Display.RenderWidth != nextDisplay.RenderWidth || Display.RenderHeight != nextDisplay.RenderHeight)
         {
             FullScreenRenderTargetPool.DisposeAll(GraphicsDevice);

@@ -27,6 +27,9 @@ dotnet run -- profile-gpu
 # DEBUG only: deterministic 60-card, 4K card-list performance benchmark
 dotnet run -- card-list-profile profile-gpu --render-scale 2
 
+# DEBUG only: deterministic 1080p Battle rendering performance benchmark
+dotnet run -- battle-render-profile profile-gpu
+
 # Unlock every collectible card, medal, and equipment item in the current save
 dotnet run -- unlock
 dotnet run --launch-profile unlock

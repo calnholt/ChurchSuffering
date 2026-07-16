@@ -26,6 +26,7 @@ internal readonly record struct CardBaseRenderModel(
     bool AlternateTreatsAsAttack,
     int AlternateAttackDamage,
     bool AlternateIsFreeAction,
+    SubPhase Phase,
     int StyleFingerprint,
     float Scale,
     float Rotation,
@@ -33,3 +34,8 @@ internal readonly record struct CardBaseRenderModel(
     int PhysicalHeight);
 
 internal sealed record CachedCardSurface(Texture2D Texture, Rectangle LogicalBounds);
+
+internal readonly record struct CardBaseCacheDiagnostics(
+    long Hits,
+    long Misses,
+    long Bypasses);

@@ -11,9 +11,16 @@ namespace Crusaders30XX.ECS.Events
     /// </summary>
     public class CardRenderEvent
     {
+        public const int BaseRendererPriority = 100;
+
         public Entity Card { get; set; }
         public Vector2 Position { get; set; }
         public bool IsInHand { get; set; }
+        /// <summary>
+        /// Reuses a renderer-owned base-card surface when the card presentation is static.
+        /// Highlights and status effects are still rendered live.
+        /// </summary>
+        public bool PreferCachedBase { get; set; } = false;
     }
 
     /// <summary>

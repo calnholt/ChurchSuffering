@@ -67,6 +67,31 @@ public sealed class CardRenderBoundsTests
 		Assert.InRange(rotated.Height, unrotated.Width - 2, unrotated.Width + 2);
 	}
 
+	[Fact]
+	public void Cached_base_bounds_cover_rotated_corners_without_status_overflow()
+	{
+		(EntityManager entityManager, Entity card) = CreateCard();
+		entityManager.AddComponent(card, new Frozen());
+
+		Rectangle baseBounds = CardRenderBoundsService.GetBaseBounds(
+			entityManager,
+			card,
+			new Vector2(960, 540),
+			1f,
+			MathHelper.ToRadians(20f));
+		Rectangle statusBounds = CardRenderBoundsService.GetBounds(
+			entityManager,
+			card,
+			new Vector2(960, 540),
+			1f,
+			MathHelper.ToRadians(20f));
+
+		Assert.True(baseBounds.Width > CardGeometrySettings.DefaultWidth);
+		Assert.True(baseBounds.Height > CardGeometrySettings.DefaultHeight);
+		Assert.True(statusBounds.Width > baseBounds.Width);
+		Assert.True(statusBounds.Height > baseBounds.Height);
+	}
+
 	private static (EntityManager EntityManager, Entity Card) CreateCard()
 	{
 		var entityManager = new EntityManager();
