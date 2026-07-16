@@ -177,6 +177,94 @@ public sealed class FrostboundAeonTests : IDisposable
 	}
 
 	[Fact]
+	public void Animated_resolution_preserves_distinct_flight_positions_through_presentation()
+	{
+		var entityManager = new EntityManager();
+		var phase = entityManager.CreateEntity("PhaseState");
+		entityManager.AddComponent(phase, new PhaseState { Sub = SubPhase.EnemyAttack });
+		var deckEntity = entityManager.CreateEntity("Deck");
+		var deck = new Deck();
+		entityManager.AddComponent(deckEntity, deck);
+		var enemy = entityManager.CreateEntity("Enemy");
+		entityManager.AddComponent(enemy, new AttackIntent
+		{
+			ActiveAttackSequence = 1,
+			Planned =
+			[
+				new PlannedAttack
+				{
+					AttackId = EnemyAttackId.ChronoSlice,
+					AttackDefinition = new ChronoSlice(),
+				},
+			],
+		});
+
+		var drawPilePosition = new Vector2(1700f, 900f);
+		var discardPilePosition = new Vector2(120f, 900f);
+		var drawPileRoot = entityManager.CreateEntity("UI_DrawPileRoot");
+		entityManager.AddComponent(drawPileRoot, new Transform { Position = drawPilePosition });
+		var discardPileRoot = entityManager.CreateEntity("UI_DiscardPileRoot");
+		entityManager.AddComponent(discardPileRoot, new Transform { Position = discardPilePosition });
+
+		var anchor = entityManager.CreateEntity("EnemyAttackBannerAnchor");
+		entityManager.AddComponent(anchor, new EnemyAttackBannerAnchor());
+		entityManager.AddComponent(anchor, new Transform { Position = new Vector2(1000f, 400f) });
+		entityManager.AddComponent(anchor, new EnemyAttackBannerPresentation
+		{
+			LogicalWidth = 620,
+			RenderBounds = new Rectangle(690, 400, 620, 220),
+		});
+		entityManager.AddComponent(anchor, new AssignedBlockRailPresentation
+		{
+			LogicalAnchorPos = new Vector2(900f, 350f),
+		});
+
+		var redirected = AddPresentedBlocker(entityManager, "Redirected", 1, new Vector2(860f, 500f));
+		var discarded = AddPresentedBlocker(entityManager, "Discarded", 2, new Vector2(1060f, 500f));
+		_ = new CardZoneSystem(entityManager);
+		var flightSystem = new AssignedBlocksToDiscardSystem(entityManager, null)
+		{
+			StartDelayBetweenCardsSeconds = 0f,
+			FlightDurationSeconds = 1f,
+			ArcHeightPx = 0,
+		};
+		var railAnimationSystem = new AssignedBlockAnimationSystem(entityManager);
+		var lateLayoutSystem = new AssignedBlockLateLayoutSystem(entityManager);
+
+		new ChronoSlice().OnBlocksConfirmed(entityManager);
+		EventManager.Publish(new DebugCommandEvent { Command = "AnimateAssignedBlocksToDiscard" });
+
+		var redirectedFlight = Assert.IsType<CardToDiscardFlight>(redirected.GetComponent<CardToDiscardFlight>());
+		var discardedFlight = Assert.IsType<CardToDiscardFlight>(discarded.GetComponent<CardToDiscardFlight>());
+		Assert.Equal(CardZoneType.DrawPile, redirectedFlight.Destination);
+		Assert.Equal(drawPilePosition, redirectedFlight.TargetPos);
+		Assert.Equal(CardZoneType.DiscardPile, discardedFlight.Destination);
+		Assert.Equal(discardPilePosition, discardedFlight.TargetPos);
+
+		redirectedFlight.Started = true;
+		discardedFlight.Started = true;
+		var quarterSecond = new GameTime(TimeSpan.FromSeconds(0.25), TimeSpan.FromSeconds(0.25));
+		flightSystem.Update(quarterSecond);
+		var redirectedFlightPosition = redirected.GetComponent<Transform>().Position;
+		var discardedFlightPosition = discarded.GetComponent<Transform>().Position;
+
+		railAnimationSystem.Update(quarterSecond);
+		lateLayoutSystem.Update(quarterSecond);
+
+		Assert.Equal(redirectedFlightPosition, redirected.GetComponent<AssignedBlockPresentation>().CurrentPos);
+		Assert.Equal(redirectedFlightPosition, redirected.GetComponent<AssignedBlockPresentation>().RenderPos);
+		Assert.Equal(discardedFlightPosition, discarded.GetComponent<AssignedBlockPresentation>().CurrentPos);
+		Assert.Equal(discardedFlightPosition, discarded.GetComponent<AssignedBlockPresentation>().RenderPos);
+		Assert.False(redirected.GetComponent<UIElement>().IsInteractable);
+		Assert.False(discarded.GetComponent<UIElement>().IsInteractable);
+
+		flightSystem.Update(new GameTime(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(0.75)));
+
+		Assert.Equal([redirected], deck.DrawPile);
+		Assert.Equal([discarded], deck.DiscardPile);
+	}
+
+	[Fact]
 	public void Card_blocked_event_runs_current_attack_block_processing()
 	{
 		var entityManager = new EntityManager();
@@ -244,6 +332,32 @@ public sealed class FrostboundAeonTests : IDisposable
 			AssignedAtTicks = assignedAt,
 			IsEquipment = isEquipment,
 		});
+		return entity;
+	}
+
+	private static Entity AddPresentedBlocker(
+		EntityManager entityManager,
+		string name,
+		long assignedAt,
+		Vector2 position)
+	{
+		var entity = AddBlocker(entityManager, name, assignedAt);
+		entityManager.AddComponent(entity, new Transform
+		{
+			Position = position,
+			Scale = new Vector2(0.24f),
+		});
+		entityManager.AddComponent(entity, new AssignedBlockPresentation
+		{
+			StartPos = position,
+			CurrentPos = position,
+			TargetPos = position,
+			RenderPos = position,
+			StartScale = 0.24f,
+			CurrentScale = 0.24f,
+			Phase = AssignedBlockPresentation.PhaseState.Idle,
+		});
+		entityManager.AddComponent(entity, new UIElement { IsInteractable = true });
 		return entity;
 	}
 

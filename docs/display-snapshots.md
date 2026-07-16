@@ -196,10 +196,11 @@ Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
 
 ## `assigned-block-rail`
 
-Renders the production gothic blocker rail attached to a fixed enemy attack banner. Variants cover a single card, mixed card/equipment assignments, the normal eight-item dense state, hover lift, entry impact, and equipment return motion.
+Renders the production gothic blocker rail attached to a fixed enemy attack banner. Variants cover a single card, mixed card/equipment assignments, the normal eight-item dense state, hover lift, entry impact, equipment return motion, and Chrono Slice blockers flying toward distinct draw and discard piles.
 
 ```bash
 dotnet run -- snapshot assigned-block-rail single-card --verify
+dotnet run -- snapshot assigned-block-rail chronoslice-flight --verify
 ./scripts/verify-assigned-block-rail-snapshots.sh
 ```
 

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -22,6 +24,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private Texture2D _pixel;
 		private AssignedBlockAnimationSystem _animation;
 		private AssignedBlockLateLayoutSystem _lateLayout;
+		private AssignedBlocksToDiscardSystem _discardFlights;
 		private AssignedBlockCardsDisplaySystem _display;
 		private EquipmentTooltipDisplaySystem _tooltip;
 
@@ -33,13 +36,23 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_pixel.SetData(new[] { Color.White });
 
 			var phase = ctx.World.CreateEntity("AssignedBlockRailSnapshotPhase");
-			ctx.World.AddComponent(phase, new PhaseState { Main = MainPhase.EnemyTurn, Sub = SubPhase.Block });
+			ctx.World.AddComponent(phase, new PhaseState
+			{
+				Main = MainPhase.EnemyTurn,
+				Sub = _variant == "chronoslice-flight" ? SubPhase.EnemyAttack : SubPhase.Block,
+			});
 			var enemy = ctx.World.CreateEntity("AssignedBlockRailSnapshotEnemy");
 			ctx.World.AddComponent(enemy, new AttackIntent
 			{
 				Owner = enemy,
 				ActiveAttackSequence = 1,
-				Planned = { new PlannedAttack() },
+				Planned =
+				{
+					new PlannedAttack
+					{
+						AttackDefinition = new ChronoSlice(),
+					},
+				},
 			});
 
 			var anchor = ctx.World.CreateEntity("EnemyAttackBannerAnchor");
@@ -67,6 +80,11 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 			BuildVariant(ctx);
 			Advance(_variant == "entry-impact" ? 0.245f : 0.55f);
+			if (_variant == "chronoslice-flight")
+			{
+				StartChronoSliceFlight(ctx);
+				Advance(0.32f);
+			}
 
 			if (_variant == "hover")
 			{
@@ -127,7 +145,36 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					AddEquipment(ctx, "helm_of_seeing", 4, new Color(185, 180, 161));
 					AddEquipment(ctx, "fleetfoot_greaves", 3, new Color(117, 27, 35));
 					break;
+				case "chronoslice-flight":
+					AddCard(ctx, "mantlet", CardData.CardColor.White, 4);
+					AddCard(ctx, "hold_the_line", CardData.CardColor.Red, 3);
+					break;
 			}
+		}
+
+		private void StartChronoSliceFlight(DisplaySnapshotContext ctx)
+		{
+			var deckEntity = ctx.World.CreateEntity("AssignedBlockRailSnapshotDeck");
+			ctx.World.AddComponent(deckEntity, new Deck());
+			var drawPileRoot = ctx.World.CreateEntity("UI_DrawPileRoot");
+			ctx.World.AddComponent(drawPileRoot, new Transform
+			{
+				Position = new Vector2(Game1.VirtualWidth - 180f, Game1.VirtualHeight - 120f),
+			});
+			var discardPileRoot = ctx.World.CreateEntity("UI_DiscardPileRoot");
+			ctx.World.AddComponent(discardPileRoot, new Transform
+			{
+				Position = new Vector2(180f, Game1.VirtualHeight - 120f),
+			});
+
+			new ChronoSlice().OnBlocksConfirmed(ctx.World.EntityManager);
+			_discardFlights = new AssignedBlocksToDiscardSystem(ctx.World.EntityManager, ctx.GraphicsDevice)
+			{
+				StartDelayBetweenCardsSeconds = 0f,
+				FlightDurationSeconds = 1f,
+				ArcHeightPx = 180,
+			};
+			EventManager.Publish(new DebugCommandEvent { Command = "AnimateAssignedBlocksToDiscard" });
 		}
 
 		private void AddCard(DisplaySnapshotContext ctx, string cardId, CardData.CardColor color, int block)
@@ -194,6 +241,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			{
 				elapsed += step;
 				var gameTime = new GameTime(TimeSpan.FromSeconds(elapsed), TimeSpan.FromSeconds(step));
+				_discardFlights?.Update(gameTime);
 				_animation.Update(gameTime);
 				_lateLayout.Update(gameTime);
 			}
@@ -210,10 +258,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private static string ParseVariant(string[] args)
 		{
 			if (args.Length == 0) return "single-card";
-			if (args.Length == 1 && args[0] is "single-card" or "mixed-row" or "dense-row" or "hover" or "entry-impact" or "returning")
+			if (args.Length == 1 && args[0] is "single-card" or "mixed-row" or "dense-row" or "hover" or "entry-impact" or "returning" or "chronoslice-flight")
 				return args[0];
 			throw new DisplaySnapshotSetupException(
-				"assigned-block-rail expects one variant: single-card, mixed-row, dense-row, hover, entry-impact, or returning");
+				"assigned-block-rail expects one variant: single-card, mixed-row, dense-row, hover, entry-impact, returning, or chronoslice-flight");
 		}
 	}
 }

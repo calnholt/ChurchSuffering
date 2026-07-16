@@ -51,18 +51,20 @@ namespace Crusaders30XX.ECS.Systems
 				var presentation = entity.GetComponent<AssignedBlockPresentation>();
 				if (assignment == null || presentation == null) continue;
 
+				bool inFlight = entity.GetComponent<CardToDiscardFlight>() != null;
 				bool returning = presentation.Phase == AssignedBlockPresentation.PhaseState.Returning;
-				presentation.RenderPos = returning
+				presentation.RenderPos = returning || inFlight
 					? presentation.CurrentPos
 					: presentation.CurrentPos + parallaxDelta;
 				presentation.RenderBounds = GetBounds(entity, assignment, presentation.RenderPos, presentation.CurrentScale);
-				if (!returning || assignment.IsEquipment) activeBounds.Add(presentation.RenderBounds);
+				if (!inFlight && (!returning || assignment.IsEquipment)) activeBounds.Add(presentation.RenderBounds);
 
 				var ui = entity.GetComponent<UIElement>();
 				if (ui == null) continue;
 				ui.Bounds = presentation.RenderBounds;
-				bool settled = presentation.Phase is AssignedBlockPresentation.PhaseState.Idle
-					or AssignedBlockPresentation.PhaseState.Impact;
+				bool settled = !inFlight
+					&& presentation.Phase is (AssignedBlockPresentation.PhaseState.Idle
+						or AssignedBlockPresentation.PhaseState.Impact);
 				ui.IsInteractable = settled
 					&& !StateSingleton.IsActive
 					&& !BattleInputGate.IsBattleInputFrozen(EntityManager);

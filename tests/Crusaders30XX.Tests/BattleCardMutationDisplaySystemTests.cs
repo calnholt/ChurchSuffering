@@ -27,7 +27,7 @@ public sealed class BattleCardMutationDisplaySystemTests : IDisposable
 	}
 
 	[Fact]
-	public void Single_application_applies_restriction_after_animation()
+	public void Hand_application_applies_immediately_without_animation_or_input_gate()
 	{
 		var entityManager = new EntityManager();
 		var deck = CreateDeck(entityManager);
@@ -42,11 +42,6 @@ public sealed class BattleCardMutationDisplaySystemTests : IDisposable
 			Type = CardApplicationType.Frozen,
 		});
 
-		Assert.True(mutationSystem.IsBusy);
-		Assert.True(card.HasComponent<SuppressCardZoneRender>());
-
-		BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
-
 		Assert.False(mutationSystem.IsBusy);
 		Assert.True(card.HasComponent<Frozen>());
 		Assert.False(card.HasComponent<SuppressCardZoneRender>());
@@ -55,7 +50,7 @@ public sealed class BattleCardMutationDisplaySystemTests : IDisposable
 	}
 
 	[Fact]
-	public void Swap_plays_restriction_sfx()
+	public void Hand_application_keeps_restriction_sfx()
 	{
 		var entityManager = new EntityManager();
 		var deck = CreateDeck(entityManager);
@@ -69,9 +64,36 @@ public sealed class BattleCardMutationDisplaySystemTests : IDisposable
 			TargetCard = card,
 			Type = CardApplicationType.Brittle,
 		});
-		BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
 
+		Assert.False(mutationSystem.IsBusy);
 		Assert.Contains(SfxTrack.ApplyBrittle, played);
+	}
+
+	[Fact]
+	public void Hand_seal_application_adds_stacks_without_animation()
+	{
+		var entityManager = new EntityManager();
+		var deck = CreateDeck(entityManager);
+		var card = AddCard(entityManager, deck, deck.Hand, new Tempest());
+		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
+
+		EventManager.Publish(new CardRestrictionMutationAnimationRequested
+		{
+			TargetCard = card,
+			Type = CardApplicationType.Sealed,
+			StacksPerCard = 2,
+		});
+		EventManager.Publish(new CardRestrictionMutationAnimationRequested
+		{
+			TargetCard = card,
+			Type = CardApplicationType.Sealed,
+			StacksPerCard = 3,
+		});
+
+		Assert.False(mutationSystem.IsBusy);
+		Assert.Equal(5, card.GetComponent<Sealed>()?.Seals);
+		Assert.False(card.HasComponent<SuppressCardZoneRender>());
+		Assert.False(StateSingleton.PreventClicking);
 	}
 
 	[Fact]
@@ -79,7 +101,7 @@ public sealed class BattleCardMutationDisplaySystemTests : IDisposable
 	{
 		var entityManager = new EntityManager();
 		var deck = CreateDeck(entityManager);
-		var first = AddCard(entityManager, deck, deck.Hand, new Tempest());
+		var first = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
 		var second = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
 		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 
@@ -104,11 +126,42 @@ public sealed class BattleCardMutationDisplaySystemTests : IDisposable
 	}
 
 	[Fact]
+	public void Queued_application_applies_immediately_if_card_enters_hand_before_starting()
+	{
+		var entityManager = new EntityManager();
+		var deck = CreateDeck(entityManager);
+		var first = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
+		var second = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
+		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
+
+		EventManager.Publish(new CardRestrictionMutationAnimationRequested
+		{
+			TargetCard = first,
+			Type = CardApplicationType.Frozen,
+		});
+		EventManager.Publish(new CardRestrictionMutationAnimationRequested
+		{
+			TargetCard = second,
+			Type = CardApplicationType.Scorched,
+		});
+		deck.DrawPile.Remove(second);
+		deck.Hand.Add(second);
+
+		BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
+
+		Assert.True(first.HasComponent<Frozen>());
+		Assert.True(second.HasComponent<Scorched>());
+		Assert.False(second.HasComponent<SuppressCardZoneRender>());
+		Assert.False(mutationSystem.IsBusy);
+		Assert.False(StateSingleton.PreventClicking);
+	}
+
+	[Fact]
 	public void DeleteCachesEvent_clears_queue_and_unblocks_input()
 	{
 		var entityManager = new EntityManager();
 		var deck = CreateDeck(entityManager);
-		var card = AddCard(entityManager, deck, deck.Hand, new Tempest());
+		var card = AddCard(entityManager, deck, deck.DrawPile, new Tempest());
 		var mutationSystem = BattleMutationTestSupport.CreateBattleMutationPipeline(entityManager);
 
 		EventManager.Publish(new CardRestrictionMutationAnimationRequested

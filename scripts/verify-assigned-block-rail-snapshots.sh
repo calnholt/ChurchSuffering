@@ -14,6 +14,7 @@ variants=(
   hover
   entry-impact
   returning
+  chronoslice-flight
 )
 
 for variant in "${variants[@]}"; do

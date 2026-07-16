@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Input;
 
 namespace Crusaders30XX.ECS.Services;
@@ -68,15 +69,95 @@ public readonly record struct ClimbPointsAwardScenario(
 	string EmptyTitle,
 	string EmptyDetail);
 
+[DebugTab("Climb Points Award Timing")]
+public sealed class ClimbPointsAwardAnimationTimingSettings
+{
+	public static ClimbPointsAwardAnimationTimingSettings Instance { get; } = new();
+
+	[DebugEditable(DisplayName = "Tier Start (s)", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float TierStartSeconds { get; set; } = 0.900f;
+
+	[DebugEditable(DisplayName = "Tier Stagger (s)", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float TierStaggerSeconds { get; set; } = 0.410f;
+
+	[DebugEditable(DisplayName = "Total After Last (s)", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float TotalAfterLastSeconds { get; set; } = 0.520f;
+
+	[DebugEditable(DisplayName = "Total Animation (s)", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float TotalAnimationSeconds { get; set; } = 0.760f;
+
+	[DebugEditable(DisplayName = "Count Up (s)", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float CountUpSeconds { get; set; } = 0.580f;
+
+	[DebugEditable(DisplayName = "Exit Fade (s)", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float ExitFadeSeconds { get; set; } = 0.300f;
+
+	[DebugEditable(DisplayName = "Tier Node Slam Offset (s)", Step = 0.01f, Min = 0f, Max = 2f)]
+	public float TierNodeSlamOffsetSeconds { get; set; } = 0.080f;
+
+	[DebugEditable(DisplayName = "Progress Meter Start (s)", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float ProgressMeterStartDelaySeconds { get; set; } = 0.620f;
+
+	public void ResetToDefaults()
+	{
+		TierStartSeconds = 0.900f;
+		TierStaggerSeconds = 0.410f;
+		TotalAfterLastSeconds = 0.520f;
+		TotalAnimationSeconds = 0.760f;
+		CountUpSeconds = 0.580f;
+		ExitFadeSeconds = 0.300f;
+		TierNodeSlamOffsetSeconds = 0.080f;
+		ProgressMeterStartDelaySeconds = 0.620f;
+	}
+}
+
 public static class ClimbPointsAwardAnimationService
 {
-	public const float TierStartSeconds = 0.620f;
-	public const float TierStaggerSeconds = 0.410f;
-	public const float TotalAfterLastSeconds = 0.520f;
-	public const float TotalAnimationSeconds = 0.760f;
-	public const float CountUpSeconds = 0.580f;
-	public const float ExitFadeSeconds = 0.300f;
-	public const float TierNodeSlamOffsetSeconds = 0.080f;
+	private static ClimbPointsAwardAnimationTimingSettings Timing =>
+		ClimbPointsAwardAnimationTimingSettings.Instance;
+
+	public static float TierStartSeconds
+	{
+		get => Timing.TierStartSeconds;
+		set => Timing.TierStartSeconds = value;
+	}
+
+	public static float TierStaggerSeconds
+	{
+		get => Timing.TierStaggerSeconds;
+		set => Timing.TierStaggerSeconds = value;
+	}
+
+	public static float TotalAfterLastSeconds
+	{
+		get => Timing.TotalAfterLastSeconds;
+		set => Timing.TotalAfterLastSeconds = value;
+	}
+
+	public static float TotalAnimationSeconds
+	{
+		get => Timing.TotalAnimationSeconds;
+		set => Timing.TotalAnimationSeconds = value;
+	}
+
+	public static float CountUpSeconds
+	{
+		get => Timing.CountUpSeconds;
+		set => Timing.CountUpSeconds = value;
+	}
+
+	public static float ExitFadeSeconds
+	{
+		get => Timing.ExitFadeSeconds;
+		set => Timing.ExitFadeSeconds = value;
+	}
+
+	public static float TierNodeSlamOffsetSeconds
+	{
+		get => Timing.TierNodeSlamOffsetSeconds;
+		set => Timing.TierNodeSlamOffsetSeconds = value;
+	}
+
 	private const float BoundaryEpsilon = 0.00001f;
 
 	public static readonly ClimbPointsAwardTier[] Tiers =
@@ -119,30 +200,35 @@ public static class ClimbPointsAwardAnimationService
 	}
 
 	public static float GetTierRevealSeconds(int earnedIndex) =>
-		TierStartSeconds + Math.Max(0, earnedIndex) * TierStaggerSeconds;
+		Timing.TierStartSeconds + Math.Max(0, earnedIndex) * Timing.TierStaggerSeconds;
+
+	public static float GetRouteFillStartSeconds(int earnedIndex) =>
+		earnedIndex == 0
+			? Timing.ProgressMeterStartDelaySeconds
+			: GetTierRevealSeconds(earnedIndex);
 
 	public static float GetTotalRevealSeconds(int earnedTierCount)
 	{
 		float lastTier = earnedTierCount > 0
 			? GetTierRevealSeconds(earnedTierCount - 1)
-			: TierStartSeconds;
-		return lastTier + TotalAfterLastSeconds;
+			: Timing.TierStartSeconds;
+		return lastTier + Timing.TotalAfterLastSeconds;
 	}
 
 	public static float GetReadySeconds(int earnedTierCount) =>
-		GetTotalRevealSeconds(earnedTierCount) + TotalAnimationSeconds;
+		GetTotalRevealSeconds(earnedTierCount) + Timing.TotalAnimationSeconds;
 
 	public static float GetProgressCap(int earnedTierCount) =>
 		earnedTierCount <= 0 ? 0f : (float)earnedTierCount / Tiers.Length;
 
 	public static float GetTierNodeSlamSeconds(int earnedIndex) =>
-		GetTierRevealSeconds(earnedIndex) + TierNodeSlamOffsetSeconds;
+		GetTierRevealSeconds(earnedIndex) + Timing.TierNodeSlamOffsetSeconds;
 
 	public static float GetCrestRevealSeconds(int earnedTierCount) =>
 		GetTotalRevealSeconds(earnedTierCount);
 
 	public static float GetCountUpCompleteSeconds(int earnedTierCount) =>
-		GetTotalRevealSeconds(earnedTierCount) + CountUpSeconds;
+		GetTotalRevealSeconds(earnedTierCount) + Timing.CountUpSeconds;
 
 	public static ClimbPointsAwardRumbleSample SampleRumble(
 		float elapsedSeconds,
@@ -278,7 +364,7 @@ public static class ClimbPointsAwardAnimationService
 		float elapsed,
 		ClimbPointsAwardRumbleSettings settings)
 	{
-		float local = elapsed - TierStartSeconds;
+		float local = elapsed - Timing.TierStartSeconds;
 		float duration = Math.Max(0.001f, settings.EmptyPulseDurationSeconds);
 		if (local < 0f || local >= duration) return ClimbPointsAwardRumbleSample.Zero;
 
@@ -296,15 +382,15 @@ public static class ClimbPointsAwardAnimationService
 		ClimbPointsAwardRumbleSettings settings)
 	{
 		float totalReveal = GetTotalRevealSeconds(earnedTierCount);
-		if (elapsed < TierStartSeconds || elapsed >= totalReveal)
+		if (elapsed < Timing.TierStartSeconds || elapsed >= totalReveal)
 		{
 			return ClimbPointsAwardRumbleSample.Zero;
 		}
 
-		float duration = totalReveal - TierStartSeconds;
+		float duration = totalReveal - Timing.TierStartSeconds;
 		if (duration <= 0f) return ClimbPointsAwardRumbleSample.Zero;
 
-		float progress = Clamp01((elapsed - TierStartSeconds) / duration);
+		float progress = Clamp01((elapsed - Timing.TierStartSeconds) / duration);
 		float intensity = progress * progress * GetProgressCap(earnedTierCount);
 		return new ClimbPointsAwardRumbleSample(
 			settings.MaxBuildupLow * intensity,

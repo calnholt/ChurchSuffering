@@ -16,7 +16,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Crusaders30XX.ECS.Systems;
 
 [DebugTab("Climb Points Award")]
-public sealed class ClimbPointsAwardDisplaySystem : Core.System
+public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectableChildren
 {
 	private const string OverlayEntityName = "ClimbPointsAwardOverlay";
 	private const string BlockerEntityName = "ClimbPointsAwardBlocker";
@@ -600,7 +600,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 		float height = 0f;
 		for (int index = 0; index < earnedCount; index++)
 		{
-			float reveal = ClimbPointsAwardAnimationService.GetTierRevealSeconds(index);
+			float reveal = ClimbPointsAwardAnimationService.GetRouteFillStartSeconds(index);
 			if (elapsed < reveal) break;
 			float previous = index == 0
 				? 0f
@@ -1044,4 +1044,9 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System
 	}
 
 	private readonly record struct SparkDefinition(float AngleRadians, float Distance, float DelaySeconds);
+
+	IEnumerable<object> IDebugInspectableChildren.GetDebugInspectableChildren()
+	{
+		yield return ClimbPointsAwardAnimationTimingSettings.Instance;
+	}
 }
