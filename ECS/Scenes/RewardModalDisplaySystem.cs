@@ -26,10 +26,6 @@ public sealed class RewardModalDisplaySystem : Core.System
 	private const string TitleText = "Quest Complete!";
 	private const string SkipText = "SKIP DECK REWARD";
 	private const int MaxOptions = 3;
-	private const float EntranceDuration = 1.25f;
-	private const float ClaimDuration = 1.45f;
-	private const float SkipDuration = 0.76f;
-	private const float CardScale = 244f / CardGeometrySettings.DefaultWidth;
 
 	private static readonly Color Bone = new(238, 233, 223);
 	private static readonly Color BoneDim = new(170, 165, 157);
@@ -55,6 +51,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 	private float _effectTime;
 	private QuestRewardOverlayEffect _atmosphere;
 	private QuestRewardLayerCompositor _layerCompositor;
+	private QuestRewardLayoutKey _layoutKey;
 
 	[DebugEditable(DisplayName = "Z Order", Step = 10, Min = 0, Max = 100000)]
 	public int ZOrder { get; set; } = 52000;
@@ -81,7 +78,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 	public float TitleTracking { get; set; } = 4f;
 
 	[DebugEditable(DisplayName = "Kicker Pixel Height", Step = 1, Min = 6, Max = 30)]
-	public int KickerPixelHeight { get; set; } = 10;
+	public int KickerPixelHeight { get; set; } = 13;
 
 	[DebugEditable(DisplayName = "Kicker Tracking", Step = 0.1f, Min = 0f, Max = 8f)]
 	public float KickerTracking { get; set; } = 2.5f;
@@ -89,13 +86,307 @@ public sealed class RewardModalDisplaySystem : Core.System
 	[DebugEditable(DisplayName = "Grain Time Scale", Step = 0.01f, Min = 0f, Max = 4f)]
 	public float GrainTimeScale { get; set; } = 1f;
 
+	[DebugEditable(DisplayName = "Card Pixel Width", Step = 1, Min = 120, Max = 420)]
+	public int CardPixelWidth { get; set; } = 244;
+
+	[DebugEditable(DisplayName = "Stage Top Padding", Step = 1, Min = 0, Max = 120)]
+	public int StageTopPadding { get; set; } = 26;
+
+	[DebugEditable(DisplayName = "Footer Bottom Padding", Step = 1, Min = 0, Max = 120)]
+	public int FooterBottomPadding { get; set; } = 28;
+
+	[DebugEditable(DisplayName = "Connector Height", Step = 1, Min = 8, Max = 120)]
+	public int ConnectorHeight { get; set; } = 42;
+
+	[DebugEditable(DisplayName = "Connector Padding", Step = 1, Min = 0, Max = 60)]
+	public int ConnectorPadding { get; set; } = 8;
+
+	[DebugEditable(DisplayName = "Skip Pixel Height", Step = 1, Min = 6, Max = 32)]
+	public int SkipPixelHeight { get; set; } = 14;
+
+	[DebugEditable(DisplayName = "Skip Tracking", Step = 0.1f, Min = 0f, Max = 8f)]
+	public float SkipTracking { get; set; } = 1.6f;
+
+	[DebugEditable(DisplayName = "Skip Horizontal Padding", Step = 1, Min = 0, Max = 160)]
+	public int SkipHorizontalPadding { get; set; } = 52;
+
+	[DebugEditable(DisplayName = "Skip Button Height", Step = 1, Min = 24, Max = 100)]
+	public int SkipButtonHeight { get; set; } = 48;
+
+	[DebugEditable(DisplayName = "Horizontal Rule Side Padding", Step = 1, Min = 0, Max = 500)]
+	public int HorizontalRuleSidePadding { get; set; } = 96;
+
+	[DebugEditable(DisplayName = "Horizontal Rule Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float HorizontalRuleAlpha { get; set; } = 0.30f;
+
+	[DebugEditable(DisplayName = "Title Center Y", Step = 1, Min = 0, Max = 220)]
+	public int TitleCenterY { get; set; } = 62;
+
+	[DebugEditable(DisplayName = "Title Scale Origin Y", Step = 1, Min = 0, Max = 260)]
+	public int TitleScaleOriginY { get; set; } = 88;
+
+	[DebugEditable(DisplayName = "Title Shadow Offset Y", Step = 1, Min = -20, Max = 20)]
+	public int TitleShadowOffsetY { get; set; } = 4;
+
+	[DebugEditable(DisplayName = "Title Shadow Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float TitleShadowAlpha { get; set; } = 0.85f;
+
+	[DebugEditable(DisplayName = "Title Rule Y", Step = 1, Min = 0, Max = 300)]
+	public int TitleRuleY { get; set; } = 129;
+
+	[DebugEditable(DisplayName = "Title Rule Half Width", Step = 1, Min = 1, Max = 300)]
+	public int TitleRuleHalfWidth { get; set; } = 80;
+
+	[DebugEditable(DisplayName = "Title Rule Center Gap", Step = 1, Min = 0, Max = 80)]
+	public int TitleRuleCenterGap { get; set; } = 9;
+
+	[DebugEditable(DisplayName = "Title Rule Diamond Size", Step = 0.5f, Min = 1f, Max = 40f)]
+	public float TitleRuleDiamondSize { get; set; } = 7f;
+
+	[DebugEditable(DisplayName = "Badge Offset X", Step = 1, Min = 0, Max = 100)]
+	public int BadgeOffsetX { get; set; } = 27;
+
+	[DebugEditable(DisplayName = "Badge Offset Y", Step = 1, Min = 0, Max = 100)]
+	public int BadgeOffsetY { get; set; } = 18;
+
+	[DebugEditable(DisplayName = "Badge Outer Radius", Step = 1, Min = 2, Max = 50)]
+	public int BadgeOuterRadius { get; set; } = 15;
+
+	[DebugEditable(DisplayName = "Badge Inner Radius", Step = 1, Min = 1, Max = 48)]
+	public int BadgeInnerRadius { get; set; } = 13;
+
+	[DebugEditable(DisplayName = "Badge Active Accent Mix", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float BadgeActiveAccentMix { get; set; } = 0.48f;
+
+	[DebugEditable(DisplayName = "Badge Number Pixel Height", Step = 1, Min = 6, Max = 40)]
+	public int BadgeNumberPixelHeight { get; set; } = 16;
+
+	[DebugEditable(DisplayName = "Kicker Text Gap", Step = 1, Min = 0, Max = 80)]
+	public int KickerTextGap { get; set; } = 22;
+
+	[DebugEditable(DisplayName = "Skip Fill Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float SkipFillAlpha { get; set; } = 0.70f;
+
+	[DebugEditable(DisplayName = "Skip Idle Border Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float SkipIdleBorderAlpha { get; set; } = 0.38f;
+
+	[DebugEditable(DisplayName = "Skip Border Thickness", Step = 1, Min = 1, Max = 12)]
+	public int SkipBorderThickness { get; set; } = 1;
+
+	[DebugEditable(DisplayName = "Lane Top Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float LaneTopOpacity { get; set; } = 0.38f;
+
+	[DebugEditable(DisplayName = "Lane Middle Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float LaneMiddleOpacity { get; set; } = 0.58f;
+
+	[DebugEditable(DisplayName = "Lane Bottom Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float LaneBottomOpacity { get; set; } = 0.42f;
+
+	[DebugEditable(DisplayName = "Lane Hover Max Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float LaneHoverMaxOpacity { get; set; } = 0.72f;
+
+	[DebugEditable(DisplayName = "Lane Hover Opacity Boost", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float LaneHoverOpacityBoost { get; set; } = 0.10f;
+
+	[DebugEditable(DisplayName = "Lane Hover Edge Accent Mix", Step = 0.005f, Min = 0f, Max = 1f)]
+	public float LaneHoverEdgeAccentMix { get; set; } = 0.08f;
+
+	[DebugEditable(DisplayName = "Lane Hover Center Accent Mix", Step = 0.005f, Min = 0f, Max = 1f)]
+	public float LaneHoverCenterAccentMix { get; set; } = 0.025f;
+
+	[DebugEditable(DisplayName = "Lane Active Top Border Thickness", Step = 1, Min = 1, Max = 12)]
+	public int LaneActiveTopBorderThickness { get; set; } = 3;
+
+	[DebugEditable(DisplayName = "Lane Idle Top Border Thickness", Step = 1, Min = 1, Max = 12)]
+	public int LaneIdleTopBorderThickness { get; set; } = 1;
+
+	[DebugEditable(DisplayName = "Lane Idle Top Border Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float LaneIdleTopBorderAlpha { get; set; } = 0.35f;
+
+	[DebugEditable(DisplayName = "Plus Size", Step = 1f, Min = 4f, Max = 100f)]
+	public float PlusSize { get; set; } = 30f;
+
+	[DebugEditable(DisplayName = "Arrow Width", Step = 1f, Min = 4f, Max = 100f)]
+	public float ArrowWidth { get; set; } = 30f;
+
+	[DebugEditable(DisplayName = "Arrow Height", Step = 1f, Min = 4f, Max = 120f)]
+	public float ArrowHeight { get; set; } = 38f;
+
+	[DebugEditable(DisplayName = "Plus Thickness Ratio", Step = 0.01f, Min = 0.01f, Max = 1f)]
+	public float PlusThicknessRatio { get; set; } = 0.13f;
+
+	[DebugEditable(DisplayName = "Plus Minimum Thickness", Step = 0.5f, Min = 1f, Max = 20f)]
+	public float PlusMinimumThickness { get; set; } = 2f;
+
+	[DebugEditable(DisplayName = "Arrow Shaft Ratio", Step = 0.01f, Min = 0.01f, Max = 1f)]
+	public float ArrowShaftRatio { get; set; } = 0.14f;
+
+	[DebugEditable(DisplayName = "Arrow Minimum Shaft", Step = 0.5f, Min = 1f, Max = 20f)]
+	public float ArrowMinimumShaft { get; set; } = 3f;
+
+	[DebugEditable(DisplayName = "Arrow Head Offset Ratio", Step = 0.01f, Min = -0.5f, Max = 0.5f)]
+	public float ArrowHeadOffsetRatio { get; set; } = 0.12f;
+
+	[DebugEditable(DisplayName = "Overlay Dim Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float OverlayDimAlpha { get; set; } = 0.62f;
+
+	[DebugEditable(DisplayName = "Entrance Flash Duration", Step = 0.01f, Min = 0.01f, Max = 4f)]
+	public float EntranceFlashDuration { get; set; } = 0.82f;
+
+	[DebugEditable(DisplayName = "Fallback Vignette Layers", Step = 1, Min = 2, Max = 40)]
+	public int FallbackVignetteLayers { get; set; } = 10;
+
+	[DebugEditable(DisplayName = "Fallback Vignette Inset X", Step = 1, Min = 0, Max = 800)]
+	public int FallbackVignetteInsetX { get; set; } = 300;
+
+	[DebugEditable(DisplayName = "Fallback Vignette Inset Y", Step = 1, Min = 0, Max = 400)]
+	public int FallbackVignetteInsetY { get; set; } = 100;
+
+	[DebugEditable(DisplayName = "Fallback Vignette Layer Alpha", Step = 0.005f, Min = 0f, Max = 0.25f)]
+	public float FallbackVignetteLayerAlpha { get; set; } = 0.025f;
+
+	[DebugEditable(DisplayName = "Entrance Duration", Step = 0.01f, Min = 0.05f, Max = 5f)]
+	public float EntranceDuration { get; set; } = 1.25f;
+
+	[DebugEditable(DisplayName = "Title Entry Delay", Step = 0.01f, Min = 0f, Max = 3f)]
+	public float TitleEntryDelay { get; set; } = 0.12f;
+
+	[DebugEditable(DisplayName = "Title Entry Duration", Step = 0.01f, Min = 0.01f, Max = 4f)]
+	public float TitleEntryDuration { get; set; } = 0.62f;
+
+	[DebugEditable(DisplayName = "Title Entry Start Scale", Step = 0.01f, Min = 0.1f, Max = 4f)]
+	public float TitleEntryStartScale { get; set; } = 1.65f;
+
+	[DebugEditable(DisplayName = "Title Entry Start Blur", Step = 0.1f, Min = 0f, Max = 40f)]
+	public float TitleEntryStartBlur { get; set; } = 10f;
+
+	[DebugEditable(DisplayName = "Center Lane Entry Delay", Step = 0.01f, Min = 0f, Max = 3f)]
+	public float CenterLaneEntryDelay { get; set; } = 0.23f;
+
+	[DebugEditable(DisplayName = "Outer Lane Entry Delay", Step = 0.01f, Min = 0f, Max = 3f)]
+	public float OuterLaneEntryDelay { get; set; } = 0.33f;
+
+	[DebugEditable(DisplayName = "Lane Entry Duration", Step = 0.01f, Min = 0.01f, Max = 4f)]
+	public float LaneEntryDuration { get; set; } = 0.68f;
+
+	[DebugEditable(DisplayName = "Lane Entry Start Scale", Step = 0.01f, Min = 0.1f, Max = 2f)]
+	public float LaneEntryStartScale { get; set; } = 0.72f;
+
+	[DebugEditable(DisplayName = "Lane Entry Start Blur", Step = 0.1f, Min = 0f, Max = 40f)]
+	public float LaneEntryStartBlur { get; set; } = 9f;
+
+	[DebugEditable(DisplayName = "Footer Entry Delay", Step = 0.01f, Min = 0f, Max = 3f)]
+	public float FooterEntryDelay { get; set; } = 0.69f;
+
+	[DebugEditable(DisplayName = "Footer Entry Duration", Step = 0.01f, Min = 0.01f, Max = 4f)]
+	public float FooterEntryDuration { get; set; } = 0.42f;
+
+	[DebugEditable(DisplayName = "Claim Duration", Step = 0.01f, Min = 0.05f, Max = 6f)]
+	public float ClaimDuration { get; set; } = 1.45f;
+
+	[DebugEditable(DisplayName = "Claim Chrome Exit Duration", Step = 0.01f, Min = 0.01f, Max = 3f)]
+	public float ClaimChromeExitDuration { get; set; } = 0.38f;
+
+	[DebugEditable(DisplayName = "Claim Chrome Offset Y", Step = 1f, Min = -300f, Max = 300f)]
+	public float ClaimChromeOffsetY { get; set; } = -18f;
+
+	[DebugEditable(DisplayName = "Unselected Lane Exit Duration", Step = 0.01f, Min = 0.01f, Max = 3f)]
+	public float UnselectedLaneExitDuration { get; set; } = 0.43f;
+
+	[DebugEditable(DisplayName = "Unselected Lane Exit Scale", Step = 0.01f, Min = 0.1f, Max = 2f)]
+	public float UnselectedLaneExitScale { get; set; } = 0.86f;
+
+	[DebugEditable(DisplayName = "Unselected Lane Exit Blur", Step = 0.1f, Min = 0f, Max = 40f)]
+	public float UnselectedLaneExitBlur { get; set; } = 9f;
+
+	[DebugEditable(DisplayName = "Selected Chrome Exit Duration", Step = 0.01f, Min = 0.01f, Max = 3f)]
+	public float SelectedChromeExitDuration { get; set; } = 0.26f;
+
+	[DebugEditable(DisplayName = "Outgoing Card Exit Duration", Step = 0.01f, Min = 0.01f, Max = 4f)]
+	public float OutgoingCardExitDuration { get; set; } = 0.52f;
+
+	[DebugEditable(DisplayName = "Outgoing Card Exit Scale", Step = 0.01f, Min = 0.1f, Max = 2f)]
+	public float OutgoingCardExitScale { get; set; } = 0.86f;
+
+	[DebugEditable(DisplayName = "Outgoing Card Exit Blur", Step = 0.1f, Min = 0f, Max = 40f)]
+	public float OutgoingCardExitBlur { get; set; } = 7f;
+
+	[DebugEditable(DisplayName = "Outgoing Card Exit Offset Y", Step = 1f, Min = -600f, Max = 600f)]
+	public float OutgoingCardExitOffsetY { get; set; } = 110f;
+
+	[DebugEditable(DisplayName = "Outgoing Card Exit Rotation", Step = 0.5f, Min = -90f, Max = 90f)]
+	public float OutgoingCardExitRotationDegrees { get; set; } = -5f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Delay", Step = 0.01f, Min = 0f, Max = 3f)]
+	public float IncomingClaimDelay { get; set; } = 0.08f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Lift End", Step = 0.01f, Min = 0.01f, Max = 0.99f)]
+	public float IncomingClaimLiftEnd { get; set; } = 0.32f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Exit Start", Step = 0.01f, Min = 0.01f, Max = 0.99f)]
+	public float IncomingClaimExitStart { get; set; } = 0.68f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Peak Scale", Step = 0.01f, Min = 0.1f, Max = 3f)]
+	public float IncomingClaimPeakScale { get; set; } = 1.18f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Lift Offset Y", Step = 1f, Min = -800f, Max = 800f)]
+	public float IncomingClaimLiftOffsetY { get; set; } = -150f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Peak Brightness", Step = 0.01f, Min = 0f, Max = 4f)]
+	public float IncomingClaimPeakBrightness { get; set; } = 1.12f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Exit Scale", Step = 0.01f, Min = 0.1f, Max = 3f)]
+	public float IncomingClaimExitScale { get; set; } = 0.72f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Exit Offset Y", Step = 1f, Min = -1000f, Max = 1000f)]
+	public float IncomingClaimExitOffsetY { get; set; } = -330f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Exit Blur", Step = 0.1f, Min = 0f, Max = 50f)]
+	public float IncomingClaimExitBlur { get; set; } = 10f;
+
+	[DebugEditable(DisplayName = "Incoming Claim Exit Brightness", Step = 0.01f, Min = 0f, Max = 5f)]
+	public float IncomingClaimExitBrightness { get; set; } = 1.55f;
+
+	[DebugEditable(DisplayName = "Skip Duration", Step = 0.01f, Min = 0.05f, Max = 4f)]
+	public float SkipDuration { get; set; } = 0.76f;
+
+	[DebugEditable(DisplayName = "Skip Exit Blur", Step = 0.1f, Min = 0f, Max = 40f)]
+	public float SkipExitBlur { get; set; } = 7f;
+
+	[DebugEditable(DisplayName = "Skip Exit Offset Y", Step = 1f, Min = -500f, Max = 500f)]
+	public float SkipExitOffsetY { get; set; } = 24f;
+
+	[DebugEditable(DisplayName = "Incoming Card Hover Scale", Step = 0.005f, Min = 1f, Max = 1.3f)]
+	public float IncomingCardHoverScale { get; set; } = 1.025f;
+
+	[DebugEditable(DisplayName = "Incoming Card Hover Tween Speed", Step = 0.5f, Min = 0.1f, Max = 60f)]
+	public float IncomingCardHoverTweenSpeed { get; set; } = 12f;
+
 	private sealed class OptionView
 	{
 		public Entity Lane { get; init; }
 		public Entity OutgoingCard { get; init; }
 		public Entity IncomingCard { get; init; }
 		public bool IsUpgrade { get; init; }
+		public float IncomingHoverScale { get; set; } = 1f;
 	}
+
+	private readonly record struct QuestRewardLayoutKey(
+		int OptionCount,
+		int OuterSidePadding,
+		int MastheadHeight,
+		int FooterHeight,
+		int LaneWidth,
+		int LaneGap,
+		int CardPixelWidth,
+		int StageTopPadding,
+		int FooterBottomPadding,
+		int ConnectorHeight,
+		int ConnectorPadding,
+		int SkipPixelHeight,
+		float SkipTracking,
+		int SkipHorizontalPadding,
+		int SkipButtonHeight);
 
 	private readonly struct QuestRewardLayout
 	{
@@ -115,6 +406,48 @@ public sealed class RewardModalDisplaySystem : Core.System
 		public float Brightness { get; init; }
 		public Vector2 Offset { get; init; }
 		public float Rotation { get; init; }
+	}
+
+	internal readonly record struct RewardModalAnimationSettings
+	{
+		public float CenterLaneEntryDelay { get; init; }
+		public float OuterLaneEntryDelay { get; init; }
+		public float LaneEntryDuration { get; init; }
+		public float LaneEntryStartScale { get; init; }
+		public float LaneEntryStartBlur { get; init; }
+		public float ClaimDuration { get; init; }
+		public float IncomingClaimDelay { get; init; }
+		public float IncomingClaimLiftEnd { get; init; }
+		public float IncomingClaimExitStart { get; init; }
+		public float IncomingClaimStartScale { get; init; }
+		public float IncomingClaimPeakScale { get; init; }
+		public float IncomingClaimLiftOffsetY { get; init; }
+		public float IncomingClaimPeakBrightness { get; init; }
+		public float IncomingClaimExitScale { get; init; }
+		public float IncomingClaimExitOffsetY { get; init; }
+		public float IncomingClaimExitBlur { get; init; }
+		public float IncomingClaimExitBrightness { get; init; }
+
+		public static RewardModalAnimationSettings Default => new()
+		{
+			CenterLaneEntryDelay = 0.23f,
+			OuterLaneEntryDelay = 0.33f,
+			LaneEntryDuration = 0.68f,
+			LaneEntryStartScale = 0.72f,
+			LaneEntryStartBlur = 9f,
+			ClaimDuration = 1.45f,
+			IncomingClaimDelay = 0.08f,
+			IncomingClaimLiftEnd = 0.32f,
+			IncomingClaimExitStart = 0.68f,
+			IncomingClaimStartScale = 1.025f,
+			IncomingClaimPeakScale = 1.18f,
+			IncomingClaimLiftOffsetY = -150f,
+			IncomingClaimPeakBrightness = 1.12f,
+			IncomingClaimExitScale = 0.72f,
+			IncomingClaimExitOffsetY = -330f,
+			IncomingClaimExitBlur = 10f,
+			IncomingClaimExitBrightness = 1.55f,
+		};
 	}
 
 	public RewardModalDisplaySystem(
@@ -169,9 +502,8 @@ public sealed class RewardModalDisplaySystem : Core.System
 
 		StateSingleton.PreventClicking = scene?.Current == SceneId.Climb;
 		EnsureLayout(state.DeckRewardOffer?.options?.Count ?? 0);
-		SyncControls(state);
-
 		float elapsed = Math.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
+		SyncControls(state, elapsed);
 		state.PhaseElapsedSeconds += elapsed;
 		if (state.DeckColumnSelectionInProgress)
 			state.DeckColumnSelectionElapsedSeconds += elapsed;
@@ -181,7 +513,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 			case QuestRewardPresentationPhase.Entering when state.PhaseElapsedSeconds >= EntranceDuration:
 				state.Phase = QuestRewardPresentationPhase.Visible;
 				state.PhaseElapsedSeconds = 0f;
-				SyncControls(state);
+				SyncControls(state, elapsed);
 				break;
 			case QuestRewardPresentationPhase.Visible:
 				HandleVisibleInput(state);
@@ -311,7 +643,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 		state.IsOpen = _optionViews.Count > 0;
 		_layoutValid = false;
 		EnsureLayout(_optionViews.Count);
-		SyncControls(state);
+		SyncControls(state, 0f);
 	}
 
 	public void OpenDeckOfferForSnapshot(DeckRewardOfferSave offer)
@@ -404,7 +736,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 		StateSingleton.PreventClicking = false;
 	}
 
-	private void SyncControls(QuestRewardOverlayState state)
+	private void SyncControls(QuestRewardOverlayState state, float elapsedSeconds)
 	{
 		bool interactive = state?.Phase == QuestRewardPresentationPhase.Visible && !state.DismissInProgress;
 		for (int i = 0; i < _optionViews.Count; i++)
@@ -423,6 +755,8 @@ public sealed class RewardModalDisplaySystem : Core.System
 		}
 
 		UIElement skipUi = _skipButton?.GetComponent<UIElement>();
+		Transform skipTransform = _skipButton?.GetComponent<Transform>();
+		if (skipTransform != null) skipTransform.ZOrder = ZOrder + 20;
 		if (skipUi != null)
 		{
 			skipUi.Bounds = _layout.SkipButton;
@@ -433,11 +767,77 @@ public sealed class RewardModalDisplaySystem : Core.System
 		HotKey hotKey = _skipButton?.GetComponent<HotKey>();
 		if (hotKey != null) hotKey.IsActive = interactive;
 
+		float cardScale = GetCardScale();
+		for (int i = 0; i < _optionViews.Count; i++)
+		{
+			OptionView view = _optionViews[i];
+			Rectangle outgoingBounds = i < _layout.OutgoingAnchors.Length
+				? CardGeometryService.GetVisualRect(EntityManager, _layout.OutgoingAnchors[i], cardScale)
+				: Rectangle.Empty;
+			Rectangle incomingBounds = i < _layout.IncomingAnchors.Length
+				? CardGeometryService.GetVisualRect(EntityManager, _layout.IncomingAnchors[i], cardScale)
+				: Rectangle.Empty;
+			PreparePreviewCard(view.OutgoingCard, outgoingBounds);
+			PreparePreviewCard(view.IncomingCard, incomingBounds);
+		}
+
+		SyncPreviewCardHover(interactive);
 		foreach (OptionView view in _optionViews)
 		{
-			PreparePreviewCard(view.OutgoingCard);
-			PreparePreviewCard(view.IncomingCard);
+			bool hovered = interactive && view.IncomingCard?.GetComponent<UIElement>()?.IsHovered == true;
+			float target = hovered ? Math.Max(1f, IncomingCardHoverScale) : 1f;
+			view.IncomingHoverScale = UpdateHoverScale(
+				view.IncomingHoverScale,
+				target,
+				IncomingCardHoverTweenSpeed,
+				elapsedSeconds);
 		}
+	}
+
+	private void SyncPreviewCardHover(bool interactive)
+	{
+		foreach (OptionView view in _optionViews)
+		{
+			SetHovered(view.OutgoingCard, false);
+			SetHovered(view.IncomingCard, false);
+		}
+		if (!interactive) return;
+
+		PlayerInputState input = EntityManager.GetEntitiesWithComponent<PlayerInputState>()
+			.FirstOrDefault()?.GetComponent<PlayerInputState>();
+		if (input == null || !input.IsCursorInteractionEnabled) return;
+		Vector2 pointer = input.Frame.PointerPosition;
+
+		foreach (OptionView view in _optionViews)
+		{
+			UIElement ui = view.OutgoingCard?.GetComponent<UIElement>();
+			if (ui?.Bounds.Contains(pointer) != true) continue;
+			ui.IsHovered = true;
+			return;
+		}
+		foreach (OptionView view in _optionViews)
+		{
+			UIElement ui = view.IncomingCard?.GetComponent<UIElement>();
+			if (ui?.Bounds.Contains(pointer) != true) continue;
+			ui.IsHovered = true;
+			return;
+		}
+	}
+
+	private static void SetHovered(Entity entity, bool hovered)
+	{
+		UIElement ui = entity?.GetComponent<UIElement>();
+		if (ui != null) ui.IsHovered = hovered;
+	}
+
+	internal static float UpdateHoverScale(float current, float target, float speed, float elapsedSeconds)
+	{
+		current = float.IsFinite(current) ? Math.Max(0.01f, current) : 1f;
+		target = float.IsFinite(target) ? Math.Max(0.01f, target) : 1f;
+		float elapsed = float.IsFinite(elapsedSeconds) ? Math.Max(0f, elapsedSeconds) : 0f;
+		float alpha = 1f - MathF.Exp(-Math.Max(0.1f, speed) * elapsed);
+		float value = MathHelper.Lerp(current, target, MathHelper.Clamp(alpha, 0f, 1f));
+		return MathF.Abs(value - target) < 0.0001f ? target : value;
 	}
 
 	private void DisableInputs()
@@ -448,6 +848,11 @@ public sealed class RewardModalDisplaySystem : Core.System
 			if (ui == null) continue;
 			ui.IsInteractable = false;
 			ui.IsClicked = false;
+		}
+		foreach (OptionView view in _optionViews)
+		{
+			SetHovered(view.OutgoingCard, false);
+			SetHovered(view.IncomingCard, false);
 		}
 		UIElement skipUi = _skipButton?.GetComponent<UIElement>();
 		if (skipUi != null)
@@ -461,10 +866,27 @@ public sealed class RewardModalDisplaySystem : Core.System
 
 	private void EnsureLayout(int optionCount)
 	{
-		if (_layoutValid && _layout.Lanes?.Length == optionCount) return;
 		int count = Math.Clamp(optionCount, 0, MaxOptions);
-		int stageTop = 26 + MastheadHeight;
-		int footerTop = Game1.VirtualHeight - 28 - FooterHeight;
+		var key = new QuestRewardLayoutKey(
+			count,
+			OuterSidePadding,
+			MastheadHeight,
+			FooterHeight,
+			LaneWidth,
+			LaneGap,
+			CardPixelWidth,
+			StageTopPadding,
+			FooterBottomPadding,
+			ConnectorHeight,
+			ConnectorPadding,
+			SkipPixelHeight,
+			SkipTracking,
+			SkipHorizontalPadding,
+			SkipButtonHeight);
+		if (_layoutValid && _layoutKey == key) return;
+
+		int stageTop = StageTopPadding + MastheadHeight;
+		int footerTop = Game1.VirtualHeight - FooterBottomPadding - FooterHeight;
 		var stage = new Rectangle(OuterSidePadding, stageTop, Game1.VirtualWidth - OuterSidePadding * 2, Math.Max(1, footerTop - stageTop));
 		var footer = new Rectangle(OuterSidePadding, footerTop, Game1.VirtualWidth - OuterSidePadding * 2, FooterHeight);
 
@@ -474,24 +896,29 @@ public sealed class RewardModalDisplaySystem : Core.System
 		var swaps = new Vector2[count];
 		int totalWidth = count * LaneWidth + Math.Max(0, count - 1) * LaneGap;
 		int startX = (Game1.VirtualWidth - totalWidth) / 2;
-		float cardHeight = CardGeometrySettings.DefaultHeight * CardScale;
-		float stackHeight = cardHeight * 2f + 42f + 16f;
+		float cardScale = GetCardScale();
+		float cardHeight = CardGeometrySettings.DefaultHeight * cardScale;
+		float stackHeight = cardHeight * 2f + ConnectorHeight + ConnectorPadding * 2f;
 		float stackTop = stage.Y + (stage.Height - stackHeight) / 2f;
 		for (int i = 0; i < count; i++)
 		{
 			lanes[i] = new Rectangle(startX + i * (LaneWidth + LaneGap), stage.Y, LaneWidth, stage.Height);
 			float centerX = lanes[i].Center.X;
 			float outgoingVisualCenter = stackTop + cardHeight / 2f;
-			float swapCenter = stackTop + cardHeight + 8f + 21f;
-			float incomingVisualCenter = stackTop + cardHeight + 8f + 42f + 8f + cardHeight / 2f;
-			outgoing[i] = CardAnchorForVisualCenter(new Vector2(centerX, outgoingVisualCenter), CardScale);
-			incoming[i] = CardAnchorForVisualCenter(new Vector2(centerX, incomingVisualCenter), CardScale);
+			float swapCenter = stackTop + cardHeight + ConnectorPadding + ConnectorHeight / 2f;
+			float incomingVisualCenter = stackTop + cardHeight + ConnectorPadding + ConnectorHeight + ConnectorPadding + cardHeight / 2f;
+			outgoing[i] = CardAnchorForVisualCenter(new Vector2(centerX, outgoingVisualCenter), cardScale);
+			incoming[i] = CardAnchorForVisualCenter(new Vector2(centerX, incomingVisualCenter), cardScale);
 			swaps[i] = new Vector2(centerX, swapCenter);
 		}
 
-		float skipScale = ScaleForPixelHeight(_bodyFont, SkipText, 11f);
-		float skipWidth = MeasureTracked(_bodyFont, SkipText, skipScale, 1.6f).X + 52f;
-		var skip = new Rectangle((int)(Game1.VirtualWidth / 2f - skipWidth / 2f), footer.Center.Y - 24, (int)Math.Ceiling(skipWidth), 48);
+		float skipScale = ScaleForPixelHeight(_bodyFont, SkipText, SkipPixelHeight);
+		float skipWidth = MeasureTracked(_bodyFont, SkipText, skipScale, SkipTracking).X + SkipHorizontalPadding;
+		var skip = new Rectangle(
+			(int)(Game1.VirtualWidth / 2f - skipWidth / 2f),
+			footer.Center.Y - SkipButtonHeight / 2,
+			(int)Math.Ceiling(skipWidth),
+			SkipButtonHeight);
 		_layout = new QuestRewardLayout
 		{
 			Lanes = lanes,
@@ -500,8 +927,11 @@ public sealed class RewardModalDisplaySystem : Core.System
 			SwapCenters = swaps,
 			SkipButton = skip,
 		};
+		_layoutKey = key;
 		_layoutValid = true;
 	}
+
+	private float GetCardScale() => Math.Max(1f, CardPixelWidth) / CardGeometrySettings.DefaultWidth;
 
 	public void Draw()
 	{
@@ -512,8 +942,8 @@ public sealed class RewardModalDisplaySystem : Core.System
 
 		EnsureLayout(_optionViews.Count);
 		DrawAtmosphere(state);
-		DrawHorizontalRule(171, GetOverlayAlpha(state));
-		DrawHorizontalRule(Game1.VirtualHeight - 101, GetOverlayAlpha(state));
+		DrawHorizontalRule(StageTopPadding + MastheadHeight, GetOverlayAlpha(state));
+		DrawHorizontalRule(Game1.VirtualHeight - FooterBottomPadding - FooterHeight + 1, GetOverlayAlpha(state));
 
 		bool canFilter = ShaderRuntimeOptions.ShadersEnabled && _layerCompositor?.IsAvailable == true;
 		switch (state.Phase)
@@ -542,7 +972,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 			Texture2D sceneSource = previousTargets.Length > 0 ? previousTargets[0].RenderTarget as Texture2D : null;
 			if (sceneSource == null)
 			{
-				_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * (0.62f * alpha));
+				_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * (OverlayDimAlpha * alpha));
 				return;
 			}
 			SamplerState savedSampler = _graphicsDevice.SamplerStates[0];
@@ -559,7 +989,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 				_atmosphere.Time = _effectTime;
 				_atmosphere.OverlayAlpha = alpha;
 				_atmosphere.FlashProgress = state.Phase == QuestRewardPresentationPhase.Entering
-					? state.PhaseElapsedSeconds / 0.82f
+					? state.PhaseElapsedSeconds / Math.Max(0.01f, EntranceFlashDuration)
 					: -1f;
 				_atmosphere.Begin(_spriteBatch);
 				effectStarted = true;
@@ -588,24 +1018,26 @@ public sealed class RewardModalDisplaySystem : Core.System
 			return;
 		}
 
-		_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * (0.62f * alpha));
-		for (int i = 0; i < 10; i++)
+		_spriteBatch.Draw(_pixel, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight), Color.Black * (OverlayDimAlpha * alpha));
+		int layers = Math.Max(2, FallbackVignetteLayers);
+		for (int i = 0; i < layers; i++)
 		{
-			float t = i / 9f;
-			int insetX = (int)(300 * t);
-			int insetY = (int)(100 * t);
-			_spriteBatch.Draw(_pixel, new Rectangle(insetX, insetY, Game1.VirtualWidth - insetX * 2, Game1.VirtualHeight - insetY * 2), Color.Black * (0.025f * t * alpha));
+			float t = i / (float)(layers - 1);
+			int insetX = (int)(FallbackVignetteInsetX * t);
+			int insetY = (int)(FallbackVignetteInsetY * t);
+			_spriteBatch.Draw(_pixel, new Rectangle(insetX, insetY, Game1.VirtualWidth - insetX * 2, Game1.VirtualHeight - insetY * 2), Color.Black * (FallbackVignetteLayerAlpha * t * alpha));
 		}
 	}
 
 	private void DrawEntrance(QuestRewardOverlayState state, bool canFilter)
 	{
-		float titleT = EaseBackOut(Progress(state.PhaseElapsedSeconds - 0.12f, 0.62f));
+		RewardModalAnimationSettings animation = BuildAnimationSettings();
+		float titleT = EaseBackOut(Progress(state.PhaseElapsedSeconds - TitleEntryDelay, TitleEntryDuration));
 		var titleVisual = new LayerVisual
 		{
-			Alpha = Progress(state.PhaseElapsedSeconds - 0.12f, 0.62f),
-			Scale = MathHelper.Lerp(1.65f, 1f, titleT),
-			Blur = MathHelper.Lerp(10f, 0f, titleT),
+			Alpha = Progress(state.PhaseElapsedSeconds - TitleEntryDelay, TitleEntryDuration),
+			Scale = MathHelper.Lerp(TitleEntryStartScale, 1f, titleT),
+			Blur = MathHelper.Lerp(TitleEntryStartBlur, 0f, titleT),
 			Brightness = 1f,
 		};
 		DrawFilteredOrDirect(() => DrawMasthead(titleVisual), titleVisual, canFilter);
@@ -613,58 +1045,49 @@ public sealed class RewardModalDisplaySystem : Core.System
 		for (int i = 0; i < _optionViews.Count; i++)
 		{
 			int index = i;
-			float delay = i == 1 ? 0.23f : 0.33f;
-			float raw = Progress(state.PhaseElapsedSeconds - delay, 0.68f);
-			float eased = EaseOutCubic(raw);
-			var visual = new LayerVisual
-			{
-				Alpha = raw,
-				Scale = MathHelper.Lerp(0.72f, 1f, eased),
-				Blur = MathHelper.Lerp(9f, 0f, eased),
-				Grayscale = 1f - eased,
-				Brightness = 1f,
-			};
+			LayerVisual visual = ComputeEntranceLaneVisual(index, state.PhaseElapsedSeconds, animation);
 			DrawFilteredOrDirect(() => DrawLane(index, state, visual, drawChrome: true, drawOutgoing: true, drawIncoming: true), visual, canFilter);
 		}
 
-		float footerAlpha = Progress(state.PhaseElapsedSeconds - 0.69f, 0.42f);
+		float footerAlpha = Progress(state.PhaseElapsedSeconds - FooterEntryDelay, FooterEntryDuration);
 		DrawFooter(state, new Vector2(0f, 0f), footerAlpha);
 	}
 
 	private void DrawClaim(QuestRewardOverlayState state, bool canFilter)
 	{
 		float elapsed = state.PhaseElapsedSeconds;
-		float chromeT = EaseInCubic(Progress(elapsed, 0.38f));
-		DrawMasthead(new LayerVisual { Alpha = 1f - chromeT, Scale = 1f, Offset = new Vector2(0f, -18f * chromeT), Brightness = 1f });
-		DrawFooter(state, new Vector2(0f, -18f * chromeT), 1f - chromeT);
+		RewardModalAnimationSettings animation = BuildAnimationSettings();
+		float chromeT = EaseInCubic(Progress(elapsed, ClaimChromeExitDuration));
+		DrawMasthead(new LayerVisual { Alpha = 1f - chromeT, Scale = 1f, Offset = new Vector2(0f, ClaimChromeOffsetY * chromeT), Brightness = 1f });
+		DrawFooter(state, new Vector2(0f, ClaimChromeOffsetY * chromeT), 1f - chromeT);
 
 		for (int i = 0; i < _optionViews.Count; i++)
 		{
 			int index = i;
 			if (i != state.SelectedDeckRewardColumnIndex)
 			{
-				float t = EaseInCubic(Progress(elapsed, 0.43f));
-				var visual = new LayerVisual { Alpha = 1f - t, Scale = MathHelper.Lerp(1f, 0.86f, t), Blur = 9f * t, Brightness = 1f };
+				float t = EaseInCubic(Progress(elapsed, UnselectedLaneExitDuration));
+				var visual = new LayerVisual { Alpha = 1f - t, Scale = MathHelper.Lerp(1f, UnselectedLaneExitScale, t), Blur = UnselectedLaneExitBlur * t, Brightness = 1f };
 				DrawFilteredOrDirect(() => DrawLane(index, state, visual, true, true, true), visual, canFilter);
 				continue;
 			}
 
-			float selectedChromeT = EaseInCubic(Progress(elapsed, 0.26f));
-			DrawLane(index, state, new LayerVisual { Alpha = 1f - selectedChromeT, Scale = 1f, Offset = new Vector2(0f, -18f * selectedChromeT), Brightness = 1f }, true, false, false);
+			float selectedChromeT = EaseInCubic(Progress(elapsed, SelectedChromeExitDuration));
+			DrawLane(index, state, new LayerVisual { Alpha = 1f - selectedChromeT, Scale = 1f, Offset = new Vector2(0f, ClaimChromeOffsetY * selectedChromeT), Brightness = 1f }, true, false, false);
 
-			float outgoingT = EaseInCubic(Progress(elapsed, 0.52f));
+			float outgoingT = EaseInCubic(Progress(elapsed, OutgoingCardExitDuration));
 			var outgoing = new LayerVisual
 			{
 				Alpha = 1f - outgoingT,
-				Scale = MathHelper.Lerp(1f, 0.86f, outgoingT),
-				Blur = 7f * outgoingT,
-				Offset = new Vector2(0f, 110f * outgoingT),
-				Rotation = MathHelper.ToRadians(-5f * outgoingT),
+				Scale = MathHelper.Lerp(1f, OutgoingCardExitScale, outgoingT),
+				Blur = OutgoingCardExitBlur * outgoingT,
+				Offset = new Vector2(0f, OutgoingCardExitOffsetY * outgoingT),
+				Rotation = MathHelper.ToRadians(OutgoingCardExitRotationDegrees * outgoingT),
 				Brightness = 1f,
 			};
 			DrawFilteredOrDirect(() => DrawLane(index, state, outgoing, false, true, false), outgoing, canFilter);
 
-			LayerVisual incoming = ComputeIncomingClaimVisual(elapsed);
+			LayerVisual incoming = ComputeIncomingClaimVisual(elapsed, animation);
 			DrawFilteredOrDirect(() => DrawLane(index, state, incoming, false, false, true), incoming, canFilter);
 		}
 	}
@@ -676,8 +1099,8 @@ public sealed class RewardModalDisplaySystem : Core.System
 		{
 			Alpha = 1f - t,
 			Scale = 1f,
-			Blur = 7f * t,
-			Offset = new Vector2(0f, 24f * t),
+			Blur = SkipExitBlur * t,
+			Offset = new Vector2(0f, SkipExitOffsetY * t),
 			Brightness = 1f,
 		};
 		DrawFilteredOrDirect(() => DrawForeground(state, visual.Offset, visual.Alpha), visual, canFilter);
@@ -707,31 +1130,31 @@ public sealed class RewardModalDisplaySystem : Core.System
 		if (visual.Alpha <= 0.001f) return;
 		float scale = ScaleForPixelHeight(_titleFont, TitleText, TitlePixelHeight) * Math.Max(0.01f, visual.Scale);
 		Vector2 size = MeasureTracked(_titleFont, TitleText, scale, TitleTracking);
-		Vector2 position = new(Game1.VirtualWidth / 2f - size.X / 2f, 62f - size.Y / 2f);
-		position = ScaleAround(position, new Vector2(Game1.VirtualWidth / 2f, 88f), visual.Scale) + visual.Offset;
-		DrawTracked(_titleFont, TitleText, position + new Vector2(0f, 4f), scale, Color.Black * (0.85f * visual.Alpha), TitleTracking);
+		Vector2 position = new(Game1.VirtualWidth / 2f - size.X / 2f, TitleCenterY - size.Y / 2f);
+		position = ScaleAround(position, new Vector2(Game1.VirtualWidth / 2f, TitleScaleOriginY), visual.Scale) + visual.Offset;
+		DrawTracked(_titleFont, TitleText, position + new Vector2(0f, TitleShadowOffsetY), scale, Color.Black * (TitleShadowAlpha * visual.Alpha), TitleTracking);
 		DrawTracked(_titleFont, TitleText, position, scale, Color.White * visual.Alpha, TitleTracking);
 
-		float ruleY = 129f + visual.Offset.Y;
+		float ruleY = TitleRuleY + visual.Offset.Y;
 		DrawMastheadRule(new Vector2(Game1.VirtualWidth / 2f, ruleY), visual.Alpha, visual.Scale);
 	}
 
 	private void DrawMastheadRule(Vector2 center, float alpha, float scale)
 	{
-		int half = Math.Max(1, (int)Math.Round(80f * scale));
+		int half = Math.Max(1, (int)Math.Round(TitleRuleHalfWidth * scale));
 		for (int i = 0; i < 8; i++)
 		{
 			float t0 = i / 8f;
 			float t1 = (i + 1) / 8f;
 			Color color = Blood * (alpha * t1);
-			int x0 = (int)(center.X - 9 - half + half * t0);
-			int x1 = (int)(center.X - 9 - half + half * t1);
+			int x0 = (int)(center.X - TitleRuleCenterGap - half + half * t0);
+			int x1 = (int)(center.X - TitleRuleCenterGap - half + half * t1);
 			_spriteBatch.Draw(_pixel, new Rectangle(x0, (int)center.Y, Math.Max(1, x1 - x0), 1), color);
-			int rx0 = (int)(center.X + 9 + half * t0);
-			int rx1 = (int)(center.X + 9 + half * t1);
+			int rx0 = (int)(center.X + TitleRuleCenterGap + half * t0);
+			int rx1 = (int)(center.X + TitleRuleCenterGap + half * t1);
 			_spriteBatch.Draw(_pixel, new Rectangle(rx0, (int)center.Y, Math.Max(1, rx1 - rx0), 1), Blood * (alpha * (1f - t0)));
 		}
-		DrawDiamond(center, 7f * scale, Blood * alpha);
+		DrawDiamond(center, TitleRuleDiamondSize * scale, Blood * alpha);
 	}
 
 	private void DrawLane(int index, QuestRewardOverlayState state, LayerVisual visual, bool drawChrome, bool drawOutgoing, bool drawIncoming)
@@ -749,21 +1172,20 @@ public sealed class RewardModalDisplaySystem : Core.System
 			DrawLaneBackground(lane, view.IsUpgrade, hovered || selected, visual.Alpha);
 			DrawKicker(index, lane, view.IsUpgrade, hovered || selected, visual.Alpha);
 			Vector2 swap = TransformPoint(_layout.SwapCenters[index], laneCenter, visual.Scale, visual.Offset);
-			if (view.IsUpgrade) DrawPlus(swap, 30f * visual.Scale, Bone * visual.Alpha);
-			else DrawArrow(swap, 30f * visual.Scale, 38f * visual.Scale, Blood * visual.Alpha);
+			if (view.IsUpgrade) DrawPlus(swap, PlusSize * visual.Scale, Bone * visual.Alpha);
+			else DrawArrow(swap, ArrowWidth * visual.Scale, ArrowHeight * visual.Scale, Blood * visual.Alpha);
 		}
 
-		float hoverScale = hovered && state.Phase == QuestRewardPresentationPhase.Visible ? 1.025f : 1f;
 		if (drawOutgoing)
 		{
 			Vector2 anchor = TransformPoint(_layout.OutgoingAnchors[index], laneCenter, visual.Scale, visual.Offset);
-			DrawCard(view.OutgoingCard, anchor, CardScale * visual.Scale, visual.Alpha, visual.Rotation);
+			DrawCard(view.OutgoingCard, anchor, GetCardScale() * visual.Scale, visual.Alpha, visual.Rotation);
 		}
 		if (drawIncoming)
 		{
 			Vector2 anchor = TransformPoint(_layout.IncomingAnchors[index], laneCenter, visual.Scale, visual.Offset);
-			if (hovered) DrawCardGlow(anchor, CardScale * visual.Scale * hoverScale, view.IsUpgrade ? Bone : Blood, visual.Alpha);
-			DrawCard(view.IncomingCard, anchor, CardScale * visual.Scale * hoverScale, visual.Alpha, visual.Rotation);
+			float hoverScale = state.Phase == QuestRewardPresentationPhase.Visible ? view.IncomingHoverScale : 1f;
+			DrawCard(view.IncomingCard, anchor, GetCardScale() * visual.Scale * hoverScale, visual.Alpha, visual.Rotation);
 		}
 	}
 
@@ -777,36 +1199,39 @@ public sealed class RewardModalDisplaySystem : Core.System
 			float t1 = (i + 1) / (float)segments;
 			float center = (t0 + t1) * 0.5f;
 			float opacity = center <= 0.5f
-				? MathHelper.Lerp(0.38f, 0.58f, center * 2f)
-				: MathHelper.Lerp(0.58f, 0.42f, (center - 0.5f) * 2f);
-			if (active) opacity = Math.Min(0.72f, opacity + 0.10f);
-			float accentMix = active ? MathHelper.Lerp(0.08f, 0.025f, 1f - Math.Abs(center * 2f - 1f)) : 0f;
+				? MathHelper.Lerp(LaneTopOpacity, LaneMiddleOpacity, center * 2f)
+				: MathHelper.Lerp(LaneMiddleOpacity, LaneBottomOpacity, (center - 0.5f) * 2f);
+			if (active) opacity = Math.Min(LaneHoverMaxOpacity, opacity + LaneHoverOpacityBoost);
+			float accentMix = active ? MathHelper.Lerp(LaneHoverEdgeAccentMix, LaneHoverCenterAccentMix, 1f - Math.Abs(center * 2f - 1f)) : 0f;
 			Color fill = Color.Lerp(Color.Black, accent, accentMix) * (opacity * alpha);
 			int y0 = lane.Y + (int)Math.Round(lane.Height * t0);
 			int y1 = lane.Y + (int)Math.Round(lane.Height * t1);
 			_spriteBatch.Draw(_pixel, new Rectangle(lane.X, y0, lane.Width, Math.Max(1, y1 - y0)), fill);
 		}
-		DrawGradientLine(new Rectangle(lane.X, lane.Y, lane.Width, active ? 3 : 1), accent, active ? alpha : 0.35f * alpha);
+		DrawGradientLine(
+			new Rectangle(lane.X, lane.Y, lane.Width, active ? LaneActiveTopBorderThickness : LaneIdleTopBorderThickness),
+			accent,
+			active ? alpha : LaneIdleTopBorderAlpha * alpha);
 	}
 
 	private void DrawKicker(int index, Rectangle lane, bool isUpgrade, bool active, float alpha)
 	{
-		Vector2 badgeCenter = new(lane.X + 27f, lane.Y + 18f);
+		Vector2 badgeCenter = new(lane.X + BadgeOffsetX, lane.Y + BadgeOffsetY);
 		Color accent = isUpgrade ? Bone : Blood;
-		Texture2D circle = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, 15);
-		_spriteBatch.Draw(circle, badgeCenter, null, (active ? accent : BadgeBorder) * alpha, 0f, new Vector2(15f), 1f, SpriteEffects.None, 0f);
-		Texture2D inner = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, 13);
-		_spriteBatch.Draw(inner, badgeCenter, null, (active ? Color.Lerp(new Color(17, 17, 17), accent, 0.48f) : new Color(17, 17, 17)) * alpha, 0f, new Vector2(13f), 1f, SpriteEffects.None, 0f);
+		Texture2D circle = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, BadgeOuterRadius);
+		_spriteBatch.Draw(circle, badgeCenter, null, (active ? accent : BadgeBorder) * alpha, 0f, new Vector2(BadgeOuterRadius), 1f, SpriteEffects.None, 0f);
+		Texture2D inner = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, BadgeInnerRadius);
+		_spriteBatch.Draw(inner, badgeCenter, null, (active ? Color.Lerp(new Color(17, 17, 17), accent, BadgeActiveAccentMix) : new Color(17, 17, 17)) * alpha, 0f, new Vector2(BadgeInnerRadius), 1f, SpriteEffects.None, 0f);
 
 		string number = (index + 1).ToString();
-		float numberScale = ScaleForPixelHeight(_badgeFont, number, 16f);
+		float numberScale = ScaleForPixelHeight(_badgeFont, number, BadgeNumberPixelHeight);
 		Vector2 numberSize = _badgeFont.MeasureString(number) * numberScale;
 		_spriteBatch.DrawString(_badgeFont, number, badgeCenter - numberSize / 2f, Color.White * alpha, 0f, Vector2.Zero, numberScale, SpriteEffects.None, 0f);
 
 		string label = isUpgrade ? "UPGRADE" : "REPLACE";
 		float labelScale = ScaleForPixelHeight(_bodyFont, label, KickerPixelHeight);
 		Vector2 labelSize = MeasureTracked(_bodyFont, label, labelScale, KickerTracking);
-		Vector2 labelPos = new(badgeCenter.X + 22f, badgeCenter.Y - labelSize.Y / 2f);
+		Vector2 labelPos = new(badgeCenter.X + KickerTextGap, badgeCenter.Y - labelSize.Y / 2f);
 		DrawTracked(_bodyFont, label, labelPos, labelScale, (active ? Color.White : KickerDim) * alpha, KickerTracking);
 	}
 
@@ -816,16 +1241,17 @@ public sealed class RewardModalDisplaySystem : Core.System
 		Rectangle rect = _layout.SkipButton;
 		rect.Offset((int)Math.Round(offset.X), (int)Math.Round(offset.Y));
 		bool hovered = state.Phase == QuestRewardPresentationPhase.Visible && (_skipButton?.GetComponent<UIElement>()?.IsHovered ?? false);
-		_spriteBatch.Draw(_pixel, rect, new Color(6, 6, 6) * (0.70f * alpha));
-		DrawBorder(rect, (hovered ? Color.White : Color.White * 0.38f) * alpha, 1);
-		float scale = ScaleForPixelHeight(_bodyFont, SkipText, 11f);
-		Vector2 size = MeasureTracked(_bodyFont, SkipText, scale, 1.6f);
-		DrawTracked(_bodyFont, SkipText, new Vector2(rect.Center.X - size.X / 2f, rect.Center.Y - size.Y / 2f), scale, (hovered ? Color.White : new Color(189, 185, 178)) * alpha, 1.6f);
+		_spriteBatch.Draw(_pixel, rect, new Color(6, 6, 6) * (SkipFillAlpha * alpha));
+		DrawBorder(rect, (hovered ? Color.White : Color.White * SkipIdleBorderAlpha) * alpha, SkipBorderThickness);
+		float scale = ScaleForPixelHeight(_bodyFont, SkipText, SkipPixelHeight);
+		Vector2 size = MeasureTracked(_bodyFont, SkipText, scale, SkipTracking);
+		DrawTracked(_bodyFont, SkipText, new Vector2(rect.Center.X - size.X / 2f, rect.Center.Y - size.Y / 2f), scale, (hovered ? Color.White : new Color(189, 185, 178)) * alpha, SkipTracking);
 	}
 
 	private void DrawHorizontalRule(int y, float alpha)
 	{
-		DrawGradientLine(new Rectangle(96, y, Game1.VirtualWidth - 192, 1), Color.White, 0.30f * alpha);
+		int inset = Math.Max(0, HorizontalRuleSidePadding);
+		DrawGradientLine(new Rectangle(inset, y, Math.Max(1, Game1.VirtualWidth - inset * 2), 1), Color.White, HorizontalRuleAlpha * alpha);
 	}
 
 	private void DrawGradientLine(Rectangle rect, Color color, float alpha)
@@ -856,17 +1282,6 @@ public sealed class RewardModalDisplaySystem : Core.System
 		});
 	}
 
-	private void DrawCardGlow(Vector2 anchor, float scale, Color accent, float alpha)
-	{
-		Rectangle rect = CardGeometryService.GetVisualRect(EntityManager, anchor, scale);
-		for (int i = 12; i >= 2; i -= 2)
-		{
-			Rectangle expanded = new(rect.X - i, rect.Y - i, rect.Width + i * 2, rect.Height + i * 2);
-			DrawBorder(expanded, accent * (alpha * 0.035f), 2);
-		}
-		DrawBorder(rect, accent * alpha, 2);
-	}
-
 	private void DrawBorder(Rectangle rect, Color color, int thickness)
 	{
 		_spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color);
@@ -877,16 +1292,16 @@ public sealed class RewardModalDisplaySystem : Core.System
 
 	private void DrawPlus(Vector2 center, float size, Color color)
 	{
-		float thickness = Math.Max(2f, size * 0.13f);
+		float thickness = Math.Max(PlusMinimumThickness, size * PlusThicknessRatio);
 		_spriteBatch.Draw(_pixel, new Rectangle((int)(center.X - size / 2f), (int)(center.Y - thickness / 2f), (int)size, (int)thickness), color);
 		_spriteBatch.Draw(_pixel, new Rectangle((int)(center.X - thickness / 2f), (int)(center.Y - size / 2f), (int)thickness, (int)size), color);
 	}
 
 	private void DrawArrow(Vector2 center, float width, float height, Color color)
 	{
-		float shaft = Math.Max(3f, width * 0.14f);
+		float shaft = Math.Max(ArrowMinimumShaft, width * ArrowShaftRatio);
 		float top = center.Y - height / 2f;
-		float headY = center.Y + height * 0.12f;
+		float headY = center.Y + height * ArrowHeadOffsetRatio;
 		_spriteBatch.Draw(_pixel, new Rectangle((int)(center.X - shaft / 2f), (int)top, (int)shaft, (int)(headY - top)), color);
 		DrawTriangle(new Vector2(center.X - width / 2f, headY), new Vector2(center.X + width / 2f, headY), new Vector2(center.X, center.Y + height / 2f), color);
 	}
@@ -955,6 +1370,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 			ui.EventType = UIElementEventType.None;
 			ui.LayerType = UILayerType.Overlay;
 			ui.Bounds = Rectangle.Empty;
+			ui.ShowHoverHighlight = false;
 		}
 		Transform transform = card.GetComponent<Transform>();
 		if (transform != null) transform.ZOrder = ZOrder + 2;
@@ -1005,14 +1421,17 @@ public sealed class RewardModalDisplaySystem : Core.System
 		}
 	}
 
-	private void PreparePreviewCard(Entity card)
+	private void PreparePreviewCard(Entity card, Rectangle bounds)
 	{
 		UIElement ui = card?.GetComponent<UIElement>();
 		if (ui == null) return;
 		ui.IsInteractable = false;
 		ui.IsClicked = false;
-		ui.Bounds = Rectangle.Empty;
+		ui.Bounds = bounds;
 		ui.LayerType = UILayerType.Overlay;
+		ui.ShowHoverHighlight = false;
+		Transform transform = card.GetComponent<Transform>();
+		if (transform != null) transform.ZOrder = ZOrder + 2;
 	}
 
 	private void EnsureOverlayEntity()
@@ -1155,41 +1574,96 @@ public sealed class RewardModalDisplaySystem : Core.System
 		return state != null && (state.IsOpen || state.DismissInProgress);
 	}
 
-	internal static LayerVisual ComputeEntranceLaneVisual(int index, float elapsed)
+	private RewardModalAnimationSettings BuildAnimationSettings() => new()
 	{
-		float delay = index == 1 ? 0.23f : 0.33f;
-		float raw = Progress(elapsed - delay, 0.68f);
-		float eased = EaseOutCubic(raw);
-		return new LayerVisual { Alpha = raw, Scale = MathHelper.Lerp(0.72f, 1f, eased), Blur = MathHelper.Lerp(9f, 0f, eased), Grayscale = 1f - eased, Brightness = 1f };
-	}
+		CenterLaneEntryDelay = CenterLaneEntryDelay,
+		OuterLaneEntryDelay = OuterLaneEntryDelay,
+		LaneEntryDuration = LaneEntryDuration,
+		LaneEntryStartScale = LaneEntryStartScale,
+		LaneEntryStartBlur = LaneEntryStartBlur,
+		ClaimDuration = ClaimDuration,
+		IncomingClaimDelay = IncomingClaimDelay,
+		IncomingClaimLiftEnd = IncomingClaimLiftEnd,
+		IncomingClaimExitStart = IncomingClaimExitStart,
+		IncomingClaimStartScale = IncomingCardHoverScale,
+		IncomingClaimPeakScale = IncomingClaimPeakScale,
+		IncomingClaimLiftOffsetY = IncomingClaimLiftOffsetY,
+		IncomingClaimPeakBrightness = IncomingClaimPeakBrightness,
+		IncomingClaimExitScale = IncomingClaimExitScale,
+		IncomingClaimExitOffsetY = IncomingClaimExitOffsetY,
+		IncomingClaimExitBlur = IncomingClaimExitBlur,
+		IncomingClaimExitBrightness = IncomingClaimExitBrightness,
+	};
 
-	internal static LayerVisual ComputeIncomingClaimVisual(float elapsed)
+	internal static LayerVisual ComputeEntranceLaneVisual(int index, float elapsed) =>
+		ComputeEntranceLaneVisual(index, elapsed, RewardModalAnimationSettings.Default);
+
+	internal static LayerVisual ComputeEntranceLaneVisual(
+		int index,
+		float elapsed,
+		RewardModalAnimationSettings settings)
 	{
-		float t = Progress(elapsed - 0.08f, 1.37f);
-		if (t <= 0.32f)
-		{
-			float local = EaseOutCubic(t / 0.32f);
-			return new LayerVisual { Alpha = 1f, Scale = MathHelper.Lerp(1.025f, 1.18f, local), Offset = new Vector2(0f, -150f * local), Brightness = MathHelper.Lerp(1f, 1.12f, local) };
-		}
-		if (t <= 0.68f)
-			return new LayerVisual { Alpha = 1f, Scale = 1.18f, Offset = new Vector2(0f, -150f), Brightness = 1.12f };
-		float exit = EaseInCubic((t - 0.68f) / 0.32f);
+		float delay = index == 1 ? settings.CenterLaneEntryDelay : settings.OuterLaneEntryDelay;
+		float raw = Progress(elapsed - delay, settings.LaneEntryDuration);
+		float eased = EaseOutCubic(raw);
 		return new LayerVisual
 		{
-			Alpha = 1f - exit,
-			Scale = MathHelper.Lerp(1.18f, 0.72f, exit),
-			Offset = new Vector2(0f, MathHelper.Lerp(-150f, -330f, exit)),
-			Blur = 10f * exit,
-			Brightness = MathHelper.Lerp(1.12f, 1.55f, exit),
+			Alpha = raw,
+			Scale = MathHelper.Lerp(settings.LaneEntryStartScale, 1f, eased),
+			Blur = MathHelper.Lerp(settings.LaneEntryStartBlur, 0f, eased),
+			Grayscale = 1f - eased,
+			Brightness = 1f,
 		};
 	}
 
-	private static float GetOverlayAlpha(QuestRewardOverlayState state)
+	internal static LayerVisual ComputeIncomingClaimVisual(float elapsed) =>
+		ComputeIncomingClaimVisual(elapsed, RewardModalAnimationSettings.Default);
+
+	internal static LayerVisual ComputeIncomingClaimVisual(
+		float elapsed,
+		RewardModalAnimationSettings settings)
+	{
+		float duration = Math.Max(0.001f, settings.ClaimDuration - settings.IncomingClaimDelay);
+		float liftEnd = MathHelper.Clamp(settings.IncomingClaimLiftEnd, 0.01f, 0.99f);
+		float exitStart = MathHelper.Clamp(settings.IncomingClaimExitStart, liftEnd, 0.99f);
+		float t = Progress(elapsed - settings.IncomingClaimDelay, duration);
+		if (t <= liftEnd)
+		{
+			float local = EaseOutCubic(t / liftEnd);
+			return new LayerVisual
+			{
+				Alpha = 1f,
+				Scale = MathHelper.Lerp(settings.IncomingClaimStartScale, settings.IncomingClaimPeakScale, local),
+				Offset = new Vector2(0f, settings.IncomingClaimLiftOffsetY * local),
+				Brightness = MathHelper.Lerp(1f, settings.IncomingClaimPeakBrightness, local),
+			};
+		}
+		if (t <= exitStart)
+			return new LayerVisual
+			{
+				Alpha = 1f,
+				Scale = settings.IncomingClaimPeakScale,
+				Offset = new Vector2(0f, settings.IncomingClaimLiftOffsetY),
+				Brightness = settings.IncomingClaimPeakBrightness,
+			};
+		float exit = EaseInCubic((t - exitStart) / (1f - exitStart));
+		return new LayerVisual
+		{
+			Alpha = 1f - exit,
+			Scale = MathHelper.Lerp(settings.IncomingClaimPeakScale, settings.IncomingClaimExitScale, exit),
+			Offset = new Vector2(0f, MathHelper.Lerp(settings.IncomingClaimLiftOffsetY, settings.IncomingClaimExitOffsetY, exit)),
+			Blur = settings.IncomingClaimExitBlur * exit,
+			Brightness = MathHelper.Lerp(settings.IncomingClaimPeakBrightness, settings.IncomingClaimExitBrightness, exit),
+		};
+	}
+
+	private float GetOverlayAlpha(QuestRewardOverlayState state)
 	{
 		if (state?.Phase == QuestRewardPresentationPhase.Skipping)
 			return 1f - EaseInCubic(Progress(state.PhaseElapsedSeconds, SkipDuration));
 		if (state?.Phase != QuestRewardPresentationPhase.Claiming) return 1f;
-		float fadeStart = 0.08f + 1.37f * 0.68f;
+		float claimSequenceDuration = Math.Max(0.001f, ClaimDuration - IncomingClaimDelay);
+		float fadeStart = IncomingClaimDelay + claimSequenceDuration * MathHelper.Clamp(IncomingClaimExitStart, 0.01f, 0.99f);
 		return 1f - EaseInCubic(Progress(state.PhaseElapsedSeconds - fadeStart, ClaimDuration - fadeStart));
 	}
 

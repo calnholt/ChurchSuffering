@@ -140,6 +140,48 @@ public sealed class RewardModalDisplaySystemTests
 	}
 
 	[Fact]
+	public void Hover_scale_eases_toward_hover_target_without_snapping()
+	{
+		float scale = RewardModalDisplaySystem.UpdateHoverScale(1f, 1.025f, 12f, 1f / 60f);
+
+		Assert.InRange(scale, 1.0001f, 1.0249f);
+	}
+
+	[Fact]
+	public void Hover_scale_eases_back_to_rest_after_pointer_leaves()
+	{
+		float scale = RewardModalDisplaySystem.UpdateHoverScale(1.025f, 1f, 12f, 1f / 60f);
+
+		Assert.InRange(scale, 1.0001f, 1.0249f);
+	}
+
+	[Fact]
+	public void Hover_scale_is_frame_rate_independent_for_equal_elapsed_time()
+	{
+		float oneStep = RewardModalDisplaySystem.UpdateHoverScale(1f, 1.025f, 12f, 1f / 30f);
+		float twoSteps = RewardModalDisplaySystem.UpdateHoverScale(1f, 1.025f, 12f, 1f / 60f);
+		twoSteps = RewardModalDisplaySystem.UpdateHoverScale(twoSteps, 1.025f, 12f, 1f / 60f);
+
+		Assert.Equal(oneStep, twoSteps, 5);
+	}
+
+	[Fact]
+	public void Animation_helpers_honor_debug_tuning_snapshot()
+	{
+		var settings = RewardModalDisplaySystem.RewardModalAnimationSettings.Default with
+		{
+			OuterLaneEntryDelay = 0.5f,
+			LaneEntryDuration = 1f,
+			LaneEntryStartScale = 0.5f,
+		};
+
+		var visual = RewardModalDisplaySystem.ComputeEntranceLaneVisual(0, 0.5f, settings);
+
+		Assert.Equal(0f, visual.Alpha, 3);
+		Assert.Equal(0.5f, visual.Scale, 3);
+	}
+
+	[Fact]
 	public void Random_debug_offer_contains_two_exchanges_and_one_upgrade_with_valid_keys()
 	{
 		var offer = RewardModalDisplaySystem.BuildRandomDebugOffer(new Random(30030));
