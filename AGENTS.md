@@ -30,7 +30,7 @@ When you finish implementing an attached or approved plan, always run `dotnet bu
 
 ## Snapshot fixture changes
 
-`docs/display-snapshots.md` is the canonical snapshot reference. When adding or changing a snapshot fixture, update that doc, accept intentional baselines into `tests/VisualBaselines/`, verify with `--verify`, and add/update a script under `scripts/` when a fixture has multiple variants.
+`docs/display-snapshots.md` is the canonical snapshot reference. When adding or changing a snapshot fixture, update that doc, accept intentional baselines into `tests/VisualBaselines/`, verify with `--verify`, and add/update a script under `scripts/` when a fixture has multiple variants. When verifying snapshots, fix and re-run at most two passes to catch obvious rendering, scale, or display issues — do not loop beyond that.
 
 ## Universal project rules
 

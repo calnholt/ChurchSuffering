@@ -16,6 +16,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
         private RewardModalDisplaySystem _modal;
         private QuestRewardSnapshotVariant _variant;
         private Texture2D _pixel;
+        private Texture2D _backdrop;
 
         public string OutputFileName => _variant?.FileSlug ?? "quest-reward-modal";
 
@@ -25,7 +26,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
         {
             _variant = QuestRewardSnapshotVariant.Parse(args);
 
-            if (_variant.HasCardReward)
+            if (_variant.DeckRewardOffer?.options != null)
             {
                 foreach (var cardKey in EnumerateOfferCardKeys(_variant.DeckRewardOffer))
                 {
@@ -51,26 +52,30 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
                 ctx.World.EntityManager,
                 ctx.GraphicsDevice,
                 ctx.SpriteBatch,
-                ctx.ImageAssets);
+                ctx.ImageAssets,
+                ctx.Content);
             ctx.World.AddSystem(_modal);
 
-            _modal.Open(
-                message: null,
-                rewardGold: _variant.RewardGold,
-                hasCardReward: _variant.HasCardReward,
-                rewardCardKey: _variant.RewardCardKey,
-                rewardCardKeys: _variant.RewardCardKeys,
-                deckRewardOffer: _variant.DeckRewardOffer);
+            _modal.OpenDeckOfferForSnapshot(_variant.DeckRewardOffer);
 
             _pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
             _pixel.SetData(new[] { Color.White });
+            _backdrop = ctx.Content.Load<Texture2D>("Battle_Backgrounds/gothic-battle-background");
         }
 
         public void Draw(DisplaySnapshotContext ctx)
         {
             int vw = Game1.VirtualWidth;
             int vh = Game1.VirtualHeight;
-            ctx.SpriteBatch.Draw(_pixel, new Rectangle(0, 0, vw, vh), BackdropColor);
+            if (_backdrop != null)
+                ctx.SpriteBatch.Draw(_backdrop, new Rectangle(0, 0, vw, vh), Color.White);
+            else
+                ctx.SpriteBatch.Draw(_pixel, new Rectangle(0, 0, vw, vh), BackdropColor);
+            foreach (var entity in ctx.World.EntityManager.GetEntitiesWithComponent<UIElement>())
+            {
+				var ui = entity.GetComponent<UIElement>();
+				if (ui != null) ui.IsHovered = false;
+			}
             _modal.Draw();
         }
 

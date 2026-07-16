@@ -74,24 +74,10 @@ namespace Crusaders30XX.ECS.Events
 
 	public class ShowQuestRewardOverlay
 	{
-		public string Message;
-		public string TitleLine1;
-		public string TitleLine2;
-		public int RewardGold;
-		public bool HasCardReward;
-		public string RewardCardKey;
-		public List<string> RewardCardKeys = new List<string>();
 		public DeckRewardOfferSave DeckRewardOffer;
 		public bool IsEncounterReward;
 		public ClimbResourceSave ClimbResources;
 		public SceneId DismissScene = SceneId.Climb;
-	}
-
-	public class TreasureChestOpened
-	{
-		public int RewardGold;
-		public string RewardMedalId;
-		public string RewardEquipmentId;
 	}
 
 	public class ShowBoosterPackOpeningOverlayEvent

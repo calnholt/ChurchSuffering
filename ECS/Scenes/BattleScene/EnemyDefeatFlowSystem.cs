@@ -227,17 +227,6 @@ namespace Crusaders30XX.ECS.Systems
 						Kind = PostVictoryKind.ShowQuestReward,
 						QuestReward = new ShowQuestRewardOverlay
 						{
-							Message = "Encounter Complete!",
-							TitleLine1 = "Encounter",
-							TitleLine2 = "Complete!",
-							RewardGold = 0,
-							HasCardReward = climbCompletion.DeckRewardOffer?.options != null && climbCompletion.DeckRewardOffer.options.Count > 0,
-							RewardCardKeys = climbCompletion.DeckRewardOffer?.options?
-								.Select(o => string.Equals(o.kind, DeckRewardOfferKinds.Exchange, StringComparison.OrdinalIgnoreCase)
-									? o.incomingCardKey
-									: o.upgradedCardKey)
-								.Where(k => !string.IsNullOrWhiteSpace(k))
-								.ToList() ?? new List<string>(),
 							DeckRewardOffer = climbCompletion.DeckRewardOffer,
 							IsEncounterReward = true,
 							ClimbResources = climbCompletion.Resources,

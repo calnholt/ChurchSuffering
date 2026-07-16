@@ -330,7 +330,7 @@ public class Game1 : Game
         _world.AddSystem(_debugCommandSystem);
         _world.AddSystem(_medalEquipDebugSystem);
         _world.AddSystem(_equipmentEquipDebugSystem);
-        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets, Content);
         _world.AddSystem(_rewardModalDisplaySystem);
         _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_narrativeEventModalDisplaySystem);

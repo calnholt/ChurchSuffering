@@ -65,14 +65,6 @@ namespace Crusaders30XX.ECS.Services
 		private static readonly string[] SwordRewardPool = Array.Empty<string>();
 		private static readonly string[] DaggerRewardPool = Array.Empty<string>();
 
-		public struct QuestCardRewardResult
-		{
-			public bool Granted;
-			public string CardId;
-			public CardData.CardColor Color;
-			public string CardKey;
-		}
-
 		private readonly struct DeckEntry
 		{
 			public DeckEntry(int index, string entryId, string cardKey, string cardId, CardData.CardColor color, bool isUpgraded, CardBase card)
@@ -251,31 +243,6 @@ namespace Crusaders30XX.ECS.Services
 			SaveCache.ClearPendingDeckRewardOffer();
 		}
 
-		public static IReadOnlyList<QuestCardRewardResult> GenerateRandomCardChoices(int choiceCount = 2)
-		{
-			var offer = GenerateDeckRewardOffer();
-			return ConvertExchangeOptionsToLegacyResults(offer, choiceCount);
-		}
-
-		internal static IReadOnlyList<QuestCardRewardResult> GenerateRandomCardChoices(IReadOnlyList<string> deckKeys, int choiceCount = 2)
-		{
-			var offer = GenerateDeckRewardOffer(deckKeys, string.Empty);
-			return ConvertExchangeOptionsToLegacyResults(offer, choiceCount);
-		}
-
-		public static QuestCardRewardResult GrantCard(string cardKey)
-		{
-			var result = new QuestCardRewardResult();
-			if (!RunDeckService.TryParseCardKey(cardKey, out var cardId, out var color)) return result;
-			if (SaveCache.AddRunDeckEntry(RunDeckService.PrimaryLoadoutId, cardKey) == null) return result;
-
-			result.Granted = true;
-			result.CardId = cardId;
-			result.Color = color;
-			result.CardKey = cardKey;
-			return result;
-		}
-
 		internal static IReadOnlyList<string> GetEligibleRewardCardIdsForTests(IReadOnlyList<string> deckKeys)
 		{
 			return GetEligibleRewardCardIdsForTests(deckKeys, string.Empty);
@@ -298,26 +265,6 @@ namespace Crusaders30XX.ECS.Services
 		internal static IReadOnlyList<string> GetUpgradeCardKeysForTests(IReadOnlyList<string> deckKeys)
 		{
 			return BuildEligibleDeckEntries(ToTemporaryEntries(deckKeys)).Select(e => e.CardKey).ToList();
-		}
-
-		private static IReadOnlyList<QuestCardRewardResult> ConvertExchangeOptionsToLegacyResults(DeckRewardOfferSave offer, int choiceCount)
-		{
-			var results = new List<QuestCardRewardResult>();
-			if (offer?.options == null) return results;
-			foreach (var option in offer.options)
-			{
-				if (results.Count >= Math.Max(1, choiceCount)) break;
-				if (!string.Equals(option.kind, DeckRewardOfferKinds.Exchange, StringComparison.OrdinalIgnoreCase)) continue;
-				if (!RunDeckService.TryParseCardKey(option.incomingCardKey, out var cardId, out var color)) continue;
-				results.Add(new QuestCardRewardResult
-				{
-					Granted = false,
-					CardId = cardId,
-					Color = color,
-					CardKey = option.incomingCardKey
-				});
-			}
-			return results;
 		}
 
 		private static IReadOnlyList<DeckEntry> PickExchangeOutgoingEntries(

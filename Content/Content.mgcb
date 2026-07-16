@@ -2463,6 +2463,18 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/GaussianBlur.fx
 
+#begin Shaders/QuestRewardOverlay.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/QuestRewardOverlay.fx
+
+#begin Shaders/QuestRewardLayerFilter.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/QuestRewardLayerFilter.fx
+
 #---------------------------------- Shaders ---------------------------------#
 
 #begin Shaders/Bloodshot.fx

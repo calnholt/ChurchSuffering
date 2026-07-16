@@ -126,8 +126,6 @@ public class ClimbEncounterServiceTests
 			Assert.Equal(1, climb.pendingEncounterReward.resources.red);
 			Assert.Equal(0, climb.pendingEncounterReward.resources.white);
 			Assert.Equal(0, climb.pendingEncounterReward.resources.black);
-			Assert.True(RewardModalDisplaySystem.HasClimbResourceReward(climb.pendingEncounterReward.resources));
-			Assert.Equal("+1 RED", RewardModalDisplaySystem.BuildClimbResourceRewardText(climb.pendingEncounterReward.resources));
 		}
 		finally
 		{

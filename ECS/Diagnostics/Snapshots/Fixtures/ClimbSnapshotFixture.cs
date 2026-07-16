@@ -28,7 +28,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		HoverPreview,
 		MedalTooltipHover,
 		SoldShopSlot,
-		EncounterRewardModal,
 		ReplacementModal,
 		InventoryOverlay,
 		InventoryEquipmentTooltip,
@@ -46,7 +45,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		private ClimbColumnLayoutSystem _columnLayout;
 		private MedalTooltipDisplaySystem _medalTooltip;
 		private TooltipTextDisplaySystem _textTooltip;
-		private RewardModalDisplaySystem _rewardModal;
 		private CardListModalSystem _cardListModal;
 		private NarrativeEventModalDisplaySystem _narrativeModal;
 		private DialogDisplaySystem _dialog;
@@ -72,7 +70,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			ClimbSnapshotVariant.HoverPreview => "climb-hover-preview",
 			ClimbSnapshotVariant.MedalTooltipHover => "climb-medal-tooltip-hover",
 			ClimbSnapshotVariant.SoldShopSlot => "climb-sold-shop-slot",
-			ClimbSnapshotVariant.EncounterRewardModal => "climb-encounter-reward-modal",
 			ClimbSnapshotVariant.ReplacementModal => "climb-replacement-modal",
 			ClimbSnapshotVariant.InventoryOverlay => "climb-inventory-overlay",
 			ClimbSnapshotVariant.InventoryEquipmentTooltip => "climb-inventory-equipment-tooltip",
@@ -126,7 +123,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_columnLayout = ctx.World.GetSystem<ClimbColumnLayoutSystem>();
 			_medalTooltip = ctx.World.GetSystem<MedalTooltipDisplaySystem>();
 			_textTooltip = ctx.World.GetSystem<TooltipTextDisplaySystem>();
-			_rewardModal = ctx.World.GetSystem<RewardModalDisplaySystem>();
 			_cardListModal = ctx.World.GetSystem<CardListModalSystem>();
 			if (IsCardListScrollVariant() && _cardListModal != null)
 			{
@@ -175,11 +171,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				}
 			}
 
-			if (_variant == ClimbSnapshotVariant.EncounterRewardModal)
-			{
-				OpenRewardModal();
-			}
-			else if (_variant == ClimbSnapshotVariant.ReplacementModal)
+			if (_variant == ClimbSnapshotVariant.ReplacementModal)
 			{
 				OpenReplacementModal(ctx.World.EntityManager);
 			}
@@ -219,11 +211,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				_textTooltip.Draw();
 			}
 
-			if (_variant == ClimbSnapshotVariant.EncounterRewardModal)
-			{
-				_rewardModal?.Draw();
-			}
-			else if (_variant == ClimbSnapshotVariant.ReplacementModal)
+			if (_variant == ClimbSnapshotVariant.ReplacementModal)
 			{
 				_cardListModal?.Draw();
 			}
@@ -532,19 +520,6 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			var time = new GameTime(TimeSpan.FromSeconds(1d), TimeSpan.FromSeconds(1d / 60d));
 			_headerLayout?.Update(time);
 			_columnLayout?.Update(time);
-		}
-
-		private void OpenRewardModal()
-		{
-			if (_modalOpened) return;
-			_modalOpened = true;
-			if (_rewardModal == null)
-			{
-				throw new DisplaySnapshotSetupException("Reward modal system was not registered.");
-			}
-
-			_rewardModal.OpenEncounterRewardForSnapshot(
-				new ClimbResourceSave { red = 2, white = 1, black = 1 });
 		}
 
 		private void OpenReplacementModal(EntityManager entityManager)

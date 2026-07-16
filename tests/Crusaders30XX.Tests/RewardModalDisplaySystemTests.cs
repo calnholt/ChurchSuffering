@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Loadouts;
@@ -13,10 +15,6 @@ namespace Crusaders30XX.Tests;
 
 public sealed class RewardModalDisplaySystemTests
 {
-	private const float AnimDuration = 0.55f;
-	private const float PulseAmplitude = 0.12f;
-	private const float PulseFrequencyHz = 6f;
-
 	private static readonly string[] AllPreviewRestrictions =
 	{
 		RunScopedStateService.RestrictionFrozen,
@@ -86,87 +84,93 @@ public sealed class RewardModalDisplaySystemTests
 	}
 
 	[Fact]
-	public void ComputeDeckColumnSelectionVisual_non_selected_column_fades_out()
+	public void Entrance_center_lane_starts_at_its_230ms_delay_with_full_blur_and_grayscale()
 	{
-		RewardModalDisplaySystem.ComputeDeckColumnSelectionVisual(
-			columnIndex: 0,
-			selectedColumnIndex: 1,
-			isOutgoing: true,
-			elapsedSeconds: AnimDuration,
-			durationSeconds: AnimDuration,
-			pulseAmplitude: PulseAmplitude,
-			pulseFrequencyHz: PulseFrequencyHz,
-			out var scale,
-			out var alpha);
+		var visual = RewardModalDisplaySystem.ComputeEntranceLaneVisual(1, 0.23f);
 
-		Assert.Equal(1f, scale);
-		Assert.Equal(0f, alpha, 3);
+		Assert.Equal(0f, visual.Alpha, 3);
+		Assert.Equal(0.72f, visual.Scale, 3);
+		Assert.Equal(9f, visual.Blur, 3);
+		Assert.Equal(1f, visual.Grayscale, 3);
 	}
 
 	[Fact]
-	public void ComputeDeckColumnSelectionVisual_selected_outgoing_shrinks_to_zero()
+	public void Entrance_outer_lanes_remain_delayed_after_center_lane_begins()
 	{
-		RewardModalDisplaySystem.ComputeDeckColumnSelectionVisual(
-			columnIndex: 1,
-			selectedColumnIndex: 1,
-			isOutgoing: true,
-			elapsedSeconds: AnimDuration,
-			durationSeconds: AnimDuration,
-			pulseAmplitude: PulseAmplitude,
-			pulseFrequencyHz: PulseFrequencyHz,
-			out var scale,
-			out var alpha);
+		var center = RewardModalDisplaySystem.ComputeEntranceLaneVisual(1, 0.28f);
+		var outer = RewardModalDisplaySystem.ComputeEntranceLaneVisual(0, 0.28f);
 
-		Assert.Equal(0f, scale, 3);
-		Assert.Equal(1f, alpha);
+		Assert.True(center.Alpha > 0f);
+		Assert.Equal(0f, outer.Alpha, 3);
 	}
 
 	[Fact]
-	public void ComputeDeckColumnSelectionVisual_selected_incoming_pulses_without_shrinking_at_start()
+	public void Entrance_lane_finishes_without_blur_or_grayscale()
 	{
-		RewardModalDisplaySystem.ComputeDeckColumnSelectionVisual(
-			columnIndex: 1,
-			selectedColumnIndex: 1,
-			isOutgoing: false,
-			elapsedSeconds: 0f,
-			durationSeconds: AnimDuration,
-			pulseAmplitude: PulseAmplitude,
-			pulseFrequencyHz: PulseFrequencyHz,
-			out var scale,
-			out var alpha);
+		var visual = RewardModalDisplaySystem.ComputeEntranceLaneVisual(0, 1.01f);
 
-		Assert.Equal(1f, scale, 3);
-		Assert.Equal(1f, alpha);
+		Assert.Equal(1f, visual.Alpha, 3);
+		Assert.Equal(1f, visual.Scale, 3);
+		Assert.Equal(0f, visual.Blur, 3);
+		Assert.Equal(0f, visual.Grayscale, 3);
 	}
 
 	[Fact]
-	public void GetDeckColumnChromeAlpha_selected_column_stays_opaque()
+	public void Incoming_claim_holds_at_ascended_position_before_final_release()
 	{
-		var state = new QuestRewardOverlayState
+		float elapsed = 0.08f + 1.37f * 0.5f;
+		var visual = RewardModalDisplaySystem.ComputeIncomingClaimVisual(elapsed);
+
+		Assert.Equal(1f, visual.Alpha, 3);
+		Assert.Equal(1.18f, visual.Scale, 3);
+		Assert.Equal(-150f, visual.Offset.Y, 3);
+		Assert.Equal(0f, visual.Blur, 3);
+	}
+
+	[Fact]
+	public void Incoming_claim_finishes_bright_blurred_and_released()
+	{
+		var visual = RewardModalDisplaySystem.ComputeIncomingClaimVisual(1.45f);
+
+		Assert.Equal(0f, visual.Alpha, 3);
+		Assert.Equal(0.72f, visual.Scale, 3);
+		Assert.Equal(-330f, visual.Offset.Y, 3);
+		Assert.Equal(10f, visual.Blur, 3);
+		Assert.Equal(1.55f, visual.Brightness, 3);
+	}
+
+	[Fact]
+	public void Random_debug_offer_contains_two_exchanges_and_one_upgrade_with_valid_keys()
+	{
+		var offer = RewardModalDisplaySystem.BuildRandomDebugOffer(new Random(30030));
+
+		Assert.Equal(3, offer.options.Count);
+		Assert.Equal(2, offer.options.Count(option => option.kind == DeckRewardOfferKinds.Exchange));
+		Assert.Single(offer.options, option => option.kind == DeckRewardOfferKinds.Upgrade);
+		Assert.All(offer.options, option => Assert.True(RunDeckService.TryParseCardKey(option.outgoingCardKey, out _, out _, out _)));
+		Assert.All(offer.options, option =>
 		{
-			DeckColumnSelectionInProgress = true,
-			SelectedDeckRewardColumnIndex = 2,
-			DeckColumnSelectionElapsedSeconds = AnimDuration * 0.5f,
-		};
-
-		float alpha = RewardModalDisplaySystem.GetDeckColumnChromeAlpha(2, state, AnimDuration);
-
-		Assert.Equal(1f, alpha);
+			string incoming = option.kind == DeckRewardOfferKinds.Upgrade ? option.upgradedCardKey : option.incomingCardKey;
+			Assert.True(RunDeckService.TryParseCardKey(incoming, out _, out _, out _));
+		});
 	}
 
 	[Fact]
-	public void GetDeckColumnChromeAlpha_non_selected_column_fades()
+	public void Preview_selection_and_skip_leave_pending_offer_unchanged()
 	{
-		var state = new QuestRewardOverlayState
-		{
-			DeckColumnSelectionInProgress = true,
-			SelectedDeckRewardColumnIndex = 1,
-			DeckColumnSelectionElapsedSeconds = AnimDuration,
-		};
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+		var pending = RewardModalDisplaySystem.BuildRandomDebugOffer(new Random(44));
+		SaveCache.SetPendingDeckRewardOffer(pending);
+		var state = new QuestRewardOverlayState { IsPreviewOnly = true, DeckRewardOffer = pending };
 
-		float alpha = RewardModalDisplaySystem.GetDeckColumnChromeAlpha(0, state, AnimDuration);
+		Assert.True(RewardModalDisplaySystem.TryCommitSelection(state, 0));
+		RewardModalDisplaySystem.CommitSkip(state);
 
-		Assert.Equal(0f, alpha, 3);
+		var after = SaveCache.GetPendingDeckRewardOffer();
+		Assert.NotNull(after);
+		Assert.Equal(pending.options.Count, after.options.Count);
+		Assert.Equal(pending.options[0].outgoingCardKey, after.options[0].outgoingCardKey);
 	}
 
 	private static string SeedRestrictedEntry(string cardKey, IEnumerable<string> restrictions)
