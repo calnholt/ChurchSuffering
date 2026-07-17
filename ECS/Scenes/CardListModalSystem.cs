@@ -1190,7 +1190,7 @@ namespace Crusaders30XX.ECS.Systems
             if (ui != null)
             {
                 ui.LayerType = UILayerType.Default;
-                ui.IsInteractable = false;
+                ui.IsInteractable = ShouldRestoreHandInteraction(entityManager, card);
                 ui.IsHovered = false;
                 ui.IsClicked = false;
                 ui.IsHidden = false;
@@ -1201,6 +1201,15 @@ namespace Crusaders30XX.ECS.Systems
             {
                 entityManager.RemoveComponent<CardListModalSelectionMetadata>(card);
             }
+        }
+
+        private static bool ShouldRestoreHandInteraction(EntityManager entityManager, Entity card)
+        {
+            if (!HandStateLoggingService.CountsForHandLayout(card)) return false;
+
+            return entityManager.GetEntitiesWithComponent<Deck>()
+                .Select(entity => entity.GetComponent<Deck>())
+                .Any(deck => deck?.Hand?.Contains(card) == true);
         }
 
         private void OnDeleteCaches(DeleteCachesEvent _)
