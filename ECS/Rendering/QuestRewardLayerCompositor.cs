@@ -34,7 +34,14 @@ public sealed class QuestRewardLayerCompositor
 		int height = Game1.Display.RenderHeight;
 
 		_spriteBatch.End();
-		using var sourceLease = FullScreenRenderTargetPool.Acquire(_graphicsDevice, width, height);
+		// Drawing a reward layer can invoke the card shader pipeline, which temporarily
+		// switches to card-sized render targets. Preserve this partially drawn layer
+		// when those nested passes restore it.
+		using var sourceLease = FullScreenRenderTargetPool.Acquire(
+			_graphicsDevice,
+			width,
+			height,
+			RenderTargetUsage.PreserveContents);
 		FullScreenRenderTargetPool.Lease tempLease = null;
 		try
 		{

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Services;
@@ -11,13 +12,23 @@ public sealed class QuestRewardSnapshotVariant
 {
 	public DeckRewardOfferSave DeckRewardOffer { get; init; }
 	public string FileSlug { get; init; } = "deck-offer";
+	public QuestRewardPresentationPhase PresentationPhase { get; init; } = QuestRewardPresentationPhase.Visible;
+	public float PresentationElapsedSeconds { get; init; }
+	public int SelectedOptionIndex { get; init; } = -1;
 
 	public static QuestRewardSnapshotVariant Parse(string[] args)
 	{
 		var options = new List<DeckRewardOfferOptionSave>();
+		QuestRewardPresentationPhase presentationPhase = QuestRewardPresentationPhase.Visible;
 		for (int i = 0; i < args.Length; i++)
 		{
-			if (string.Equals(args[i], "--exchange", StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(args[i], "--presentation", StringComparison.OrdinalIgnoreCase))
+			{
+				if (i + 1 >= args.Length)
+					throw new DisplaySnapshotSetupException("Invalid --presentation value; expected entering, visible, claiming, or skipping");
+				presentationPhase = ParsePresentationPhase(args[++i]);
+			}
+			else if (string.Equals(args[i], "--exchange", StringComparison.OrdinalIgnoreCase))
 			{
 				if (i + 2 >= args.Length) throw new DisplaySnapshotSetupException("Invalid --exchange value; expected outgoingKey incomingKey");
 				string outgoing = args[i + 1];
@@ -51,8 +62,32 @@ public sealed class QuestRewardSnapshotVariant
 		}
 
 		var offer = new DeckRewardOfferSave { options = options.Take(3).ToList() };
-		return new QuestRewardSnapshotVariant { DeckRewardOffer = offer, FileSlug = BuildSlug(offer.options) };
+		return new QuestRewardSnapshotVariant
+		{
+			DeckRewardOffer = offer,
+			FileSlug = BuildSlug(offer.options, presentationPhase),
+			PresentationPhase = presentationPhase,
+			PresentationElapsedSeconds = GetPresentationElapsedSeconds(presentationPhase),
+			SelectedOptionIndex = presentationPhase == QuestRewardPresentationPhase.Claiming ? 1 : -1,
+		};
 	}
+
+	private static QuestRewardPresentationPhase ParsePresentationPhase(string value)
+	{
+		if (string.Equals(value, "entering", StringComparison.OrdinalIgnoreCase)) return QuestRewardPresentationPhase.Entering;
+		if (string.Equals(value, "visible", StringComparison.OrdinalIgnoreCase)) return QuestRewardPresentationPhase.Visible;
+		if (string.Equals(value, "claiming", StringComparison.OrdinalIgnoreCase)) return QuestRewardPresentationPhase.Claiming;
+		if (string.Equals(value, "skipping", StringComparison.OrdinalIgnoreCase)) return QuestRewardPresentationPhase.Skipping;
+		throw new DisplaySnapshotSetupException($"Invalid --presentation value '{value}'; expected entering, visible, claiming, or skipping");
+	}
+
+	private static float GetPresentationElapsedSeconds(QuestRewardPresentationPhase phase) => phase switch
+	{
+		QuestRewardPresentationPhase.Entering => 0.50f,
+		QuestRewardPresentationPhase.Claiming => 0.25f,
+		QuestRewardPresentationPhase.Skipping => 0.50f,
+		_ => 0f,
+	};
 
 	private static void ValidateCardKey(string cardKey)
 	{
@@ -62,7 +97,9 @@ public sealed class QuestRewardSnapshotVariant
 			throw new DisplaySnapshotSetupException($"Unknown card id in card key: '{cardId}'");
 	}
 
-	private static string BuildSlug(IEnumerable<DeckRewardOfferOptionSave> options)
+	private static string BuildSlug(
+		IEnumerable<DeckRewardOfferOptionSave> options,
+		QuestRewardPresentationPhase presentationPhase)
 	{
 		var parts = new List<string> { "deck-offer" };
 		foreach (DeckRewardOfferOptionSave option in options ?? Enumerable.Empty<DeckRewardOfferOptionSave>())
@@ -70,6 +107,8 @@ public sealed class QuestRewardSnapshotVariant
 			string key = string.Equals(option.kind, DeckRewardOfferKinds.Upgrade, StringComparison.OrdinalIgnoreCase) ? option.upgradedCardKey : option.incomingCardKey;
 			parts.Add(string.IsNullOrWhiteSpace(key) ? "empty" : key.Replace("|", "-", StringComparison.Ordinal).Trim().ToLowerInvariant());
 		}
+		if (presentationPhase != QuestRewardPresentationPhase.Visible)
+			parts.Add(presentationPhase.ToString().ToLowerInvariant());
 		return string.Join("-", parts);
 	}
 }

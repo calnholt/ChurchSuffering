@@ -52,6 +52,9 @@ public sealed class RewardModalDisplaySystem : Core.System
 	private QuestRewardOverlayEffect _atmosphere;
 	private QuestRewardLayerCompositor _layerCompositor;
 	private QuestRewardLayoutKey _layoutKey;
+	private QuestRewardPresentationPhase? _snapshotPresentationPhase;
+	private float _snapshotPresentationElapsedSeconds;
+	private int _snapshotSelectedOptionIndex = -1;
 
 	[DebugEditable(DisplayName = "Z Order", Step = 10, Min = 0, Max = 100000)]
 	public int ZOrder { get; set; } = 52000;
@@ -502,6 +505,12 @@ public sealed class RewardModalDisplaySystem : Core.System
 
 		StateSingleton.PreventClicking = scene?.Current == SceneId.Climb;
 		EnsureLayout(state.DeckRewardOffer?.options?.Count ?? 0);
+		if (state.IsPreviewOnly && _snapshotPresentationPhase.HasValue)
+		{
+			ApplySnapshotPresentation(state);
+			SyncControls(state, 0f);
+			return;
+		}
 		float elapsed = Math.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
 		SyncControls(state, elapsed);
 		state.PhaseElapsedSeconds += elapsed;
@@ -638,6 +647,9 @@ public sealed class RewardModalDisplaySystem : Core.System
 		state.Phase = skipEntrance ? QuestRewardPresentationPhase.Visible : QuestRewardPresentationPhase.Entering;
 		state.PhaseElapsedSeconds = 0f;
 		_effectTime = 0f;
+		_snapshotPresentationPhase = null;
+		_snapshotPresentationElapsedSeconds = 0f;
+		_snapshotSelectedOptionIndex = -1;
 
 		CreateViews(state.DeckRewardOffer);
 		state.IsOpen = _optionViews.Count > 0;
@@ -649,6 +661,36 @@ public sealed class RewardModalDisplaySystem : Core.System
 	public void OpenDeckOfferForSnapshot(DeckRewardOfferSave offer)
 	{
 		OpenDeckOffer(offer, false, null, SceneId.Climb, previewOnly: true, skipEntrance: true);
+	}
+
+	internal void SetPresentationForSnapshot(
+		QuestRewardPresentationPhase phase,
+		float elapsedSeconds,
+		int selectedOptionIndex)
+	{
+		QuestRewardOverlayState state = GetState();
+		if (state?.IsOpen != true || !state.IsPreviewOnly) return;
+		_snapshotPresentationPhase = phase;
+		_snapshotPresentationElapsedSeconds = Math.Max(0f, elapsedSeconds);
+		_snapshotSelectedOptionIndex = selectedOptionIndex;
+		ApplySnapshotPresentation(state);
+		SyncControls(state, 0f);
+	}
+
+	private void ApplySnapshotPresentation(QuestRewardOverlayState state)
+	{
+		QuestRewardPresentationPhase phase = _snapshotPresentationPhase ?? QuestRewardPresentationPhase.Visible;
+		state.Phase = phase;
+		state.PhaseElapsedSeconds = _snapshotPresentationElapsedSeconds;
+		state.DismissInProgress = phase is QuestRewardPresentationPhase.Claiming or QuestRewardPresentationPhase.Skipping;
+		state.DeckColumnSelectionInProgress = phase == QuestRewardPresentationPhase.Claiming;
+		state.SelectedDeckRewardColumnIndex = phase == QuestRewardPresentationPhase.Claiming
+			? Math.Clamp(_snapshotSelectedOptionIndex, 0, Math.Max(0, _optionViews.Count - 1))
+			: -1;
+		state.DeckColumnSelectionElapsedSeconds = state.DeckColumnSelectionInProgress
+			? state.PhaseElapsedSeconds
+			: 0f;
+		_effectTime = 0f;
 	}
 
 	[DebugAction("Preview Random Rewards")]

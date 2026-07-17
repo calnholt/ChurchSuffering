@@ -57,6 +57,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
             ctx.World.AddSystem(_modal);
 
             _modal.OpenDeckOfferForSnapshot(_variant.DeckRewardOffer);
+			_modal.SetPresentationForSnapshot(
+				_variant.PresentationPhase,
+				_variant.PresentationElapsedSeconds,
+				_variant.SelectedOptionIndex);
 
             _pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
             _pixel.SetData(new[] { Color.White });

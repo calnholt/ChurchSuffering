@@ -489,8 +489,17 @@ Renders the cinematic `RewardModalDisplaySystem` deck offer with two exchange la
 # Default: two exchanges and one upgrade
 dotnet run -- snapshot quest-reward-modal
 
+# Deterministic presentation samples
+dotnet run -- snapshot quest-reward-modal --presentation entering
+dotnet run -- snapshot quest-reward-modal --presentation claiming
+dotnet run -- snapshot quest-reward-modal --presentation skipping
+
 # Explicit structured offer
 dotnet run -- snapshot quest-reward-modal --exchange 'strike|white' 'smite|red' --exchange 'reckoning|white' 'unburdened_strike|black' --upgrade 'smite|white'
+
+# Verify or accept the visible, entering, claiming, and skipping matrix
+./scripts/verify-quest-reward-modal-snapshots.sh
+./scripts/verify-quest-reward-modal-snapshots.sh --accept
 ```
 
 ### Card key format
@@ -511,12 +520,16 @@ Example: `'strike|white'`, `'smite|red|Upgraded'` (quote in shell so `|` is not 
 |-----|--------|
 | `--exchange` | `outgoingCardKey incomingCardKey` |
 | `--upgrade` | `cardKey` |
+| `--presentation` | `entering`, `visible`, `claiming`, or `skipping` |
 
 ### Output files
 
 | Run | Example path |
 |-----|----------------|
 | Defaults | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded.png` |
+| Entering | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded-entering.png` |
+| Claiming | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded-claiming.png` |
+| Skipping | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded-skipping.png` |
 | Explicit structured offer | `debug/snapshots/quest-reward-modal/deck-offer-...png` |
 
 (Slugs are defined by `QuestRewardSnapshotVariant` at implementation time; adjust this table if slugs change.)

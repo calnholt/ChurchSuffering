@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.Diagnostics.Snapshots;
+using Crusaders30XX.Diagnostics.Snapshots.Fixtures;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Loadouts;
@@ -195,6 +197,26 @@ public sealed class RewardModalDisplaySystemTests
 			string incoming = option.kind == DeckRewardOfferKinds.Upgrade ? option.upgradedCardKey : option.incomingCardKey;
 			Assert.True(RunDeckService.TryParseCardKey(incoming, out _, out _, out _));
 		});
+	}
+
+	[Fact]
+	public void Snapshot_claiming_presentation_uses_deterministic_selected_lane_sample()
+	{
+		QuestRewardSnapshotVariant variant = QuestRewardSnapshotVariant.Parse(new[] { "--presentation", "claiming" });
+
+		Assert.Equal(QuestRewardPresentationPhase.Claiming, variant.PresentationPhase);
+		Assert.Equal(0.25f, variant.PresentationElapsedSeconds);
+		Assert.Equal(1, variant.SelectedOptionIndex);
+		Assert.EndsWith("-claiming", variant.FileSlug);
+	}
+
+	[Fact]
+	public void Snapshot_presentation_rejects_unknown_phase()
+	{
+		DisplaySnapshotSetupException exception = Assert.Throws<DisplaySnapshotSetupException>(() =>
+			QuestRewardSnapshotVariant.Parse(new[] { "--presentation", "hidden" }));
+
+		Assert.Contains("entering, visible, claiming, or skipping", exception.Message);
 	}
 
 	[Fact]
