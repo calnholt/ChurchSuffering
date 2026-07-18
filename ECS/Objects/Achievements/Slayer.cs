@@ -21,7 +21,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Column = 0;
             StartsVisible = false; // This is a starter achievement
             TargetValue = RequiredKills;
-            Points = 10;
         }
 
         public override void RegisterListeners()

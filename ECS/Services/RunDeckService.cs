@@ -13,7 +13,6 @@ namespace Crusaders30XX.ECS.Services
 	public static class RunDeckService
 	{
 		public const string PrimaryLoadoutId = "loadout_1";
-		public const int EnemyHealthClimbTimeBonusMultiplier = 2;
 		private const string DeckEntityName = "Deck";
 
 		public static LoadoutDefinition GetLoadoutForRun()
@@ -200,32 +199,6 @@ namespace Crusaders30XX.ECS.Services
 			{
 				entityManager.DestroyEntity(deckEntity.Id);
 			}
-		}
-
-		public static float CalculateEnemyHealthDeckWeight(
-			EntityManager entityManager,
-			int fallbackDeckCardCount,
-			int baseCardCountReduction = 0,
-			int climbTimeOverride = -1)
-		{
-			var entries = BuildDesiredEntries(GetLoadoutForRun());
-			if (entries.Count == 0 && entityManager != null)
-			{
-				entries = entityManager.GetEntitiesWithComponent<RunDeckCard>()
-					.Where(entity => entity != null && entity.IsActive)
-					.Select(entity => entity.GetComponent<RunDeckCard>())
-					.Where(runCard => runCard != null && !string.IsNullOrWhiteSpace(runCard.CardKey) && !IsWeaponCardKey(runCard.CardKey))
-					.Select(runCard => new LoadoutCardEntry { entryId = runCard.EntryId, cardKey = runCard.CardKey })
-					.ToList();
-			}
-
-			int cardCount = entries.Count > 0 ? entries.Count : Math.Max(0, fallbackDeckCardCount);
-			int reducedCardCount = Math.Max(0, cardCount - Math.Max(0, baseCardCountReduction));
-			int climbTime = climbTimeOverride >= 0
-				? ClimbRuleService.ClampTime(climbTimeOverride)
-				: ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0);
-			int timeBonus = (climbTime / ClimbRuleService.ShopRefreshInterval) * EnemyHealthClimbTimeBonusMultiplier;
-			return reducedCardCount + timeBonus;
 		}
 
 		public static Entity GetRunDeckEntity(EntityManager entityManager)

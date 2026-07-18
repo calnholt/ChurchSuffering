@@ -16,6 +16,7 @@ namespace Crusaders30XX.ECS.Objects.EnemyAttacks
       Id = EnemyId.Ogre;
       Name = "Ogre";
       HP = 31;
+      ClimbPool = ClimbEncounterPool.Early;
     }
 
     public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)

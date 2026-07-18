@@ -49,7 +49,7 @@ namespace Crusaders30XX.ECS.Data.Achievements
         /// Points awarded when this achievement is completed.
         /// Used for the achievement meter progress bar.
         /// </summary>
-        public int Points { get; protected set; } = 10;
+        public int Points { get; protected set; } = 5;
 
         /// <summary>
         /// Target value for counter-based achievements (e.g., "Kill 10 enemies").

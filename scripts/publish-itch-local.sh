@@ -58,6 +58,12 @@ if [[ -z "$BUTLER_API_KEY" ]]; then
   exit 1
 fi
 
+IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+PATCH=$((PATCH + 1))
+VERSION="$MAJOR.$MINOR.$PATCH"
+printf '%s\n' "$VERSION" > "$VERSION_FILE"
+echo "Bumped VERSION to $VERSION"
+
 echo "Publishing Crusaders30XX version $VERSION"
 echo "Temporary build directory: $ARTIFACTS_DIR"
 

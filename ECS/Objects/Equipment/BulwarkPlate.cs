@@ -14,8 +14,8 @@ namespace Crusaders30XX.ECS.Objects.Equipment
       Id = "bulwark_plate";
       Name = "Bulwark Plate";
       Slot = EquipmentSlot.Chest;
-      Block = 0;
-      Color = CardData.CardColor.White;
+      Block = 1;
+      Color = CardData.CardColor.Black;
       Text = $"Gain {AegisAmount} aegis.";
       CanActivateDuringActionPhase = true;
 

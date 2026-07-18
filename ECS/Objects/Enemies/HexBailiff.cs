@@ -13,6 +13,7 @@ public sealed class HexBailiff : EnemyBase
         Id = EnemyId.HexBailiff;
         Name = "Hex Bailiff";
         HP = 32;
+        ClimbPool = ClimbEncounterPool.Late;
     }
 
     public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber) =>

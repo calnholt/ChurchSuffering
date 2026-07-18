@@ -15,6 +15,7 @@ namespace Crusaders30XX.ECS.Services
 		private const int MaxOfferOptions = 3;
 		private const int PreferredExchangeOptions = 2;
 		private const int LateRewardMutationThreshold = 10;
+		private const double PreferNonStarterUpgradeChance = 0.6;
 
 		private static readonly CardData.CardColor[] RewardColors =
 		{
@@ -22,48 +23,6 @@ namespace Crusaders30XX.ECS.Services
 			CardData.CardColor.White,
 			CardData.CardColor.Black
 		};
-
-		private static readonly string[] SharedRewardPool =
-		{
-			"strike",
-			"crusade",
-			"zealous_vow",
-			"tempest",
-			"shield_of_faith",
-			"increase_faith",
-			"renounce_and_hone",
-			"sacrifice",
-			"steel_the_spirit",
-			"iron_covenant",
-			"whirlwind",
-			"pouch_of_kunai",
-			"ravage",
-			"reap",
-			"relentless_strike",
-			"serpent_crush",
-			"stalwart",
-			"temper_the_blade",
-			"vindicate",
-			"vanguards_promise",
-			"steadfast_resolve",
-			"exhaltation",
-			"deus_vult",
-			"carpe_diem",
-			"crimson_rite",
-			"consecrate",
-			"ark_of_the_covenant",
-			"dowse_with_holy_water",
-			"fury"
-		};
-
-		private static readonly string[] HammerRewardPool =
-		{
-			"unburdened_strike",
-			"battering_blow"
-		};
-
-		private static readonly string[] SwordRewardPool = Array.Empty<string>();
-		private static readonly string[] DaggerRewardPool = Array.Empty<string>();
 
 		private readonly struct DeckEntry
 		{
@@ -315,7 +274,15 @@ namespace Crusaders30XX.ECS.Services
 				.Where(e => usedIndices == null || !usedIndices.Contains(e.Index))
 				.ToList();
 			if (eligible.Count == 0) return null;
-			return eligible[random.Next(eligible.Count)];
+
+			var nonStarters = eligible.Where(e => e.Card.Rarity != Rarity.Starter).ToList();
+			var starters = eligible.Where(e => e.Card.Rarity == Rarity.Starter).ToList();
+			bool preferNonStarter = random.NextDouble() < PreferNonStarterUpgradeChance;
+			var preferred = preferNonStarter ? nonStarters : starters;
+			var fallback = preferNonStarter ? starters : nonStarters;
+			var pool = preferred.Count > 0 ? preferred : fallback;
+			if (pool.Count == 0) return null;
+			return pool[random.Next(pool.Count)];
 		}
 
 		private static List<DeckEntry> BuildEligibleDeckEntries(IReadOnlyList<LoadoutCardEntry> deckEntries, bool includeUpgradedStarters = false)
@@ -385,26 +352,13 @@ namespace Crusaders30XX.ECS.Services
 
 		private static IEnumerable<string> BuildIncomingPool(string weaponId)
 		{
-			var pool = CardFactory.GetAllCards()
-				.Where(c => c.Value.CanAddToLoadout && !c.Value.IsWeapon && !c.Value.IsToken && c.Value.Rarity != Rarity.Starter)
-				.Select(c => c.Key.ToKey())
-				.ToList();
-			foreach (var id in pool)
+			foreach (var pair in CardFactory.GetAllCards())
 			{
-				yield return id;
-			}
-
-			if (string.Equals(weaponId, "hammer", StringComparison.OrdinalIgnoreCase))
-			{
-				foreach (var id in HammerRewardPool) yield return id;
-			}
-			else if (string.Equals(weaponId, "sword", StringComparison.OrdinalIgnoreCase))
-			{
-				foreach (var id in SwordRewardPool) yield return id;
-			}
-			else if (string.Equals(weaponId, "dagger", StringComparison.OrdinalIgnoreCase))
-			{
-				foreach (var id in DaggerRewardPool) yield return id;
+				var card = pair.Value;
+				if (card == null) continue;
+				if (!card.CanAddToLoadout || card.IsWeapon || card.IsToken || card.Rarity == Rarity.Starter) continue;
+				if (!card.IsEligibleForWeapon(weaponId)) continue;
+				yield return pair.Key.ToKey();
 			}
 
 			foreach (var id in StartingDeckGeneratorService.GetAutoUpgradeCardIds(weaponId ?? string.Empty))

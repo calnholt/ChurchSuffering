@@ -29,10 +29,10 @@ namespace Crusaders30XX.ECS.Singletons
 
 		public static float EnemyHealthModifier => SelectedDifficulty switch
 		{
-			RunDifficulty.Easy => 0.8f,
-			RunDifficulty.Normal => 0.9f,
+			RunDifficulty.Easy => 0.7f,
+			RunDifficulty.Normal => 0.85f,
 			RunDifficulty.Hard => 1.0f,
-			_ => 0.9f
+			_ => 0.85f
 		};
 
 		public static string WeaponId => SelectedWeapon switch

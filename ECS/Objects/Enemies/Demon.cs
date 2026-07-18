@@ -17,6 +17,7 @@ public class Demon : EnemyBase
     Id = EnemyId.Demon;
     Name = "Demon";
     HP = 29;
+    ClimbPool = ClimbEncounterPool.Early;
   }
 
   public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)

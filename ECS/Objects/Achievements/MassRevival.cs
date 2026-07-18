@@ -23,7 +23,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Column = 1;
             StartsVisible = false;
             TargetValue = RequiredResurrects;
-            Points = 25;
         }
 
         public override void RegisterListeners()

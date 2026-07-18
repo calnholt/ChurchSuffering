@@ -17,6 +17,7 @@ public class Sorcerer : EnemyBase
     Id = EnemyId.Sorcerer;
     Name = "Sorcerer";
     HP = 25;
+    ClimbPool = ClimbEncounterPool.Late;
 
     OnStartOfBattle = (entityManager) =>
     {

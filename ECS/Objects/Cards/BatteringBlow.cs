@@ -20,6 +20,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             Damage = 6;
             Block = 3;
             IsFreeAction = false;
+            EligibleWeapons = [EligibleWeapon.Hammer];
 
             OnPlay = (entityManager, card) =>
             {

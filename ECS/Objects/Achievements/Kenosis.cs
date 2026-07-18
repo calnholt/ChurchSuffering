@@ -19,7 +19,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Row = 5;
             Column = 2;
             StartsVisible = false;
-            Points = 30;
         }
 
         public override void RegisterListeners()

@@ -21,6 +21,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
             VisualEffectRecipe = PlayerAttackEffect();
             Damage = 8;
             Block = 2;
+            EligibleWeapons = [EligibleWeapon.Hammer];
 
             OnPlay = (entityManager, card) =>
             {

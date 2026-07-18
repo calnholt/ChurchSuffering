@@ -23,6 +23,7 @@
 | `ExhaustsOnEndTurn` | bool | false | — |
 | `IsToken` | bool | false | — |
 | `CanAddToLoadout` | bool | true | — |
+| `EligibleWeapons` | EligibleWeapon[] | `[All]` | Restricts shop/encounter reward pools to listed weapons; `All` = any weapon |
 | `Tooltip` | string | "" | Auto-processed for keywords via `TooltipTextService` |
 | `CardTooltip` | string | "" | — |
 

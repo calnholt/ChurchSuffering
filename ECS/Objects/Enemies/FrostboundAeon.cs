@@ -15,6 +15,7 @@ public sealed class FrostboundAeon : EnemyBase
 		Id = EnemyId.FrostboundAeon;
 		Name = "Frostbound Aeon";
 		HP = 32;
+		ClimbPool = ClimbEncounterPool.Late;
 	}
 
 	public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber) =>

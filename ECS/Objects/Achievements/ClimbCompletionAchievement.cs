@@ -31,7 +31,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
 			Row = row;
 			Column = column;
 			StartsVisible = startsVisible;
-			Points = 5;
 			_requiredWeaponId = requiredWeaponId;
 			_requiredDifficulty = requiredDifficulty;
 			_requiredCompletions = Math.Max(1, requiredCompletions);

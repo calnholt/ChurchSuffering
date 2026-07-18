@@ -17,6 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
             Id = EnemyId.CinderboltDemon;
             Name = "Cinderbolt Demon";
             HP = 30;
+            ClimbPool = ClimbEncounterPool.Late;
         }
 
         public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)

@@ -17,6 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
       Id = EnemyId.Berserker;
       Name = "Berserker";
       HP = 31;
+      ClimbPool = ClimbEncounterPool.Early;
 
       OnStartOfBattle = (entityManager) =>
       {

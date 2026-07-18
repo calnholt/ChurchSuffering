@@ -40,6 +40,7 @@ Do **not** edit deck JSON, shop pools, or reward tables unless the user asks.
 | `Cost` | `[]` |
 | `VisualEffectRecipe` | `PlayerAttackEffect()` for attacks, `HolySupportEffect()` for prayers |
 | `Rarity` | omit unless user specifies |
+| `EligibleWeapons` | `[EligibleWeapon.All]` (set e.g. `[EligibleWeapon.Hammer]` to gate shop/encounter rewards) |
 
 ## Archetype picker
 

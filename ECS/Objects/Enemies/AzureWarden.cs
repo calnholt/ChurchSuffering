@@ -13,6 +13,7 @@ public class AzureWarden : EnemyBase
         Id = EnemyId.AzureWarden;
         Name = "Azure Warden";
         HP = 30;
+        ClimbPool = ClimbEncounterPool.Late;
     }
 
     public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)

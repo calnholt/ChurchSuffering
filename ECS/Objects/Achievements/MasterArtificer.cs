@@ -21,7 +21,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Column = 4;
             StartsVisible = false;
             TargetValue = RequiredUniqueUpgrades;
-            Points = 25;
         }
 
         public override void RegisterListeners()

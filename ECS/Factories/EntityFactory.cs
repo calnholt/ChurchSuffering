@@ -414,9 +414,6 @@ namespace Crusaders30XX.ECS.Factories
             {
                 throw new InvalidOperationException("Cannot spawn enemy: player deck is missing or empty.");
             }
-            float deckHealthWeight = RunDeckService.CalculateEnemyHealthDeckWeight(
-                entityManager,
-                deck.Cards.Count);
 			if (isGuidedTutorial)
 			{
 				var tutorial = GuidedTutorialService.GetState(entityManager);
@@ -426,8 +423,9 @@ namespace Crusaders30XX.ECS.Factories
 			}
             else
             {
-                def.ApplyHealthFromDeckWeight(deckHealthWeight);
+                def.ApplyBaseHealth();
                 ApplyWayStationEnemyHealthModifier(def);
+                ApplyClimbTimeHealthBonus(def);
             }
             if (def.MaxHealth <= 0)
             {
@@ -522,6 +520,22 @@ namespace Crusaders30XX.ECS.Factories
 
             def.MaxHealth = Math.Max(1, (int)Math.Round(def.MaxHealth * modifier));
             def.CurrentHealth = Math.Max(1, (int)Math.Round(def.CurrentHealth * modifier));
+            def.CurrentHealth = Math.Min(def.CurrentHealth, def.MaxHealth);
+        }
+
+        private const float ClimbTimeHealthBonusPerInterval = 0.1f;
+
+        private static void ApplyClimbTimeHealthBonus(EnemyBase def)
+        {
+            if (def == null) return;
+
+            int climbTime = ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0);
+            int intervals = climbTime / ClimbRuleService.ShopRefreshInterval;
+            if (intervals <= 0) return;
+
+            float scale = 1f + ClimbTimeHealthBonusPerInterval * intervals;
+            def.MaxHealth = Math.Max(1, (int)Math.Round(def.MaxHealth * scale));
+            def.CurrentHealth = Math.Max(1, (int)Math.Round(def.CurrentHealth * scale));
             def.CurrentHealth = Math.Min(def.CurrentHealth, def.MaxHealth);
         }
 

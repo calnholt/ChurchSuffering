@@ -16,6 +16,7 @@ public sealed class Blighttongue : EnemyBase
         Id = EnemyId.Blighttongue;
         Name = "Blighttongue";
         HP = 28;
+        ClimbPool = ClimbEncounterPool.Early;
         OnStartOfBattle = entityManager =>
             EventQueueBridge.EnqueueTriggerAction("Blighttongue.OnStartOfBattle", () =>
                 EventManager.Publish(new ApplyPassiveEvent

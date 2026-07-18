@@ -9,8 +9,12 @@ namespace Crusaders30XX.ECS.Services;
 
 public static class CollectionProgressionRules
 {
-	public const int FirstLevelPoints = 20;
-	public const int SubsequentLevelPoints = 50;
+	public const int FirstLevelPoints = 5;
+	public const int MidTierLevelPoints = 10;
+	public const int MidTierLevelCount = 10; // levels 2–11
+	public const int LateTierLevelPoints = 20;
+	public const int MidTierEndCumulative = FirstLevelPoints + MidTierLevelPoints * MidTierLevelCount; // 105
+	public const int MidTierEndLevel = 1 + MidTierLevelCount; // 11
 	public const int FirstShopRefreshTime = 8;
 	public const int SecondShopRefreshTime = 16;
 	public const int ThirdShopRefreshTime = 24;
@@ -19,29 +23,45 @@ public static class CollectionProgressionRules
 	private const int MedalWeight = 30;
 	private const int EquipmentWeight = 20;
 
+	public static int GetCostToReachNextLevel(int completedLevels)
+	{
+		if (completedLevels <= 0) return FirstLevelPoints;
+		if (completedLevels < MidTierEndLevel) return MidTierLevelPoints;
+		return LateTierLevelPoints;
+	}
+
+	public static int GetCumulativeCost(int completedLevels)
+	{
+		completedLevels = Math.Max(0, completedLevels);
+		if (completedLevels <= 0) return 0;
+		if (completedLevels == 1) return FirstLevelPoints;
+		if (completedLevels <= MidTierEndLevel)
+			return FirstLevelPoints + (completedLevels - 1) * MidTierLevelPoints;
+		return MidTierEndCumulative + (completedLevels - MidTierEndLevel) * LateTierLevelPoints;
+	}
+
 	public static int GetCompletedLevelCount(int totalPoints)
 	{
 		totalPoints = Math.Max(0, totalPoints);
 		if (totalPoints < FirstLevelPoints) return 0;
-		return 1 + (totalPoints - FirstLevelPoints) / SubsequentLevelPoints;
+		if (totalPoints < MidTierEndCumulative)
+			return 1 + (totalPoints - FirstLevelPoints) / MidTierLevelPoints;
+		return MidTierEndLevel + (totalPoints - MidTierEndCumulative) / LateTierLevelPoints;
 	}
 
 	public static (int Level, int PointsInLevel, int PointsRequired) GetLevelState(int totalPoints)
 	{
+		totalPoints = Math.Max(0, totalPoints);
 		int level = GetCompletedLevelCount(totalPoints);
-		int completedPointCost = level == 0
-			? 0
-			: FirstLevelPoints + (level - 1) * SubsequentLevelPoints;
-		return (level, Math.Max(0, totalPoints - completedPointCost), level == 0 ? FirstLevelPoints : SubsequentLevelPoints);
+		int completedPointCost = GetCumulativeCost(level);
+		int pointsRequired = GetCostToReachNextLevel(level);
+		return (level, Math.Max(0, totalPoints - completedPointCost), pointsRequired);
 	}
 
 	public static int GetNextLevelThresholdTotal(int totalPoints)
 	{
 		var state = GetLevelState(totalPoints);
-		int completedCost = state.Level == 0
-			? 0
-			: FirstLevelPoints + (state.Level - 1) * SubsequentLevelPoints;
-		return completedCost + state.PointsRequired;
+		return GetCumulativeCost(state.Level) + state.PointsRequired;
 	}
 
 	public static int CalculateClimbPoints(int climbTime, bool completedFinalBoss, bool abandoned)

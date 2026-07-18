@@ -57,12 +57,16 @@ public sealed class CollectionProgressionTests : IDisposable
 	}
 
 	[Theory]
-	[InlineData(0, 0, 0, 20)]
-	[InlineData(19, 0, 19, 20)]
-	[InlineData(20, 1, 0, 50)]
-	[InlineData(69, 1, 49, 50)]
-	[InlineData(70, 2, 0, 50)]
-	public void Level_state_uses_twenty_then_fifty_point_thresholds(int total, int level, int inLevel, int required)
+	[InlineData(0, 0, 0, 5)]
+	[InlineData(4, 0, 4, 5)]
+	[InlineData(5, 1, 0, 10)]
+	[InlineData(14, 1, 9, 10)]
+	[InlineData(15, 2, 0, 10)]
+	[InlineData(104, 10, 9, 10)]
+	[InlineData(105, 11, 0, 20)]
+	[InlineData(124, 11, 19, 20)]
+	[InlineData(125, 12, 0, 20)]
+	public void Level_state_uses_five_ten_then_twenty_point_thresholds(int total, int level, int inLevel, int required)
 	{
 		var actual = CollectionProgressionRules.GetLevelState(total);
 		Assert.Equal(level, actual.Level);
@@ -100,7 +104,7 @@ public sealed class CollectionProgressionTests : IDisposable
 				.Select(card => card.CardId).ToList(),
 			medalIds = MedalFactory.GetAllMedals().Keys.Select(id => id.ToKey()).ToList(),
 			equipmentIds = EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey()).ToList(),
-			totalPoints = 20,
+			totalPoints = 5,
 		};
 
 		CollectionProgressionRules.ReconcileEarnedPacks(collection, new Random(1));
@@ -187,12 +191,15 @@ public sealed class CollectionProgressionTests : IDisposable
 	}
 
 	[Theory]
-	[InlineData(0, 20)]
-	[InlineData(19, 20)]
-	[InlineData(20, 70)]
-	[InlineData(69, 70)]
-	[InlineData(70, 120)]
-	public void Next_level_threshold_uses_twenty_then_fifty_point_costs(int total, int expected)
+	[InlineData(0, 5)]
+	[InlineData(4, 5)]
+	[InlineData(5, 15)]
+	[InlineData(14, 15)]
+	[InlineData(104, 105)]
+	[InlineData(105, 125)]
+	[InlineData(124, 125)]
+	[InlineData(125, 145)]
+	public void Next_level_threshold_uses_five_ten_then_twenty_point_costs(int total, int expected)
 	{
 		Assert.Equal(expected, CollectionProgressionRules.GetNextLevelThresholdTotal(total));
 	}
@@ -206,7 +213,7 @@ public sealed class CollectionProgressionTests : IDisposable
 		_ = new CollectionProgressionSystem(manager);
 		var collection = SaveCache.GetCollection();
 		collection.cardIds = new List<string>(collection.cardIds);
-		collection.pendingClimbPoints = 20;
+		collection.pendingClimbPoints = 5;
 		collection.totalPoints = 0;
 		collection.processedRewardLevels = 0;
 		collection.pendingBoosterPacks.Clear();
@@ -214,12 +221,12 @@ public sealed class CollectionProgressionTests : IDisposable
 
 		EventManager.Publish(new ClimbPointsSegmentAwardedEvent
 		{
-			NewTotalPoints = 20,
+			NewTotalPoints = 5,
 			TriggeredLevelComplete = true,
 		});
 
 		var claimed = SaveCache.GetCollection();
-		Assert.Equal(20, claimed.totalPoints);
+		Assert.Equal(5, claimed.totalPoints);
 		Assert.Equal(0, claimed.pendingClimbPoints);
 		Assert.Equal(1, claimed.processedRewardLevels);
 		Assert.Single(claimed.pendingBoosterPacks);
@@ -234,7 +241,7 @@ public sealed class CollectionProgressionTests : IDisposable
 		_ = new CollectionProgressionSystem(manager);
 		var collection = SaveCache.GetCollection();
 		collection.cardIds = new List<string>(collection.cardIds);
-		collection.pendingClimbPoints = 25;
+		collection.pendingClimbPoints = 8;
 		collection.totalPoints = 0;
 		collection.processedRewardLevels = 0;
 		collection.pendingBoosterPacks.Clear();
@@ -242,17 +249,17 @@ public sealed class CollectionProgressionTests : IDisposable
 
 		EventManager.Publish(new ClimbPointsSegmentAwardedEvent
 		{
-			NewTotalPoints = 20,
+			NewTotalPoints = 5,
 			TriggeredLevelComplete = true,
 		});
 		EventManager.Publish(new ClimbPointsSegmentAwardedEvent
 		{
-			NewTotalPoints = 25,
+			NewTotalPoints = 8,
 			TriggeredLevelComplete = false,
 		});
 
 		var claimed = SaveCache.GetCollection();
-		Assert.Equal(25, claimed.totalPoints);
+		Assert.Equal(8, claimed.totalPoints);
 		Assert.Equal(0, claimed.pendingClimbPoints);
 		Assert.Equal(1, claimed.processedRewardLevels);
 		Assert.Single(claimed.pendingBoosterPacks);

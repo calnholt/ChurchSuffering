@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Objects.Enemies;
 
 namespace Crusaders30XX.ECS.Services
 {
@@ -13,34 +14,37 @@ namespace Crusaders30XX.ECS.Services
 	{
 		private const string PortraitFolder = "Enemies";
 
-		private static readonly HashSet<string> PortraitEnemyIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		private static readonly HashSet<EnemyId> PortraitEnemyIds = new HashSet<EnemyId>
 		{
-			"demon",
-			"mummy",
-			"earth_demon",
-			"ogre",
-			"skeleton",
-			"skeletal_archer",
-			"spider",
-			"succubus",
-			"thornreaver",
-			"dust_wuurm",
-			"sorcerer",
-			"ice_demon",
-			"glacial_guardian",
-			"cinderbolt_demon",
-			"fire_skeleton",
-			"berserker",
-			"shadow",
-			"wyvern",
-			"sand_golem",
-			"fallen_shepherd",
-			"azure_warden",
-			"blighttongue",
-			"hex_bailiff",
-			"frostbound_aeon",
-			// "training_demon", // test-fight only
-			// "ninja",
+			EnemyId.Demon,
+			EnemyId.Mummy,
+			EnemyId.EarthDemon,
+			EnemyId.Ogre,
+			EnemyId.Skeleton,
+			EnemyId.SkeletalArcher,
+			EnemyId.Spider,
+			EnemyId.Succubus,
+			EnemyId.Thornreaver,
+			EnemyId.DustWuurm,
+			EnemyId.Sorcerer,
+			EnemyId.IceDemon,
+			EnemyId.GlacialGuardian,
+			EnemyId.CinderboltDemon,
+			EnemyId.FireSkeleton,
+			EnemyId.EarthSkeleton,
+			EnemyId.FrostSkeleton,
+			EnemyId.CursedSkeleton,
+			EnemyId.Berserker,
+			EnemyId.Shadow,
+			EnemyId.Wyvern,
+			EnemyId.SandGolem,
+			EnemyId.FallenShepherd,
+			EnemyId.AzureWarden,
+			EnemyId.Blighttongue,
+			EnemyId.HexBailiff,
+			EnemyId.FrostboundAeon,
+			// EnemyId.TrainingDemon, // test-fight only
+			// EnemyId.Ninja,
 		};
 
 		public static string ToAssetName(string enemyId)
@@ -55,20 +59,48 @@ namespace Crusaders30XX.ECS.Services
 			return $"{PortraitFolder}/{joined}";
 		}
 
+		public static bool HasPortrait(EnemyId enemyId) => PortraitEnemyIds.Contains(enemyId);
+
 		public static bool HasPortrait(string enemyId) =>
-			!string.IsNullOrEmpty(enemyId) && PortraitEnemyIds.Contains(enemyId);
+			GameIdExtensions.TryParseEnemyId(enemyId, out var id) && HasPortrait(id);
 
 		public static IReadOnlyList<string> GetClimbEncounterEnemyPool()
+		{
+			return GetClimbEncounterEnemyPool(pool: null);
+		}
+
+		public static IReadOnlyList<string> GetClimbEncounterEnemyPool(ClimbEncounterPool pool)
+		{
+			return GetClimbEncounterEnemyPool((ClimbEncounterPool?)pool);
+		}
+
+		private static IReadOnlyList<string> GetClimbEncounterEnemyPool(ClimbEncounterPool? pool)
 		{
 			return EnemyFactory.GetAllEnemies()
 				.Where(entry => entry.Value != null
 					&& !entry.Value.IsBoss
 					&& !entry.Value.IsTutorialOnly
-					&& HasPortrait(entry.Key.ToKey())
+					&& entry.Value.ClimbPool != ClimbEncounterPool.None
+					&& MatchesClimbPool(entry.Value.ClimbPool, pool)
+					&& HasPortrait(entry.Key)
 				)
 				.Select(entry => entry.Key.ToKey())
 				.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
 				.ToList();
+		}
+
+		private static bool MatchesClimbPool(ClimbEncounterPool enemyPool, ClimbEncounterPool? requested)
+		{
+			if (requested == null) return true;
+			return requested.Value switch
+			{
+				ClimbEncounterPool.Early => enemyPool == ClimbEncounterPool.Early
+					|| enemyPool == ClimbEncounterPool.Throughout,
+				ClimbEncounterPool.Late => enemyPool == ClimbEncounterPool.Late
+					|| enemyPool == ClimbEncounterPool.Throughout,
+				ClimbEncounterPool.Throughout => enemyPool == ClimbEncounterPool.Throughout,
+				_ => enemyPool == requested.Value,
+			};
 		}
 	}
 }

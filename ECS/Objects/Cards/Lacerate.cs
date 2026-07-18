@@ -7,7 +7,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class Lacerate : CardBase
     {
-        private const int WoundedDamageThreshold = 7;
+        private const int WoundedDamageBonus = 3;
         private const int WoundedGained = 1;
         private const int BlockUpgrade = 1;
 
@@ -16,16 +16,17 @@ namespace Crusaders30XX.ECS.Objects.Cards
             CardId = "lacerate";
             Name = "Lacerate";
             Target = "Enemy";
-            Text = $"If this attack deals {WoundedDamageThreshold} or more damage, the enemy gains {WoundedGained} wounded.";
             VisualEffectRecipe = PlayerAttackEffect();
-            Damage = 4;
+            Damage = 2;
             Block = 2;
+            Text = $"If this attack deals {Damage + WoundedDamageBonus} or more damage, the enemy gains {WoundedGained} wounded.";
 
             OnPlay = (entityManager, card) =>
             {
                 var player = entityManager.GetEntity("Player");
                 var enemy = entityManager.GetEntity("Enemy");
                 int rawDamage = GetDerivedDamage(entityManager, card);
+                int woundedDamageThreshold = Damage + WoundedDamageBonus;
                 var attackPreview = new ModifyHpRequestEvent
                 {
                     Source = player,
@@ -44,7 +45,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
                     DamageType = ModifyTypeEnum.Attack
                 });
 
-                if (damageDealt >= WoundedDamageThreshold)
+                if (damageDealt >= woundedDamageThreshold)
                 {
                     EventManager.Publish(new ApplyPassiveEvent
                     {

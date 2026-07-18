@@ -15,8 +15,9 @@ namespace Crusaders30XX.Tests;
 
 public class QuestCardRewardServiceTests
 {
-	private static readonly string[] ExpectedSharedIncomingPool = CardFactory.GetAllCards()
+	private static string[] ExpectedIncomingPoolForWeapon(string weaponId) => CardFactory.GetAllCards()
 		.Where(pair => pair.Value.CanAddToLoadout && !pair.Value.IsWeapon && !pair.Value.IsToken && pair.Value.Rarity != Rarity.Starter)
+		.Where(pair => pair.Value.IsEligibleForWeapon(weaponId))
 		.Select(pair => pair.Key.ToKey())
 		.Order(StringComparer.OrdinalIgnoreCase)
 		.ToArray();
@@ -50,35 +51,38 @@ public class QuestCardRewardServiceTests
 	public void Incoming_exchange_pool_contains_shared_and_auto_upgrade_cards_for_sword_and_dagger()
 	{
 		var swordPool = QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "sword");
-		var swordAllowed = ExpectedSharedIncomingPool
+		var swordAllowed = ExpectedIncomingPoolForWeapon("sword")
 			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("sword"))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 		Assert.All(swordPool, id => Assert.Contains(id, swordAllowed, StringComparer.OrdinalIgnoreCase));
 		Assert.All(swordAllowed, id => Assert.Contains(id, swordPool, StringComparer.OrdinalIgnoreCase));
+		Assert.DoesNotContain("unburdened_strike", swordPool, StringComparer.OrdinalIgnoreCase);
+		Assert.DoesNotContain("battering_blow", swordPool, StringComparer.OrdinalIgnoreCase);
 
 		var daggerPool = QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "dagger");
-		var daggerAllowed = ExpectedSharedIncomingPool
+		var daggerAllowed = ExpectedIncomingPoolForWeapon("dagger")
 			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("dagger"))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 		Assert.All(daggerPool, id => Assert.Contains(id, daggerAllowed, StringComparer.OrdinalIgnoreCase));
 		Assert.All(daggerAllowed, id => Assert.Contains(id, daggerPool, StringComparer.OrdinalIgnoreCase));
+		Assert.DoesNotContain("unburdened_strike", daggerPool, StringComparer.OrdinalIgnoreCase);
+		Assert.DoesNotContain("battering_blow", daggerPool, StringComparer.OrdinalIgnoreCase);
 	}
 
 	[Fact]
-	public void Incoming_exchange_pool_adds_hammer_bonus_and_auto_upgrade_cards_for_hammer()
+	public void Incoming_exchange_pool_includes_hammer_gated_and_auto_upgrade_cards_for_hammer()
 	{
-		var expected = ExpectedSharedIncomingPool
-			.Concat(new[] { "unburdened_strike", "battering_blow" })
+		var hammerPool = QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "hammer");
+		var expected = ExpectedIncomingPoolForWeapon("hammer")
 			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("hammer"))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.Order(StringComparer.OrdinalIgnoreCase);
 
-		Assert.Equal(
-			expected,
-			QuestCardRewardService.GetEligibleRewardCardIdsForTests(Array.Empty<string>(), "hammer")
-				.Order(StringComparer.OrdinalIgnoreCase));
+		Assert.Equal(expected, hammerPool.Order(StringComparer.OrdinalIgnoreCase));
+		Assert.Contains("unburdened_strike", hammerPool, StringComparer.OrdinalIgnoreCase);
+		Assert.Contains("battering_blow", hammerPool, StringComparer.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -99,16 +103,15 @@ public class QuestCardRewardServiceTests
 			"reckoning|Black",
 			"fervor|Red"
 		};
-		var swordAllowed = ExpectedSharedIncomingPool
+		var swordAllowed = ExpectedIncomingPoolForWeapon("sword")
 			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("sword"))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		var daggerAllowed = ExpectedSharedIncomingPool
+		var daggerAllowed = ExpectedIncomingPoolForWeapon("dagger")
 			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("dagger"))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		var hammerAllowed = ExpectedSharedIncomingPool
-			.Concat(new[] { "unburdened_strike", "battering_blow" })
+		var hammerAllowed = ExpectedIncomingPoolForWeapon("hammer")
 			.Concat(StartingDeckGeneratorService.GetAutoUpgradeCardIds("hammer"))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -193,6 +196,72 @@ public class QuestCardRewardServiceTests
 
 		Assert.True(foundNonStarter);
 		Assert.True(foundUpgradedStarter);
+	}
+
+	[Fact]
+	public void GenerateDeckRewardOffer_upgrade_options_prefer_nonstarters_about_sixty_percent()
+	{
+		// After two starter exchanges, one starter and one non-starter remain for upgrade picks.
+		// Uniform random would be ~50%; PreferNonStarterUpgradeChance (0.6) should land near 60%.
+		var entries = Entries(
+			"smite|White",
+			"reckoning|Black",
+			"absolution|Red",
+			"fervor|Red");
+
+		int upgradeCount = 0;
+		int nonStarterUpgradeCount = 0;
+		const int seedCount = 300;
+
+		for (int seed = 0; seed < seedCount; seed++)
+		{
+			var offer = QuestCardRewardService.GenerateDeckRewardOffer(
+				entries, "sword", 20, restrictToCollection: false, acceptedDeckRewardMutations: 0, random: new Random(seed));
+			foreach (var option in offer.options.Where(option => option.kind == DeckRewardOfferKinds.Upgrade))
+			{
+				upgradeCount++;
+				Assert.True(
+					RunDeckService.TryParseCardKey(option.outgoingCardKey, out var cardId, out _),
+					$"Invalid upgrade outgoing key {option.outgoingCardKey}");
+				var card = CardFactory.Create(cardId);
+				Assert.NotNull(card);
+				if (card.Rarity != Rarity.Starter)
+					nonStarterUpgradeCount++;
+			}
+		}
+
+		Assert.True(upgradeCount > 0);
+		double ratio = (double)nonStarterUpgradeCount / upgradeCount;
+		Assert.InRange(ratio, 0.52, 0.70);
+	}
+
+	[Fact]
+	public void GenerateDeckRewardOffer_upgrade_options_fall_back_to_starters_when_no_nonstarters_remain()
+	{
+		var entries = Entries(
+			"smite|White",
+			"reckoning|Black",
+			"absolution|Red",
+			"courageous|White");
+
+		bool foundStarterUpgrade = false;
+		for (int seed = 0; seed < 40; seed++)
+		{
+			var offer = QuestCardRewardService.GenerateDeckRewardOffer(
+				entries, "sword", 20, restrictToCollection: false, acceptedDeckRewardMutations: 0, random: new Random(seed));
+			foreach (var option in offer.options.Where(option => option.kind == DeckRewardOfferKinds.Upgrade))
+			{
+				Assert.True(
+					RunDeckService.TryParseCardKey(option.outgoingCardKey, out var cardId, out _),
+					$"Invalid upgrade outgoing key {option.outgoingCardKey}");
+				var card = CardFactory.Create(cardId);
+				Assert.NotNull(card);
+				Assert.Equal(Rarity.Starter, card.Rarity);
+				foundStarterUpgrade = true;
+			}
+		}
+
+		Assert.True(foundStarterUpgrade);
 	}
 
 	[Fact]
