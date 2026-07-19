@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
@@ -507,6 +508,60 @@ public class ClimbRuleServiceTests
 		state.time = 8;
 		ClimbRuleService.RefreshShopSlots(state, 123, TestLoadout());
 		AssertShopSlotDisplayOrder(state);
+	}
+
+	[Fact]
+	public void Shop_equipment_excludes_occupied_loadout_slots()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+
+		var loadout = TestLoadout();
+		loadout.headId = "knightly_helm";
+		var equipmentIndex = Array.IndexOf(ClimbShopSlotKinds.DisplayOrder, ClimbShopSlotKinds.Equipment);
+
+		for (int seed = 1; seed <= 40; seed++)
+		{
+			var state = new ClimbSaveState
+			{
+				time = 0,
+				resources = new ClimbResourceSave(),
+				shopSlots = new List<ClimbShopSlotSave>(),
+				encounterSlots = new List<ClimbEncounterSlotSave>(),
+				eventSlots = new List<ClimbEventSlotSave>(),
+				shownMedalIds = new List<string>(),
+				shownEquipmentIds = new List<string>(),
+			};
+			ClimbRuleService.RefreshShopSlots(state, seed, loadout);
+
+			var equipmentSlot = state.shopSlots[equipmentIndex];
+			Assert.Equal(ClimbShopSlotKinds.Equipment, equipmentSlot.kind, ignoreCase: true);
+
+			var equipment = EquipmentFactory.Create(equipmentSlot.itemId);
+			Assert.NotNull(equipment);
+			Assert.NotEqual(EquipmentSlot.Head, equipment.Slot);
+		}
+	}
+
+	[Fact]
+	public void Shop_equipment_is_empty_when_all_loadout_slots_are_occupied()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+
+		var loadout = TestLoadout();
+		loadout.headId = "knightly_helm";
+		loadout.chestId = "knightly_chest";
+		loadout.armsId = "knightly_gauntlets";
+		loadout.legsId = "knightly_grieves";
+
+		var state = ClimbRuleService.CreateInitialState(123, loadout);
+		var equipmentIndex = Array.IndexOf(ClimbShopSlotKinds.DisplayOrder, ClimbShopSlotKinds.Equipment);
+		var equipmentSlot = state.shopSlots[equipmentIndex];
+
+		Assert.Equal(ClimbShopSlotKinds.Empty, equipmentSlot.kind, ignoreCase: true);
+		Assert.Equal(0, equipmentSlot.timeCost);
+		Assert.Equal(0, ResourcePips(equipmentSlot.cost));
 	}
 
 	[Fact]

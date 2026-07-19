@@ -27,9 +27,10 @@ public sealed class ClimbResourceAcquisitionDisplaySystemTests
 
 			Assert.True(RewardModalDisplaySystem.PublishClimbResourceAcquisitionIfNeeded(state));
 			Assert.NotNull(published);
-			Assert.Equal(2, published.Resources.red);
-			Assert.Equal(1, published.Resources.white);
-			Assert.Equal(1, published.Resources.black);
+				Assert.Equal(2, published.Resources.red);
+				Assert.Equal(1, published.Resources.white);
+				Assert.Equal(1, published.Resources.black);
+				Assert.True(published.DelayClimbTurnoverUntilComplete);
 
 			published = null;
 			state.DismissScene = SceneId.Battle;

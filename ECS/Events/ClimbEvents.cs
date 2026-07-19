@@ -95,6 +95,12 @@ namespace Crusaders30XX.ECS.Events
 		public string DeckEntryId { get; set; } = string.Empty;
 		public string BaseCardKey { get; set; } = string.Empty;
 		public string UpgradedCardKey { get; set; } = string.Empty;
+		public bool DelayClimbTurnoverUntilComplete { get; set; }
+	}
+
+	public class ClimbCardUpgradeAnimationCompleted
+	{
+		public bool ReleasesClimbTurnover { get; set; }
 	}
 
 	public class ClimbCardMutationAnimationRequested
@@ -109,6 +115,12 @@ namespace Crusaders30XX.ECS.Events
 	public class ClimbResourceAcquisitionAnimationRequested
 	{
 		public ClimbResourceSave Resources { get; set; } = new();
+		public bool DelayClimbTurnoverUntilComplete { get; set; }
+	}
+
+	public class ClimbResourceAcquisitionAnimationCompleted
+	{
+		public bool ReleasesClimbTurnover { get; set; }
 	}
 
 	public class ClimbResourceHeaderPulseRequested

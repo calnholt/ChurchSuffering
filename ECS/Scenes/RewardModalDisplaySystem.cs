@@ -1597,7 +1597,11 @@ public sealed class RewardModalDisplaySystem : Core.System
 	{
 		if (state?.IsEncounterReward != true || state.DismissScene != SceneId.Climb || state.ClimbResources == null) return false;
 		if (state.ClimbResources.red <= 0 && state.ClimbResources.white <= 0 && state.ClimbResources.black <= 0) return false;
-		EventManager.Publish(new ClimbResourceAcquisitionAnimationRequested { Resources = CloneResources(state.ClimbResources) });
+		EventManager.Publish(new ClimbResourceAcquisitionAnimationRequested
+		{
+			Resources = CloneResources(state.ClimbResources),
+			DelayClimbTurnoverUntilComplete = true,
+		});
 		return true;
 	}
 

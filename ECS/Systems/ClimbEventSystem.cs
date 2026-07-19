@@ -263,6 +263,7 @@ namespace Crusaders30XX.ECS.Systems
 						DeckEntryId = result.UpgradedEntryId,
 						BaseCardKey = baseKey,
 						UpgradedCardKey = result.UpgradedCardKey,
+						DelayClimbTurnoverUntilComplete = true,
 					});
 				}
 				CardUpgradeService.InvokeUpgradeConfirmed(result.UpgradedCardKey);

@@ -11,7 +11,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 	{
 		private readonly ClimbResourceSave _resources = new() { red = 2, white = 1, black = 1 };
 		private ClimbResourceAcquisitionDisplaySystem _animation;
-		private ClimbHeaderDisplaySystem _header;
+		private PlayerResourcesDisplaySystem _resourcesDisplay;
 		private string _variant = "fall";
 
 		public string Id => "climb-resource-acquisition";
@@ -36,15 +36,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			}
 			SaveCache.SaveClimbState(climbState);
 			ctx.World.GetSystem<ParallaxLayerSystem>()?.SetActive(false);
-			var columns = ctx.World.GetSystem<ClimbColumnDisplaySystem>();
-			if (columns != null)
-			{
-				columns.PortraitParallaxMultiplierX = 0f;
-				columns.PortraitParallaxMultiplierY = 0f;
-			}
 			_animation = ctx.World.GetSystem<ClimbResourceAcquisitionDisplaySystem>();
-			_header = ctx.World.GetSystem<ClimbHeaderDisplaySystem>();
-			if (_animation == null || _header == null)
+			_resourcesDisplay = ctx.World.GetSystem<PlayerResourcesDisplaySystem>();
+			if (_animation == null || _resourcesDisplay == null)
 			{
 				throw new DisplaySnapshotSetupException("Climb resource acquisition systems were not registered.");
 			}
@@ -56,9 +50,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		{
 			if (_variant == "pulse")
 			{
-				_header.SetResourcePulseForSnapshot(_resources, 0.5f);
+				_resourcesDisplay.SetResourcePulseForSnapshot(_resources, 0.5f);
 			}
-			_header.Draw();
+			_resourcesDisplay.Draw();
 			_animation.Draw();
 		}
 

@@ -140,7 +140,7 @@ namespace Crusaders30XX.ECS.Systems
                         bool isClimb = IsClimbScene(entityManager);
                         EventManager.Publish(new OpenCardListModalEvent
                         {
-                            Title = isClimb ? "Run Overview" : "Loadout",
+							Title = isClimb ? "Climb Overview" : "Loadout",
                             Cards = deck.Cards.ToList(),
                             Mode = isClimb ? CardListModalMode.Inventory : CardListModalMode.CardList,
                         });

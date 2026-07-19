@@ -671,8 +671,16 @@ namespace Crusaders30XX.ECS.Services
 			}
 			else if (kind == ClimbShopSlotKinds.Equipment)
 			{
+				var occupiedSlots = GetOccupiedEquipmentSlots(loadout);
 				var unlockedEquipment = new HashSet<string>(SaveCache.GetCollection().equipmentIds, StringComparer.OrdinalIgnoreCase);
-				var allEquipment = EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey()).Where(unlockedEquipment.Contains);
+				var allEquipment = EquipmentFactory.GetAllEquipment().Keys
+					.Select(id => id.ToKey())
+					.Where(unlockedEquipment.Contains)
+					.Where(id =>
+					{
+						var equipment = EquipmentFactory.Create(id);
+						return equipment != null && !occupiedSlots.Contains(equipment.Slot);
+					});
 				slot.itemId = PickUnshown(allEquipment, state.shownEquipmentIds, rng);
 				if (string.IsNullOrWhiteSpace(slot.itemId)) slot.kind = ClimbShopSlotKinds.Empty;
 				else AddDistinct(state.shownEquipmentIds, slot.itemId);
@@ -1099,6 +1107,17 @@ namespace Crusaders30XX.ECS.Services
 
 			if (eligible.Count == 0) return (-1, string.Empty, string.Empty);
 			return eligible[rng.Next(eligible.Count)];
+		}
+
+		private static HashSet<EquipmentSlot> GetOccupiedEquipmentSlots(LoadoutDefinition loadout)
+		{
+			var occupied = new HashSet<EquipmentSlot>();
+			if (loadout == null) return occupied;
+			if (!string.IsNullOrWhiteSpace(loadout.headId)) occupied.Add(EquipmentSlot.Head);
+			if (!string.IsNullOrWhiteSpace(loadout.chestId)) occupied.Add(EquipmentSlot.Chest);
+			if (!string.IsNullOrWhiteSpace(loadout.armsId)) occupied.Add(EquipmentSlot.Arms);
+			if (!string.IsNullOrWhiteSpace(loadout.legsId)) occupied.Add(EquipmentSlot.Legs);
+			return occupied;
 		}
 
 		private static string PickUnshown(IEnumerable<string> allIds, List<string> shownIds, Random rng)

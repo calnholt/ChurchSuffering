@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crusaders30XX — Climb Scene Reimagined</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&amp;family=New+Rocker&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08090a;
+    --coal: #111315;
+    --paper: #eee7dc;
+    --muted: #b7afa3;
+    --red: #e52c48;
+    --red-dark: #8d1428;
+    --gold: #d3a85e;
+    --green: #8fd1a7;
+    --game-w: 1920px;
+    --game-h: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--paper);
+    background:
+      radial-gradient(circle at 50% 0, #24191b 0, transparent 45%),
+      #070708;
+    font-family: "Chakra Petch", sans-serif;
+  }
+
+  button { font: inherit; }
+
+  .document-head {
+    width: min(1180px, calc(100vw - 40px));
+    margin: 0 auto;
+    padding: 34px 0 22px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+    align-items: end;
+  }
+
+  .eyebrow,
+  .variant-kicker,
+  .micro-label {
+    color: var(--red);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+  }
+
+  h1, h2, h3, .display-face { font-family: "New Rocker", serif; }
+
+  .document-head h1 {
+    margin: 5px 0 7px;
+    font-size: clamp(29px, 4vw, 48px);
+    font-weight: 400;
+    letter-spacing: .025em;
+  }
+
+  .document-head p {
+    margin: 0;
+    max-width: 720px;
+    color: #aaa39c;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .variant-section { display: block; }
+
+  .variant-copy {
+    width: min(1180px, calc(100vw - 40px));
+    margin: 0 auto 15px;
+    display: grid;
+    grid-template-columns: 1fr minmax(440px, 1.25fr);
+    align-items: end;
+    gap: 32px;
+  }
+
+  .variant-copy h2 {
+    margin: 3px 0 0;
+    font-size: 28px;
+    font-weight: 400;
+  }
+
+  .variant-copy p {
+    margin: 0;
+    color: #9f9992;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .motion-lab {
+    width: min(1180px, calc(100vw - 40px));
+    margin: 0 auto 18px;
+    padding: 15px 17px 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px 28px;
+    border: 1px solid #383336;
+    background: linear-gradient(110deg, rgba(40,20,25,.76), rgba(10,11,12,.94) 42%);
+    box-shadow: 0 16px 45px rgba(0,0,0,.28);
+  }
+
+  .motion-lab-copy { align-self: center; }
+  .motion-lab-copy strong { display: block; margin-top: 3px; color: #e9dfd3; font-size: 14px; }
+  .motion-lab-copy p { margin: 4px 0 0; max-width: 620px; color: #918b85; font-size: 11px; line-height: 1.45; }
+
+  .demo-buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .demo-button {
+    min-height: 34px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,.18);
+    color: #bbb2a7;
+    background: rgba(5,6,7,.74);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    transition: border-color .15s, color .15s, background .15s, transform .15s;
+  }
+
+  .demo-button:hover { border-color: rgba(255,255,255,.58); color: white; transform: translateY(-1px); }
+  .demo-button:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+  .demo-buttons { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.1); }
+  .demo-buttons::before { content: "Play exit:"; margin-right: 3px; color: #7f7872; font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  .demo-button { min-height: 31px; padding: 7px 10px; }
+  .demo-button[data-demo="mixed"] { border-color: rgba(229,44,72,.58); color: #ffacb8; }
+
+  .viewport-shell {
+    width: min(1480px, calc(100vw - 32px));
+    margin: 0 auto 54px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #383336;
+    background: #090909;
+    box-shadow: 0 30px 100px rgba(0,0,0,.65);
+  }
+
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    transform-origin: top left;
+    background: #13100e;
+  }
+
+  .scene-bg {
+    position: absolute;
+    inset: 0;
+    background: url('../Content/desert_background_location.png') center / cover no-repeat;
+  }
+
+  .scene-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8,8,9,.28), transparent 24%, rgba(6,7,8,.28) 70%, rgba(4,5,6,.86));
+  }
+
+  .resource-cluster {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .resource {
+    width: 72px;
+    min-width: 72px;
+    height: 42px;
+    position: relative;
+    padding: 4px 7px 4px 6px;
+    display: grid;
+    grid-template-columns: 27px 23px;
+    align-items: center;
+    gap: 3px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 22px;
+    color: white;
+    background: rgba(7,8,9,.72);
+    box-shadow: 0 6px 20px rgba(0,0,0,.32);
+    transition: border-color .16s, background .16s;
+  }
+
+  .resource img { width: 27px; height: 27px; object-fit: contain; }
+  .resource b { font-size: 19px; line-height: 1; text-align: center; }
+  .resource .delta {
+    min-width: 28px;
+    height: 20px;
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    padding: 2px 5px;
+    border: 1px solid rgba(143,209,167,.78);
+    border-radius: 10px;
+    color: var(--green);
+    background: #102419;
+    box-shadow: 0 4px 12px rgba(0,0,0,.5);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+    transition: opacity .16s;
+  }
+  .resource.is-changing { border-color: rgba(255,255,255,.5); background: rgba(41,26,28,.92); }
+  .resource.is-changing .delta { visibility: visible; opacity: 1; }
+  .resource.is-negative .delta { border-color: rgba(255,104,122,.78); color: #ff8292; background: #301018; }
+
+  .overview-orb {
+    width: 52px;
+    height: 52px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.33);
+    border-radius: 50%;
+    color: white;
+    background: rgba(8,9,10,.74);
+    cursor: pointer;
+    box-shadow: 0 7px 24px rgba(0,0,0,.42);
+  }
+
+  .overview-orb::before,
+  .overview-orb::after {
+    content: "";
+    position: absolute;
+    width: 17px;
+    height: 24px;
+    border: 1px solid currentColor;
+    background: #201619;
+    transform: rotate(-7deg);
+  }
+
+  .overview-orb::after { transform: translate(4px, -3px) rotate(5deg); }
+  .overview-orb span { position: absolute; top: 59px; white-space: nowrap; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; opacity: 0; transition: opacity .15s; }
+  .overview-orb:hover { color: var(--red); border-color: var(--red); }
+  .overview-orb:hover span { opacity: 1; }
+
+  .slot {
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    transform-origin: center;
+    transition: transform .18s ease-out;
+  }
+
+  .slot:focus-visible { filter: brightness(1.08); }
+  .slot:hover { transform: scale(1.012); }
+
+  .slot::before {
+    content: "";
+    position: absolute;
+    z-index: 28;
+    inset: 0;
+    background:
+      repeating-linear-gradient(135deg, transparent 0 13px, rgba(229,44,72,.14) 13px 17px),
+      rgba(34,5,12,.42);
+    box-shadow: inset 0 0 35px rgba(229,44,72,.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .24s ease-out;
+  }
+
+  .slot.will-leave::before {
+    opacity: 1;
+    animation:
+      leavePreviewPulse 1.15s ease-in-out infinite alternate,
+      leavePreviewDrift 1.8s linear infinite;
+  }
+
+  @keyframes leavePreviewPulse {
+    from { background-color: rgba(34,5,12,.28); }
+    to { background-color: rgba(63,6,18,.58); }
+  }
+
+  @keyframes leavePreviewDrift {
+    to { background-position: 24px 0, 0 0; }
+  }
+
+  .choice-stats {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 58px 64px;
+    color: #eee7dc;
+  }
+
+  .choice-stat {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .stat-label {
+    color: #918a83;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    color: #f1ece5;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .stat-value img { width: 19px; height: 19px; object-fit: contain; }
+  .stat-outcome .stat-value { color: #aee0bd; }
+  .choice-stats.is-cost .stat-outcome .stat-value { color: #ffacb8; }
+  .stat-time .stat-value { color: #f1d194; }
+  .stat-duration .stat-value { color: #b9d7e2; }
+  .stat-value.is-pips { min-height: 10px; gap: 3px; }
+  .stat-pip { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; }
+  .stat-time .stat-pip { background: #f2eee8; box-shadow: 0 0 5px rgba(242,238,232,.34); }
+  .stat-duration .stat-pip { background: #e52c48; box-shadow: 0 0 5px rgba(229,44,72,.34); }
+  .stat-duration .stat-pip.is-preview-hollow { border: 1px solid #ff5c73; background: transparent; box-shadow: 0 0 5px rgba(229,44,72,.25); animation: staysPipFlash 2s ease-in-out infinite; }
+  @keyframes staysPipFlash {
+    0%, 100% { opacity: .28; }
+    50% { opacity: 1; }
+  }
+  .choice-stats.no-outcome { grid-template-columns: 1fr 1fr; }
+
+  /* A: one continuous, strongly ordered information rail. */
+  .stats-segmented .choice-stats {
+    height: 42px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.17);
+    border-radius: 4px;
+    background: rgba(5,6,7,.7);
+  }
+
+  .stats-segmented .choice-stat { padding: 5px 7px; gap: 4px; }
+  .stats-segmented .choice-stat + .choice-stat { border-left: 1px solid rgba(255,255,255,.13); }
+
+
+  /* Variant 1 — Pilgrim's Road */
+  .road-screen { position: absolute; inset: 0; }
+  .road-screen .scene-bg { filter: saturate(.76) sepia(.12); }
+
+  .road-topbar {
+    position: absolute;
+    z-index: 20;
+    inset: 26px 34px auto;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .road-title { flex: 0 0 auto; display: flex; align-items: center; gap: 17px; text-shadow: 0 3px 15px black; }
+  .road-title .crest { width: 45px; height: 45px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.35); transform: rotate(45deg); background: rgba(116,17,34,.82); }
+  .road-title .crest::before { content: "†"; font: 33px/1 Georgia, serif; transform: rotate(-45deg); }
+  .road-title h3 { margin: 0; font-size: 29px; font-weight: 400; white-space: nowrap; }
+  .road-title small { display: block; color: #d1c8bc; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; }
+  .road-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 18px; }
+
+  .road-progress {
+    min-width: 0;
+    flex: 1 1 auto;
+    position: relative;
+    z-index: 16;
+    margin: 0 38px 0 52px;
+  }
+
+  .road-progress-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 4px; text-shadow: 0 2px 10px black; }
+  .road-progress-head span:first-child { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; }
+  .road-progress-head strong { color: #eadfce; font: 19px "New Rocker", serif; }
+
+  .timeline { display: flex; align-items: center; }
+  .road-progress .timeline { height: 23px; padding: 0 10px; }
+  .road-progress .timeline { position: relative; }
+  .road-progress .time-mark { flex: 1; height: 18px; position: relative; }
+  .road-progress .time-mark::before { content: ""; position: absolute; z-index: 2; left: 0; top: 5px; width: 8px; height: 8px; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; background: #151313; }
+  .road-progress .time-mark::after { content: ""; position: absolute; z-index: 1; left: 10px; right: 0; top: 9px; height: 2px; background: rgba(255,255,255,.22); }
+  .road-progress .time-mark.is-used::before { background: #e9dfd0; }
+  .road-progress .time-mark.is-line-used::after { background: #e9dfd0; }
+  .road-progress .time-mark.is-preview::before { background: var(--red); border-color: #ff7b8e; box-shadow: 0 0 10px var(--red); }
+  .road-progress .time-mark.is-line-preview::after { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .road-progress .time-mark.is-refresh::before { left: -3px; top: 2px; width: 14px; height: 14px; border: 2px solid var(--gold); box-shadow: 0 0 0 2px rgba(8,9,10,.72), 0 0 13px rgba(211,168,94,.78); }
+  .road-progress .time-mark.is-refresh.is-preview::before { border-color: #ffd58b; box-shadow: 0 0 0 2px rgba(8,9,10,.72), 0 0 15px var(--red); }
+  .road-progress .time-mark.is-refresh > span { position: absolute; top: 19px; left: 4px; width: 44px; transform: translateX(-50%); color: #eed29e; font-size: 9px; font-weight: 700; letter-spacing: .12em; text-align: center; text-shadow: 0 1px 6px black; }
+  .timeline-destination {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    margin-left: 5px;
+    display: grid;
+    place-items: center;
+    border: 2px solid #eee3d5;
+    color: white;
+    background: #751629;
+    box-shadow: 0 0 16px rgba(229,44,72,.5);
+    transform: rotate(45deg);
+  }
+  .timeline-destination span { font: 21px/1 Georgia, serif; transform: rotate(-45deg); }
+
+  .journey-road {
+    position: absolute;
+    z-index: 3;
+    left: 365px;
+    right: 365px;
+    top: 110px;
+    bottom: 55px;
+  }
+
+  .journey-road::before {
+    content: "";
+    position: absolute;
+    left: 14%;
+    top: -30px;
+    width: 74%;
+    height: 810px;
+    border: 62px solid rgba(206,171,115,.16);
+    border-left-color: transparent;
+    border-right-color: transparent;
+    border-radius: 50%;
+    transform: rotate(-8deg);
+    filter: blur(1px);
+  }
+
+  .encounter-waystone {
+    position: absolute;
+    width: 330px;
+    height: 480px;
+    border-radius: 150px 150px 18px 18px;
+    overflow: hidden;
+    color: white;
+    background: rgba(8,9,10,.72);
+    box-shadow: 0 20px 46px rgba(0,0,0,.48), 0 5px 14px rgba(0,0,0,.32);
+  }
+
+  .encounter-waystone.one { left: 42px; bottom: 70px; }
+  .encounter-waystone.two { left: 430px; top: 35px; }
+  .encounter-waystone.three { right: 42px; bottom: 48px; }
+  .waystone-art { position: absolute; inset: 0 0 108px; overflow: hidden; background-position: center; background-size: cover; }
+  .waystone-art.gothic { background-image: url('../Content/Battle_Backgrounds/gothic-battle-background.png'); }
+  .waystone-art.volcano { background-image: url('../Content/Battle_Backgrounds/volcano-battle-background.png'); }
+  .waystone-art.jungle { background-image: url('../Content/Battle_Backgrounds/jungle-battle-background.png'); }
+  .waystone-art.tundra { background-image: url('../Content/Battle_Backgrounds/tundra-battle-background.png'); }
+  .waystone-art.desert { background-image: url('../Content/Battle_Backgrounds/desert-battle-background.png'); }
+  .waystone-art img { position: relative; z-index: 1; width: 100%; height: 120%; object-fit: contain; object-position: center top; filter: drop-shadow(0 12px 5px rgba(0,0,0,.5)); }
+  .waystone-body { position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; height: 136px; padding: 18px 18px 16px; background: linear-gradient(180deg, rgba(12,13,14,.84), #090a0b); }
+  .waystone-art.gothic + .waystone-body { background: linear-gradient(180deg, rgba(49,28,62,.92), rgba(16,10,21,.98)); }
+  .waystone-art.jungle + .waystone-body { background: linear-gradient(180deg, rgba(24,49,33,.92), rgba(8,17,11,.98)); }
+  .waystone-art.volcano + .waystone-body { background: linear-gradient(180deg, rgba(67,23,29,.92), rgba(22,7,10,.98)); }
+  .waystone-art.tundra + .waystone-body { background: linear-gradient(180deg, rgba(24,40,65,.92), rgba(8,13,22,.98)); }
+  .waystone-art.desert + .waystone-body { background: linear-gradient(180deg, rgba(61,48,31,.92), rgba(22,17,10,.98)); }
+  .waystone-body h3 { margin: 0 0 8px; padding-top: 3px; font-family: "New Rocker", serif; font-size: 28px; font-weight: 400; line-height: 1.1; }
+  .waystone-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+  .road-shop {
+    position: absolute;
+    z-index: 12;
+    top: 120px;
+    left: 36px;
+    width: 315px;
+  }
+
+  .road-events {
+    position: absolute;
+    z-index: 12;
+    top: 135px;
+    right: 36px;
+    width: 315px;
+  }
+
+  .shop-surface { transition: filter .15s; }
+
+  .shop-ticket {
+    min-height: 105px;
+    margin-bottom: 8px;
+    padding: 12px 13px 11px 86px;
+    border-radius: 7px 2px 2px 7px;
+    background: rgba(16,17,18,.9);
+    box-shadow: 0 10px 26px rgba(0,0,0,.42), 0 3px 9px rgba(0,0,0,.28);
+  }
+
+  .shop-ticket .item-art { position: absolute; inset: 0 auto 0 0; width: 78px; overflow: hidden; clip-path: polygon(0 0, 100% 0, 84% 100%, 0 100%); background: rgba(236,228,214,.95); }
+  .shop-ticket .item-art.card-art { background: rgba(141,20,40,.96); }
+  .shop-ticket .item-art.medal-art { background: rgba(7,8,9,.97); }
+  .shop-ticket .item-art.equipment-art { background: rgba(236,228,214,.95); }
+  .shop-ticket .item-thumb { position: absolute; left: 7px; top: 10px; width: 64px; height: 84px; object-fit: contain; }
+  .shop-ticket h4 { margin: 1px 0 7px; color: white; font-size: 18px; line-height: 1.1; }
+  .shop-ticket .ticket-kind { display: block; color: #ff8797; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .shop-ticket .choice-stats { grid-template-columns: minmax(0, 1fr) 58px; }
+
+  .event-pennant {
+    min-height: 225px;
+    margin-bottom: 15px;
+    padding: 20px 16px 82px 95px;
+    clip-path: polygon(0 0, 100% 0, 100% 86%, 92% 100%, 84% 86%, 76% 100%, 68% 86%, 60% 100%, 52% 86%, 44% 100%, 36% 86%, 28% 100%, 20% 86%, 12% 100%, 0 86%);
+    background: linear-gradient(135deg, rgba(73,49,29,.94), rgba(11,12,13,.94) 48%);
+    filter: drop-shadow(0 14px 18px rgba(0,0,0,.48)) drop-shadow(0 4px 7px rgba(0,0,0,.26));
+  }
+
+  .event-pennant.character { min-height: 225px; padding: 20px 16px 82px 115px; background: linear-gradient(135deg, rgba(93,19,37,.9), rgba(10,11,12,.94) 55%); }
+  .event-pennant .event-glyph { position: absolute; left: 24px; top: 24px; width: 50px; height: 50px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; font: 35px/1 "New Rocker"; }
+  .event-pennant .event-portrait { position: absolute; left: 7px; top: 18px; width: 100px; height: 155px; object-fit: contain; object-position: top; }
+  .event-pennant h4 { margin: 0 0 7px; font-family: "New Rocker", serif; font-size: 25px; line-height: 1.2; }
+  .event-pennant p { margin: 0 0 12px; color: #d5cdc2; font-size: 15px; line-height: 1.35; }
+  .event-pennant .choice-stats { position: absolute; left: 95px; right: 16px; bottom: 42px; width: auto; }
+  .event-pennant.character .choice-stats { left: 115px; }
+
+  .screen.is-demo-running .slot { pointer-events: none; }
+  .slot.is-demo-leaving {
+    z-index: 40;
+    pointer-events: none;
+    will-change: transform, opacity, filter;
+    animation-delay: var(--exit-delay, 0ms) !important;
+  }
+
+  .slot.is-demo-leaving { animation: ashesExit 1.05s cubic-bezier(.36,.02,.68,.3) both; }
+
+  .slot.is-demo-entering {
+    z-index: 42;
+    pointer-events: none;
+    will-change: transform, opacity, filter;
+    animation-delay: var(--enter-delay, 0ms) !important;
+  }
+
+  .slot.is-purchasing,
+  .slot.is-appearing {
+    z-index: 45;
+    pointer-events: none;
+    will-change: transform, opacity, filter;
+  }
+
+  .shop-ticket.is-purchasing { animation: purchaseReplacement .94s linear both; }
+  .shop-ticket.is-demo-entering { animation: shopArrival .62s cubic-bezier(0,0,.2,1) both; }
+  .encounter-waystone.one.is-appearing,
+  .encounter-waystone.three.is-appearing,
+  .encounter-waystone.one.is-demo-entering,
+  .encounter-waystone.three.is-demo-entering { animation: encounterArrivalTop .72s cubic-bezier(0,0,.2,1) both; }
+  .encounter-waystone.two.is-appearing,
+  .encounter-waystone.two.is-demo-entering { animation: encounterArrivalBottom .72s cubic-bezier(0,0,.2,1) both; }
+  .event-pennant.is-appearing,
+  .event-pennant.is-demo-entering { animation: eventArrivalRight .62s cubic-bezier(0,0,.2,1) both; }
+
+  @keyframes ashesExit {
+    0% { opacity: 1; transform: translateY(0); filter: grayscale(0) sepia(0) blur(0); box-shadow: 0 0 0 rgba(255,121,70,0); }
+    30% { opacity: 1; transform: translateY(0); filter: grayscale(.3) sepia(.7) brightness(1.25); box-shadow: inset 0 -18px 35px rgba(229,44,72,.32), 0 0 18px rgba(255,121,70,.2); }
+    68% { opacity: .64; filter: grayscale(.72) sepia(1) brightness(.75) blur(2px); }
+    100% { opacity: 0; transform: translateY(-48px); filter: grayscale(1) sepia(1) brightness(.35) blur(9px); box-shadow: inset 0 -80px 55px rgba(10,10,10,.8), 0 0 35px rgba(255,121,70,0); }
+  }
+
+  @keyframes purchaseReplacement {
+    0% { opacity: 1; transform: translateX(0); filter: brightness(1); animation-timing-function: cubic-bezier(.4,0,1,1); }
+    44% { opacity: 0; transform: translateX(105px); filter: brightness(.72) blur(3px); }
+    45% { opacity: 0; transform: translateX(-105px); filter: brightness(.72) blur(3px); animation-timing-function: cubic-bezier(0,0,.2,1); }
+    100% { opacity: 1; transform: translateX(0); filter: brightness(1) blur(0); }
+  }
+
+  @keyframes shopArrival {
+    from { opacity: 0; transform: translateX(-105px); filter: brightness(.72) blur(3px); }
+    to { opacity: 1; transform: translateX(0); filter: brightness(1) blur(0); }
+  }
+
+  @keyframes encounterArrivalTop {
+    from { opacity: 0; transform: translateY(-220px); filter: brightness(.58) blur(5px); }
+    to { opacity: 1; transform: translateY(0); filter: brightness(1) blur(0); }
+  }
+
+  @keyframes encounterArrivalBottom {
+    from { opacity: 0; transform: translateY(220px); filter: brightness(.58) blur(5px); }
+    to { opacity: 1; transform: translateY(0); filter: brightness(1) blur(0); }
+  }
+
+  @keyframes eventArrivalRight {
+    from { opacity: 0; transform: translateX(120px); filter: brightness(.65) blur(3px); }
+    to { opacity: 1; transform: translateX(0); filter: brightness(1) blur(0); }
+  }
+
+  @media (max-width: 820px) {
+    .document-head, .variant-copy { grid-template-columns: 1fr; align-items: start; }
+    .variant-copy { gap: 8px; }
+    .motion-lab { grid-template-columns: 1fr; }
+    .demo-buttons { grid-column: auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body>
+  <header class="document-head">
+    <div>
+      <div class="eyebrow">Scene exploration · July 2026</div>
+      <h1>Reimagining the Climb</h1>
+      <p>A spatial direction for making the Climb feel like a journey. Hover any offer, encounter, or event to preview time, resource changes, expiring choices, and shop refreshes.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="variant-section is-active" data-variant="road">
+      <div class="variant-copy">
+        <div><div class="variant-kicker">Selected direction · Spatial</div><h2>Pilgrim’s Road</h2></div>
+        <p>The encounters become places along a winding center road. Shops read as roadside inventory tickets, while rare events arrive as hanging pennants. This preserves simultaneous choice visibility but breaks the spreadsheet grid most aggressively.</p>
+      </div>
+      <div class="motion-lab" aria-label="Animation prototype controls">
+        <div class="motion-lab-copy">
+          <div class="micro-label">Climb motion study</div>
+          <strong>Ashes + directional turnover</strong>
+          <p>Each exit demo now completes with its replacement entering. Inside the scene, click a shop item to replay purchase-and-replace, or click an encounter or event to replay its directional arrival.</p>
+        </div>
+        <div class="demo-buttons" aria-label="Animation scenarios">
+          <button class="demo-button" type="button" data-demo="encounter">Encounter expires</button>
+          <button class="demo-button" type="button" data-demo="event">Passing event</button>
+          <button class="demo-button" type="button" data-demo="shop">Shop refresh</button>
+          <button class="demo-button" type="button" data-demo="mixed">Mixed +5 time</button>
+        </div>
+      </div>
+      <div class="viewport-shell">
+        <div class="viewport screen road-screen stats-segmented">
+          <div class="scene-bg"></div>
+          <header class="road-topbar">
+            <div class="road-title"><div class="crest"></div><div><h3>The Climb</h3></div></div>
+            <div class="road-progress">
+              <div class="road-progress-head"><span>Distance climbed</span><strong><span data-time-readout>6</span> / 32</strong></div>
+              <div class="timeline" data-timeline></div>
+            </div>
+            <div class="road-actions">
+              <div class="resource-cluster" data-resources></div>
+              <button class="overview-orb" type="button" aria-label="Open run overview"><span>Run overview</span></button>
+            </div>
+          </header>
+
+          <aside class="road-shop shop-surface">
+            <div class="shop-ticket slot" tabindex="0" data-time="1" data-duration="2" data-r="-1" data-w="-1" data-b="0">
+              <div class="item-art card-art"><img class="item-thumb" src="../Content/CardArt/smite.png" alt=""></div><span class="ticket-kind">Upgrade</span><h4>Smite+</h4>
+              <div class="choice-stats is-cost"><div class="choice-stat stat-outcome"><span class="stat-label">Price</span><span class="stat-value">− <img src="../Content/Climb_UI/red_gem.png" alt="red">1 <img src="../Content/Climb_UI/white_gem.png" alt="white">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">1</span></div></div>
+            </div>
+            <div class="shop-ticket slot" tabindex="0" data-time="2" data-duration="2" data-r="-1" data-w="-1" data-b="0">
+              <div class="item-art card-art"><img class="item-thumb" src="../Content/CardArt/zealous_vow.png" alt=""></div><span class="ticket-kind">Replace</span><h4>Zealous Vow</h4>
+              <div class="choice-stats is-cost"><div class="choice-stat stat-outcome"><span class="stat-label">Price</span><span class="stat-value">− <img src="../Content/Climb_UI/red_gem.png" alt="red">1 <img src="../Content/Climb_UI/white_gem.png" alt="white">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">2</span></div></div>
+            </div>
+            <div class="shop-ticket slot" tabindex="0" data-time="0" data-duration="2" data-r="-1" data-w="0" data-b="0">
+              <div class="item-art medal-art"><img class="item-thumb" src="../Content/Medals/st_luke.png" alt=""></div><span class="ticket-kind">Medal</span><h4>St. Luke</h4>
+              <div class="choice-stats is-cost"><div class="choice-stat stat-outcome"><span class="stat-label">Price</span><span class="stat-value">− <img src="../Content/Climb_UI/red_gem.png" alt="red">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">0</span></div></div>
+            </div>
+            <div class="shop-ticket slot" tabindex="0" data-time="1" data-duration="2" data-r="0" data-w="-1" data-b="0">
+              <div class="item-art medal-art"><img class="item-thumb" src="../Content/Medals/st_michael.png" alt=""></div><span class="ticket-kind">Medal</span><h4>St. Michael</h4>
+              <div class="choice-stats is-cost"><div class="choice-stat stat-outcome"><span class="stat-label">Price</span><span class="stat-value">− <img src="../Content/Climb_UI/white_gem.png" alt="white">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">1</span></div></div>
+            </div>
+            <div class="shop-ticket slot" tabindex="0" data-time="1" data-duration="2" data-r="0" data-w="-1" data-b="0">
+              <div class="item-art equipment-art"><img class="item-thumb" src="../Content/Equipment/knightly_helm.png" alt=""></div><span class="ticket-kind">Gear</span><h4>Knightly Helm</h4>
+              <div class="choice-stats is-cost"><div class="choice-stat stat-outcome"><span class="stat-label">Price</span><span class="stat-value">− <img src="../Content/Climb_UI/white_gem.png" alt="white">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">1</span></div></div>
+            </div>
+          </aside>
+
+          <div class="journey-road">
+            <article class="encounter-waystone one slot" tabindex="0" data-time="3" data-duration="3" data-r="1" data-w="1" data-b="1">
+              <div class="waystone-art gothic"><img src="../Content/Enemies/Skeleton.png" alt="Skeleton enemy"></div>
+              <div class="waystone-body"><h3>Gravebound</h3><div class="choice-stats is-gain"><div class="choice-stat stat-outcome"><span class="stat-label">Reward</span><span class="stat-value">+ <img src="../Content/Climb_UI/red_gem.png" alt="red">1 <img src="../Content/Climb_UI/white_gem.png" alt="white">1 <img src="../Content/Climb_UI/black_gem.png" alt="black">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">3</span></div><div class="choice-stat stat-duration"><span class="stat-label">Stays</span><span class="stat-value">3</span></div></div></div>
+            </article>
+            <article class="encounter-waystone two slot" tabindex="0" data-time="2" data-duration="2" data-r="0" data-w="1" data-b="0">
+              <div class="waystone-art volcano"><img src="../Content/Enemies/Demon.png" alt="Demon enemy"></div>
+              <div class="waystone-body"><h3>Cinderfiend</h3><div class="choice-stats is-gain"><div class="choice-stat stat-outcome"><span class="stat-label">Reward</span><span class="stat-value">+ <img src="../Content/Climb_UI/white_gem.png" alt="white">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">2</span></div><div class="choice-stat stat-duration"><span class="stat-label">Stays</span><span class="stat-value">2</span></div></div></div>
+            </article>
+            <article class="encounter-waystone three slot" tabindex="0" data-time="5" data-duration="5" data-r="1" data-w="1" data-b="1">
+              <div class="waystone-art jungle"><img src="../Content/Enemies/Thornreaver.png" alt="Thornreaver enemy"></div>
+              <div class="waystone-body"><h3>Thornreaver</h3><div class="choice-stats is-gain"><div class="choice-stat stat-outcome"><span class="stat-label">Reward</span><span class="stat-value">+ <img src="../Content/Climb_UI/red_gem.png" alt="red">1 <img src="../Content/Climb_UI/white_gem.png" alt="white">1 <img src="../Content/Climb_UI/black_gem.png" alt="black">1</span></div><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">5</span></div><div class="choice-stat stat-duration"><span class="stat-label">Stays</span><span class="stat-value">5</span></div></div></div>
+            </article>
+          </div>
+
+          <aside class="road-events events-surface">
+            <div class="event-pennant slot" tabindex="0" data-time="0" data-duration="3"><div class="event-glyph">?</div><h4>Unknown Hazard</h4><p>Something waits beyond the road. Its nature—and its price—remain hidden.</p><div class="choice-stats no-outcome"><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">0</span></div><div class="choice-stat stat-duration"><span class="stat-label">Stays</span><span class="stat-value">3</span></div></div></div>
+            <div class="event-pennant character slot" tabindex="0" data-time="1" data-duration="4"><img class="event-portrait" src="../Content/character/nun.png" alt="Nun"><h4>Sister Mara</h4><p>Gain +2 Temperance in the next battle.</p><div class="choice-stats no-outcome"><div class="choice-stat stat-time"><span class="stat-label">Time</span><span class="stat-value">1</span></div><div class="choice-stat stat-duration"><span class="stat-label">Stays</span><span class="stat-value">4</span></div></div></div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+<script>
+  const MAX_TIME = 32;
+  const SHOP_REFRESH_INTERVAL = 8;
+  const BASE = { time: 6, r: 2, w: 1, b: 1 };
+  const RESOURCE_ASSETS = {
+    r: '../Content/Climb_UI/red_gem.png',
+    w: '../Content/Climb_UI/white_gem.png',
+    b: '../Content/Climb_UI/black_gem.png'
+  };
+
+  function createResourceCluster(cluster) {
+    cluster.innerHTML = ['r', 'w', 'b'].map(type => `
+      <div class="resource" data-type="${type}">
+        <img src="${RESOURCE_ASSETS[type]}" alt="${type === 'r' ? 'red' : type === 'w' ? 'white' : 'black'} resource">
+        <b>${BASE[type]}</b><span class="delta"></span>
+      </div>`).join('');
+  }
+
+  function createTimeline(timeline) {
+    for (let i = 1; i <= MAX_TIME; i += 1) {
+      const mark = document.createElement('span');
+      mark.className = 'time-mark';
+      mark.dataset.step = String(i);
+      if (i % SHOP_REFRESH_INTERVAL === 0 && i < MAX_TIME) {
+        mark.classList.add('is-refresh');
+        mark.innerHTML = '<span>SHOP</span>';
+      }
+      timeline.append(mark);
+    }
+    const destination = document.createElement('span');
+    destination.className = 'timeline-destination';
+    destination.setAttribute('aria-label', 'Final destination: The Gate');
+    destination.innerHTML = '<span>†</span>';
+    timeline.append(destination);
+  }
+
+  function renderStatPips(value, count) {
+    count = Math.max(0, Number(count) || 0);
+    if (Number(value.dataset.renderedCount) === count) return;
+    value.replaceChildren();
+    value.dataset.renderedCount = String(count);
+    const isTime = value.closest('.stat-time') !== null;
+    value.setAttribute('aria-label', `${count} ${isTime ? 'time' : 'stays'}`);
+    for (let i = 0; i < count; i += 1) {
+      const pip = document.createElement('span');
+      pip.className = 'stat-pip';
+      pip.setAttribute('aria-hidden', 'true');
+      value.append(pip);
+    }
+  }
+
+  function createStatPips(screen) {
+    screen.querySelectorAll('.stat-time .stat-value, .stat-duration .stat-value').forEach(value => {
+      if (value.classList.contains('is-pips')) return;
+      const count = Math.max(0, Number(value.textContent.trim()) || 0);
+      value.textContent = '';
+      value.classList.add('is-pips');
+      value.dataset.baseCount = String(count);
+      renderStatPips(value, count);
+    });
+  }
+
+  function nextShopRefresh(time) {
+    return (Math.floor(time / SHOP_REFRESH_INTERVAL) + 1) * SHOP_REFRESH_INTERVAL;
+  }
+
+  function findLeavingChoices(screen, timeDelta, source) {
+    if (timeDelta <= 0) return [];
+    const projectedTime = Math.min(MAX_TIME, BASE.time + timeDelta);
+    const refreshAt = nextShopRefresh(BASE.time);
+    const leaving = new Set();
+
+    if (projectedTime >= refreshAt && refreshAt < MAX_TIME) {
+      screen.querySelectorAll('.shop-ticket.slot').forEach(slot => leaving.add(slot));
+    }
+
+    screen.querySelectorAll('.encounter-waystone.slot, .event-pennant.slot').forEach(slot => {
+      const remaining = Number(slot.dataset.duration || 0);
+      if (remaining > 0 && timeDelta >= remaining) leaving.add(slot);
+    });
+
+    leaving.delete(source);
+    return [...leaving];
+  }
+
+  function renderStaysPreview(screen, source, timeDelta, projectedTime) {
+    const refreshAt = nextShopRefresh(BASE.time);
+    screen.querySelectorAll('.slot').forEach(choice => {
+      const value = choice.querySelector('.stat-duration .stat-value');
+      if (!value) return;
+      const baseCount = Math.max(0, Number(value.dataset.baseCount) || 0);
+      let projectedCount = baseCount;
+      if (source && choice !== source && timeDelta > 0) {
+        projectedCount = choice.classList.contains('shop-ticket')
+          ? Math.max(0, refreshAt - projectedTime)
+          : Math.max(0, baseCount - timeDelta);
+      }
+      renderStatPips(value, baseCount);
+      [...value.children].forEach((pip, index) => {
+        pip.classList.toggle('is-preview-hollow', index >= projectedCount);
+      });
+      value.setAttribute('aria-label', `${projectedCount} stays${projectedCount < baseCount ? `, ${baseCount - projectedCount} expiring` : ''}`);
+    });
+  }
+
+  function renderPreview(screen, slot) {
+    const timeDelta = slot ? Number(slot.dataset.time || 0) : 0;
+    const projectedTime = Math.min(MAX_TIME, BASE.time + timeDelta);
+    const deltas = {
+      r: slot ? Number(slot.dataset.r || 0) : 0,
+      w: slot ? Number(slot.dataset.w || 0) : 0,
+      b: slot ? Number(slot.dataset.b || 0) : 0
+    };
+
+    screen.querySelectorAll('[data-time-readout]').forEach(el => { el.textContent = projectedTime; });
+    screen.querySelectorAll('.time-mark').forEach(mark => {
+      const step = Number(mark.dataset.step);
+      mark.classList.toggle('is-used', step <= BASE.time);
+      mark.classList.toggle('is-preview', Boolean(slot) && step > BASE.time && step <= projectedTime);
+      mark.classList.toggle('is-line-used', step < BASE.time);
+      mark.classList.toggle('is-line-preview', Boolean(slot) && step >= BASE.time && step < projectedTime);
+    });
+
+    screen.querySelectorAll('.resource').forEach(resource => {
+      const type = resource.dataset.type;
+      const delta = deltas[type];
+      resource.querySelector('b').textContent = String(Math.max(0, BASE[type] + delta));
+      const badge = resource.querySelector('.delta');
+      badge.textContent = delta > 0 ? `+${delta}` : String(delta);
+      resource.classList.toggle('is-changing', Boolean(slot) && delta !== 0);
+      resource.classList.toggle('is-negative', delta < 0);
+    });
+
+    const refreshAt = nextShopRefresh(BASE.time);
+    const crossesRefresh = Boolean(slot) && timeDelta > 0 && BASE.time < refreshAt && projectedTime >= refreshAt;
+    screen.classList.toggle('is-crossing-refresh', crossesRefresh);
+    screen.querySelectorAll('.slot').forEach(el => el.classList.toggle('is-preview-source', el === slot));
+    renderStaysPreview(screen, slot, timeDelta, projectedTime);
+
+    const leavingChoices = new Set(findLeavingChoices(screen, timeDelta, slot));
+    screen.querySelectorAll('.slot').forEach(choice => {
+      const willLeave = leavingChoices.has(choice);
+      choice.classList.toggle('will-leave', willLeave);
+    });
+
+  }
+
+  function setupScreen(screen) {
+    screen.querySelectorAll('[data-resources]').forEach(createResourceCluster);
+    screen.querySelectorAll('[data-timeline]').forEach(createTimeline);
+    createStatPips(screen);
+    renderPreview(screen, null);
+
+    screen.querySelectorAll('.slot').forEach(slot => {
+      slot.addEventListener('mouseenter', () => renderPreview(screen, slot));
+      slot.addEventListener('mouseleave', () => renderPreview(screen, null));
+      slot.addEventListener('focus', () => renderPreview(screen, slot));
+      slot.addEventListener('blur', () => renderPreview(screen, null));
+      slot.addEventListener('click', () => playSlotInteraction(screen, slot));
+    });
+
+  }
+
+  function resizeViewports() {
+    document.querySelectorAll('.viewport-shell').forEach(shell => {
+      const viewport = shell.querySelector('.viewport');
+      const scale = shell.clientWidth / 1920;
+      viewport.style.transform = `scale(${scale})`;
+      shell.style.height = `${1080 * scale}px`;
+    });
+  }
+
+  document.querySelectorAll('.screen').forEach(setupScreen);
+
+  let demoEntranceTimer = 0;
+  let demoResetTimer = 0;
+  let slotMotionTimer = 0;
+
+  function clearExitDemo(screen) {
+    window.clearTimeout(demoEntranceTimer);
+    window.clearTimeout(demoResetTimer);
+    screen.classList.remove('is-demo-running');
+    screen.querySelectorAll('.is-demo-leaving, .is-demo-entering').forEach(slot => {
+      slot.classList.remove('is-demo-leaving', 'is-demo-entering');
+      slot.style.removeProperty('--exit-delay');
+      slot.style.removeProperty('--enter-delay');
+    });
+  }
+
+  function clearSlotInteraction(screen) {
+    window.clearTimeout(slotMotionTimer);
+    screen.querySelectorAll('.is-purchasing, .is-appearing').forEach(slot => {
+      slot.classList.remove('is-purchasing', 'is-appearing');
+    });
+  }
+
+  function playSlotInteraction(screen, slot) {
+    clearExitDemo(screen);
+    clearSlotInteraction(screen);
+    renderPreview(screen, null);
+
+    const motionClass = slot.classList.contains('shop-ticket') ? 'is-purchasing' : 'is-appearing';
+    void slot.offsetWidth;
+    slot.classList.add(motionClass);
+    slotMotionTimer = window.setTimeout(() => clearSlotInteraction(screen), motionClass === 'is-purchasing' ? 980 : 1120);
+  }
+
+  function playExitDemo(kind) {
+    const screen = document.querySelector('.screen');
+    clearExitDemo(screen);
+    clearSlotInteraction(screen);
+    renderPreview(screen, null);
+
+    let targets = [];
+    if (kind === 'shop') targets = [...screen.querySelectorAll('.shop-ticket.slot')];
+    if (kind === 'encounter') targets = [screen.querySelector('.encounter-waystone.two')].filter(Boolean);
+    if (kind === 'event') targets = [screen.querySelector('.event-pennant')].filter(Boolean);
+    if (kind === 'mixed') targets = findLeavingChoices(screen, 5, null);
+    if (targets.length === 0) return;
+
+    screen.classList.add('is-demo-running');
+    targets.forEach((slot, index) => {
+      slot.style.setProperty('--exit-delay', `${index * 75}ms`);
+      slot.classList.add('is-demo-leaving');
+    });
+
+    const exitDuration = 1050;
+    const exitWindow = exitDuration + Math.max(0, targets.length - 1) * 75;
+    demoEntranceTimer = window.setTimeout(() => {
+      targets.forEach(slot => {
+        slot.classList.remove('is-demo-leaving');
+        slot.style.removeProperty('--exit-delay');
+      });
+      void screen.offsetWidth;
+      targets.forEach((slot, index) => {
+        slot.style.setProperty('--enter-delay', `${index * 75}ms`);
+        slot.classList.add('is-demo-entering');
+      });
+
+      const entranceDuration = targets.some(slot => slot.classList.contains('encounter-waystone')) ? 720 : 620;
+      const entranceWindow = entranceDuration + Math.max(0, targets.length - 1) * 75;
+      demoResetTimer = window.setTimeout(() => clearExitDemo(screen), entranceWindow + 100);
+    }, exitWindow + 80);
+  }
+
+  document.querySelectorAll('.demo-button').forEach(button => {
+    button.addEventListener('click', () => playExitDemo(button.dataset.demo));
+  });
+
+  window.addEventListener('resize', resizeViewports);
+  resizeViewports();
+</script>
+</body>
+</html>

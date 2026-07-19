@@ -203,7 +203,12 @@ namespace Crusaders30XX.ECS.Systems
 		private static IEnumerable<string> ResolveEffectAssets(SceneId scene)
 		{
 			if (!ShaderRuntimeOptions.ShadersEnabled) yield break;
-			if (scene == SceneId.Climb) yield return "Shaders/LayeredHoles";
+			if (scene == SceneId.Climb)
+			{
+				yield return "Shaders/LayeredHoles";
+				yield return "Shaders/GaussianBlur";
+				yield return "Shaders/ClimbChoiceFilter";
+			}
 			if (scene == SceneId.Achievement) yield return "Shaders/AchievementBackground";
 		}
 

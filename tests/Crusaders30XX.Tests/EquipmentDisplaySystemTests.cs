@@ -410,6 +410,62 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 		Assert.Null(equipment.GetComponent<AssignedBlockCard>());
 	}
 
+	[Fact]
+	public void Layout_preserves_foreign_named_equipment_tooltip_entities()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Action);
+		AddEquipment(entityManager, player, "helm_of_seeing");
+		CreateNamedTooltip(entityManager, "CardListModal_EquipmentTooltip");
+		CreateNamedTooltip(entityManager, "BoosterPack_EquipmentTooltip");
+		var display = new EquipmentDisplaySystem(entityManager, null, null, null);
+
+		display.Update(Frame());
+
+		Assert.NotNull(entityManager.GetEntity("CardListModal_EquipmentTooltip")
+			?.GetComponent<EquipmentTooltipState>());
+		Assert.NotNull(entityManager.GetEntity("BoosterPack_EquipmentTooltip")
+			?.GetComponent<EquipmentTooltipState>());
+		Assert.NotNull(entityManager.GetEntity(EquipmentDisplaySystem.TooltipEntityName)
+			?.GetComponent<EquipmentTooltipState>());
+		Assert.Equal(3, entityManager.GetEntitiesWithComponent<EquipmentTooltipState>().Count());
+	}
+
+	[Fact]
+	public void Teardown_destroys_only_battle_equipment_tooltip_entity()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Action);
+		AddEquipment(entityManager, player, "helm_of_seeing");
+		CreateNamedTooltip(entityManager, "CardListModal_EquipmentTooltip");
+		CreateNamedTooltip(entityManager, "BoosterPack_EquipmentTooltip");
+		var display = new EquipmentDisplaySystem(entityManager, null, null, null);
+		display.Update(Frame());
+
+		entityManager.GetEntitiesWithComponent<SceneState>().First()
+			.GetComponent<SceneState>().Current = SceneId.Climb;
+		display.Update(Frame());
+
+		Assert.NotNull(entityManager.GetEntity("CardListModal_EquipmentTooltip")
+			?.GetComponent<EquipmentTooltipState>());
+		Assert.NotNull(entityManager.GetEntity("BoosterPack_EquipmentTooltip")
+			?.GetComponent<EquipmentTooltipState>());
+		Assert.Null(entityManager.GetEntity(EquipmentDisplaySystem.TooltipEntityName));
+		Assert.Empty(entityManager.GetEntitiesWithComponent<EquipmentDisplayRoot>());
+		Assert.Equal(2, entityManager.GetEntitiesWithComponent<EquipmentTooltipState>().Count());
+	}
+
+	private static void CreateNamedTooltip(EntityManager entityManager, string name)
+	{
+		var entity = entityManager.CreateEntity(name);
+		entityManager.AddComponent(entity, new EquipmentTooltipState());
+		entityManager.AddComponent(entity, new Transform());
+		entityManager.AddComponent(entity, new UIElement
+		{
+			IsInteractable = false,
+			IsHidden = true,
+			TooltipType = TooltipType.None,
+		});
+	}
+
 	private static EntityManager BuildBattle(out Entity player, SubPhase subPhase)
 	{
 		var entityManager = new EntityManager();

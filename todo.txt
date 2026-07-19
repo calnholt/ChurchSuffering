@@ -49,3 +49,14 @@ MUST FOLLOW - Style: Anime. Solid flat color fills, 2-tone cel-shading at most (
 
 Create a physical description for the following characer so we can create an art brief
 
+rm -rf Content/bin Content/obj && echo "Cleaned Content/bin and Content/obj" && dotnet tool restore && dotnet build /p:SkipMonoGameContentPipeline=false
+
+
+Climb Penance Levels:
+
+Fasting - Crusader gets -1HP (5)
+Mortification - Enemies get +15% more HP (2)
+Abstinence - Start with 1 fewer starting resource (3)
+Penitential Pilgrimage - Shop reset is 1 time longer (2)
+Reparation - 1 starter is replaced with a random card with a random negative mod (5)
+

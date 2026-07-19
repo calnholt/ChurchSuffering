@@ -173,6 +173,10 @@ namespace Crusaders30XX.ECS.Systems
             UpdateScroll(modal, mode, layout, gameTime);
             LayoutCards(modal, layout);
             UpdateInventoryTooltipEntities(modal, mode, layout);
+            if (mode == CardListModalMode.Inventory)
+            {
+                EnsureEquipmentTooltipEntity();
+            }
             UpdateEquipmentTooltip(gameTime, mode);
             TryPublishSelection(modal);
         }
@@ -809,6 +813,7 @@ namespace Crusaders30XX.ECS.Systems
 
             if (evt.Mode == CardListModalMode.Inventory)
             {
+                EnsureEquipmentTooltipEntity();
                 EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.OpenInventory, Volume = 0.5f });
             }
 

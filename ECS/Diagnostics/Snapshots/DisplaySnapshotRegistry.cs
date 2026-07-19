@@ -48,7 +48,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CharacterDialog));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ActiveEvents));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.HoverPreview));
-            Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.MedalTooltipHover));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.MedalTooltipHover));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardTooltipHover));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.EquipmentTooltipHover));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.SoldShopSlot));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ReplacementModal));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryOverlay));
@@ -56,6 +58,9 @@ namespace Crusaders30XX.Diagnostics.Snapshots
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListTop));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListMiddle));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListBottom));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.V2Entrance));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.V2Ashes));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.V2Purchase));
 			Register(new ClimbHeaderSnapshotFixture());
 			Register(new ClimbResourceAcquisitionSnapshotFixture());
 			Register(new ClimbPointsAwardSnapshotFixture());

@@ -9,7 +9,10 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 {
 	public sealed class ClimbHeaderSnapshotFixture : IDisplaySnapshotFixture
 	{
-		private ClimbHeaderDisplaySystem _header;
+		private ClimbV2TitleDisplaySystem _title;
+		private DistanceClimbedTimelineDisplaySystem _timeline;
+		private PlayerResourcesDisplaySystem _resources;
+		private ClimbOverviewButtonDisplaySystem _overview;
 		private string _variant = "normal";
 
 		public string Id => "climb-header";
@@ -28,15 +31,11 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			});
 
 			ctx.World.GetSystem<ParallaxLayerSystem>()?.SetActive(false);
-			var columns = ctx.World.GetSystem<ClimbColumnDisplaySystem>();
-			if (columns != null)
-			{
-				columns.PortraitParallaxMultiplierX = 0f;
-				columns.PortraitParallaxMultiplierY = 0f;
-			}
-
-			_header = ctx.World.GetSystem<ClimbHeaderDisplaySystem>();
-			if (_header == null)
+			_title = ctx.World.GetSystem<ClimbV2TitleDisplaySystem>();
+			_timeline = ctx.World.GetSystem<DistanceClimbedTimelineDisplaySystem>();
+			_resources = ctx.World.GetSystem<PlayerResourcesDisplaySystem>();
+			_overview = ctx.World.GetSystem<ClimbOverviewButtonDisplaySystem>();
+			if (_title == null || _timeline == null || _resources == null || _overview == null)
 			{
 				throw new DisplaySnapshotSetupException("Climb header systems were not registered.");
 			}
@@ -50,21 +49,24 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 			if (_variant == "preview-delta")
 			{
-				_header.SetResourcePreviewForSnapshot(new ClimbResourceSave { red = 14, white = 5, black = 103 }, 1f);
+				_resources.SetResourcePreviewForSnapshot(new ClimbResourceSave { red = 14, white = 5, black = 103 }, 1f);
 			}
 			else if (_variant == "pulse")
 			{
-				_header.SetResourcePulseForSnapshot(new ClimbResourceSave { red = 1, black = 1 }, 0.5f);
+				_resources.SetResourcePulseForSnapshot(new ClimbResourceSave { red = 1, black = 1 }, 0.5f);
 			}
 			else if (_variant == "overview-hover")
 			{
 				var ui = ctx.World.EntityManager
-					.GetEntity(ClimbHeaderLayoutSystem.LoadoutButtonName)
+					.GetEntity(ClimbV2LayoutSystem.OverviewName)
 					?.GetComponent<UIElement>();
 				if (ui != null) ui.IsHovered = true;
 			}
 
-			_header.Draw();
+			_title.Draw();
+			_timeline.Draw();
+			_resources.Draw();
+			_overview.Draw();
 		}
 
 		private static void ConfigureSave()

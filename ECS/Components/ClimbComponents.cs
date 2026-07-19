@@ -40,7 +40,115 @@ namespace Crusaders30XX.ECS.Components
 		Black,
 	}
 
+	public enum ClimbV2SectionKind
+	{
+		Shop,
+		Encounter,
+		Event,
+	}
+
+	public enum ClimbChoiceRailOutcomeKind
+	{
+		None,
+		Price,
+		Reward,
+	}
+
+	public enum ClimbV2MotionPhase
+	{
+		Settled,
+		AshesExiting,
+		Entering,
+		Purchasing,
+	}
+
 	public class ClimbSceneRoot : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public sealed class ClimbV2SceneState : IComponent
+	{
+		public Entity Owner { get; set; }
+		public bool FreshEntranceRequested { get; set; }
+		public bool FreshEntranceStarted { get; set; }
+		public bool IsInputSuppressed { get; set; }
+	}
+
+	public sealed class ClimbV2TitlePresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public sealed class DistanceClimbedTimelinePresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public sealed class PlayerResourcesPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public sealed class ClimbOverviewButton : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public sealed class ClimbV2SectionPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public ClimbV2SectionKind Kind { get; set; }
+	}
+
+	public sealed class ClimbShopItemPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string ItemKind { get; set; } = string.Empty;
+		public string ItemAsset { get; set; } = string.Empty;
+		public string TooltipFingerprint { get; set; } = string.Empty;
+	}
+
+	public sealed class ClimbEncounterPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+	}
+
+	public sealed class ClimbEventPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string Description { get; set; } = string.Empty;
+	}
+
+	public sealed class ClimbChoiceRailPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public string SourceSlotId { get; set; } = string.Empty;
+		public ClimbChoiceRailOutcomeKind OutcomeKind { get; set; }
+		public ClimbResourceSave Resources { get; set; } = new();
+		public int Time { get; set; }
+		public int Stays { get; set; } = -1;
+		public int ProjectedStays { get; set; } = -1;
+		public float Opacity { get; set; } = 1f;
+	}
+
+	public sealed class ClimbV2ChoiceMotion : IComponent
+	{
+		public Entity Owner { get; set; }
+		public ClimbV2MotionPhase Phase { get; set; } = ClimbV2MotionPhase.Settled;
+		public float ElapsedSeconds { get; set; }
+		public float DelaySeconds { get; set; }
+		public Vector2 Offset { get; set; }
+		public float Opacity { get; set; } = 1f;
+		public float Brightness { get; set; } = 1f;
+		public float Grayscale { get; set; }
+		public float Sepia { get; set; }
+		public float Blur { get; set; }
+		public string Fingerprint { get; set; } = string.Empty;
+		public bool Initialized { get; set; }
+	}
+
+	public sealed class ClimbV2InputSuppression : IComponent
 	{
 		public Entity Owner { get; set; }
 	}

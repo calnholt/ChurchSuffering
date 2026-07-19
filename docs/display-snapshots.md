@@ -89,20 +89,40 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `climb-hazard-confirmation` | Climb scene + narrative modal | Binding Hazard effect and gain confirmation |
 | `climb-character-summary` | Climb scene + narrative modal | Character reward summary |
 | `climb-character-dialog` | Climb background + dialogue | Background-only Character exchange |
-| `climb-active-events` | Climb scene | Three columns with active event slots at T5 |
+| `climb-active-events` | Climb scene V2 | Fixed shop, encounter, and active-event regions at T6 |
 | `climb-hover-preview` | Climb scene | Hover preview on first encounter slot |
 | `climb-medal-tooltip-hover` | Climb scene | Medal shop hover with icon followed by text tooltip |
+| `climb-card-tooltip-hover` | Climb scene V2 | Card shop hover with upgrade-preview tooltip |
+| `climb-equipment-tooltip-hover` | Climb scene V2 | Equipment shop hover with equipment tooltip |
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
 | `climb-header` | Climb scene | Compact resources, preview badges, pulse, and Run Overview control |
 | `climb-resource-acquisition` | Climb scene | Gem fall, pouch catch, and earned-resource pulse |
+| `climb-v2-entrance` | Climb scene V2 | Fresh-climb staggered entrance sample |
+| `climb-v2-ashes` | Climb scene V2 | Midpoint ashes/desaturation turnover sample |
+| `climb-v2-purchase` | Climb scene V2 | Midpoint shop purchase split sample |
 | `climb-points-award` | WayStation return overlay | Climb threshold ascent, total crest, zero, and abandoned variants |
+
+---
+
+## Climb scene V2
+
+The V2 fixture matrix covers the fixed no-event layout, the full mockup-bible layout,
+hover projections, the three shop tooltip routes, transition samples, the V2 header,
+and the retained V1 resource-acquisition overlay. Run the complete matrix with:
+
+```bash
+./scripts/verify-climb-v2-snapshots.sh
+./scripts/verify-climb-v2-snapshots.sh --accept
+```
+
+Approved images are stored under their matching directories in `tests/VisualBaselines/`.
 
 ---
 
 ## `climb-header`
 
-Renders the production Climb header with fixed resource cells and the Run Overview control. The variants cover mixed-width resource values, simultaneous positive and negative preview badges, earned-resource pulse, and overview hover feedback.
+Renders the production V2 Climb header with fixed resource cells and the Climb Overview control. The variants cover mixed-width resource values, simultaneous positive and negative preview badges, earned-resource pulse, and overview hover feedback.
 
 ```bash
 dotnet run -- snapshot climb-header normal --verify

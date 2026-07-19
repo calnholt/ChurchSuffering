@@ -2511,6 +2511,12 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/QuestRewardLayerFilter.fx
 
+#begin Shaders/ClimbChoiceFilter.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/ClimbChoiceFilter.fx
+
 #---------------------------------- Shaders ---------------------------------#
 
 #begin Shaders/Bloodshot.fx

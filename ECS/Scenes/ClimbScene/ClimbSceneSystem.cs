@@ -1,10 +1,13 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Nodes;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -22,10 +25,22 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly ImageAssetService _imageAssets;
 		private bool _firstLoad = true;
 		private ClimbBackgroundDisplaySystem _backgroundDisplaySystem;
-		private ClimbHeaderLayoutSystem _headerLayoutSystem;
-		private ClimbHeaderDisplaySystem _headerDisplaySystem;
-		private ClimbColumnLayoutSystem _columnLayoutSystem;
-		private ClimbColumnDisplaySystem _columnDisplaySystem;
+		private ClimbV2LayoutSystem _layoutSystem;
+		private ClimbV2MotionSystem _motionSystem;
+		private ShopContainerDisplaySystem _shopContainerDisplaySystem;
+		private EncounterContainerDisplaySystem _encounterContainerDisplaySystem;
+		private EventContainerDisplaySystem _eventContainerDisplaySystem;
+		private ClimbV2TitleDisplaySystem _titleDisplaySystem;
+		private DistanceClimbedTimelineDisplaySystem _timelineDisplaySystem;
+		private PlayerResourcesDisplaySystem _resourcesDisplaySystem;
+		private ClimbOverviewButtonDisplaySystem _overviewDisplaySystem;
+		private ShopItemDisplaySystem _shopItemDisplaySystem;
+		private EncounterDisplaySystem _encounterDisplaySystem;
+		private EventDisplaySystem _eventDisplaySystem;
+		private ChoiceStatsRailDisplaySystem _railDisplaySystem;
+		private ClimbChoicePreviewDisplaySystem _previewDisplaySystem;
+		private ClimbChoiceLayerCompositor _choiceCompositor;
+		private bool _effectLoadAttempted;
 		private MedalTooltipDisplaySystem _medalTooltipDisplaySystem;
 		private ClimbCardUpgradeDisplaySystem _cardUpgradeDisplaySystem;
 		private ClimbResourceAcquisitionDisplaySystem _resourceAcquisitionDisplaySystem;
@@ -83,6 +98,7 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Publish(new ChangeMusicTrack { Track = MusicTrack.Climb });
 			EventManager.Publish(new HideLocationNameEvent());
 			AddClimbSystems();
+			_layoutSystem?.PrepareForLoad(evt);
 			SetClimbSystemsActive(true);
 			EnsureEquipmentTooltipEntity();
 		}
@@ -94,14 +110,22 @@ namespace Crusaders30XX.ECS.Systems
 
 			_backgroundDisplaySystem = new ClimbBackgroundDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _content, _imageAssets);
 			_world.AddSystem(_backgroundDisplaySystem);
-			_headerLayoutSystem = new ClimbHeaderLayoutSystem(EntityManager);
-			_world.AddSystem(_headerLayoutSystem);
-			_headerDisplaySystem = new ClimbHeaderDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
-			_world.AddSystem(_headerDisplaySystem);
-			_columnDisplaySystem = new ClimbColumnDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
-			_world.AddSystem(_columnDisplaySystem);
-			_columnLayoutSystem = new ClimbColumnLayoutSystem(EntityManager);
-			_world.AddSystem(_columnLayoutSystem);
+			_layoutSystem = new ClimbV2LayoutSystem(EntityManager);
+			_world.AddSystem(_layoutSystem);
+			_motionSystem = new ClimbV2MotionSystem(EntityManager);
+			_world.AddSystem(_motionSystem);
+			_shopContainerDisplaySystem = Add(new ShopContainerDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_encounterContainerDisplaySystem = Add(new EncounterContainerDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_eventContainerDisplaySystem = Add(new EventContainerDisplaySystem(EntityManager));
+			_titleDisplaySystem = Add(new ClimbV2TitleDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_timelineDisplaySystem = Add(new DistanceClimbedTimelineDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_resourcesDisplaySystem = Add(new PlayerResourcesDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets));
+			_overviewDisplaySystem = Add(new ClimbOverviewButtonDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_shopItemDisplaySystem = Add(new ShopItemDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_encounterDisplaySystem = Add(new EncounterDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_eventDisplaySystem = Add(new EventDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
+			_railDisplaySystem = Add(new ChoiceStatsRailDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets));
+			_previewDisplaySystem = Add(new ClimbChoicePreviewDisplaySystem(EntityManager, _spriteBatch, _imageAssets));
 			_medalTooltipDisplaySystem = new MedalTooltipDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_medalTooltipDisplaySystem);
 			_cardUpgradeDisplaySystem = new ClimbCardUpgradeDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch);
@@ -121,10 +145,20 @@ namespace Crusaders30XX.ECS.Systems
 		private void SetClimbSystemsActive(bool active)
 		{
 			_backgroundDisplaySystem?.SetActive(active);
-			_headerLayoutSystem?.SetActive(active);
-			_headerDisplaySystem?.SetActive(active);
-			_columnLayoutSystem?.SetActive(active);
-			_columnDisplaySystem?.SetActive(active);
+			_layoutSystem?.SetActive(active);
+			_motionSystem?.SetActive(active);
+			_shopContainerDisplaySystem?.SetActive(active);
+			_encounterContainerDisplaySystem?.SetActive(active);
+			_eventContainerDisplaySystem?.SetActive(active);
+			_titleDisplaySystem?.SetActive(active);
+			_timelineDisplaySystem?.SetActive(active);
+			_resourcesDisplaySystem?.SetActive(active);
+			_overviewDisplaySystem?.SetActive(active);
+			_shopItemDisplaySystem?.SetActive(active);
+			_encounterDisplaySystem?.SetActive(active);
+			_eventDisplaySystem?.SetActive(active);
+			_railDisplaySystem?.SetActive(active);
+			_previewDisplaySystem?.SetActive(active);
 			_medalTooltipDisplaySystem?.SetActive(active);
 			_cardUpgradeDisplaySystem?.SetActive(active);
 			_resourceAcquisitionDisplaySystem?.SetActive(active);
@@ -133,12 +167,70 @@ namespace Crusaders30XX.ECS.Systems
 		public void Draw()
 		{
 			if (_backgroundDisplaySystem != null) FrameProfiler.Measure("ClimbBackgroundDisplaySystem.Draw", _backgroundDisplaySystem.Draw);
-			if (_headerDisplaySystem != null) FrameProfiler.Measure("ClimbHeaderDisplaySystem.Draw", _headerDisplaySystem.Draw);
-			if (_columnDisplaySystem != null) FrameProfiler.Measure("ClimbColumnDisplaySystem.Draw", _columnDisplaySystem.Draw);
+			if (_shopContainerDisplaySystem != null) FrameProfiler.Measure("ShopContainerDisplaySystem.Draw", _shopContainerDisplaySystem.Draw);
+			if (_encounterContainerDisplaySystem != null) FrameProfiler.Measure("EncounterContainerDisplaySystem.Draw", _encounterContainerDisplaySystem.Draw);
+			if (_eventContainerDisplaySystem != null) FrameProfiler.Measure("EventContainerDisplaySystem.Draw", _eventContainerDisplaySystem.Draw);
+			if (_titleDisplaySystem != null) FrameProfiler.Measure("ClimbV2TitleDisplaySystem.Draw", _titleDisplaySystem.Draw);
+			if (_timelineDisplaySystem != null) FrameProfiler.Measure("DistanceClimbedTimelineDisplaySystem.Draw", _timelineDisplaySystem.Draw);
+			if (_resourcesDisplaySystem != null) FrameProfiler.Measure("PlayerResourcesDisplaySystem.Draw", _resourcesDisplaySystem.Draw);
+			if (_overviewDisplaySystem != null) FrameProfiler.Measure("ClimbOverviewButtonDisplaySystem.Draw", _overviewDisplaySystem.Draw);
+			FrameProfiler.Measure("ClimbV2Choices.Draw", DrawChoices);
+			if (_previewDisplaySystem != null) FrameProfiler.Measure("ClimbChoicePreviewDisplaySystem.Draw", _previewDisplaySystem.Draw);
 			if (_medalTooltipDisplaySystem != null) FrameProfiler.Measure("MedalTooltipDisplaySystem.Draw", _medalTooltipDisplaySystem.Draw);
 			if (_cardUpgradeDisplaySystem != null) FrameProfiler.Measure("ClimbCardUpgradeDisplaySystem.Draw", _cardUpgradeDisplaySystem.Draw);
 			if (_resourceAcquisitionDisplaySystem != null) FrameProfiler.Measure("ClimbResourceAcquisitionDisplaySystem.Draw", _resourceAcquisitionDisplaySystem.Draw);
 			if (_equipmentTooltipDisplaySystem != null) FrameProfiler.Measure("ClimbEquipmentTooltipDisplaySystem.Draw", _equipmentTooltipDisplaySystem.Draw);
+		}
+
+		private T Add<T>(T system) where T : Core.System
+		{
+			_world.AddSystem(system);
+			return system;
+		}
+
+		private void DrawChoices()
+		{
+			EnsureEffectsLoaded();
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>()
+				.Where(entity => entity.GetComponent<ClimbShopItemPresentation>() != null
+					|| entity.GetComponent<ClimbEncounterPresentation>() != null
+					|| entity.GetComponent<ClimbEventPresentation>() != null)
+				.OrderBy(entity => entity.GetComponent<Transform>()?.ZOrder ?? 0)
+				.ThenBy(entity => entity.Id))
+			{
+				Action draw = () => DrawChoice(entity);
+				var motion = entity.GetComponent<ClimbV2ChoiceMotion>();
+				bool filtered = ShaderRuntimeOptions.ShadersEnabled
+					&& _choiceCompositor?.IsAvailable == true
+					&& motion != null
+					&& (motion.Blur > 0.05f || motion.Grayscale > 0.01f || motion.Sepia > 0.01f || Math.Abs(motion.Brightness - 1f) > 0.01f);
+				if (filtered) _choiceCompositor.DrawLayer(draw, motion.Blur, motion.Grayscale, motion.Sepia, motion.Brightness);
+				else draw();
+			}
+		}
+
+		private void DrawChoice(Entity entity)
+		{
+			if (entity.GetComponent<ClimbShopItemPresentation>() != null) _shopItemDisplaySystem?.DrawEntity(entity);
+			else if (entity.GetComponent<ClimbEncounterPresentation>() != null) _encounterDisplaySystem?.DrawEntity(entity);
+			else if (entity.GetComponent<ClimbEventPresentation>() != null) _eventDisplaySystem?.DrawEntity(entity);
+			_railDisplaySystem?.DrawForSource(entity);
+		}
+
+		private void EnsureEffectsLoaded()
+		{
+			if (_effectLoadAttempted || !ShaderRuntimeOptions.ShadersEnabled) return;
+			_effectLoadAttempted = true;
+			try
+			{
+				var blur = _content.Load<Effect>("Shaders/GaussianBlur");
+				var filter = _content.Load<Effect>("Shaders/ClimbChoiceFilter");
+				_choiceCompositor = new ClimbChoiceLayerCompositor(_graphicsDevice, _spriteBatch, blur, filter);
+			}
+			catch (Exception ex)
+			{
+				LoggingService.Append("ClimbSceneSystem.EffectLoadFailed", new JsonObject { ["Message"] = ex.Message });
+			}
 		}
 
 		public void DrawBackgroundOnly()
@@ -198,6 +290,16 @@ namespace Crusaders30XX.ECS.Systems
 					|| entity.GetComponent<ClimbColumnPresentation>() != null
 					|| entity.GetComponent<ClimbSlotPresentation>() != null
 					|| entity.GetComponent<ClimbColumnTransitionInputSuppression>() != null
+					|| entity.GetComponent<ClimbV2TitlePresentation>() != null
+					|| entity.GetComponent<DistanceClimbedTimelinePresentation>() != null
+					|| entity.GetComponent<PlayerResourcesPresentation>() != null
+					|| entity.GetComponent<ClimbOverviewButton>() != null
+					|| entity.GetComponent<ClimbV2SectionPresentation>() != null
+					|| entity.GetComponent<ClimbShopItemPresentation>() != null
+					|| entity.GetComponent<ClimbEncounterPresentation>() != null
+					|| entity.GetComponent<ClimbEventPresentation>() != null
+					|| entity.GetComponent<ClimbChoiceRailPresentation>() != null
+					|| entity.GetComponent<ClimbV2InputSuppression>() != null
 					|| entity.GetComponent<ClimbShopTooltipSource>() != null
 					|| entity.GetComponent<ClimbMedalTooltipSource>() != null
 					|| entity.GetComponent<ClimbMedalTooltipAnchor>() != null
@@ -213,6 +315,11 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						ui.Restore();
 						entityManager.RemoveComponent<ClimbColumnTransitionInputSuppression>(entity);
+					}
+					if (entity.GetComponent<ClimbV2InputSuppression>() != null)
+					{
+						ui.Restore();
+						entityManager.RemoveComponent<ClimbV2InputSuppression>(entity);
 					}
 					ui.Bounds = Rectangle.Empty;
 					ui.IsInteractable = false;
