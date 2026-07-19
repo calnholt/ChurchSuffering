@@ -159,13 +159,15 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
 
         float d = distance(auv + disp, center);
         float feather = max(HoleFeather * (1.0 + FeatherVary * (fVary - 0.5)), 0.001);
-        float m = 1.0 - smoothstep(radius - feather, radius + feather, d);
+        float geometricMask = 1.0 - smoothstep(radius - feather, radius + feather, d);
+        float extinction = smoothstep(0.0, feather, radius);
+        float m = geometricMask * extinction;
         if (m <= 0.0)
         {
             continue;
         }
 
-        float rim = m * (1.0 - m) * 4.0;
+        float rim = geometricMask * (1.0 - geometricMask) * 4.0 * extinction;
         float2 revealUv = uv + dispUv * RevealRefract * rim;
         float3 middle = tex2D(MiddleTextureSampler, revealUv).rgb;
         float3 bottom = tex2D(BottomTextureSampler, revealUv).rgb;

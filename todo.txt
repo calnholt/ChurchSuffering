@@ -58,5 +58,26 @@ Fasting - Crusader gets -1HP (5)
 Mortification - Enemies get +15% more HP (2)
 Abstinence - Start with 1 fewer starting resource (3)
 Penitential Pilgrimage - Shop reset is 1 time longer (2)
-Reparation - 1 starter is replaced with a random card with a random negative mod (5)
+Reparation - 1 starter is replaced with a random card with a random negative mod (8)
 
+
+Fasting
+Reparation
+Abstinence
+Fasting
+Reparation
+Abstinence
+Reparation
+Penitential Pilgrimage
+Fasting
+Mortification
+Reparation
+Fasting
+Reparation
+Abstinence
+Reparation
+Penitential Pilgrimage
+Reparation
+Fasting
+Reparation
+Mortification

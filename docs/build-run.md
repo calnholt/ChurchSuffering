@@ -18,7 +18,7 @@ dotnet run -- new
 dotnet run -- no-shaders
 dotnet run --launch-profile no-shaders
 
-# Run without in-battle tutorials
+# Skip guided intro + Keeper intro (persisted to save) and in-battle teach tips
 dotnet run -- skip-tutorials
 
 # DEBUG only: asynchronous GPU command timing and rendering workload counters

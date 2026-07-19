@@ -15,9 +15,9 @@ namespace Crusaders30XX.ECS.Objects.Cards
             CardId = "crimson_rite";
             Name = "Crimson Rite";
             Target = "Enemy";
-            Cost = ["Any", "Any"];
+            Cost = ["Black", "Any"];
             VisualEffectRecipe = PlayerAttackEffect();
-            Damage = 3;
+            Damage = 4;
             Block = 3;
             Text = "Heal X HP where X is the damage dealt from this attack.";
 

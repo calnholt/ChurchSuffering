@@ -158,6 +158,7 @@ namespace Crusaders30XX.ECS.Systems
 		private RecoilDisplaySystem _recoilDisplaySystem;
 		private SealManagementSystem _sealManagementSystem;
 		private VigorManagementSystem _vigorManagementSystem;
+		private GraceManagementSystem _graceManagementSystem;
 		private ShackleDisplaySystem _shackleDisplaySystem;
 		private UIElementHighlightSystem _uiElementHighlightSystem;
 		private TribulationManagerSystem _tribulationManagerSystem;
@@ -918,6 +919,7 @@ namespace Crusaders30XX.ECS.Systems
 			_recoilDisplaySystem = new RecoilDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
 			_sealManagementSystem = new SealManagementSystem(_world.EntityManager);
 			_vigorManagementSystem = new VigorManagementSystem(_world.EntityManager);
+			_graceManagementSystem = new GraceManagementSystem(_world.EntityManager);
 			var shackleTexture = _imageAssets.GetRequiredTexture("shackles");
 			_shackleDisplaySystem = new ShackleDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch, shackleTexture);
 			_intimidateDisplaySystem = new IntimidateDisplaySystem(_world.EntityManager, _graphicsDevice, _spriteBatch);
@@ -1048,6 +1050,7 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_scorchedManagementSystem);
 			_world.AddSystem(_thornedManagementSystem);
 			_world.AddSystem(_vigorManagementSystem);
+			_world.AddSystem(_graceManagementSystem);
 			_world.AddSystem(_bleedManagementSystem);
 			_world.AddSystem(_battleStateInfoManagementSystem);
 			_world.AddSystem(_payCostOverlaySystem);

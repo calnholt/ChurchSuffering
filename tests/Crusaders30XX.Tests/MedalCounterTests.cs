@@ -1439,6 +1439,259 @@ public class MedalCounterTests
 		Assert.Contains(MedalId.StAnthonyOfPadua, MedalFactory.GetAllMedals().Keys);
 	}
 
+	[Fact]
+	public void MedalFactory_includes_st_adrian()
+	{
+		Assert.IsType<StAdrian>(MedalFactory.Create("st_adrian"));
+		Assert.Contains(MedalId.StAdrian, MedalFactory.GetAllMedals().Keys);
+	}
+
+	[Fact]
+	public void MedalFactory_includes_st_jude()
+	{
+		Assert.IsType<StJude>(MedalFactory.Create("st_jude"));
+		Assert.Contains(MedalId.StJude, MedalFactory.GetAllMedals().Keys);
+	}
+
+	[Fact]
+	public void StJude_does_not_increment_on_non_kunai_or_non_hand()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StJude();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var strike = EntityFactory.CreateCardFromDefinition(entityManager, "strike", CardData.CardColor.White);
+			EventManager.Publish(new CardMoved
+			{
+				Card = strike,
+				To = CardZoneType.Hand
+			});
+			Assert.Equal(0, medal.CurrentCount);
+
+			var kunai = EntityFactory.CreateCardFromDefinition(entityManager, "kunai", CardData.CardColor.White);
+			EventManager.Publish(new CardMoved
+			{
+				Card = kunai,
+				To = CardZoneType.DiscardPile
+			});
+			Assert.Equal(0, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StJude_increments_and_triggers_every_fourth_kunai()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StJude();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			for (int i = 0; i < 3; i++)
+			{
+				PublishKunaiMovedToHand(entityManager);
+				Assert.Equal(i + 1, medal.CurrentCount);
+				Assert.Equal(0, activateCount);
+			}
+
+			PublishKunaiMovedToHand(entityManager);
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			for (int i = 0; i < 3; i++)
+			{
+				PublishKunaiMovedToHand(entityManager);
+			}
+			PublishKunaiMovedToHand(entityManager);
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(2, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StJude_activate_upgrades_armed_kunai()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StJude();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			Entity fourthKunai = null;
+			for (int i = 0; i < 4; i++)
+			{
+				fourthKunai = PublishKunaiMovedToHand(entityManager);
+			}
+
+			medal.Activate();
+
+			var card = fourthKunai.GetComponent<CardData>().Card;
+			Assert.True(card.IsUpgraded);
+			Assert.Contains("3 times", card.Text);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StJude_already_upgraded_fourth_kunai_resets_counter_without_error()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StJude();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			for (int i = 0; i < 3; i++)
+			{
+				PublishKunaiMovedToHand(entityManager);
+			}
+
+			var upgradedKunai = EntityFactory.CreateCardFromDefinition(
+				entityManager, "kunai", CardData.CardColor.White, false, 0, isUpgraded: true);
+			EventManager.Publish(new CardMoved
+			{
+				Card = upgradedKunai,
+				To = CardZoneType.Hand
+			});
+
+			Assert.Equal(0, medal.CurrentCount);
+			Assert.Equal(1, activateCount);
+
+			medal.Activate();
+			Assert.True(upgradedKunai.GetComponent<CardData>().Card.IsUpgraded);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StJude_start_battle_clears_mid_cycle_count()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StJude();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			PublishKunaiMovedToHand(entityManager);
+			PublishKunaiMovedToHand(entityManager);
+			Assert.Equal(2, medal.CurrentCount);
+
+			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.StartBattle });
+			Assert.Equal(0, medal.CurrentCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StAdrian_emits_activate_on_red_attack_when_proc_succeeds()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StAdrian { ProcChancePercent = 100 };
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var card = EntityFactory.CreateCardFromDefinition(entityManager, "strike", CardData.CardColor.Red);
+			EventManager.Publish(new PlayCardRequested { Card = card, CostsPaid = true });
+
+			Assert.Equal(1, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StAdrian_does_not_emit_activate_on_non_red_or_non_attack()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StAdrian { ProcChancePercent = 100 };
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			var activateCount = 0;
+			EventManager.Subscribe<MedalActivateEvent>(_ => activateCount++);
+
+			var whiteAttack = EntityFactory.CreateCardFromDefinition(entityManager, "strike", CardData.CardColor.White);
+			EventManager.Publish(new PlayCardRequested { Card = whiteAttack, CostsPaid = true });
+			Assert.Equal(0, activateCount);
+
+			var redPrayer = EntityFactory.CreateCardFromDefinition(entityManager, "increase_faith", CardData.CardColor.Red);
+			EventManager.Publish(new PlayCardRequested { Card = redPrayer, CostsPaid = true });
+			Assert.Equal(0, activateCount);
+
+			var redAttackUnpaid = EntityFactory.CreateCardFromDefinition(entityManager, "strike", CardData.CardColor.Red);
+			EventManager.Publish(new PlayCardRequested { Card = redAttackUnpaid, CostsPaid = false });
+			Assert.Equal(0, activateCount);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void StAdrian_activate_publishes_courage_loss()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var medal = new StAdrian();
+			medal.Initialize(entityManager, entityManager.CreateEntity("Medal"));
+
+			ModifyCourageRequestEvent courageEvent = null;
+			EventManager.Subscribe<ModifyCourageRequestEvent>(evt => courageEvent = evt);
+			medal.Activate();
+
+			Assert.NotNull(courageEvent);
+			Assert.Equal(ModifyCourageType.Lost, courageEvent.Type);
+			Assert.Equal(-1, courageEvent.Delta);
+			Assert.Equal("st_adrian", courageEvent.Reason);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
 	private static (Entity Player, Entity Enemy) CreatePlayerAndEnemy(EntityManager entityManager)
 	{
 		var player = entityManager.CreateEntity("Player");
@@ -1450,6 +1703,17 @@ public class MedalCounterTests
 		entityManager.AddComponent(enemy, new AppliedPassives());
 
 		return (player, enemy);
+	}
+
+	private static Entity PublishKunaiMovedToHand(EntityManager entityManager)
+	{
+		var kunai = EntityFactory.CreateCardFromDefinition(entityManager, "kunai", CardData.CardColor.White);
+		EventManager.Publish(new CardMoved
+		{
+			Card = kunai,
+			To = CardZoneType.Hand
+		});
+		return kunai;
 	}
 
 	private static void PublishPlayerAttackDamage(Entity player, Entity enemy, int damage)

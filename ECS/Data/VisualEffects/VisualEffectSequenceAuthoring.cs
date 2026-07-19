@@ -80,7 +80,7 @@ public static class VisualEffectSequenceAuthoring
 
 	internal static bool HasExplicitCardChoreography(CardId id) => id switch
 	{
-		CardId.Absolution or CardId.ArkOfTheCovenant or CardId.BatteringBlow or CardId.BattleScars or CardId.BloodPrice or CardId.Burn or CardId.CarpeDiem or CardId.Colorless3Block or CardId.Consecrate or CardId.Courageous or CardId.CrimsonRite or CardId.Crusade or CardId.Curse or CardId.Hex or CardId.Dagger or CardId.DeusVult or CardId.DivineProtection or CardId.DowseWithHolyWater or CardId.EmberHarvest or CardId.Exaltation or CardId.Excavate or CardId.Fervor or CardId.ForgeStrike or CardId.Fury or CardId.Graveward or CardId.HoldTheLine or CardId.Hammer or CardId.HiddenKunai or CardId.Impale or CardId.IncreaseFaith or CardId.IronCovenant or CardId.Kunai or CardId.Lacerate or CardId.LitanyOfWrath or CardId.Mantlet or CardId.MaleficRite or CardId.QuickWit or CardId.RallyTheFaithful or CardId.RelentlessStrike or CardId.PierceThrough or CardId.PouchOfKunai or CardId.Purge or CardId.Ravage or CardId.RazorStorm or CardId.Reckoning or CardId.Reap or CardId.RenounceAndHone or CardId.Sacrifice or CardId.SerpentCrush or CardId.Seize or CardId.ShieldbearersVigil or CardId.ShieldOfFaith or CardId.Smite or CardId.Stab or CardId.SteadfastResolve or CardId.Stalwart or CardId.SteelTheSpirit or CardId.StokedAssault or CardId.Strike or CardId.SuddenThrust or CardId.StokeTheFurnace or CardId.Sword or CardId.SwordIntoShield or CardId.TemperTheBlade or CardId.Tempest or CardId.Thaw or CardId.UnburdenedStrike or CardId.VanguardsPromise or CardId.Vindicate or CardId.Whirlwind or CardId.ZealousVow => true,
+		CardId.Absolution or CardId.AboundingGrace or CardId.AnsweredPrayer or CardId.ArkOfTheCovenant or CardId.BatteringBlow or CardId.BattleScars or CardId.BloodPrice or CardId.Burn or CardId.CarpeDiem or CardId.Colorless3Block or CardId.Consecrate or CardId.Courageous or CardId.CrimsonRite or CardId.Crusade or CardId.Curse or CardId.Hex or CardId.Dagger or CardId.DeusVult or CardId.DivineProtection or CardId.DowseWithHolyWater or CardId.EmberHarvest or CardId.Exaltation or CardId.Excavate or CardId.Fervor or CardId.ForgeStrike or CardId.Fury or CardId.Graveward or CardId.HoldTheLine or CardId.Hammer or CardId.HiddenKunai or CardId.Impale or CardId.IncreaseFaith or CardId.IronCovenant or CardId.Kunai or CardId.Lacerate or CardId.LitanyOfWrath or CardId.Mantlet or CardId.MaleficRite or CardId.MarkOfAnathema or CardId.QuickWit or CardId.RallyTheFaithful or CardId.RelentlessStrike or CardId.PierceThrough or CardId.PouchOfKunai or CardId.Purge or CardId.Ravage or CardId.RazorStorm or CardId.Reckoning or CardId.Reap or CardId.RecklessBarrage or CardId.RenounceAndHone or CardId.Sacrifice or CardId.SerpentCrush or CardId.Seize or CardId.ShieldbearersVigil or CardId.ShieldOfFaith or CardId.Smite or CardId.Stab or CardId.SteadfastResolve or CardId.Stalwart or CardId.SteelPrayer or CardId.SteelTheSpirit or CardId.StokedAssault or CardId.Strike or CardId.SuddenThrust or CardId.StokeTheFurnace or CardId.Sword or CardId.SwordIntoShield or CardId.TemperTheBlade or CardId.Tempest or CardId.Thaw or CardId.UnburdenedStrike or CardId.VanguardsPromise or CardId.Vindicate or CardId.Whirlwind or CardId.ZealousVow => true,
 		_ => false
 	};
 
@@ -93,6 +93,8 @@ public static class VisualEffectSequenceAuthoring
 	private static CardDirection CardDirectionFor(CardId id) => id switch
 	{
 		CardId.Absolution => Card(CardStyle.HolyStrike, EffectWeight.Epic, VisualEffectModule.Beam, 0.06f),
+		CardId.AboundingGrace => Card(CardStyle.HolySupport, EffectWeight.Medium, VisualEffectModule.Halo, 0.08f),
+		CardId.AnsweredPrayer => Card(CardStyle.HolyStrike, EffectWeight.Heavy, VisualEffectModule.CrossBloom, 0.04f),
 		CardId.ArkOfTheCovenant => Card(CardStyle.HolySupport, EffectWeight.Heavy, VisualEffectModule.ResourceMotes, 0.03f),
 		CardId.BatteringBlow => Card(CardStyle.Heavy, EffectWeight.Heavy, VisualEffectModule.Shockwave, -0.02f),
 		CardId.BattleScars => Card(CardStyle.BloodStrike, EffectWeight.Heavy, VisualEffectModule.Shards, 0.04f),
@@ -128,6 +130,7 @@ public static class VisualEffectSequenceAuthoring
 		CardId.LitanyOfWrath => Card(CardStyle.HolySupport, EffectWeight.Heavy, VisualEffectModule.RedVignette, 0.10f),
 		CardId.Mantlet => Card(CardStyle.Guard, EffectWeight.Medium, VisualEffectModule.Debris, -0.01f),
 		CardId.MaleficRite => Card(CardStyle.Ritual, EffectWeight.Heavy, VisualEffectModule.ShadowTendrils, 0.09f),
+		CardId.MarkOfAnathema => Card(CardStyle.ShadowStrike, EffectWeight.Heavy, VisualEffectModule.ColorDrain, 0.05f),
 		CardId.QuickWit => Card(CardStyle.Thrust, EffectWeight.Light, VisualEffectModule.Rays, -0.09f),
 		CardId.RallyTheFaithful => Card(CardStyle.HolySupport, EffectWeight.Epic, VisualEffectModule.CrossBloom, 0.13f),
 		CardId.RelentlessStrike => Card(CardStyle.Slash, EffectWeight.Heavy, VisualEffectModule.SlashBand, 0.04f),
@@ -138,6 +141,7 @@ public static class VisualEffectSequenceAuthoring
 		CardId.RazorStorm => Card(CardStyle.Whirlwind, EffectWeight.Epic, VisualEffectModule.ThrownBladeVolley, 0.12f),
 		CardId.Reckoning => Card(CardStyle.Heavy, EffectWeight.Epic, VisualEffectModule.CrossBloom, 0.14f),
 		CardId.Reap => Card(CardStyle.ShadowStrike, EffectWeight.Heavy, VisualEffectModule.SoulSiphon, 0.06f),
+		CardId.RecklessBarrage => Card(CardStyle.Whirlwind, EffectWeight.Heavy, VisualEffectModule.Debris, 0.04f),
 		CardId.RenounceAndHone => Card(CardStyle.Ritual, EffectWeight.Heavy, VisualEffectModule.ResourceMotes, 0.04f),
 		CardId.Sacrifice => Card(CardStyle.Ritual, EffectWeight.Epic, VisualEffectModule.SoulSiphon, 0.11f),
 		CardId.SerpentCrush => Card(CardStyle.Heavy, EffectWeight.Medium, VisualEffectModule.PoisonCloud, 0.00f),
@@ -148,6 +152,7 @@ public static class VisualEffectSequenceAuthoring
 		CardId.Stab => Card(CardStyle.Thrust, EffectWeight.Medium, VisualEffectModule.RedVignette, -0.02f),
 		CardId.SteadfastResolve => Card(CardStyle.Support, EffectWeight.Medium, VisualEffectModule.ShieldWard, 0.03f),
 		CardId.Stalwart => Card(CardStyle.Guard, EffectWeight.Heavy, VisualEffectModule.Cracks, 0.05f),
+		CardId.SteelPrayer => Card(CardStyle.HolySupport, EffectWeight.Heavy, VisualEffectModule.Rays, 0.06f),
 		CardId.SteelTheSpirit => Card(CardStyle.Ritual, EffectWeight.Medium, VisualEffectModule.ShieldWard, 0.01f),
 		CardId.StokedAssault => Card(CardStyle.FireStrike, EffectWeight.Medium, VisualEffectModule.SlashBand, -0.03f),
 		CardId.Strike => Card(CardStyle.Slash, EffectWeight.Light, VisualEffectModule.Debris, -0.06f),

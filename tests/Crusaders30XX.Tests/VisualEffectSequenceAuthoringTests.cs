@@ -19,7 +19,7 @@ public sealed class VisualEffectSequenceAuthoringTests
 			.Append(new System.Collections.Generic.KeyValuePair<CardId, CardBase>(CardId.Hex, CardFactory.Create(CardId.Hex)))
 			.ToList();
 		var cards = registered.Select(pair => pair.Value).ToList();
-		Assert.Equal(71, cards.Count);
+		Assert.Equal(76, cards.Count);
 		Assert.All(registered, pair => Assert.True(VisualEffectSequenceAuthoring.HasExplicitCardChoreography(pair.Key), $"Missing explicit choreography for {pair.Key}."));
 		Assert.All(cards, card => Assert.NotEmpty(card.VisualEffectSequence.Beats));
 		Assert.Equal(cards.Count, cards.Select(VisualSignature).Distinct(StringComparer.Ordinal).Count());

@@ -167,12 +167,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         // feather width varies around the rim (some arcs crisp, some hazy)
         float fw = max(HOLE_FEATHER * (1.0 + FEATHER_VARY * (fVary - 0.5)), 1e-3);
 
-        // reveal mask: 1 inside the hole, feathered to 0 across the rim band
-        float m = 1.0 - smoothstep(radius - fw, radius + fw, d);
+        // Fade the final sub-feather remnant so birth/death reaches zero continuously.
+        float geometricMask = 1.0 - smoothstep(radius - fw, radius + fw, d);
+        float extinction = smoothstep(0.0, fw, radius);
+        float m = geometricMask * extinction;
         if (m <= 0.0) continue;
 
         // refraction smear that peaks exactly at the feathered edge
-        float rim = m * (1.0 - m) * 4.0;  // 0 in center & outside, 1 at edge
+        float rim = geometricMask * (1.0 - geometricMask) * 4.0 * extinction;
         vec2 ruv = uv + dispUv * REVEAL_REFRACT * rim;
 
         // per-hole layer pick (middle vs bottom), re-rolled each respawn

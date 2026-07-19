@@ -12,6 +12,8 @@ namespace Crusaders30XX.ECS.Factories
             new Dictionary<CardId, Func<CardBase>>
             {
                 { CardId.Absolution, () => new Absolution() },
+                { CardId.AboundingGrace, () => new AboundingGrace() },
+                { CardId.AnsweredPrayer, () => new AnsweredPrayer() },
                 { CardId.ArkOfTheCovenant, () => new ArkOfTheCovenant() },
                 { CardId.BatteringBlow, () => new BatteringBlow() },
                 { CardId.BattleScars, () => new BattleScars() },
@@ -47,6 +49,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.LitanyOfWrath, () => new LitanyOfWrath() },
                 { CardId.Mantlet, () => new Mantlet() },
                 { CardId.MaleficRite, () => new MaleficRite() },
+                { CardId.MarkOfAnathema, () => new MarkOfAnathema() },
                 { CardId.QuickWit, () => new QuickWit() },
                 { CardId.RallyTheFaithful, () => new RallyTheFaithful() },
                 { CardId.RelentlessStrike, () => new RelentlessStrike() },
@@ -57,6 +60,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.RazorStorm, () => new RazorStorm() },
                 { CardId.Reckoning, () => new Reckoning() },
                 { CardId.Reap, () => new Reap() },
+                { CardId.RecklessBarrage, () => new RecklessBarrage() },
                 { CardId.RenounceAndHone, () => new RenounceAndHone() },
                 { CardId.Sacrifice, () => new Sacrifice() },
                 { CardId.SerpentCrush, () => new SerpentCrush() },
@@ -67,6 +71,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.Stab, () => new Stab() },
                 { CardId.SteadfastResolve, () => new SteadfastResolve() },
                 { CardId.Stalwart, () => new Stalwart() },
+                { CardId.SteelPrayer, () => new SteelPrayer() },
                 { CardId.SteelTheSpirit, () => new SteelTheSpirit() },
                 { CardId.StokedAssault, () => new StokedAssault() },
                 { CardId.Strike, () => new Strike() },

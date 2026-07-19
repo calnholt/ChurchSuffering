@@ -43,6 +43,7 @@ namespace Crusaders30XX.ECS.Services
 			new() { Id = "sharpen", Aliases = ["sharpen"], Tooltip = "X Sharpen - Your next weapon attack this turn gains +X damage." },
 			new() { Id = "might", Aliases = ["might"], Tooltip = "X Might - Your attacks deal +X damage this turn." },
 			new() { Id = "vigor", Aliases = ["vigor"], Tooltip = "X Vigor - The next non-weapon card with a cost you play costs X discard less." },
+			new() { Id = "grace", Aliases = ["grace"], Tooltip = "X Grace - At the start of your turn (after draw), resurrect 1. Lose 1 grace." },
 			new() { Id = "scar", Aliases = ["scar", "scars"], Tooltip = "X Scar - Lose X max HP. At the start of battle, lose 1 scar. Max HP is not restored until the next battle recalculates from remaining scars." },
 			new() { Id = "fear", Aliases = ["fear"], Tooltip = "X Fear - All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear." },
 			new() { Id = "wounded", Aliases = ["wounded"], Tooltip = "X Wounded - Take X more damage from all sources this battle." },
@@ -256,6 +257,8 @@ namespace Crusaders30XX.ECS.Services
 					return "At the end of the turn, lose all courage.";
 				case AppliedPassiveType.SwordIntoShield:
 					return $"Your next non-weapon attack card this turn gains +{stacks} damage this climb.";
+				case AppliedPassiveType.Grace:
+					return "At the start of your turn (after draw), resurrect 1. Lose 1 grace.";
 				default:
 					return StringUtils.ToSentenceCase(type.ToString());
 			}

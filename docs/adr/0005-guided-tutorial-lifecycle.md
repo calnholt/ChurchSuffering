@@ -6,4 +6,4 @@ The tutorial owns temporary `GuidedTutorial`, `StockHand`, player, deck, and que
 
 Tutorial combat uses normal battle systems and presentation, but it does not publish kill or quest-completion flow, grant rewards, update achievements, record card usage or run telemetry, or enter run-failure and abandon flow. Completion is persisted as meta, temporary entities are destroyed, and the game transitions to WayStation with no active run. Interruption leaves completion unset, so title routing restarts battle one and its opening dialogue.
 
-`skip-tutorials` records tutorial completion and all contextual tutorial keys covered by the guided sequence before routing to WayStation. WayStation Depart remains the only operation that creates a run.
+`skip-tutorials` records tutorial completion and all contextual tutorial keys covered by the guided sequence, and marks Keeper WayStation intro dialogue as seen, before routing to WayStation. WayStation Depart remains the only operation that creates a run.

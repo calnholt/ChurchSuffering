@@ -1,5 +1,6 @@
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Dialog;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.Diagnostics;
@@ -34,12 +35,32 @@ namespace Crusaders30XX.ECS.Services
 			EventManager.Publish(new ShowTransition { Scene = SceneId.Climb, SkipHold = true });
 		}
 
-		private static void ApplySkipTutorialsOption()
+		/// <summary>
+		/// When <c>skip-tutorials</c> is set, persist guided-tutorial completion and Keeper intro
+		/// so a later launch without the flag skips both. Idempotent.
+		/// </summary>
+		public static void PersistSkipTutorialsIfRequested()
 		{
-			if (TutorialLaunchOptions.SkipTutorials && !SaveCache.IsGuidedTutorialCompleted())
+			if (!TutorialLaunchOptions.SkipTutorials) return;
+
+			if (!SaveCache.IsGuidedTutorialCompleted())
 			{
 				SaveCache.CompleteGuidedTutorial();
 			}
+
+			if (!SaveCache.HasSeenWayStationDialogueSegment(
+				WayStationDialogueCatalog.KeeperCharacterId,
+				WayStationDialogueCatalog.KeeperIntroSegmentId))
+			{
+				SaveCache.MarkWayStationDialogueSegmentSeen(
+					WayStationDialogueCatalog.KeeperCharacterId,
+					WayStationDialogueCatalog.KeeperIntroSegmentId);
+			}
+		}
+
+		private static void ApplySkipTutorialsOption()
+		{
+			PersistSkipTutorialsIfRequested();
 		}
 	}
 }

@@ -233,6 +233,7 @@ namespace Crusaders30XX.ECS.Components
         NumberOfAttacksHitPlayer,
         CardsMilled,
         CursesRemoved,
+        PrayersPlayed,
     }
     
     /// <summary>
@@ -1224,7 +1225,8 @@ namespace Crusaders30XX.ECS.Components
         Vigor,
         CarpeDiem,
         Galvanize,
-        SwordIntoShield
+        SwordIntoShield,
+        Grace
     }
 
     public class PassiveMeterComponent : IComponent

@@ -5,6 +5,8 @@ namespace Crusaders30XX.ECS.Data.Ids;
 public enum CardId
 {
     Absolution,
+    AboundingGrace,
+    AnsweredPrayer,
     ArkOfTheCovenant,
     BatteringBlow,
     BattleScars,
@@ -40,6 +42,7 @@ public enum CardId
     LitanyOfWrath,
     Mantlet,
     MaleficRite,
+    MarkOfAnathema,
     QuickWit,
     RallyTheFaithful,
     RelentlessStrike,
@@ -50,6 +53,7 @@ public enum CardId
     RazorStorm,
     Reckoning,
     Reap,
+    RecklessBarrage,
     RenounceAndHone,
     Sacrifice,
     SerpentCrush,
@@ -60,6 +64,7 @@ public enum CardId
     Stab,
     SteadfastResolve,
     Stalwart,
+    SteelPrayer,
     SteelTheSpirit,
     StokedAssault,
     Strike,
@@ -107,6 +112,8 @@ public enum MedalId
     StChristopher,
     StLawrence,
     StLazarus,
+    StAdrian,
+    StJude,
 }
 
 public enum EquipmentId
@@ -275,6 +282,8 @@ public static class GameIdExtensions
     public static string ToKey(this CardId id) => id switch
     {
         CardId.Absolution => "absolution",
+        CardId.AboundingGrace => "abounding_grace",
+        CardId.AnsweredPrayer => "answered_prayer",
         CardId.ArkOfTheCovenant => "ark_of_the_covenant",
         CardId.BatteringBlow => "battering_blow",
         CardId.BattleScars => "battle_scars",
@@ -310,6 +319,7 @@ public static class GameIdExtensions
         CardId.LitanyOfWrath => "litany_of_wrath",
         CardId.Mantlet => "mantlet",
         CardId.MaleficRite => "malefic_rite",
+        CardId.MarkOfAnathema => "mark_of_anathema",
         CardId.QuickWit => "quick_wit",
         CardId.RallyTheFaithful => "rally_the_faithful",
         CardId.RelentlessStrike => "relentless_strike",
@@ -320,6 +330,7 @@ public static class GameIdExtensions
         CardId.RazorStorm => "razor_storm",
         CardId.Reckoning => "reckoning",
         CardId.Reap => "reap",
+        CardId.RecklessBarrage => "reckless_barrage",
         CardId.RenounceAndHone => "renounce_and_hone",
         CardId.Sacrifice => "sacrifice",
         CardId.SerpentCrush => "serpent_crush",
@@ -330,6 +341,7 @@ public static class GameIdExtensions
         CardId.Stab => "stab",
         CardId.SteadfastResolve => "steadfast_resolve",
         CardId.Stalwart => "stalwart",
+        CardId.SteelPrayer => "steel_prayer",
         CardId.SteelTheSpirit => "steel_the_spirit",
         CardId.StokedAssault => "stoked_assault",
         CardId.Strike => "strike",
@@ -378,6 +390,8 @@ public static class GameIdExtensions
         MedalId.StChristopher => "st_christopher",
         MedalId.StLawrence => "st_lawrence",
         MedalId.StLazarus => "st_lazarus",
+        MedalId.StAdrian => "st_adrian",
+        MedalId.StJude => "st_jude",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 

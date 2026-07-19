@@ -560,6 +560,7 @@ namespace Crusaders30XX.ECS.Systems
                 AppliedPassiveType.Plunder,
                 AppliedPassiveType.Vigor,
                 AppliedPassiveType.Enflamed,
+                AppliedPassiveType.Grace,
             };
         }
         public static HashSet<AppliedPassiveType> GetRunLongPassives()

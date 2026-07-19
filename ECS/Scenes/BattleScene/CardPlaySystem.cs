@@ -304,7 +304,11 @@ namespace Crusaders30XX.ECS.Systems
                 PlayedAsCurse = playedAsCurse,
             });
             if (!playedAsCurse && !GuidedTutorialService.IsActive(EntityManager))
+            {
                 EventManager.Publish(new TrackingEvent { Type = card.CardId, Delta = 1 });
+                if (card.Type == CardType.Prayer)
+                    EventManager.Publish(new TrackingEvent { Type = TrackingTypeEnum.PrayersPlayed.ToString(), Delta = 1 });
+            }
 
             // Remove Pledge if present when playing
             if (cardEntity.HasComponent<Pledge>())

@@ -100,3 +100,4 @@ This document summarizes all passive effects in the game. Each passive has a dur
 | Keyword | Effect |
 |---------|--------|
 | **Intellect** | Max hand size and cards drawn at start of block phase increased by X |
+| **Grace** | At the start of your turn (after draw), resurrect 1. Lose 1 grace |

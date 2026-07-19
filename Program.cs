@@ -2,6 +2,7 @@
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.Diagnostics.Snapshots;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Services;
 
 ShaderRuntimeOptions.ConfigureFromArgs(args);
 GpuProfilingRuntimeOptions.ConfigureFromArgs(args);
@@ -96,6 +97,8 @@ if (NewGameLaunchOptions.DeleteSaveBeforeLaunch)
 {
     SaveCache.DeleteSaveFilesIfPresent();
 }
+
+TitleMenuResumeService.PersistSkipTutorialsIfRequested();
 
 if (UnlockLaunchOptions.UnlockAllCollectionItems)
 {

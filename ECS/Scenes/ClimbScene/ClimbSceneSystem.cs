@@ -44,6 +44,7 @@ namespace Crusaders30XX.ECS.Systems
 		private MedalTooltipDisplaySystem _medalTooltipDisplaySystem;
 		private ClimbCardUpgradeDisplaySystem _cardUpgradeDisplaySystem;
 		private ClimbResourceAcquisitionDisplaySystem _resourceAcquisitionDisplaySystem;
+		private ClimbOverviewGamepadInputSystem _overviewGamepadInputSystem;
 		private EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
 		private const string EquipmentTooltipEntityName = "Climb_EquipmentTooltip";
 
@@ -132,6 +133,8 @@ namespace Crusaders30XX.ECS.Systems
 			_world.AddSystem(_cardUpgradeDisplaySystem);
 			_resourceAcquisitionDisplaySystem = new ClimbResourceAcquisitionDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets);
 			_world.AddSystem(_resourceAcquisitionDisplaySystem);
+			_overviewGamepadInputSystem = new ClimbOverviewGamepadInputSystem(EntityManager);
+			_world.AddSystem(_overviewGamepadInputSystem);
 			EnsureEquipmentTooltipEntity();
 			_equipmentTooltipDisplaySystem = new EquipmentTooltipDisplaySystem(EntityManager, _graphicsDevice, _spriteBatch, _imageAssets, EquipmentTooltipEntityName);
 		}
@@ -162,6 +165,7 @@ namespace Crusaders30XX.ECS.Systems
 			_medalTooltipDisplaySystem?.SetActive(active);
 			_cardUpgradeDisplaySystem?.SetActive(active);
 			_resourceAcquisitionDisplaySystem?.SetActive(active);
+			_overviewGamepadInputSystem?.SetActive(active);
 		}
 
 		public void Draw()
