@@ -60,6 +60,10 @@ Abstinence - Start with 1 fewer starting resource (3)
 Penitential Pilgrimage - Shop reset is 1 time longer (2)
 Reparation - 1 starter is replaced with a random card with a random negative mod (8)
 
+CONSIDER:
+- final boss gains +1 phase
+
+
 
 Fasting
 Reparation
