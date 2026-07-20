@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Services;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -288,5 +289,38 @@ namespace Crusaders30XX.ECS.Systems
                 Target = CardApplicationTarget.Hand,
             });
         }
+
+		[DebugAction("Apply Dual Color (hand)")]
+		public void Debug_ApplyDualColorHand()
+		{
+			var cards = GetComponentHelper.GetHandOfCards(EntityManager)
+				.Where(card =>
+				{
+					var data = card?.GetComponent<CardData>();
+					return data?.Card != null
+						&& !data.Card.IsWeapon
+						&& !data.Card.IsToken
+						&& !card.HasComponent<Colorless>()
+						&& !card.HasComponent<DualColor>()
+						&& CardColorQualificationService.IsPlayableColor(data.Color);
+				})
+				.ToList();
+			if (cards.Count == 0) return;
+
+			var card = cards[Random.Shared.Next(cards.Count)];
+			var printedColor = card.GetComponent<CardData>().Color;
+			var secondaryColors = new[]
+			{
+				CardData.CardColor.White,
+				CardData.CardColor.Red,
+				CardData.CardColor.Black,
+			}.Where(color => color != printedColor).ToArray();
+
+			EventManager.Publish(new ApplyDualColorEvent
+			{
+				Card = card,
+				SecondaryColor = secondaryColors[Random.Shared.Next(secondaryColors.Length)],
+			});
+		}
     }
 }

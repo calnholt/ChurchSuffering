@@ -13,7 +13,6 @@ namespace Crusaders30XX.ECS.Services
 	public static class RunDeckService
 	{
 		public const string PrimaryLoadoutId = "loadout_1";
-		public const int EnemyHealthClimbTimeBonusMultiplier = 2;
 		private const string DeckEntityName = "Deck";
 
 		public static LoadoutDefinition GetLoadoutForRun()
@@ -40,6 +39,7 @@ namespace Crusaders30XX.ECS.Services
 				if (existingByEntryId.TryGetValue(entry.entryId, out var existing)
 					&& string.Equals(existing.GetComponent<RunDeckCard>()?.CardKey, entry.cardKey, StringComparison.OrdinalIgnoreCase))
 				{
+					SynchronizeDualColor(entityManager, existing, entry);
 					continue;
 				}
 
@@ -201,32 +201,6 @@ namespace Crusaders30XX.ECS.Services
 			}
 		}
 
-		public static float CalculateEnemyHealthDeckWeight(
-			EntityManager entityManager,
-			int fallbackDeckCardCount,
-			int baseCardCountReduction = 0,
-			int climbTimeOverride = -1)
-		{
-			var entries = BuildDesiredEntries(GetLoadoutForRun());
-			if (entries.Count == 0 && entityManager != null)
-			{
-				entries = entityManager.GetEntitiesWithComponent<RunDeckCard>()
-					.Where(entity => entity != null && entity.IsActive)
-					.Select(entity => entity.GetComponent<RunDeckCard>())
-					.Where(runCard => runCard != null && !string.IsNullOrWhiteSpace(runCard.CardKey) && !IsWeaponCardKey(runCard.CardKey))
-					.Select(runCard => new LoadoutCardEntry { entryId = runCard.EntryId, cardKey = runCard.CardKey })
-					.ToList();
-			}
-
-			int cardCount = entries.Count > 0 ? entries.Count : Math.Max(0, fallbackDeckCardCount);
-			int reducedCardCount = Math.Max(0, cardCount - Math.Max(0, baseCardCountReduction));
-			int climbTime = climbTimeOverride >= 0
-				? ClimbRuleService.ClampTime(climbTimeOverride)
-				: ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0);
-			int timeBonus = (climbTime / ClimbRuleService.ShopRefreshInterval) * EnemyHealthClimbTimeBonusMultiplier;
-			return reducedCardCount + timeBonus;
-		}
-
 		public static Entity GetRunDeckEntity(EntityManager entityManager)
 		{
 			var byName = entityManager.GetEntity(DeckEntityName);
@@ -280,7 +254,43 @@ namespace Crusaders30XX.ECS.Services
 					cardData.Card.IsStarter = true;
 				}
 			}
+			SynchronizeDualColor(entityManager, entity, entry);
 			return entity;
+		}
+
+		private static void SynchronizeDualColor(
+			EntityManager entityManager,
+			Entity card,
+			LoadoutCardEntry entry)
+		{
+			if (entityManager == null || card == null || entry == null) return;
+			var data = card.GetComponent<CardData>();
+			bool hasValidSecondary = Enum.TryParse(
+				entry.secondaryColor,
+				ignoreCase: true,
+				out CardData.CardColor secondaryColor)
+				&& CardColorQualificationService.IsPlayableColor(secondaryColor)
+				&& CardColorQualificationService.IsPlayableColor(data?.Color)
+				&& data.Color != secondaryColor;
+
+			var dualColor = card.GetComponent<DualColor>();
+			if (!hasValidSecondary)
+			{
+				if (dualColor != null) entityManager.RemoveComponent<DualColor>(card);
+				return;
+			}
+
+			if (dualColor == null)
+			{
+				entityManager.AddComponent(card, new DualColor
+				{
+					Owner = card,
+					SecondaryColor = secondaryColor,
+				});
+				return;
+			}
+
+			dualColor.SecondaryColor = secondaryColor;
 		}
 
 		private static List<LoadoutCardEntry> BuildDesiredEntries(LoadoutDefinition loadout)

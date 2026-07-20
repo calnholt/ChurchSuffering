@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
@@ -12,51 +13,51 @@ namespace Crusaders30XX.ECS.Services
 	{
 		public static readonly string[] SharedWeaponRunStarterCardPool =
 		{
-			"absolution",
-			"courageous",
-			"forge_strike",
-			"litany_of_wrath",
-			"reckoning",
-			"smite",
+			CardId.Absolution.ToKey(),
+			CardId.Courageous.ToKey(),
+			CardId.ForgeStrike.ToKey(),
+			CardId.LitanyOfWrath.ToKey(),
+			CardId.Reckoning.ToKey(),
+			CardId.Smite.ToKey(),
 		};
 
 		private static readonly string[] HammerCommonStarterCards =
 		{
-			"mantlet",
-			"stoke_the_furnace",
-			"steadfast_resolve",
+			CardId.Mantlet.ToKey(),
+			CardId.StokeTheFurnace.ToKey(),
+			CardId.SteadfastResolve.ToKey(),
 		};
 
 		private static readonly string[] HammerUncommonSingleCopyStarterCards =
 		{
-			"unburdened_strike",
-			"increase_faith",
+			CardId.UnburdenedStrike.ToKey(),
+			CardId.IncreaseFaith.ToKey(),
 		};
 
 		private static readonly string[] DaggerCommonStarterCards =
 		{
-			"seize",
-			"rally_the_faithful",
-			"whirlwind",
+			CardId.Seize.ToKey(),
+			CardId.RallyTheFaithful.ToKey(),
+			CardId.Whirlwind.ToKey(),
 		};
 
 		private static readonly string[] DaggerUncommonSingleCopyStarterCards =
 		{
-			"razor_storm",
-			"increase_faith",
+			CardId.RazorStorm.ToKey(),
+			CardId.IncreaseFaith.ToKey(),
 		};
 
 		private static readonly string[] SwordCommonStarterCards =
 		{
-			"fervor",
-			"hold_the_line",
-			"stab",
+			CardId.Fervor.ToKey(),
+			CardId.HoldTheLine.ToKey(),
+			CardId.Stab.ToKey(),
 		};
 
 		private static readonly string[] SwordUncommonSingleCopyStarterCards =
 		{
-			"exaltation",
-			"increase_faith",
+			CardId.Exaltation.ToKey(),
+			CardId.IncreaseFaith.ToKey(),
 		};
 
 		public static readonly string[] DefaultStarterCardPool = BuildDefaultStarterCardPool();
@@ -76,9 +77,9 @@ namespace Crusaders30XX.ECS.Services
 
 			var weaponPools = new Dictionary<string, List<string>>()
 			{
-				["hammer"] = HammerCommonStarterCards.Concat(HammerUncommonSingleCopyStarterCards).ToList(),
-				["dagger"] = DaggerCommonStarterCards.Concat(DaggerUncommonSingleCopyStarterCards).ToList(),
-				["sword"] = SwordCommonStarterCards.Concat(SwordUncommonSingleCopyStarterCards).ToList(),
+				[CardId.Hammer.ToKey()] = HammerCommonStarterCards.Concat(HammerUncommonSingleCopyStarterCards).ToList(),
+				[CardId.Dagger.ToKey()] = DaggerCommonStarterCards.Concat(DaggerUncommonSingleCopyStarterCards).ToList(),
+				[CardId.Sword.ToKey()] = SwordCommonStarterCards.Concat(SwordUncommonSingleCopyStarterCards).ToList(),
 			};
 
 			var allCards = CardFactory.GetAllCards();
@@ -129,24 +130,24 @@ namespace Crusaders30XX.ECS.Services
 
 		public static IReadOnlyList<string> GetStarterCardPool(string weaponId)
 		{
-			return weaponId switch
-			{
-				"sword" => GetSwordStarterCardPool(),
-				"dagger" => GetDaggerStarterCardPool(),
-				"hammer" => GetHammerStarterCardPool(),
-				_ => GetSwordStarterCardPool(),
-			};
+			if (string.Equals(weaponId, CardId.Sword.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return GetSwordStarterCardPool();
+			if (string.Equals(weaponId, CardId.Dagger.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return GetDaggerStarterCardPool();
+			if (string.Equals(weaponId, CardId.Hammer.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return GetHammerStarterCardPool();
+			return GetSwordStarterCardPool();
 		}
 
 		public static IReadOnlyList<string> GetSingleCopyStarterCardPool(string weaponId)
 		{
-			return weaponId switch
-			{
-				"sword" => GetSwordSingleCopyStarterCardPool(),
-				"dagger" => GetDaggerSingleCopyStarterCardPool(),
-				"hammer" => GetHammerSingleCopyStarterCardPool(),
-				_ => GetSwordSingleCopyStarterCardPool(),
-			};
+			if (string.Equals(weaponId, CardId.Sword.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return GetSwordSingleCopyStarterCardPool();
+			if (string.Equals(weaponId, CardId.Dagger.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return GetDaggerSingleCopyStarterCardPool();
+			if (string.Equals(weaponId, CardId.Hammer.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return GetHammerSingleCopyStarterCardPool();
+			return GetSwordSingleCopyStarterCardPool();
 		}
 
 		public static List<string> GenerateStartingDeck(string weaponId, int seed)
@@ -164,7 +165,7 @@ namespace Crusaders30XX.ECS.Services
 			{
 				id = loadoutId,
 				name = loadoutId == "test_fight" ? "Test Fight" : "Deck",
-				weaponId = string.IsNullOrWhiteSpace(weaponId) ? "sword" : weaponId,
+				weaponId = string.IsNullOrWhiteSpace(weaponId) ? CardId.Sword.ToKey() : weaponId,
 				temperanceId = GetDefaultTemperanceId(weaponId),
 				cards = cardKeys.Select((cardKey, index) => new LoadoutCardEntry
 				{
@@ -182,13 +183,16 @@ namespace Crusaders30XX.ECS.Services
 			};
 		}
 
-		public static string GetDefaultTemperanceId(string weaponId) => weaponId switch
+		public static string GetDefaultTemperanceId(string weaponId)
 		{
-			"sword" => "unsheath",
-			"hammer" => "static_surge",
-			"dagger" => "fling_fling",
-			_ => "angelic_aura",
-		};
+			if (string.Equals(weaponId, CardId.Sword.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return "unsheath";
+			if (string.Equals(weaponId, CardId.Hammer.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return "static_surge";
+			if (string.Equals(weaponId, CardId.Dagger.ToKey(), StringComparison.OrdinalIgnoreCase))
+				return "fling_fling";
+			return "angelic_aura";
+		}
 
 		public static string GetDefaultTemperanceId(StartingWeapon weapon) => weapon switch
 		{

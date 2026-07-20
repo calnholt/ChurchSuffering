@@ -15,6 +15,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
             Id = EnemyId.Wyvern;
             Name = "Wyvern";
             HP = 28;
+            ClimbPool = ClimbEncounterPool.Late;
 
             OnStartOfBattle = (entityManager) =>
             {

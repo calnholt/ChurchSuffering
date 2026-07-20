@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Ids;
@@ -8,7 +6,6 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Systems;
-using Crusaders30XX.ECS.Utils;
 
 namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
 
@@ -21,6 +18,7 @@ public class Skeleton : EnemyBase
     Id = EnemyId.Skeleton;
     Name = "Skeleton";
     HP = 26;
+    ClimbPool = ClimbEncounterPool.Throughout;
 
     OnStartOfBattle = (entityManager) =>
     {
@@ -33,27 +31,7 @@ public class Skeleton : EnemyBase
 
   public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {
-    int random = Random.Shared.Next(0, 100);
-    var linkers = new List<EnemyAttackId> { EnemyAttackId.BoneStrike, EnemyAttackId.Sweep, EnemyAttackId.Calcify };
-    if (random <= 65)
-    {
-      var selected = ArrayUtils.TakeRandomWithReplacement(linkers, 3);
-      var sweepCount = selected.Count(x => x == EnemyAttackId.Sweep);
-      while (sweepCount > 2)
-      {
-        selected = ArrayUtils.TakeRandomWithReplacement(linkers, 3);
-        sweepCount = selected.Count(x => x == EnemyAttackId.Sweep);
-      }
-      int haveNoMercy = Random.Shared.Next(0, 100);
-      if (haveNoMercy <= 5)
-      {
-        var selected2 = ArrayUtils.TakeRandomWithReplacement(linkers, 2);
-        selected2 = selected2.Append(EnemyAttackId.HaveNoMercy);
-        selected = ArrayUtils.Shuffled(selected2);
-      }
-      return selected;
-    }
-    return [EnemyAttackId.SkullCrusher];
+    return SkeletonAttackSelectionService.GetAttackIds(EnemyAttackId.BoneStrike);
   }
 }
 

@@ -44,7 +44,7 @@ function syncEnemyPortraits() {
 
   for (const enemy of enemies) {
     const fileName = `${enemyIdToAssetName(enemy.id)}.png`;
-    const source = path.join(contentDir, fileName);
+    const source = path.join(contentDir, 'Enemies', fileName);
     const dest = path.join(publicPortraitDir, fileName);
     if (fs.existsSync(source)) {
       fs.copyFileSync(source, dest);
@@ -61,10 +61,18 @@ function serveGameContent(server) {
     }
 
     const publicPath = path.join(publicPortraitDir, requested);
+    const enemiesContentPath = path.join(contentDir, 'Enemies', requested);
     const contentPath = path.join(contentDir, requested);
-    const filePath = fs.existsSync(publicPath) ? publicPath : contentPath;
+    const filePath = fs.existsSync(publicPath)
+      ? publicPath
+      : fs.existsSync(enemiesContentPath)
+        ? enemiesContentPath
+        : contentPath;
 
-    if (!filePath.startsWith(publicPortraitDir) && !filePath.startsWith(contentDir)) {
+    if (
+      !filePath.startsWith(publicPortraitDir)
+      && !filePath.startsWith(contentDir)
+    ) {
       next();
       return;
     }

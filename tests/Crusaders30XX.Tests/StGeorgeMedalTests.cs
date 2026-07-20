@@ -179,51 +179,52 @@ public sealed class StGeorgeMedalTests : IDisposable
     }
 
     [Fact]
-    public void Can_play_highlight_matches_alternate_play_rule()
+    public void Resolver_allows_st_george_alternate_block_play()
     {
         var entityManager = BuildActionBattle(1, out var player, out var deck);
         var block = AddBlockCard(entityManager, deck, "mantlet");
 
         Assert.Null(AlternateCardPlayService.GetProfile(entityManager, block, SubPhase.Action));
-        Assert.False(EvaluateActionPlayability(entityManager, block));
+        Assert.False(ResolveActionPlayability(entityManager, block, deck).IsPlayable);
 
         EquipMedal(entityManager, player, new StGeorge());
 
         var profile = AlternateCardPlayService.GetProfile(entityManager, block, SubPhase.Action);
         Assert.NotNull(profile);
         Assert.True(profile.AllowsPlay);
-        Assert.True(EvaluateActionPlayability(entityManager, block));
+        var plan = ResolveActionPlayability(entityManager, block, deck);
+        Assert.True(plan.IsPlayable);
+        Assert.True(plan.IsFreeAction);
+        Assert.Equal(CardPlayMode.AlternateAttack, plan.Mode);
     }
 
-    private static bool EvaluateActionPlayability(EntityManager entityManager, Entity cardEntity)
+    private static CardPlayPlan ResolveActionPlayability(
+        EntityManager entityManager,
+        Entity cardEntity,
+        Deck deck)
     {
         var data = cardEntity.GetComponent<CardData>();
         var card = data?.Card;
-        if (card == null) return false;
-
         var alternateProfile = AlternateCardPlayService.GetProfile(entityManager, cardEntity, SubPhase.Action);
-        if (card.Type == CardType.Relic) return false;
-        if (card.Type == CardType.Block && alternateProfile?.AllowsPlay != true) return false;
-
         var player = entityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-        var ap = player?.GetComponent<ActionPoints>();
-        bool isFree = card.IsFreeAction || alternateProfile?.IsFreeAction == true;
-        if (!isFree && (ap?.Current ?? 0) <= 0) return false;
-
-        bool skipBlockCanPlay = card.Type == CardType.Block && alternateProfile?.AllowsPlay == true;
-        if (!skipBlockCanPlay && card.CanPlay != null && !card.CanPlay(entityManager, cardEntity)) return false;
-
         var pledge = cardEntity.GetComponent<Pledge>();
-        if (pledge != null && !pledge.CanPlay) return false;
-
         var appliedPassives = player?.GetComponent<AppliedPassives>();
-        if (cardEntity.HasComponent<Pledge>() && appliedPassives != null)
-        {
-            appliedPassives.Passives.TryGetValue(AppliedPassiveType.Silenced, out int silencedStacks);
-            if (silencedStacks > 0) return false;
-        }
-
-        return true;
+        bool isSilenced = appliedPassives != null
+            && appliedPassives.Passives.TryGetValue(AppliedPassiveType.Silenced, out int silencedStacks)
+            && silencedStacks > 0;
+        return CardPlayResolver.Resolve(new CardPlayContext(
+            cardEntity,
+            card,
+            SubPhase.Action,
+            player?.GetComponent<ActionPoints>()?.Current ?? 0,
+            VigorService.GetPlayerVigorStacks(entityManager),
+            false,
+            pledge != null,
+            pledge?.CanPlay ?? true,
+            isSilenced,
+            card.CanPlay?.Invoke(entityManager, cardEntity) ?? true,
+            alternateProfile,
+            deck.Hand));
     }
 
     private static EntityManager BuildActionBattle(int actionPoints, out Entity player, out Deck deck)

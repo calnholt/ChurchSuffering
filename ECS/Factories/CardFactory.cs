@@ -12,6 +12,8 @@ namespace Crusaders30XX.ECS.Factories
             new Dictionary<CardId, Func<CardBase>>
             {
                 { CardId.Absolution, () => new Absolution() },
+                { CardId.AboundingGrace, () => new AboundingGrace() },
+                { CardId.AnsweredPrayer, () => new AnsweredPrayer() },
                 { CardId.ArkOfTheCovenant, () => new ArkOfTheCovenant() },
                 { CardId.BatteringBlow, () => new BatteringBlow() },
                 { CardId.BattleScars, () => new BattleScars() },
@@ -24,6 +26,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.CrimsonRite, () => new CrimsonRite() },
                 { CardId.Crusade, () => new Crusade() },
                 { CardId.Curse, () => new Curse() },
+                { CardId.Hex, () => new Hex() },
                 { CardId.Dagger, () => new Dagger() },
                 { CardId.DeusVult, () => new DeusVult() },
                 { CardId.DivineProtection, () => new DivineProtection() },
@@ -46,6 +49,7 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.LitanyOfWrath, () => new LitanyOfWrath() },
                 { CardId.Mantlet, () => new Mantlet() },
                 { CardId.MaleficRite, () => new MaleficRite() },
+                { CardId.MarkOfAnathema, () => new MarkOfAnathema() },
                 { CardId.QuickWit, () => new QuickWit() },
                 { CardId.RallyTheFaithful, () => new RallyTheFaithful() },
                 { CardId.RelentlessStrike, () => new RelentlessStrike() },
@@ -56,15 +60,18 @@ namespace Crusaders30XX.ECS.Factories
                 { CardId.RazorStorm, () => new RazorStorm() },
                 { CardId.Reckoning, () => new Reckoning() },
                 { CardId.Reap, () => new Reap() },
+                { CardId.RecklessBarrage, () => new RecklessBarrage() },
                 { CardId.RenounceAndHone, () => new RenounceAndHone() },
                 { CardId.Sacrifice, () => new Sacrifice() },
                 { CardId.SerpentCrush, () => new SerpentCrush() },
                 { CardId.Seize, () => new Seize() },
+                { CardId.ShieldbearersVigil, () => new ShieldbearersVigil() },
                 { CardId.ShieldOfFaith, () => new ShieldOfFaith() },
                 { CardId.Smite, () => new Smite() },
                 { CardId.Stab, () => new Stab() },
                 { CardId.SteadfastResolve, () => new SteadfastResolve() },
                 { CardId.Stalwart, () => new Stalwart() },
+                { CardId.SteelPrayer, () => new SteelPrayer() },
                 { CardId.SteelTheSpirit, () => new SteelTheSpirit() },
                 { CardId.StokedAssault, () => new StokedAssault() },
                 { CardId.Strike, () => new Strike() },
@@ -99,7 +106,7 @@ namespace Crusaders30XX.ECS.Factories
         public static Dictionary<CardId, CardBase> GetAllCards()
         {
             return CardConstructors
-                .Where(entry => entry.Key != CardId.Curse)
+                .Where(entry => entry.Key != CardId.Curse && entry.Key != CardId.Hex)
                 .ToDictionary(
                     entry => entry.Key,
                     entry => entry.Value());

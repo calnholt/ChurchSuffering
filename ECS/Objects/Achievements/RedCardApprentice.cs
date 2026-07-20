@@ -22,7 +22,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Column = 1;
             StartsVisible = false;
             TargetValue = RequiredPlays;
-            Points = 20;
         }
 
         public override void RegisterListeners()

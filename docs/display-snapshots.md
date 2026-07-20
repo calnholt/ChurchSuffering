@@ -58,7 +58,13 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `brittle-card` | Brittle card shader | One brittle card on a patterned backdrop for shader debugging |
 | `frozen-card` | Frozen card shader | One frozen card on a patterned backdrop, optionally composed with Brittle |
 | `thorned-card` | Thorned card shader | One thorned card on a patterned backdrop, optionally composed with Frozen |
+| `scorched-card` | Scorched card shader | One scorched card on a patterned backdrop |
+| `cursed-card` | Cursed card shader | One cursed card on a patterned backdrop |
+| `poison-card` | Poison card shader | One poisoned card on a patterned backdrop |
+| `poison-scorched-card` | Poison + Scorched composition | One card with both Poisoned and Scorched on a patterned backdrop |
+| `card-render-pipeline` | Card render pipeline | Ordered all-status and sheen composition variants |
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
+| `dual-color-card` | Card display | Dual-color diagonal split pairings, including black secondary block bonuses |
 | `quest-reward-modal` | Quest reward modal | Quest complete overlay with deck reward offer lanes |
 | `booster-pack-opening` | Booster pack opening display | Phase-driven pack summon, rupture, reward travel, sheen, and ready states |
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
@@ -84,20 +90,40 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `climb-hazard-confirmation` | Climb scene + narrative modal | Binding Hazard effect and gain confirmation |
 | `climb-character-summary` | Climb scene + narrative modal | Character reward summary |
 | `climb-character-dialog` | Climb background + dialogue | Background-only Character exchange |
-| `climb-active-events` | Climb scene | Three columns with active event slots at T5 |
+| `climb-active-events` | Climb scene V2 | Fixed shop, encounter, and active-event regions at T6 |
 | `climb-hover-preview` | Climb scene | Hover preview on first encounter slot |
 | `climb-medal-tooltip-hover` | Climb scene | Medal shop hover with icon followed by text tooltip |
+| `climb-card-tooltip-hover` | Climb scene V2 | Card shop hover with upgrade-preview tooltip |
+| `climb-equipment-tooltip-hover` | Climb scene V2 | Equipment shop hover with equipment tooltip |
 | `climb-sold-shop-slot` | Climb scene | Shop with one purchased slot hidden (3 visible items) |
-| `climb-encounter-reward-modal` | Climb scene + reward modal | Encounter reward overlay |
 | `climb-replacement-modal` | Climb scene + card list modal | Deck replacement picker |
 | `climb-header` | Climb scene | Compact resources, preview badges, pulse, and Run Overview control |
 | `climb-resource-acquisition` | Climb scene | Gem fall, pouch catch, and earned-resource pulse |
+| `climb-v2-entrance` | Climb scene V2 | Fresh-climb staggered entrance sample |
+| `climb-v2-ashes` | Climb scene V2 | Midpoint ashes/desaturation turnover sample |
+| `climb-v2-purchase` | Climb scene V2 | Midpoint shop purchase split sample |
+| `climb-points-award` | WayStation return overlay | Climb threshold ascent, total crest, zero, and abandoned variants |
+
+---
+
+## Climb scene V2
+
+The V2 fixture matrix covers the fixed no-event layout, the full mockup-bible layout,
+hover projections, the three shop tooltip routes, transition samples, the V2 header,
+and the retained V1 resource-acquisition overlay. Run the complete matrix with:
+
+```bash
+./scripts/verify-climb-v2-snapshots.sh
+./scripts/verify-climb-v2-snapshots.sh --accept
+```
+
+Approved images are stored under their matching directories in `tests/VisualBaselines/`.
 
 ---
 
 ## `climb-header`
 
-Renders the production Climb header with fixed resource cells and the Run Overview control. The variants cover mixed-width resource values, simultaneous positive and negative preview badges, earned-resource pulse, and overview hover feedback.
+Renders the production V2 Climb header with fixed resource cells and the Climb Overview control. The variants cover mixed-width resource values, simultaneous positive and negative preview badges, earned-resource pulse, and overview hover feedback.
 
 ```bash
 dotnet run -- snapshot climb-header normal --verify
@@ -124,6 +150,20 @@ dotnet run -- snapshot climb-resource-acquisition pulse --verify
 ```
 
 Approved images are stored under `tests/VisualBaselines/climb-resource-acquisition/`.
+
+---
+
+## `climb-points-award`
+
+Renders the production Waystation return overlay at fixed animation samples and for every climb-point outcome represented by the source mockup.
+
+```bash
+dotnet run -- snapshot climb-points-award victory-ready --verify
+./scripts/verify-climb-points-award-snapshots.sh
+./scripts/verify-climb-points-award-snapshots.sh --accept
+```
+
+Approved images are stored under `tests/VisualBaselines/climb-points-award/`.
 
 ---
 
@@ -176,10 +216,11 @@ Approved images are stored under `tests/VisualBaselines/enemy-attack-banner/`.
 
 ## `assigned-block-rail`
 
-Renders the production gothic blocker rail attached to a fixed enemy attack banner. Variants cover a single card, mixed card/equipment assignments, the normal eight-item dense state, hover lift, entry impact, and equipment return motion.
+Renders the production gothic blocker rail attached to a fixed enemy attack banner. Variants cover a single card, mixed card/equipment assignments, the normal eight-item dense state, hover lift, entry impact, equipment return motion, and Chrono Slice blockers flying toward distinct draw and discard piles.
 
 ```bash
 dotnet run -- snapshot assigned-block-rail single-card --verify
+dotnet run -- snapshot assigned-block-rail chronoslice-flight --verify
 ./scripts/verify-assigned-block-rail-snapshots.sh
 ```
 
@@ -390,6 +431,64 @@ Transform variants append their scale, rotation, and optional Frozen state to fi
 
 ---
 
+## `poison-card`
+
+Renders one White card with the `Poisoned` component attached on a high-contrast patterned backdrop.
+
+```bash
+dotnet run -- snapshot poison-card
+dotnet run -- snapshot poison-card fireball
+dotnet run -- snapshot poison-card no-shaders
+dotnet run -- snapshot poison-card --verify
+```
+
+Output: `debug/snapshots/poison-card/<cardId>.png`
+
+---
+
+## `poison-scorched-card`
+
+Renders one White card with both `Poisoned` and `Scorched` attached, locking overlay time so slime stays on the card face while fire overflow remains outside it.
+
+```bash
+dotnet run -- snapshot poison-scorched-card
+dotnet run -- snapshot poison-scorched-card fireball
+dotnet run -- snapshot poison-scorched-card no-shaders
+dotnet run -- snapshot poison-scorched-card --verify
+```
+
+Output: `debug/snapshots/poison-scorched-card/<cardId>.png`
+
+---
+
+## `scorched-card` and `cursed-card`
+
+Render one White card with the selected status shader on the shared patterned shader-debug backdrop.
+
+```bash
+dotnet run -- snapshot scorched-card
+dotnet run -- snapshot scorched-card strike --scale 0.6 --rotation -25
+dotnet run -- snapshot cursed-card
+dotnet run -- snapshot cursed-card strike --scale 0.6 --rotation -25
+```
+
+Transform variants append their scale and rotation under `debug/snapshots/<fixture-id>/`.
+
+---
+
+## `card-render-pipeline`
+
+Locks the production pass order and the unified sheen path. Variants are `all-statuses`, `sheen-only`, and `all-statuses-sheen`.
+
+```bash
+./scripts/verify-card-render-pipeline-snapshots.sh --verify
+./scripts/verify-card-render-pipeline-snapshots.sh --accept
+```
+
+Approved images are stored under `tests/VisualBaselines/card-render-pipeline/`.
+
+---
+
 ## `colorless-card`
 
 Renders Colorless copies of a printed White, Red, and Black card with Red, White, Black, and Any cost pips.
@@ -403,21 +502,40 @@ Output: `debug/snapshots/colorless-card/all-printed-colors.png`
 
 ---
 
+## `dual-color-card`
+
+Renders White/Black, Red/Black, and Black/White Strike cards with a hard top-left-to-bottom-right split. The black-secondary variants also lock the visible +1 block value on the printed-color half.
+
+```bash
+dotnet run -- snapshot dual-color-card
+dotnet run -- snapshot dual-color-card --verify
+```
+
+Output: `debug/snapshots/dual-color-card/pairings.png`
+
+---
+
 ## `quest-reward-modal`
 
-Renders `RewardModalDisplaySystem` in quest deck-offer mode: exchange lanes and upgrade lanes with optional gold in the masthead.
+Renders the cinematic `RewardModalDisplaySystem` deck offer with two exchange lanes and one upgrade lane.
 
 ### Commands
 
 ```bash
-# Default: gold 500 + two exchanges and one upgrade
+# Default: two exchanges and one upgrade
 dotnet run -- snapshot quest-reward-modal
 
-# Explicit structured offer
-dotnet run -- snapshot quest-reward-modal --gold 500 --exchange 'strike|white' 'smite|red' --exchange 'reckoning|white' 'unburdened_strike|black' --upgrade 'smite|white'
+# Deterministic presentation samples
+dotnet run -- snapshot quest-reward-modal --presentation entering
+dotnet run -- snapshot quest-reward-modal --presentation claiming
+dotnet run -- snapshot quest-reward-modal --presentation skipping
 
-# Compatibility shortcut: creates exchange lanes using default outgoing cards
-dotnet run -- snapshot quest-reward-modal --card 'strike|white'
+# Explicit structured offer
+dotnet run -- snapshot quest-reward-modal --exchange 'strike|white' 'smite|red' --exchange 'reckoning|white' 'unburdened_strike|black' --upgrade 'smite|white'
+
+# Verify or accept the visible, entering, claiming, and skipping matrix
+./scripts/verify-quest-reward-modal-snapshots.sh
+./scripts/verify-quest-reward-modal-snapshots.sh --accept
 ```
 
 ### Card key format
@@ -438,14 +556,17 @@ Example: `'strike|white'`, `'smite|red|Upgraded'` (quote in shell so `|` is not 
 |-----|--------|
 | `--exchange` | `outgoingCardKey incomingCardKey` |
 | `--upgrade` | `cardKey` |
-| `--gold` | non-negative integer |
+| `--presentation` | `entering`, `visible`, `claiming`, or `skipping` |
 
 ### Output files
 
 | Run | Example path |
 |-----|----------------|
-| Defaults | `debug/snapshots/quest-reward-modal/gold-500-deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded.png` |
-| Explicit structured offer | `debug/snapshots/quest-reward-modal/gold-500-deck-offer-...png` |
+| Defaults | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded.png` |
+| Entering | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded-entering.png` |
+| Claiming | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded-claiming.png` |
+| Skipping | `debug/snapshots/quest-reward-modal/deck-offer-smite-red-unburdened_strike-black-smite-white-upgraded-skipping.png` |
+| Explicit structured offer | `debug/snapshots/quest-reward-modal/deck-offer-...png` |
 
 (Slugs are defined by `QuestRewardSnapshotVariant` at implementation time; adjust this table if slugs change.)
 
@@ -453,7 +574,6 @@ Example: `'strike|white'`, `'smite|red|Upgraded'` (quote in shell so `|` is not 
 
 - Invalid or unknown `cardId` in any card key: exit `1`, no PNG
 - Malformed card key: exit `1`, no PNG
-- Invalid `--gold` (non-integer): exit `1`, no PNG
 
 ---
 
@@ -548,17 +668,23 @@ dotnet run -- snapshot narrative-event-modal --event icebound_tithe --options 2
 
 ## `waystation`
 
-Renders the WayStation hub scene with the map background, Waystation banner, Climb POI, and Achievement POI.
+Renders the WayStation hub scene and climb settings modal progression states. The default variant includes the Achievement POI pending-reward badge; modal variants keep rewards settled. Locked choices are hidden and the remaining weapon and difficulty choices are centered.
 
 ### Commands
 
 ```bash
 dotnet run -- snapshot waystation
+dotnet run -- snapshot waystation modal-first-unlock
+dotnet run -- snapshot waystation modal-hammer
+dotnet run -- snapshot waystation modal-full
+
+./scripts/verify-waystation-snapshots.sh
+./scripts/verify-waystation-snapshots.sh --accept
 ```
 
 ### Output file
 
-`debug/snapshots/waystation/default.png`
+`debug/snapshots/waystation/<variant>.png`
 
 ---
 
@@ -608,7 +734,6 @@ dotnet run -- snapshot climb-active-events
 dotnet run -- snapshot climb-hover-preview
 dotnet run -- snapshot climb-medal-tooltip-hover
 dotnet run -- snapshot climb-sold-shop-slot
-dotnet run -- snapshot climb-encounter-reward-modal
 dotnet run -- snapshot climb-replacement-modal
 dotnet run -- snapshot climb-inventory-overlay
 dotnet run -- snapshot climb-inventory-equipment-tooltip

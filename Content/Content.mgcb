@@ -580,7 +580,7 @@
 /processorParam:TextureFormat=Color
 /build:crusader_dagger.png
 
-#begin Fallen_Shepherd.png
+#begin Enemies/Fallen_Shepherd.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -590,9 +590,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Fallen_Shepherd.png
+/build:Enemies/Fallen_Shepherd.png
 
-#begin Berserker.png
+#begin Enemies/Frostbound_Aeon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -602,9 +602,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Berserker.png
+/build:Enemies/Frostbound_Aeon.png
 
-#begin Shadow.png
+#begin Enemies/Berserker.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -614,9 +614,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Shadow.png
+/build:Enemies/Berserker.png
 
-#begin Demon.png
+#begin Enemies/Shadow.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -626,9 +626,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Demon.png
+/build:Enemies/Shadow.png
 
-#begin Training_Demon.png
+#begin Enemies/Demon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -638,9 +638,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Training_Demon.png
+/build:Enemies/Demon.png
 
-#begin Thornreaver.png
+#begin Enemies/Training_Demon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -650,9 +650,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Thornreaver.png
+/build:Enemies/Training_Demon.png
 
-#begin Earth_Demon.png
+#begin Enemies/Thornreaver.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -662,9 +662,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Earth_Demon.png
+/build:Enemies/Thornreaver.png
 
-#begin Horde.png
+#begin Enemies/Earth_Demon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -674,9 +674,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Horde.png
+/build:Enemies/Earth_Demon.png
 
-#begin Dust_Wuurm.png
+#begin Enemies/Horde.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -686,9 +686,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Dust_Wuurm.png
+/build:Enemies/Horde.png
 
-#begin Sorcerer.png
+#begin Enemies/Dust_Wuurm.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -698,9 +698,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sorcerer.png
+/build:Enemies/Dust_Wuurm.png
 
-#begin Mummy.png
+#begin Enemies/Sorcerer.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -710,9 +710,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Mummy.png
+/build:Enemies/Sorcerer.png
 
-#begin Ogre.png
+#begin Enemies/Mummy.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -722,9 +722,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Ogre.png
+/build:Enemies/Mummy.png
 
-#begin Medusa.png
+#begin Enemies/Ogre.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -734,9 +734,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Medusa.png
+/build:Enemies/Ogre.png
 
-#begin Wyvern.png
+#begin Enemies/Azure_Warden.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -746,21 +746,21 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Wyvern.png
+/build:Enemies/Azure_Warden.png
 
-#begin Succubus.png
+#begin Enemies/Blighttongue.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
 /processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=True
+/processorParam:GenerateMipmaps=False
 /processorParam:PremultiplyAlpha=True
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Succubus.png
+/build:Enemies/Blighttongue.png
 
-#begin Cinderbolt_Demon.png
+#begin Enemies/Wyvern.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -770,9 +770,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Cinderbolt_Demon.png
+/build:Enemies/Wyvern.png
 
-#begin Spider.png
+#begin Enemies/Succubus.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -782,9 +782,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Spider.png
+/build:Enemies/Succubus.png
 
-#begin Fire_Skeleton.png
+#begin Enemies/Cinderbolt_Demon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -794,9 +794,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Fire_Skeleton.png
+/build:Enemies/Cinderbolt_Demon.png
 
-#begin Skeletal_Archer.png
+#begin Enemies/Spider.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -806,9 +806,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Skeletal_Archer.png
+/build:Enemies/Spider.png
 
-#begin Sand_Golem.png
+#begin Enemies/Fire_Skeleton.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -818,9 +818,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sand_Golem.png
+/build:Enemies/Fire_Skeleton.png
 
-#begin Ice_Demon.png
+#begin Enemies/Earth_Skeleton.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -830,9 +830,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Ice_Demon.png
+/build:Enemies/Earth_Skeleton.png
 
-#begin Glacial_Guardian.png
+#begin Enemies/Frost_Skeleton.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -842,9 +842,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Glacial_Guardian.png
+/build:Enemies/Frost_Skeleton.png
 
-#begin Skeleton.png
+#begin Enemies/Cursed_Skeleton.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -854,9 +854,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Skeleton.png
+/build:Enemies/Cursed_Skeleton.png
 
-#begin Ninja.png
+#begin Enemies/Skeletal_Archer.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -866,7 +866,67 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Ninja.png
+/build:Enemies/Skeletal_Archer.png
+
+#begin Enemies/Sand_Golem.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Enemies/Sand_Golem.png
+
+#begin Enemies/Ice_Demon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Enemies/Ice_Demon.png
+
+#begin Enemies/Glacial_Guardian.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Enemies/Glacial_Guardian.png
+
+#begin Enemies/Skeleton.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Enemies/Skeleton.png
+
+#begin Enemies/Ninja.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Enemies/Ninja.png
 
 #begin card_back.png
 /importer:TextureImporter
@@ -1248,6 +1308,18 @@
 /processorParam:TextureFormat=Color
 /build:pledge.png
 
+#begin Medals/st_adrian.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_adrian.png
+
 #begin Medals/st_anthony_of_padua.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1403,6 +1475,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Medals/st_joan_of_arc.png
+
+#begin Medals/st_jude.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_jude.png
 
 #begin Medals/st_lawrence.png
 /importer:TextureImporter
@@ -2414,6 +2498,83 @@
 /processorParam:TextureFormat=Color
 /build:CardArt/thaw.png
 
+#begin CardArt/abounding_grace.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/abounding_grace.png
+
+#begin CardArt/answered_prayer.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/answered_prayer.png
+
+#begin CardArt/mark_of_anathema.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/mark_of_anathema.png
+
+#begin CardArt/reckless_barrage.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/reckless_barrage.png
+
+#begin CardArt/shieldbearers_vigil.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/shieldbearers_vigil.png
+
+#begin CardArt/steel_prayer.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/steel_prayer.png
+
+#begin CardArt/sword_into_shield.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/sword_into_shield.png
+
 #---------------------------------- Data JSON Files ---------------------------------#
 
 #begin Data/Equipment/focus_visor.json
@@ -2438,6 +2599,24 @@
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
 /build:Shaders/GaussianBlur.fx
+
+#begin Shaders/QuestRewardOverlay.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/QuestRewardOverlay.fx
+
+#begin Shaders/QuestRewardLayerFilter.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/QuestRewardLayerFilter.fx
+
+#begin Shaders/ClimbChoiceFilter.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/ClimbChoiceFilter.fx
 
 #---------------------------------- Shaders ---------------------------------#
 
@@ -2471,11 +2650,11 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/RectangularShockwave.fx
 
-#begin Shaders/Poison.fx
+#begin Shaders/PoisonCard.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:Shaders/Poison.fx
+/build:Shaders/PoisonCard.fx
 
 #begin Shaders/Brittle.fx
 /importer:EffectImporter
@@ -2632,6 +2811,16 @@
 /importer:OggImporter
 /processor:SongProcessor
 /build:Music/victory.ogg
+
+#begin Music/title.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/build:Music/title.ogg
+
+#begin Music/waystation.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/build:Music/waystation.ogg
 
 #---------------------------------- SFX ---------------------------------#
 
@@ -2849,3 +3038,27 @@
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /build:SFX/gem-drop.wav
+
+#begin Enemies/Hex_Bailiff.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Enemies/Hex_Bailiff.png
+
+#begin CardArt/hex.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:CardArt/hex.png

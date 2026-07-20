@@ -71,7 +71,7 @@ Two queues manage event flow:
   “Start turn” (rules) → “Draw card” → “On draw” triggers → resolve life gain → resolve damage reaction.  
 
 - **RPG**  
-  “Attack” (rules) → “On hit” trigger → poison effect → damage over time tick.  
+  “Attack” (rules) → “On hit” trigger → poison passive → poisoned-card block consequence.
 
 - **Simulation**  
   “Day starts” (rules) → “Weather changes” → “On rain” trigger → crops grow.  

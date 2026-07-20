@@ -63,12 +63,38 @@ public class WayStationRunSetupTests
 			Assert.NotNull(hp);
 			Assert.Equal(expectedMaxHp, hp.Max);
 			Assert.Equal(expectedMaxHp, hp.Current);
+			Assert.Equal(difficulty, SaveCache.GetClimbState().difficulty);
 			Assert.Same(world.EntityManager.GetEntity("Deck"), player.GetComponent<Player>().DeckEntity);
 			Assert.Empty(world.EntityManager.GetEntitiesWithComponent<QueuedEvents>());
 		}
 		finally
 		{
 			WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+			EventManager.Clear();
+		}
+	}
+
+	[Theory]
+	[InlineData(StartingWeapon.Sword, "sword")]
+	[InlineData(StartingWeapon.Dagger, "dagger")]
+	[InlineData(StartingWeapon.Hammer, "hammer")]
+	public void Depart_persists_the_starting_weapon_for_climb_completion(
+		StartingWeapon weapon,
+		string expectedWeaponId)
+	{
+		EventManager.Clear();
+		try
+		{
+			SaveCache.DeleteSaveFilesIfPresent();
+			WayStationRunSetupSingleton.SelectedWeapon = weapon;
+
+			WayStationRunSetupService.Depart(new World());
+
+			Assert.Equal(expectedWeaponId, SaveCache.GetClimbState().startingWeaponId);
+		}
+		finally
+		{
+			WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
 			EventManager.Clear();
 		}
 	}
@@ -155,8 +181,8 @@ public class WayStationRunSetupTests
 	}
 
 	[Theory]
-	[InlineData(RunDifficulty.Easy, 25, 0.8f)]
-	[InlineData(RunDifficulty.Normal, 22, 0.9f)]
+	[InlineData(RunDifficulty.Easy, 25, 0.7f)]
+	[InlineData(RunDifficulty.Normal, 22, 0.85f)]
 	[InlineData(RunDifficulty.Hard, 20, 1.0f)]
 	public void Difficulty_maps_to_player_hp_and_enemy_health_modifier(
 		RunDifficulty difficulty,
@@ -170,8 +196,8 @@ public class WayStationRunSetupTests
 	}
 
 	[Theory]
-	[InlineData(RunDifficulty.Easy, 21)]
-	[InlineData(RunDifficulty.Normal, 23)]
+	[InlineData(RunDifficulty.Easy, 18)]
+	[InlineData(RunDifficulty.Normal, 22)]
 	[InlineData(RunDifficulty.Hard, 26)]
 	public void Enemy_factory_scales_health_for_selected_run_difficulty(
 		RunDifficulty difficulty,
@@ -194,7 +220,7 @@ public class WayStationRunSetupTests
 	}
 
 	[Fact]
-	public void Enemy_factory_adds_climb_time_weight_to_health()
+	public void Enemy_factory_adds_climb_time_percent_bonus_after_difficulty()
 	{
 		var world = PrepareWorldWithLoadout(new List<string>
 		{
@@ -207,75 +233,34 @@ public class WayStationRunSetupTests
 
 		var enemyEntity = EntityFactory.CreateEnemyFromId(world, "skeleton", world.EntityManager);
 
-		Assert.Equal(8, enemyEntity.GetComponent<Enemy>().MaxHealth);
+		// Skeleton HP 26, Hard (1.0), time 9 → 1 interval → Round(26 * 1.1) = 29
+		Assert.Equal(29, enemyEntity.GetComponent<Enemy>().MaxHealth);
 	}
 
 	[Fact]
-	public void Diagnostic_enemy_hp_calculation_wyvern_easy_27cards_time8()
+	public void Enemy_factory_climb_time_bonus_ignores_deck_size()
 	{
-		// Reproduce user report: Wyvern, Easy difficulty, ~27 cards, time ~8
-		// Expected with fix: deckWeight=29, pre-mod=48, Easy(0.8)=38
-		const int cardCount = 27;
 		const int climbTime = 8;
-		const int wyvernHp = 28;
-		const float expectedModifier = 0.8f;   // Easy
+		// Wyvern 28, Easy 0.7 → Round(28*0.7)=20; time 8 → 1 interval → Round(20*1.1)=22
+		const int expectedHp = 22;
 
-		var world = PrepareWorldWithLoadout(
-			Enumerable.Range(0, cardCount).Select(_ => "smite|White").ToList(),
+		var smallDeckWorld = PrepareWorldWithLoadout(
+			Enumerable.Range(0, 4).Select(_ => "smite|White").ToList(),
 			climbTime: climbTime);
-
 		WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+		int smallDeckHp = EntityFactory.CreateEnemyFromId(smallDeckWorld, "wyvern", smallDeckWorld.EntityManager)
+			.GetComponent<Enemy>().MaxHealth;
 
-		float actualModifier = WayStationRunSetupSingleton.EnemyHealthModifier;
-		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
-		int loadoutCardCount = loadout.cards.Count;
-		var climb = SaveCache.GetClimbState();
-		int actualClimbTime = climb.time;
+		var largeDeckWorld = PrepareWorldWithLoadout(
+			Enumerable.Range(0, 27).Select(_ => "smite|White").ToList(),
+			climbTime: climbTime);
+		WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+		int largeDeckHp = EntityFactory.CreateEnemyFromId(largeDeckWorld, "wyvern", largeDeckWorld.EntityManager)
+			.GetComponent<Enemy>().MaxHealth;
 
-		Console.WriteLine($"=== DIAGNOSTIC: Enemy HP Calculation ===");
-		Console.WriteLine($"SelectedDifficulty:       {WayStationRunSetupSingleton.SelectedDifficulty}");
-		Console.WriteLine($"EnemyHealthModifier:       {actualModifier} (expected {expectedModifier})");
-		Console.WriteLine($"Loadout card count:        {loadoutCardCount}");
-		Console.WriteLine($"Climb time:                {actualClimbTime}");
-		Console.WriteLine($"ShopRefreshInterval:       {ClimbRuleService.ShopRefreshInterval}");
-		Console.WriteLine($"TimeBonusMultiplier:       {RunDeckService.EnemyHealthClimbTimeBonusMultiplier}");
-		Console.WriteLine($"Wyvern HP (20-card base):  {wyvernHp}");
-
-		var deckEntity = world.EntityManager.GetEntitiesWithComponent<Deck>().First();
-		var deck = deckEntity.GetComponent<Deck>();
-		float deckWeight = RunDeckService.CalculateEnemyHealthDeckWeight(
-			world.EntityManager, deck.Cards.Count, 0);
-		int timeBonus = (climbTime / ClimbRuleService.ShopRefreshInterval) * RunDeckService.EnemyHealthClimbTimeBonusMultiplier;
-		int preModifierHp = (int)Math.Round(wyvernHp * deckWeight / EnemyBase.ReferenceDeckCardCount);
-		int postModifierHp = (int)Math.Round(preModifierHp * actualModifier);
-
-		Console.WriteLine($"Time bonus:                {timeBonus}");
-		Console.WriteLine($"Deck weight:               {deckWeight} (cards + timeBonus)");
-		Console.WriteLine($"Pre-modifier HP:           {preModifierHp} (= Round({wyvernHp} * {deckWeight} / {EnemyBase.ReferenceDeckCardCount}))");
-		Console.WriteLine($"Post-modifier HP:          {postModifierHp} (= Round({preModifierHp} * {actualModifier}))");
-
-		var enemyEntity = EntityFactory.CreateEnemyFromId(world, "wyvern", world.EntityManager);
-		var enemy = enemyEntity.GetComponent<Enemy>();
-		var hp = enemyEntity.GetComponent<HP>();
-
-		Console.WriteLine($"--- Actual entity values ---");
-		Console.WriteLine($"Enemy.MaxHealth:           {enemy.MaxHealth}");
-		Console.WriteLine($"Enemy.CurrentHealth:       {enemy.CurrentHealth}");
-		Console.WriteLine($"HP.Max:                    {hp.Max}");
-		Console.WriteLine($"HP.Current:                {hp.Current}");
-		Console.WriteLine($"================================");
-
-		// Foundation: modifier must be Easy (0.8)
-		Assert.Equal(expectedModifier, actualModifier);
-
-		// Core assertion: post-modifier HP must match entity values
-		Assert.Equal(postModifierHp, enemy.MaxHealth);
-		Assert.Equal(postModifierHp, enemy.CurrentHealth);
-		Assert.Equal(postModifierHp, hp.Max);
-		Assert.Equal(postModifierHp, hp.Current);
-
-		// Wyvern base HP is 28; with deckWeight=29, postMod=Round(Round(28*29/20)*0.8)=33
-		Assert.Equal(33, enemy.MaxHealth);
+		Assert.Equal(expectedHp, smallDeckHp);
+		Assert.Equal(expectedHp, largeDeckHp);
+		Assert.Equal(smallDeckHp, largeDeckHp);
 	}
 
 	private static World PrepareWorldWithLoadout(

@@ -33,19 +33,14 @@ public class Game1 : Game
     private TransitionDisplaySystem _transitionDisplaySystem;
     private SceneLoadingCoordinatorSystem _sceneLoadingCoordinatorSystem;
     private CardDisplaySystem _cardDisplaySystem;
-    private CardShaderCompositorSystem _cardShaderCompositorSystem;
-    private FrozenDisplaySystem _frozenDisplaySystem;
-    private ThornedDisplaySystem _thornedDisplaySystem;
-    private BrittleDisplaySystem _brittleDisplaySystem;
-    private ScorchedDisplaySystem _scorchedDisplaySystem;
-    private CursedDisplaySystem _cursedDisplaySystem;
-    private CardSheenDisplaySystem _cardSheenDisplaySystem;
     private SealDisplaySystem _sealDisplaySystem;
     private PlayerInputSystem _playerInputSystem;
     private ControllerRumbleSystem _controllerRumbleSystem;
     private UIInteractionSystem _uiInteractionSystem;
 	private CardApplicationManagementSystem _cardApplicationManagementSystem;
+	private DualColorManagementSystem _dualColorManagementSystem;
 	private CursedManagementSystem _cursedManagementSystem;
+	private HexManagementSystem _hexManagementSystem;
 	private DeckManagementSystem _deckManagementSystem;
 
     private DrippingBloodDisplaySystem _drippingBloodDisplaySystem;
@@ -56,6 +51,7 @@ public class Game1 : Game
     private WayStationDialogueSystem _wayStationDialogueSystem;
     private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModalSystem;
     private WayStationSaintsMedalsModalSystem _wayStationSaintsMedalsModalSystem;
+	private ClimbPointsAwardDisplaySystem _climbPointsAwardDisplaySystem;
     private BattleSceneSystem _battleSceneSystem;
     private ClimbSceneSystem _climbSceneSystem;
     private AchievementSceneSystem _achievementSceneSystem;
@@ -88,10 +84,14 @@ public class Game1 : Game
     private readonly DisplaySnapshotLaunchOptions _snapshotOptions;
     private readonly TestFightLaunchOptions _testFightOptions;
     private readonly CardListProfileLaunchOptions _cardListProfileOptions;
+    private readonly BattleRenderProfileLaunchOptions _battleRenderProfileOptions;
 #if DEBUG
     private int _cardListProfileRenderedFrames;
     private int _cardListProfileSettleFrames;
     private int _cardListProfileMaxVisible;
+    private int _battleRenderProfileRenderedFrames;
+    private int _battleRenderProfileSettleFrames;
+    private bool _battleRenderProfilePrepared;
 #endif
 #if DEBUG
     private bool _writePerfReportOnExit;
@@ -103,7 +103,6 @@ public class Game1 : Game
     // Shockwave integration
     private ShockwaveDisplaySystem _shockwaveSystem;
     private RectangularShockwaveDisplaySystem _rectangularShockwaveSystem;
-    private PoisonDamageDisplaySystem _poisonSystem;
     private AlertDisplaySystem _alertDisplaySystem;
     private RenderTarget2D _sceneRt;
     private RenderTarget2D _ppA;
@@ -129,11 +128,13 @@ public class Game1 : Game
     public Game1(
         DisplaySnapshotLaunchOptions snapshotOptions = null,
         TestFightLaunchOptions testFightOptions = null,
-        CardListProfileLaunchOptions cardListProfileOptions = null)
+        CardListProfileLaunchOptions cardListProfileOptions = null,
+        BattleRenderProfileLaunchOptions battleRenderProfileOptions = null)
     {
         _snapshotOptions = snapshotOptions;
         _testFightOptions = testFightOptions;
         _cardListProfileOptions = cardListProfileOptions;
+        _battleRenderProfileOptions = battleRenderProfileOptions;
         if (_testFightOptions != null)
         {
             TestFightRuntime.Configure(_testFightOptions);
@@ -146,7 +147,7 @@ public class Game1 : Game
         _graphics.PreferredBackBufferWidth = VirtualWidth;
         _graphics.PreferredBackBufferHeight = VirtualHeight;
 #if DEBUG
-        if (_cardListProfileOptions != null)
+        if (_cardListProfileOptions != null || _battleRenderProfileOptions != null)
         {
             _graphics.SynchronizeWithVerticalRetrace = false;
             IsFixedTimeStep = false;
@@ -174,7 +175,8 @@ public class Game1 : Game
     {
         LoggingService.Initialize();
         CardUsageTelemetryRuntime.Initialize(
-            _snapshotOptions == null && _testFightOptions == null && _cardListProfileOptions == null);
+            _snapshotOptions == null && _testFightOptions == null && _cardListProfileOptions == null &&
+            _battleRenderProfileOptions == null);
         CalculateRenderDestination();
         // Initialize ECS World
         _world = new World();
@@ -194,7 +196,7 @@ public class Game1 : Game
         FontSingleton.Initialize(Content);
 
         // Initialize Achievement system
-        if (_testFightOptions == null && _cardListProfileOptions == null)
+        if (_testFightOptions == null && _cardListProfileOptions == null && _battleRenderProfileOptions == null)
         {
             AchievementManager.Initialize(_world.EntityManager);
         }
@@ -223,18 +225,30 @@ public class Game1 : Game
         _debugMenuSystem = new DebugMenuSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _world.SystemManager);
         _entityListOverlaySystem = new EntityListOverlaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _transitionDisplaySystem = new TransitionDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _cardDisplaySystem = new CardDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
-        _cardShaderCompositorSystem = new CardShaderCompositorSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
-        _frozenDisplaySystem = new FrozenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _thornedDisplaySystem = new ThornedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _brittleDisplaySystem = new BrittleDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _scorchedDisplaySystem = new ScorchedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _cursedDisplaySystem = new CursedDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _cardSheenDisplaySystem = new CardSheenDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        ICardOverlayPass[] cardOverlayPasses = CardOverlayPassCatalog.Create(
+            _world.EntityManager,
+            Content);
+        var cardRenderPipeline = new CardRenderPipeline(
+            _world.EntityManager,
+            GraphicsDevice,
+            _spriteBatch,
+            cardOverlayPasses);
+        _cardDisplaySystem = new CardDisplaySystem(
+            _world.EntityManager,
+            GraphicsDevice,
+            _spriteBatch,
+            _imageAssets,
+            cardRenderPipeline);
         var sealTexture = _imageAssets.GetRequiredTexture("seal");
         _sealDisplaySystem = new SealDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, sealTexture);
         _dialogDisplaySystem = new DialogDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         var playerInputAdapter = new MonoGamePlayerInputAdapter();
+		_climbPointsAwardDisplaySystem = new ClimbPointsAwardDisplaySystem(
+			_world.EntityManager,
+			GraphicsDevice,
+			_spriteBatch,
+			_imageAssets,
+			playerInputAdapter);
         _playerInputSystem = new PlayerInputSystem(
             _world.EntityManager,
             playerInputAdapter);
@@ -252,7 +266,9 @@ public class Game1 : Game
         _cardTooltipDisplaySystem = new CardTooltipDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _locationNameDisplaySystem = new LocationNameDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
 		_cardApplicationManagementSystem = new CardApplicationManagementSystem(_world.EntityManager);
+		_dualColorManagementSystem = new DualColorManagementSystem(_world.EntityManager);
 		_cursedManagementSystem = new CursedManagementSystem(_world.EntityManager);
+		_hexManagementSystem = new HexManagementSystem(_world.EntityManager);
 		_deckManagementSystem = new DeckManagementSystem(_world.EntityManager);
         _profilerSystem = new ProfilerSystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _cursorDisplaySystem = new CursorDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
@@ -274,6 +290,7 @@ public class Game1 : Game
         _world.AddSystem(_wayStationDialogueSystem);
         _world.AddSystem(_wayStationClimbSettingsModalSystem);
         _world.AddSystem(_wayStationSaintsMedalsModalSystem);
+		_world.AddSystem(_climbPointsAwardDisplaySystem);
         _world.AddSystem(_battleSceneSystem);
         _world.AddSystem(_climbSceneSystem);
         _world.AddSystem(_achievementSceneSystem);
@@ -286,19 +303,14 @@ public class Game1 : Game
                 CardUsageTelemetryRuntime.Store));
         }
 		_world.AddSystem(_cardApplicationManagementSystem);
+		_world.AddSystem(_dualColorManagementSystem);
 		_world.AddSystem(_cursedManagementSystem);
+		_world.AddSystem(_hexManagementSystem);
 		_world.AddSystem(_deckManagementSystem);
         _world.AddSystem(_debugMenuSystem);
         _world.AddSystem(_entityListOverlaySystem);
         _world.AddSystem(_transitionDisplaySystem);
         _world.AddSystem(_cardDisplaySystem);
-        _world.AddSystem(_cardShaderCompositorSystem);
-        _world.AddSystem(_frozenDisplaySystem);
-        _world.AddSystem(_thornedDisplaySystem);
-        _world.AddSystem(_brittleDisplaySystem);
-        _world.AddSystem(_scorchedDisplaySystem);
-        _world.AddSystem(_cursedDisplaySystem);
-        _world.AddSystem(_cardSheenDisplaySystem);
         _world.AddSystem(_sealDisplaySystem);
         _world.AddSystem(_dialogDisplaySystem);
         _world.AddSystem(new ModalAnimationSystem(_world.EntityManager), SystemUpdatePhase.Input);
@@ -325,7 +337,7 @@ public class Game1 : Game
         _world.AddSystem(_debugCommandSystem);
         _world.AddSystem(_medalEquipDebugSystem);
         _world.AddSystem(_equipmentEquipDebugSystem);
-        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets, Content);
         _world.AddSystem(_rewardModalDisplaySystem);
         _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_narrativeEventModalDisplaySystem);
@@ -345,8 +357,6 @@ public class Game1 : Game
         _world.AddSystem(_shockwaveSystem);
         _rectangularShockwaveSystem = new RectangularShockwaveDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _world.AddSystem(_rectangularShockwaveSystem);
-        _poisonSystem = new PoisonDamageDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
-        _world.AddSystem(_poisonSystem);
         _world.AddSystem(new CursorEmptySelectDisplaySystem(_world.EntityManager, GraphicsDevice));
         _world.AddSystem(new UISelectDisplaySystem(_world.EntityManager, GraphicsDevice));
         _world.AddSystem(new JigglePulseDisplaySystem(_world.EntityManager));
@@ -369,6 +379,10 @@ public class Game1 : Game
 
         if (_testFightOptions != null)
         {
+            if (_battleRenderProfileOptions != null)
+            {
+                TestFightRuntime.SetDeckSeedProviderForTests(() => 30030);
+            }
             TestFightSetupService.PrepareWorld(_world);
             EventManager.Publish(new ShowTransition
             {
@@ -387,11 +401,12 @@ public class Game1 : Game
     
     protected override void Update(GameTime gameTime)
     {
-        bool skipProfile = _snapshotHost?.IsActive == true || IsCardListProfileSettling();
+        bool skipProfile = _snapshotHost?.IsActive == true || IsProfileSettling();
         FrameProfiler.BeginUpdateIteration(skipProfile);
 
 #if DEBUG
         UpdateCardListProfileScroll();
+        PrepareBattleRenderProfileIfReady();
 #endif
 
 #if DEBUG
@@ -472,7 +487,7 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
 #if DEBUG
-        FrameProfiler.BeginRenderFrame(_snapshotHost?.IsActive == true || IsCardListProfileSettling());
+        FrameProfiler.BeginRenderFrame(_snapshotHost?.IsActive == true || IsProfileSettling());
         try
         {
             FrameProfiler.MeasureInclusive("Game1.Draw.Commands", () => DrawGame(gameTime));
@@ -481,6 +496,7 @@ public class Game1 : Game
         {
             FrameProfiler.EndRenderFrame();
             AdvanceCardListProfile();
+            AdvanceBattleRenderProfile();
         }
 #else
         DrawGame(gameTime);
@@ -522,22 +538,14 @@ public class Game1 : Game
 
     private bool TryCompositeDrawEffects(out Texture2D finalTexture)
     {
-        bool hasPoison = _poisonSystem != null && _poisonSystem.HasActivePoison;
         bool hasCircularWaves = _shockwaveSystem != null && _shockwaveSystem.HasActiveWaves;
         bool hasRectangularWaves = _rectangularShockwaveSystem != null && _rectangularShockwaveSystem.HasActiveWaves;
 
         finalTexture = _sceneRt;
 
-        if (ShaderRuntimeOptions.ShadersEnabled && (hasPoison || hasCircularWaves || hasRectangularWaves))
+        if (ShaderRuntimeOptions.ShadersEnabled && (hasCircularWaves || hasRectangularWaves))
         {
             EnsurePostProcessTargets();
-            if (hasPoison)
-            {
-                RenderTarget2D next = (hasCircularWaves || hasRectangularWaves) ? _ppB : _ppA;
-                _poisonSystem.Composite(finalTexture, _ppA, next);
-                finalTexture = next;
-            }
-
             if (hasCircularWaves)
             {
                 RenderTarget2D dest = (finalTexture == _ppA) ? _ppB : _ppA;
@@ -648,6 +656,20 @@ public class Game1 : Game
                 break;
             }
         }
+        if (scene.Current == SceneId.Battle)
+        {
+            FrameProfiler.Measure("Battle.GlobalOverlays", DrawGlobalOverlays);
+        }
+        else
+        {
+            DrawGlobalOverlays();
+        }
+        // Cursor blur trail (additive pass before cursor) - skip in card debug mode
+        DrawCursor();
+    }
+
+    private void DrawGlobalOverlays()
+    {
         FrameProfiler.Measure("HotKeySystem.Draw", _hotKeySystem.Draw);
         FrameProfiler.Measure("HotKeyProgressRingSystem.Draw", _hotKeyProgressRingSystem.Draw);
         FrameProfiler.Measure("LocationNameDisplaySystem.Draw", _locationNameDisplaySystem.Draw);
@@ -665,6 +687,7 @@ public class Game1 : Game
         FrameProfiler.Measure("HintTooltipDisplaySystem.Draw", _hintTooltipDisplaySystem.Draw);
         FrameProfiler.Measure("CardTooltipDisplaySystem.Draw", _cardTooltipDisplaySystem.Draw);
         FrameProfiler.Measure("AlertDisplaySystem.Draw", _alertDisplaySystem.Draw);
+		FrameProfiler.Measure("ClimbPointsAwardDisplaySystem.Draw", _climbPointsAwardDisplaySystem.Draw);
         FrameProfiler.Measure("ProfilerSystem.Draw", _profilerSystem.Draw);
         FrameProfiler.Measure("DebugMenuSystem.Draw", _debugMenuSystem.Draw);
         FrameProfiler.Measure("EntityListOverlaySystem.Draw", _entityListOverlaySystem.Draw);
@@ -674,8 +697,6 @@ public class Game1 : Game
         FrameProfiler.Measure("GameOverOverlayDisplaySystem.Draw", _gameOverOverlayDisplaySystem.Draw);
         FrameProfiler.Measure("TransitionDisplaySystem.Draw", _transitionDisplaySystem.Draw);
         FrameProfiler.Measure("UIElementBorderDebugSystem.Draw", _uiElementBorderDebugSystem.Draw);
-        // Cursor blur trail (additive pass before cursor) — skip in card debug mode
-        DrawCursor();
     }
 
     private bool IsBackgroundOnlyClimbDialogue(SceneState scene)
@@ -798,8 +819,141 @@ public class Game1 : Game
         Environment.ExitCode = pass ? 0 : 1;
         Exit();
     }
+
+    private void PrepareBattleRenderProfileIfReady()
+    {
+        if (_battleRenderProfileOptions == null || _battleRenderProfilePrepared) return;
+        SceneId scene = _world.EntityManager.GetEntitiesWithComponent<SceneState>()
+            .FirstOrDefault()?.GetComponent<SceneState>()?.Current ?? SceneId.None;
+        var deck = _world.EntityManager.GetEntity("Deck")?.GetComponent<Deck>();
+        if (scene != SceneId.Battle || deck?.Cards == null || deck.Cards.Count < 5 ||
+            _world.EntityManager.GetEntity("Enemy") == null)
+        {
+            return;
+        }
+
+        Entity[] cards = deck.Cards
+            .Where(card => card.GetComponent<CardData>()?.Card?.IsWeapon != true)
+            .OrderBy(card => card.GetComponent<CardData>()?.Card?.CardId)
+            .ThenBy(card => card.Id)
+            .Take(5)
+            .ToArray();
+        if (cards.Length != 5)
+        {
+            throw new BattleRenderProfileSetupException(
+                $"Expected at least five non-weapon cards but found {cards.Length}");
+        }
+
+        deck.Hand.Clear();
+        deck.DrawPile.Clear();
+        deck.DiscardPile.Clear();
+        deck.ExhaustPile.Clear();
+        deck.Hand.AddRange(cards);
+        deck.DrawPile.AddRange(deck.Cards.Where(card => !cards.Contains(card) &&
+            card.GetComponent<CardData>()?.Card?.IsWeapon != true));
+
+        _world.EntityManager.AddComponent(cards[1], new Frozen());
+        _world.EntityManager.AddComponent(cards[2], new Pledge { CanPlay = true });
+        _world.EntityManager.AddComponent(cards[3], new Shackle());
+        foreach (Entity card in cards)
+        {
+            var ui = card.GetComponent<UIElement>();
+            if (ui != null)
+            {
+                ui.IsHidden = false;
+                ui.IsInteractable = false;
+                ui.IsHovered = false;
+                ui.IsClicked = false;
+            }
+        }
+
+        var phase = _world.EntityManager.GetEntity("PhaseState")?.GetComponent<PhaseState>();
+        if (phase != null)
+        {
+            phase.Main = MainPhase.PlayerTurn;
+            phase.Sub = SubPhase.Action;
+            phase.TurnNumber = 1;
+        }
+        EventManager.Publish(new SetActionPointsEvent { Amount = 2 });
+        EventManager.Publish(new SetCourageEvent { Amount = 3 });
+        EventManager.Publish(new SetTemperanceEvent { Amount = 2 });
+        GpuProfiler.ResumeCapture();
+        _battleRenderProfilePrepared = true;
+        Console.WriteLine($"[BattleRenderProfile] prepared {cards.Length} hand cards at {Display.RenderWidth}x{Display.RenderHeight}");
+    }
+
+    private void AdvanceBattleRenderProfile()
+    {
+        if (_battleRenderProfileOptions == null || !_battleRenderProfilePrepared) return;
+        _battleRenderProfileRenderedFrames++;
+
+        if (_battleRenderProfileRenderedFrames == BattleRenderProfileLaunchOptions.WarmupFrames)
+        {
+            FrameProfiler.ResetSession();
+            GpuProfiler.Reset();
+            _cardDisplaySystem.ResetBaseCacheDiagnostics();
+            Console.WriteLine("[BattleRenderProfile] warm-up complete; measuring 300 frames");
+            return;
+        }
+
+        int measurementEnd = BattleRenderProfileLaunchOptions.WarmupFrames +
+            BattleRenderProfileLaunchOptions.MeasuredFrames;
+        if (_battleRenderProfileRenderedFrames == measurementEnd)
+        {
+            GpuProfiler.PauseCapture();
+            Console.WriteLine($"[BattleRenderProfile] measurement complete; resolving {GpuProfiler.PendingQueries} query pairs without blocking");
+            return;
+        }
+
+        if (_battleRenderProfileRenderedFrames <= measurementEnd) return;
+        _battleRenderProfileSettleFrames++;
+        if (GpuProfiler.PendingQueries == 0 ||
+            _battleRenderProfileSettleFrames >= BattleRenderProfileLaunchOptions.MaxQuerySettleFrames)
+        {
+            FinishBattleRenderProfile();
+        }
+    }
+
+    private void FinishBattleRenderProfile()
+    {
+        const string battleScope = "BattleSceneSystem.Draw";
+        const string handScope = "HandDisplaySystem.DrawHand";
+        bool hasBattleCpu = FrameProfiler.TryGetSessionStats(battleScope, gpu: false, out var battleCpu);
+        bool hasBattleGpu = FrameProfiler.TryGetSessionStats(battleScope, gpu: true, out var battleGpu);
+        bool hasHandCpu = FrameProfiler.TryGetSessionStats(handScope, gpu: false, out var handCpu);
+        bool hasHandGpu = FrameProfiler.TryGetSessionStats(handScope, gpu: true, out var handGpu);
+        bool hasBattleDraws = FrameProfiler.TryGetAverageDrawCalls(battleScope, out double battleDraws);
+        bool hasHandDraws = FrameProfiler.TryGetAverageDrawCalls(handScope, out double handDraws);
+        bool pass = GpuProfiler.TimerSupported && hasBattleCpu && hasBattleGpu && hasHandCpu && hasHandGpu &&
+            hasBattleDraws && hasHandDraws;
+        const string reportPath = "logs/battle-render-profile-report.txt";
+        FrameProfiler.WriteReport(reportPath, FrameProfiler.ActiveSceneId, ShaderRuntimeOptions.ShadersEnabled);
+        CardBaseCacheDiagnostics cache = _cardDisplaySystem.GetBaseCacheDiagnostics();
+        File.AppendAllText(
+            reportPath,
+            $"{Environment.NewLine}=== Card base cache ==={Environment.NewLine}" +
+            $"Hits: {cache.Hits}{Environment.NewLine}" +
+            $"Misses: {cache.Misses}{Environment.NewLine}" +
+            $"Bypasses: {cache.Bypasses}{Environment.NewLine}");
+        Console.WriteLine($"[BattleRenderProfile] battle CPU avg={(hasBattleCpu ? battleCpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasBattleCpu ? battleCpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] battle GPU avg={(hasBattleGpu ? battleGpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasBattleGpu ? battleGpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] hand CPU avg={(hasHandCpu ? handCpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasHandCpu ? handCpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] hand GPU avg={(hasHandGpu ? handGpu.AvgMs.ToString("0.00") : "n/a")} p95={(hasHandGpu ? handGpu.P95Ms.ToString("0.00") : "n/a")} ms");
+        Console.WriteLine($"[BattleRenderProfile] draw calls battle={(hasBattleDraws ? battleDraws.ToString("0.0") : "n/a")}, hand={(hasHandDraws ? handDraws.ToString("0.0") : "n/a")}");
+        Console.WriteLine($"[BattleRenderProfile] card base cache hits={cache.Hits}, misses={cache.Misses}, bypasses={cache.Bypasses}");
+        Console.WriteLine($"[BattleRenderProfile] pending={GpuProfiler.PendingQueries}, report={reportPath}");
+        Console.WriteLine($"[BattleRenderProfile] {(pass ? "PASS" : "FAIL")}");
+        Environment.ExitCode = pass ? 0 : 1;
+        Exit();
+    }
+
+    private bool IsProfileSettling() => IsCardListProfileSettling() ||
+        (_battleRenderProfileOptions != null && _battleRenderProfilePrepared &&
+         _battleRenderProfileRenderedFrames >= BattleRenderProfileLaunchOptions.WarmupFrames +
+             BattleRenderProfileLaunchOptions.MeasuredFrames);
 #else
     private bool IsCardListProfileSettling() => false;
+    private bool IsProfileSettling() => false;
 #endif
 
 	protected override void UnloadContent()
@@ -865,7 +1019,10 @@ public class Game1 : Game
         DisplayMetrics nextDisplay = DisplayMetrics.Calculate(
             presentation.BackBufferWidth,
             presentation.BackBufferHeight,
-            _cardListProfileOptions?.RenderScale ?? (_snapshotOptions == null ? null : _snapshotOptions.RenderScaleOverride ?? 1f));
+            _cardListProfileOptions?.RenderScale ??
+            (_battleRenderProfileOptions == null
+                ? (_snapshotOptions == null ? null : _snapshotOptions.RenderScaleOverride ?? 1f)
+                : BattleRenderProfileLaunchOptions.RenderScale));
         if (Display.RenderWidth != nextDisplay.RenderWidth || Display.RenderHeight != nextDisplay.RenderHeight)
         {
             FullScreenRenderTargetPool.DisposeAll(GraphicsDevice);

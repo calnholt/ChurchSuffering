@@ -5,6 +5,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Medals;
+using Crusaders30XX.ECS.Services;
 
 namespace Crusaders30XX.ECS.Systems
 {
@@ -64,7 +65,7 @@ namespace Crusaders30XX.ECS.Systems
 
     internal static class CardStatModifierService
     {
-        private const string BlackCardReason = "Black card";
+		private const string BlackCardReason = "Black card";
 
         public static CardStatResult GetCardDamage(EntityManager entityManager, Entity card, CardStatQueryMode mode = CardStatQueryMode.Preview)
         {
@@ -128,6 +129,7 @@ namespace Crusaders30XX.ECS.Systems
         {
             var result = new CardStatResult { BaseValue = query.BaseValue };
             AddStoredCardModifiers(query, result);
+			AddIntrinsicColorModifiers(query, result);
             AddSourcePassiveModifiers(query, result);
             AddProviderModifiers(query, result);
             return result;
@@ -154,11 +156,27 @@ namespace Crusaders30XX.ECS.Systems
                 if (modifiedBlock?.Modifications == null) return;
                 foreach (var mod in modifiedBlock.Modifications)
                 {
-                    if (query.Card.HasComponent<Colorless>() && mod.Reason == BlackCardReason) continue;
                     result.Modifiers.Add(FromStoredModification(mod));
                 }
             }
         }
+
+		private static void AddIntrinsicColorModifiers(CardStatQuery query, CardStatResult result)
+		{
+			if (query.Kind != CardStatKind.Block
+				|| !CardColorQualificationService.QualifiesAs(query.Card, CardData.CardColor.Black))
+			{
+				return;
+			}
+
+			result.Modifiers.Add(new CardStatModifier
+			{
+				Delta = 1,
+				Reason = BlackCardReason,
+				SourceType = "Intrinsic",
+				SourceId = "Black",
+			});
+		}
 
         private static CardStatModifier FromStoredModification(Modification mod) =>
             new()
@@ -265,11 +283,33 @@ namespace Crusaders30XX.ECS.Systems
                 if (equipped?.EquippedOwner != query.Owner) continue;
                 if (equipped.Medal is not ICardStatModifierProvider provider) continue;
 
-                foreach (var modifier in provider.GetStatModifiers(query) ?? Array.Empty<CardStatModifier>())
-                {
-                    if (modifier == null || modifier.Delta == 0) continue;
-                    result.Modifiers.Add(modifier);
-                }
+                AddProviderModifiers(provider, query, result);
+            }
+
+            var player = query.Owner.GetComponent<Player>();
+            var deck = player?.DeckEntity?.GetComponent<Deck>()
+                ?? query.EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
+            if (deck?.Hand == null) return;
+
+            foreach (var handCard in deck.Hand
+                .Where(card => card != null)
+                .Distinct()
+                .OrderBy(card => card.Id))
+            {
+                if (handCard.GetComponent<CardData>()?.Card is not ICardStatModifierProvider provider) continue;
+                AddProviderModifiers(provider, query, result);
+            }
+        }
+
+        private static void AddProviderModifiers(
+            ICardStatModifierProvider provider,
+            CardStatQuery query,
+            CardStatResult result)
+        {
+            foreach (var modifier in provider.GetStatModifiers(query) ?? Array.Empty<CardStatModifier>())
+            {
+                if (modifier == null || modifier.Delta == 0) continue;
+                result.Modifiers.Add(modifier);
             }
         }
 

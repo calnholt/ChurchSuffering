@@ -60,6 +60,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
     "$HOME/.nuget/packages/dotnet-mgcb/3.8.4.1/tools/net8.0/any/osx"
     "$HOME/.nuget/packages/dotnet-mgcb/3.8.4/tools/net8.0/any/osx"
     "$HOME/.nuget/packages/monogame.content.builder.task/3.8.4/build/dotnet-tools/.store/dotnet-mgcb/3.8.4/dotnet-mgcb/3.8.4/tools/net8.0/any/osx"
+    "$HOME/.dotnet/tools/.store/dotnet-mgcb/3.8.4.1/dotnet-mgcb/3.8.4.1/tools/net8.0/any/osx"
   )
 else
   echo "Downloading Linux ffmpeg/ffprobe ${FFMPEG_VERSION} into scripts/tools..."

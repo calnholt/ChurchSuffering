@@ -22,6 +22,7 @@ public class SkeletalArcher : EnemyBase
     Id = EnemyId.SkeletalArcher;
     Name = "Skeletal Archer";
     HP = 23;
+    ClimbPool = ClimbEncounterPool.Early;
 
     OnStartOfBattle = (entityManager) =>
     {

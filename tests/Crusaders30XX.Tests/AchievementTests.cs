@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
@@ -9,12 +10,133 @@ using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Achievements;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Singletons;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
 
 public sealed class AchievementTests
 {
+	[Fact]
+	public void Climb_achievement_catalog_has_expected_metadata_and_unique_grid_positions()
+	{
+		var achievements = ClimbAchievementCatalog.CreateAll().ToList();
+
+		Assert.Equal(10, achievements.Count);
+		Assert.Equal(10, achievements.Select(achievement => achievement.Id).Distinct().Count());
+		Assert.Equal(10, achievements.Select(achievement => (achievement.Row, achievement.Column)).Distinct().Count());
+		Assert.All(achievements, achievement => Assert.Equal(5, achievement.Points));
+
+		var firstAscent = Assert.Single(achievements, achievement => achievement.Id == "first_ascent");
+		Assert.True(firstAscent.StartsVisible);
+		Assert.Equal((1, 4), (firstAscent.Row, firstAscent.Column));
+
+		var veteran = Assert.Single(achievements, achievement => achievement.Id == "veteran_climber");
+		Assert.Equal(5, veteran.TargetValue);
+		Assert.All(achievements.Where(achievement => achievement.Id != "first_ascent"), achievement => Assert.False(achievement.StartsVisible));
+	}
+
+	[Theory]
+	[InlineData("sword", RunDifficulty.Normal, "tempered_steel")]
+	[InlineData("sword", RunDifficulty.Hard, "by_the_sword")]
+	[InlineData("dagger", RunDifficulty.Easy, "quick_work")]
+	[InlineData("dagger", RunDifficulty.Normal, "knifes_edge")]
+	[InlineData("dagger", RunDifficulty.Hard, "silent_execution")]
+	[InlineData("hammer", RunDifficulty.Easy, "first_strike")]
+	[InlineData("hammer", RunDifficulty.Normal, "judgment_falls")]
+	[InlineData("hammer", RunDifficulty.Hard, "unbreakable_force")]
+	public void Weapon_climb_achievements_require_an_exact_weapon_and_difficulty(
+		string weaponId,
+		RunDifficulty difficulty,
+		string expectedAchievementId)
+	{
+		EventManager.Clear();
+		try
+		{
+			var trackedIds = new HashSet<string>
+			{
+				"tempered_steel",
+				"by_the_sword",
+				"quick_work",
+				"knifes_edge",
+				"silent_execution",
+				"first_strike",
+				"judgment_falls",
+				"unbreakable_force",
+			};
+			var progressById = InitializeClimbAchievements();
+
+			EventManager.Publish(new ClimbCompletedEvent
+			{
+				StartingWeaponId = weaponId,
+				Difficulty = difficulty,
+			});
+
+			Assert.True(progressById[expectedAchievementId].IsCompleted);
+			Assert.All(
+				progressById.Where(pair => trackedIds.Contains(pair.Key) && pair.Key != expectedAchievementId),
+				pair => Assert.False(pair.Value.IsCompleted));
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Sword_easy_has_no_weapon_specific_climb_achievement()
+	{
+		EventManager.Clear();
+		try
+		{
+			var progressById = InitializeClimbAchievements();
+
+			EventManager.Publish(new ClimbCompletedEvent
+			{
+				StartingWeaponId = "sword",
+				Difficulty = RunDifficulty.Easy,
+			});
+
+			Assert.True(progressById["first_ascent"].IsCompleted);
+			Assert.DoesNotContain(
+				progressById.Where(pair => pair.Key != "first_ascent"),
+				pair => pair.Value.IsCompleted);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Veteran_climber_completes_on_fifth_climb()
+	{
+		EventManager.Clear();
+		try
+		{
+			var progressById = InitializeClimbAchievements();
+			var completed = new ClimbCompletedEvent
+			{
+				StartingWeaponId = "sword",
+				Difficulty = RunDifficulty.Easy,
+			};
+
+			for (int i = 0; i < 4; i++) EventManager.Publish(completed);
+
+			Assert.Equal(4, progressById["veteran_climber"].CurrentValue);
+			Assert.False(progressById["veteran_climber"].IsCompleted);
+
+			EventManager.Publish(completed);
+
+			Assert.Equal(5, progressById["veteran_climber"].CurrentValue);
+			Assert.True(progressById["veteran_climber"].IsCompleted);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
 	[Fact]
 	public void FirstVictory_starts_visible_on_fresh_save()
 	{
@@ -31,6 +153,23 @@ public sealed class AchievementTests
 		{
 			EventManager.Clear();
 		}
+	}
+
+	private static Dictionary<string, AchievementProgress> InitializeClimbAchievements()
+	{
+		var progressById = new Dictionary<string, AchievementProgress>();
+		var entityManager = new EntityManager();
+		foreach (var achievement in ClimbAchievementCatalog.CreateAll())
+		{
+			var progress = new AchievementProgress
+			{
+				AchievementId = achievement.Id,
+				State = AchievementState.Visible,
+			};
+			progressById.Add(achievement.Id, progress);
+			achievement.Initialize(progress, entityManager);
+		}
+		return progressById;
 	}
 
 	[Fact]

@@ -14,6 +14,10 @@
     "unlock": {
       "commandName": "Project",
       "commandLineArgs": "unlock"
+    },
+    "unlock-run-setup": {
+      "commandName": "Project",
+      "commandLineArgs": "unlock-run-setup"
     }
   }
 }

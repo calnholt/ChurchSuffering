@@ -4,6 +4,12 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$ROOT_DIR/Crusaders30XX.csproj"
+CONTENT_FILE="$ROOT_DIR/Content/Content.mgcb"
+CONTENT_OUTPUT="$ROOT_DIR/Content/bin/DesktopGL/Content"
+CONTENT_INTERMEDIATE="$ROOT_DIR/Content/obj/DesktopGL/net8.0/Content"
+MGCB_VERSION="3.8.4.1"
+MGCB_DLL="$HOME/.nuget/packages/dotnet-mgcb/$MGCB_VERSION/tools/net8.0/any/mgcb.dll"
+MGCB_DOTNET_DIR="$HOME/.dotnet-crusaders30xx"
 VERSION_FILE="$ROOT_DIR/VERSION"
 ITCH_USER="calnholt"
 ITCH_GAME="church-suffering"
@@ -27,6 +33,20 @@ for command_name in dotnet butler curl; do
   fi
 done
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  if [[ ! -f "$HOME/.winemonogame/drive_c/windows/system32/dotnet.exe" ]]; then
+    echo "MonoGame shader compilation is not configured. Run: ./scripts/setup-mgfxc-wine.sh" >&2
+    exit 1
+  fi
+
+  for media_tool in ffmpeg ffprobe; do
+    if [[ ! -x "$ROOT_DIR/scripts/tools/$media_tool" ]]; then
+      echo "MonoGame audio compilation is not configured. Run: ./scripts/setup-mgcb-ffmpeg.sh" >&2
+      exit 1
+    fi
+  done
+fi
+
 if [[ -z "${BUTLER_API_KEY:-}" ]]; then
   read -r -s -p "itch.io API key: " BUTLER_API_KEY
   echo
@@ -38,6 +58,12 @@ if [[ -z "$BUTLER_API_KEY" ]]; then
   exit 1
 fi
 
+IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+PATCH=$((PATCH + 1))
+VERSION="$MAJOR.$MINOR.$PATCH"
+printf '%s\n' "$VERSION" > "$VERSION_FILE"
+echo "Bumped VERSION to $VERSION"
+
 echo "Publishing Crusaders30XX version $VERSION"
 echo "Temporary build directory: $ARTIFACTS_DIR"
 
@@ -45,9 +71,38 @@ cd "$ROOT_DIR"
 
 echo "Restoring packages..."
 dotnet restore "$PROJECT"
+dotnet tool restore
+
+if [[ ! -f "$MGCB_DLL" ]]; then
+  echo "MonoGame Content Builder $MGCB_VERSION was not restored to $MGCB_DLL." >&2
+  exit 1
+fi
+
+if [[ ! -x "$MGCB_DOTNET_DIR/dotnet" ]] || \
+   ! "$MGCB_DOTNET_DIR/dotnet" --list-runtimes 2>/dev/null | grep -q '^Microsoft.NETCore.App 8\.'; then
+  echo "Installing the .NET 8 runtime used by MonoGame Content Builder..."
+  DOTNET_INSTALL_SCRIPT="$ARTIFACTS_DIR/dotnet-install.sh"
+  curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$DOTNET_INSTALL_SCRIPT"
+  bash "$DOTNET_INSTALL_SCRIPT" \
+    --channel 8.0 \
+    --runtime dotnet \
+    --install-dir "$MGCB_DOTNET_DIR" \
+    --no-path
+fi
 
 echo "Building MonoGame content..."
-dotnet build "$PROJECT" -c Release --no-restore /p:SkipMonoGameContentPipeline=false
+mkdir -p "$CONTENT_OUTPUT" "$CONTENT_INTERMEDIATE"
+PATH="$ROOT_DIR/scripts/tools:$PATH" \
+MGFXC_WINE_PATH="$HOME/.winemonogame" \
+  "$MGCB_DOTNET_DIR/dotnet" "$MGCB_DLL" \
+  /@:"$CONTENT_FILE" \
+  /platform:DesktopGL \
+  /outputDir:"$CONTENT_OUTPUT" \
+  /intermediateDir:"$CONTENT_INTERMEDIATE" \
+  /workingDir:"$ROOT_DIR/Content/"
+
+echo "Building release executable..."
+dotnet build "$PROJECT" -c Release --no-restore /p:SkipMonoGameContentPipeline=true
 
 publish_build() {
   local runtime="$1"

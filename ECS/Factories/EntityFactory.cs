@@ -354,10 +354,6 @@ namespace Crusaders30XX.ECS.Factories
             }
             var modifiedBlock = new ModifiedBlock { Modifications = new List<Modification>() };
             entityManager.AddComponent(entity, modifiedBlock);
-            if (color == CardData.CardColor.Black)
-            {
-                modifiedBlock.Modifications.Add(new Modification { Delta = 1, Reason = "Black card" });
-            }
             if (card.Type == CardType.Attack)
             {
                 entityManager.AddComponent(entity, new ModifiedDamage { Modifications = new List<Modification>() });
@@ -418,9 +414,6 @@ namespace Crusaders30XX.ECS.Factories
             {
                 throw new InvalidOperationException("Cannot spawn enemy: player deck is missing or empty.");
             }
-            float deckHealthWeight = RunDeckService.CalculateEnemyHealthDeckWeight(
-                entityManager,
-                deck.Cards.Count);
 			if (isGuidedTutorial)
 			{
 				var tutorial = GuidedTutorialService.GetState(entityManager);
@@ -430,8 +423,9 @@ namespace Crusaders30XX.ECS.Factories
 			}
             else
             {
-                def.ApplyHealthFromDeckWeight(deckHealthWeight);
+                def.ApplyBaseHealth();
                 ApplyWayStationEnemyHealthModifier(def);
+                ApplyClimbTimeHealthBonus(def);
             }
             if (def.MaxHealth <= 0)
             {
@@ -526,6 +520,22 @@ namespace Crusaders30XX.ECS.Factories
 
             def.MaxHealth = Math.Max(1, (int)Math.Round(def.MaxHealth * modifier));
             def.CurrentHealth = Math.Max(1, (int)Math.Round(def.CurrentHealth * modifier));
+            def.CurrentHealth = Math.Min(def.CurrentHealth, def.MaxHealth);
+        }
+
+        private const float ClimbTimeHealthBonusPerInterval = 0.1f;
+
+        private static void ApplyClimbTimeHealthBonus(EnemyBase def)
+        {
+            if (def == null) return;
+
+            int climbTime = ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0);
+            int intervals = climbTime / ClimbRuleService.ShopRefreshInterval;
+            if (intervals <= 0) return;
+
+            float scale = 1f + ClimbTimeHealthBonusPerInterval * intervals;
+            def.MaxHealth = Math.Max(1, (int)Math.Round(def.MaxHealth * scale));
+            def.CurrentHealth = Math.Max(1, (int)Math.Round(def.CurrentHealth * scale));
             def.CurrentHealth = Math.Min(def.CurrentHealth, def.MaxHealth);
         }
 
@@ -699,6 +709,15 @@ namespace Crusaders30XX.ECS.Factories
             {
                 entityManager.AddComponent(clonedEntity, new Colorless { Owner = clonedEntity });
             }
+			var sourceDualColor = sourceEntity.GetComponent<DualColor>();
+			if (sourceDualColor != null)
+			{
+				entityManager.AddComponent(clonedEntity, new DualColor
+				{
+					Owner = clonedEntity,
+					SecondaryColor = sourceDualColor.SecondaryColor,
+				});
+			}
             if (sourceEntity.HasComponent<Cursed>())
             {
                 entityManager.AddComponent(clonedEntity, new Cursed { Owner = clonedEntity });
@@ -771,6 +790,7 @@ namespace Crusaders30XX.ECS.Factories
                 IsInteractable = true,
                 Tooltip = sourceUIElement?.Tooltip ?? "",
                 TooltipKeywordSource = sourceUIElement?.TooltipKeywordSource ?? "",
+                TooltipExcludedKeywordId = sourceUIElement?.TooltipExcludedKeywordId ?? "",
                 TooltipType = sourceUIElement?.TooltipType ?? TooltipType.Text,
                 TooltipPosition = sourceUIElement?.TooltipPosition ?? TooltipPosition.Above,
                 TooltipOffsetPx = sourceUIElement?.TooltipOffsetPx ?? 30,

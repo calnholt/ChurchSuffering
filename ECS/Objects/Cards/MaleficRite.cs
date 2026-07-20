@@ -6,9 +6,8 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class MaleficRite : CardBase
     {
-        private const int BaseAggressionGained = 4;
-        private const int BaseCurseMultiplier = 2;
-        private const int UpgradedCurseMultiplier = 3;
+        private const int BaseCurseMultiplier = 1;
+        private const int UpgradedCurseMultiplier = 2;
         private const int BlockAmount = 2;
         private const int BlockUpgrade = 3;
         private bool _isSubscribed;
@@ -100,19 +99,21 @@ namespace Crusaders30XX.ECS.Objects.Cards
         }
 
         private int GetAggressionGained(int cursesRemoved) =>
-            BaseAggressionGained + cursesRemoved * GetCurseMultiplier(IsUpgraded);
+            cursesRemoved * GetCurseMultiplier(IsUpgraded);
 
         private static int GetCurseMultiplier(bool isUpgraded) =>
             isUpgraded ? UpgradedCurseMultiplier : BaseCurseMultiplier;
 
-        private static string GetMultiplierText(bool isUpgraded) =>
-            isUpgraded ? "thrice" : "twice";
-
         private static string GetCurseCountText(int cursesRemoved) =>
             $"{cursesRemoved} {(cursesRemoved == 1 ? "curse" : "curses")}";
 
-        private static string GetText(bool isUpgraded, int cursesRemoved) =>
-            $"Gain {BaseAggressionGained} + X aggression, where X is {GetMultiplierText(isUpgraded)} the number of curses you have removed this climb.\n\nA random card in your deck becomes cursed. (You have removed {GetCurseCountText(cursesRemoved)})";
+        private static string GetText(bool isUpgraded, int cursesRemoved)
+        {
+            var aggressionClause = isUpgraded
+                ? "Gain X aggression, where X is twice the number of curses you have removed this climb."
+                : "Gain X aggression, where X is the number of curses you have removed this climb.";
+            return $"{aggressionClause}\n\nA random card in your deck becomes cursed. (You have removed {GetCurseCountText(cursesRemoved)})";
+        }
 
         public override void Dispose()
         {

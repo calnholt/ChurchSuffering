@@ -15,10 +15,11 @@ For detailed design philosophy and rationale, see `DESIGN_PHILOSOPHY.md`.
 
 ### HP
 
-- **Range:** ~14 - 53 (`HP` on each enemy; max HP at a 20-card reference deck)
-- **Max HP at spawn:** `Round(HP * deckWeight / 20)` via `EnemyBase.ApplyHealthFromDeckWeight` in `EntityFactory.CreateEnemyFromId`
-- **deckWeight:** card count plus climb-time bonus from `RunDeckService.CalculateEnemyHealthDeckWeight`
-- **Difficulty** does not affect max HP directly; `WayStationRunSetupSingleton.EnemyHealthModifier` scales spawn HP (e.g. Skeleton 26 at 20 cards -> 21 Easy / 23 Normal / 26 Hard)
+- **Range:** ~14 - 53 (`HP` on each enemy; authored base max HP)
+- **Max HP at spawn:** `ApplyBaseHealth` then difficulty then climb-time bonus in `EntityFactory.CreateEnemyFromId`
+- **Difficulty:** `WayStationRunSetupSingleton.EnemyHealthModifier` (Easy 0.7 / Normal 0.85 / Hard 1.0), applied first
+- **Climb time:** after difficulty, `+10%` of post-difficulty HP per shop-refresh interval (every 8 climb time)
+- Example: Skeleton 26 at time 0 → 18 Easy / 22 Normal / 26 Hard; Hard at time 9 → 29
 
 ### Damage Ranges
 
@@ -47,6 +48,7 @@ For detailed design philosophy and rationale, see `DESIGN_PHILOSOPHY.md`.
 3. Register enemy in `EnemyFactory.cs`
 4. Register attacks in `EnemyAttackFactory.cs`
 5. Use private fields for numbers, eg - `private int Armor = 1;`
+6. Set `ClimbPool` to `ClimbEncounterPool.Early` or `Late` for first/second half of climb time, or `Throughout` to appear in both halves (equal odds with that half's pool). Leave `None` to exclude from climb rolls. Melee skeletons use `Throughout`; encounter boards cap melee skeletons at 1 of 3 slots (Skeletal Archer is Early-only and does not count toward that cap).
 
 ---
 

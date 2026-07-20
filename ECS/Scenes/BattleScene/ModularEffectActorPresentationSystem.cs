@@ -58,9 +58,14 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (!IsActive) return;
 			float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-			var actors = GetRelevantEntities().ToList();
-			foreach (var actor in actors)
+			foreach (var actor in EntityManager.GetAllEntities())
 			{
+				if (actor.GetComponent<Player>() == null
+					&& actor.GetComponent<Enemy>() == null
+					&& actor.GetComponent<ActorPresentationState>() == null)
+				{
+					continue;
+				}
 				var state = EnsureState(actor);
 				state.DrawOffset = Vector2.Zero;
 				state.ScaleMultiplier = Vector2.One;
@@ -74,10 +79,10 @@ namespace Crusaders30XX.ECS.Systems
 				}
 			}
 
-			foreach (var active in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>()
-				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null))
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>())
 			{
+				var active = entity.GetComponent<ActiveVisualEffect>();
+				if (active == null) continue;
 				ApplyActiveEffect(active);
 			}
 		}
@@ -85,14 +90,14 @@ namespace Crusaders30XX.ECS.Systems
 		private void ApplyActiveEffect(ActiveVisualEffect effect)
 		{
 			if (effect.ElapsedSeconds < 0f) return;
-			if (effect.Recipe.Modules.Contains(VisualEffectModule.ActorLunge))
+			if (effect.Recipe.HasModule(VisualEffectModule.ActorLunge))
 			{
 				var actor = ResolveLungeActor(effect);
 				var state = EnsureState(actor);
 				state.DrawOffset += ComputeLungeOffset(effect);
 			}
 
-			if (effect.Recipe.Modules.Contains(VisualEffectModule.ActorSquashStretch))
+			if (effect.Recipe.HasModule(VisualEffectModule.ActorSquashStretch))
 			{
 				var state = EnsureState(effect.Target);
 				var scale = ComputeBuffScale(effect);
@@ -101,7 +106,7 @@ namespace Crusaders30XX.ECS.Systems
 					state.ScaleMultiplier.Y * scale.Y);
 			}
 
-			if (effect.Recipe.Modules.Contains(VisualEffectModule.TargetShake))
+			if (effect.Recipe.HasModule(VisualEffectModule.TargetShake))
 			{
 				var state = EnsureState(effect.Target);
 				if (state != null)

@@ -20,7 +20,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Column = 1;
             StartsVisible = false;
             TargetValue = RequiredWins;
-            Points = 20;
         }
 
         public override void RegisterListeners()

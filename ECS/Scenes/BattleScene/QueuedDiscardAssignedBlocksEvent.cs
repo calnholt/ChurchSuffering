@@ -104,7 +104,7 @@ namespace Crusaders30XX.ECS.Systems
 
                 if (discardSpentBlocks)
                 {
-                    ResolveCardToDiscardImmediately(entityManager, deckEntity, entity, abc);
+                    ResolveSpentCardImmediately(entityManager, deckEntity, entity);
                 }
                 else
                 {
@@ -158,18 +158,14 @@ namespace Crusaders30XX.ECS.Systems
             }
         }
 
-        private static void ResolveCardToDiscardImmediately(
+        private static void ResolveSpentCardImmediately(
             EntityManager entityManager,
             Entity deckEntity,
-            Entity entity,
-            AssignedBlockCard abc)
+            Entity entity)
         {
-            var exhaustOnBlock = entity.GetComponent<ExhaustOnBlock>();
-            var destination = exhaustOnBlock != null ? CardZoneType.ExhaustPile : CardZoneType.DiscardPile;
-            if (exhaustOnBlock != null)
-            {
-                entityManager.RemoveComponent<ExhaustOnBlock>(entity);
-            }
+            var destination = AssignedBlockDestinationService.Resolve(entity);
+            entityManager.RemoveComponent<AssignedBlockDestinationOverride>(entity);
+            entityManager.RemoveComponent<ExhaustOnBlock>(entity);
 
             var cardData = entity.GetComponent<CardData>();
             cardData?.Card?.OnBlock?.Invoke(entityManager, entity);
@@ -183,7 +179,7 @@ namespace Crusaders30XX.ECS.Systems
                 Card = entity,
                 Deck = deckEntity,
                 Destination = destination,
-                Reason = destination == CardZoneType.ExhaustPile ? "AssignedBlockToExhaust" : "AssignedBlockToDiscard"
+                Reason = AssignedBlockDestinationService.GetMoveReason(destination)
             });
             entityManager.RemoveComponent<AssignedBlockCard>(entity);
 			entityManager.RemoveComponent<AssignedBlockPresentation>(entity);
@@ -192,6 +188,7 @@ namespace Crusaders30XX.ECS.Systems
 
         private static void ResolveCardToHandImmediately(EntityManager entityManager, Entity deckEntity, Entity entity)
         {
+            entityManager.RemoveComponent<AssignedBlockDestinationOverride>(entity);
             CardTransientStateService.ClearAssignedBlockHotKey(entityManager, entity);
             EventManager.Publish(new CardMoveRequested
             {

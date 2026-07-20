@@ -27,7 +27,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_background = ctx.Content.Load<Texture2D>("Battle_Backgrounds/gothic-battle-background");
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
-			var portrait = ctx.ImageAssets.GetRequiredTexture("Skeleton");
+			var portrait = ctx.ImageAssets.GetRequiredTexture("Enemies/Skeleton");
 			const float portraitScale = 0.35f;
 
 			_display = new PixelBurstDisplaySystem(

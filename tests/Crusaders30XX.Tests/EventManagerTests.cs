@@ -45,5 +45,34 @@ public sealed class EventManagerTests : IDisposable
 		Assert.Equal(new[] { "mutator", "added" }, calls);
 	}
 
+	[Fact]
+	public void PublishPartitioned_preserves_priority_order_and_measures_each_partition()
+	{
+		var calls = new List<string>();
+		EventManager.Subscribe<TestEvent>(_ => calls.Add("low-first"));
+		EventManager.Subscribe<TestEvent>(_ => calls.Add("high"), 100);
+		EventManager.Subscribe<TestEvent>(_ => calls.Add("low-second"));
+
+		EventManager.PublishPartitioned(
+			new TestEvent(),
+			100,
+			action =>
+			{
+				calls.Add("high-start");
+				action();
+				calls.Add("high-end");
+			},
+			action =>
+			{
+				calls.Add("low-start");
+				action();
+				calls.Add("low-end");
+			});
+
+		Assert.Equal(
+			new[] { "high-start", "high", "high-end", "low-start", "low-first", "low-second", "low-end" },
+			calls);
+	}
+
 	private sealed class TestEvent { }
 }

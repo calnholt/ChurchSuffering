@@ -171,7 +171,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 
 		private void CreateEnemyHealthSnapshot(DisplaySnapshotContext ctx)
 		{
-			_enemyPortrait = ctx.ImageAssets.GetRequiredTexture("Skeleton");
+			_enemyPortrait = ctx.ImageAssets.GetRequiredTexture("Enemies/Skeleton");
 			_enemyPortraitScale = Game1.VirtualHeight * 0.36f / _enemyPortrait.Height;
 			_enemy = ctx.World.CreateEntity("EnemyHealthSnapshot");
 			ctx.World.AddComponent(_enemy, new Enemy());

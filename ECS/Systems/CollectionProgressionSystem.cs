@@ -19,6 +19,7 @@ public sealed class CollectionProgressionSystem : Core.System
 		EventManager.Subscribe<AchievementAnimationsComplete>(_ => TryOpenQueuedPack());
 		EventManager.Subscribe<ClimbPointsSegmentAwardedEvent>(OnClimbPointsSegmentAwarded);
 		EventManager.Subscribe<ClimbEndedEvent>(OnClimbEnded);
+		EventManager.Subscribe<ClimbPointsAwardOverlayDismissedEvent>(OnClimbPointsAwardOverlayDismissed);
 		EventManager.Subscribe<BoosterPackOpeningDismissedEvent>(OnBoosterDismissed);
 		EventManager.Subscribe<LoadSceneEvent>(evt =>
 		{
@@ -58,9 +59,24 @@ public sealed class CollectionProgressionSystem : Core.System
 			evt.TimeReached,
 			evt.CompletedFinalBoss,
 			evt.Abandoned);
-		if (points <= 0) return;
 		var collection = SaveCache.GetCollection();
-		collection.pendingClimbPoints += points;
+		if (points > 0) collection.pendingClimbPoints += points;
+		collection.pendingClimbPointAward = new PendingClimbPointAwardSave
+		{
+			timeReached = Math.Max(0, evt.TimeReached),
+			abandoned = evt.Abandoned,
+			completedFinalBoss = evt.CompletedFinalBoss,
+			pointsAwarded = points,
+		};
+		SaveCache.SaveCollection(collection);
+	}
+
+	private void OnClimbPointsAwardOverlayDismissed(ClimbPointsAwardOverlayDismissedEvent evt)
+	{
+		if (evt?.WasAuthoritative != true) return;
+		var collection = SaveCache.GetCollection();
+		if (collection.pendingClimbPointAward == null) return;
+		collection.pendingClimbPointAward = null;
 		SaveCache.SaveCollection(collection);
 	}
 

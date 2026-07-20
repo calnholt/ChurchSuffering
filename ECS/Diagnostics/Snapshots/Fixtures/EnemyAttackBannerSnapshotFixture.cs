@@ -28,7 +28,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 		{
 			_variant = ParseVariant(args ?? Array.Empty<string>());
 			_background = ctx.Content.Load<Texture2D>("Battle_Backgrounds/gothic-battle-background");
-			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Ogre");
+			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Enemies/Ogre");
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
 
@@ -60,7 +60,12 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				IsConditionMet = true,
 			});
 
-			_display = new EnemyAttackDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch, ctx.ImageAssets);
+			_display = new EnemyAttackDisplaySystem(
+				ctx.World.EntityManager,
+				ctx.GraphicsDevice,
+				ctx.SpriteBatch,
+				ctx.ImageAssets,
+				new EnemyAttackResolver(ctx.World.EntityManager, new GraphicsAttackPresentationGate()));
 			_layout = new EnemyAttackBannerLateLayoutSystem(ctx.World.EntityManager);
 			Advance(0f);
 			EventManager.Publish(new TriggerEnemyAttackDisplayEvent());

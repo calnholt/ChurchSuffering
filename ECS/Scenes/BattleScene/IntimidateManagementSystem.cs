@@ -79,7 +79,11 @@ namespace Crusaders30XX.ECS.Systems
 				// Randomly select cards to intimidate
 				var random = new Random();
 				var cardsToIntimidate = availableCards
-					.OrderBy(x => random.Next())
+					.Where(card => card.GetComponent<Poisoned>() == null)
+					.OrderBy(_ => random.Next())
+					.Concat(availableCards
+						.Where(card => card.GetComponent<Poisoned>() != null)
+						.OrderBy(_ => random.Next()))
 					.Take(amount)
 					.ToList();
 
@@ -117,4 +121,3 @@ namespace Crusaders30XX.ECS.Systems
 		}
 	}
 }
-

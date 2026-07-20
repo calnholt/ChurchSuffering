@@ -127,6 +127,7 @@ namespace Crusaders30XX.ECS.Data.VisualEffects
 				[AppliedPassiveType.CarpeDiem] = R(PassiveApplicationMotif.Clock, PassiveApplicationMotion.Assemble, VisualEffectPalette.Holy, .70f, 8, -90f, 1.00f, false),
 				[AppliedPassiveType.Galvanize] = R(PassiveApplicationMotif.ElectricChain, PassiveApplicationMotion.Assemble, VisualEffectPalette.Arcane, .58f, 6, 12f, 1.14f, false),
 				[AppliedPassiveType.SwordIntoShield] = R(PassiveApplicationMotif.BladeGlint, PassiveApplicationMotion.Assemble, VisualEffectPalette.Holy, .61f, 4, 30f, 1.15f, false),
+				[AppliedPassiveType.Grace] = R(PassiveApplicationMotif.Iris, PassiveApplicationMotion.Rise, VisualEffectPalette.Holy, .68f, 5, 8f, 1.05f, false),
 			};
 
 		static PassiveApplicationRecipeCatalog()

@@ -30,13 +30,19 @@ namespace Crusaders30XX.ECS.Factories
                 { EnemyId.GlacialGuardian, () => new GlacialGuardian() },
                 { EnemyId.CinderboltDemon, () => new CinderboltDemon() },
                 { EnemyId.FireSkeleton, () => new FireSkeleton() },
+                { EnemyId.EarthSkeleton, () => new EarthSkeleton() },
+                { EnemyId.FrostSkeleton, () => new FrostSkeleton() },
+                { EnemyId.CursedSkeleton, () => new CursedSkeleton() },
                 { EnemyId.Berserker, () => new Berserker() },
                 { EnemyId.Shadow, () => new Shadow() },
                 { EnemyId.EarthDemon, () => new EarthDemon() },
-                { EnemyId.Medusa, () => new Medusa() },
+                { EnemyId.AzureWarden, () => new AzureWarden() },
+				{ EnemyId.Blighttongue, () => new Blighttongue() },
+                { EnemyId.HexBailiff, () => new HexBailiff() },
                 { EnemyId.Wyvern, () => new Wyvern() },
                 { EnemyId.FallenShepherd, () => new FallenShepherd() },
                 { EnemyId.TrainingDemon, () => new TrainingDemon() },
+                { EnemyId.FrostboundAeon, () => new FrostboundAeon() },
             };
 
         public static EnemyBase Create(EnemyId enemyId)

@@ -123,7 +123,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			int blockValue = BlockValueService.GetTotalBlockValue(card);
-			string color = CardColorQualificationService.GetQualifiedColor(card)?.ToString();
+			var colors = CardColorQualificationService.GetQualifiedColors(card);
 			var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
 			var transform = card.GetComponent<Transform>();
 			if (deckEntity != null && transform != null)
@@ -146,7 +146,7 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Publish(new BlockAssignmentAdded
 			{
 				Card = card,
-				Color = color,
+				Colors = colors,
 				DeltaBlock = blockValue,
 			});
 		}

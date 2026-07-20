@@ -57,10 +57,16 @@ namespace Crusaders30XX.ECS.Services
 
 			if (!applied) return false;
 			slot.isSold = true;
+			// Start purchase exit motion after success but before save/refresh so the UI
+			// still shows the bought offer; failed applies never publish this event.
+			EventManager.Publish(new ClimbShopSlotSelectedEvent { SlotIndex = slotIndex });
+			var loadoutForAdvance = saveLoadout
+				? loadout
+				: SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
 			ClimbRuleService.AdvanceTimeAndUpdateSlots(
 				climb,
 				SaveCache.GetAll()?.runMapSeed ?? 0,
-				loadout,
+				loadoutForAdvance,
 				timeCost);
 			if (saveLoadout) SaveCache.SaveLoadout(loadout);
 			SaveCache.SaveClimbState(climb);
@@ -224,6 +230,7 @@ namespace Crusaders30XX.ECS.Services
 				out _)) return false;
 			EventManager.Publish(new ClimbCardUpgradeAnimationRequested
 			{
+				DeckEntryId = slot.deckEntryId,
 				BaseCardKey = current,
 				UpgradedCardKey = upgraded,
 			});

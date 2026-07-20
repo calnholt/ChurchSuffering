@@ -17,7 +17,8 @@ namespace Crusaders30XX.ECS.Services
 			SaveCache.StartWayStationClimbAttempt();
 			SaveCache.ConfigurePrimaryRunSetup(
 				WayStationRunSetupSingleton.WeaponId,
-				GetSelectedTemperanceId());
+				GetSelectedTemperanceId(),
+				WayStationRunSetupSingleton.SelectedDifficulty);
 			PrepareRunEntities(world);
 
 			EventManager.Publish(new ShowTransition { Scene = SceneId.Climb, SkipHold = true });

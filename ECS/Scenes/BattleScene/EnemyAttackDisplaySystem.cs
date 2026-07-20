@@ -27,6 +27,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ImageAssetService _imageAssets;
+		private readonly IEnemyAttackResolver _attackResolver;
 		private readonly SpriteFont _contentFont = FontSingleton.ContentFont;
 		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
 		private readonly Texture2D _pixel;
@@ -267,11 +268,17 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Particle Drag", Step = 0.01f, Min = 0.8f, Max = 1f)]
 		public float ParticleDrag { get; set; } = 0.985f;
 
-		public EnemyAttackDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch sb, ImageAssetService imageAssets) : base(em)
+		public EnemyAttackDisplaySystem(
+			EntityManager em,
+			GraphicsDevice gd,
+			SpriteBatch sb,
+			ImageAssetService imageAssets,
+			IEnemyAttackResolver attackResolver) : base(em)
 		{
 			_graphicsDevice = gd;
 			_spriteBatch = sb;
 			_imageAssets = imageAssets;
+			_attackResolver = attackResolver ?? throw new ArgumentNullException(nameof(attackResolver));
 			_pixel = _imageAssets.GetPixel(Color.White);
 			_enemyAttackCornerBlTexture = TryLoadDecorationTexture("enemy_attack_bl");
 			_enemyAttackCornerBrTexture = TryLoadDecorationTexture("enemy_attack_br");
@@ -403,37 +410,7 @@ namespace Crusaders30XX.ECS.Systems
 			ClearPendingConfirm();
 			_confirmedAttackSequences.Add(attackSequence);
 			HideConfirmButton();
-			EventManager.Publish(new ChangeBattlePhaseEvent { Current = SubPhase.EnemyAttack, Previous = SubPhase.Block });
-			EventQueue.EnqueueRule(new QueuedDiscardAssignedBlocksEvent(EntityManager));
-			EventQueue.EnqueueRule(new QueuedResolveAttackEvent());
-			EventQueue.EnqueueRule(new QueuedWaitAbsorbEvent());
-			EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out var enemy, out _, out var planned);
-			var attack = planned?.AttackDefinition;
-			var requests = attack == null
-				? Array.Empty<VisualEffectRequested>()
-				: VisualEffectRequestFactory.ForEnemyAttackSequence(EntityManager, enemy, attack, attack.AttackEffectSequence);
-			var drivingRequest = requests.SingleOrDefault(request => request.DrivesGameplayImpact);
-			if (drivingRequest != null)
-			{
-				foreach (var request in requests)
-				{
-					EventQueue.EnqueueRule(new QueuedStartVisualEffect(request));
-				}
-				EventQueue.EnqueueRule(new QueuedWaitVisualEffectImpact(drivingRequest.RequestId));
-			}
-			else
-			{
-				LoggingService.Append("EnemyAttackDisplaySystem.ExecuteConfirm", new System.Text.Json.Nodes.JsonObject
-				{
-					["reason"] = "VisualEffectRequestFailed",
-					["attackSequence"] = attackSequence,
-					["attackId"] = attack?.Id.ToKey() ?? string.Empty
-				});
-				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<EnemyAttackImpactNow>(
-					"Rule.EnemyAttackImpactNow.Emergency",
-					new EnemyAttackImpactNow()));
-			}
-			EventQueue.EnqueueRule(new QueuedAdvanceToNextPlannedAttackEvent(EntityManager));
+			_attackResolver.ResolveCurrentAttack();
 		}
 
 		private void HideConfirmButton()

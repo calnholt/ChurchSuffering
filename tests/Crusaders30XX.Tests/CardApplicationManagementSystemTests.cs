@@ -90,6 +90,71 @@ public class CardApplicationManagementSystemTests
 	}
 
 	[Fact]
+	public void Sealed_application_adds_requested_stacks_and_can_reapply()
+	{
+		EventManager.Clear();
+		try
+		{
+			var entityManager = new EntityManager();
+			var deck = CreateDeck(entityManager);
+			var card = AddCard(entityManager, deck, deck.Hand, new Tempest());
+			var mutationSystem = SetupApplyPipeline(entityManager);
+
+			for (int i = 0; i < 2; i++)
+			{
+				EventManager.Publish(new ApplyCardApplicationEvent
+				{
+					Amount = 1,
+					StacksPerCard = 2,
+					Type = CardApplicationType.Sealed,
+					Target = CardApplicationTarget.Hand,
+				});
+				BattleMutationTestSupport.CompleteMutations(entityManager, mutationSystem);
+			}
+
+			Assert.Equal(4, card.GetComponent<Sealed>()?.Seals);
+		}
+		finally
+		{
+			EventManager.Clear();
+			BattleMutationTestSupport.ResetSettings();
+		}
+	}
+
+	[Fact]
+	public void Sealed_stacks_persist_exactly_across_deck_hydration()
+	{
+		EventManager.Clear();
+		SaveCache.DeleteSaveFilesIfPresent();
+		try
+		{
+			SaveCache.StartNewRun();
+			var entry = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards.First();
+			SaveCache.SetRunDeckEntryRestrictionState(
+				RunDeckService.PrimaryLoadoutId,
+				entry.entryId,
+				[RunScopedStateService.RestrictionSealed],
+				new System.Collections.Generic.Dictionary<string, int>
+				{
+					[RunScopedStateService.RestrictionSealed] = 3,
+				});
+			SaveCache.Reload();
+
+			var entityManager = new EntityManager();
+			RunDeckService.EnsureRunDeck(entityManager);
+			var card = entityManager.GetEntitiesWithComponent<RunDeckCard>()
+				.Single(entity => entity.GetComponent<RunDeckCard>().EntryId == entry.entryId);
+
+			Assert.Equal(3, card.GetComponent<Sealed>()?.Seals);
+		}
+		finally
+		{
+			EventManager.Clear();
+			SaveCache.DeleteSaveFilesIfPresent();
+		}
+	}
+
+	[Fact]
 	public void Curse_is_factory_creatable_but_not_in_card_pool()
 	{
 		Assert.IsType<Curse>(CardFactory.Create(Curse.CardIdValue));
@@ -330,6 +395,7 @@ public class CardApplicationManagementSystemTests
 			CardApplicationType.Scorched => card.HasComponent<Scorched>(),
 			CardApplicationType.Thorned => card.HasComponent<Thorned>(),
 			CardApplicationType.Colorless => card.HasComponent<Colorless>(),
+			CardApplicationType.Sealed => card.HasComponent<Sealed>(),
 			_ => false,
 		};
 	}

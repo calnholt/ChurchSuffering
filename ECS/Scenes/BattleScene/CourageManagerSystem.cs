@@ -18,8 +18,8 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Subscribe<ModifyCourageRequestEvent>(OnModifyCourage);
 			EventManager.Subscribe<SetCourageEvent>(OnSetCourageEvent);
 			EventManager.Subscribe<ApplyEffect>(OnApplyEffect);
-			EventManager.Subscribe<CardMoved>(OnCardMoved);
-			LoggingService.Append("CourageManagerSystem.ctor", new System.Text.Json.Nodes.JsonObject { ["message"] = "subscribed to ModifyCourageEvent, CardMoved" });
+			EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
+			LoggingService.Append("CourageManagerSystem.ctor", new System.Text.Json.Nodes.JsonObject { ["message"] = "subscribed to ModifyCourageEvent, CardBlockedEvent" });
 		}
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
@@ -84,25 +84,19 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Publish(new ModifyCourageRequestEvent { Delta = -amt });
 		}
 
-		private void OnCardMoved(CardMoved evt)
+		private void OnCardBlocked(CardBlockedEvent evt)
 		{
-			LoggingService.Append("CourageManagerSystem.OnCardMoved", new System.Text.Json.Nodes.JsonObject
+			LoggingService.Append("CourageManagerSystem.OnCardBlocked", new System.Text.Json.Nodes.JsonObject
 			{
-				["from"] = evt.From.ToString(),
-				["to"] = evt.To.ToString(),
 				["cardId"] = evt.Card?.Id ?? -1
 			});
-			// When assigned blocks land in discard, grant Courage for red cards
-			if (evt.To == CardZoneType.DiscardPile && evt.From == CardZoneType.AssignedBlock) {
-				if (!CardColorQualificationService.QualifiesAs(evt.Card, CardData.CardColor.Red)) return;
-				var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
-				if (player == null) return;
-				var c = player.GetComponent<Courage>();
-				if (c == null) { c = new Courage(); EntityManager.AddComponent(player, c); }
-				EventManager.Publish(new ModifyCourageRequestEvent { Delta = 1 });
-			}
+			if (!CardColorQualificationService.QualifiesAs(evt.Card, CardData.CardColor.Red)) return;
+			var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+			if (player == null) return;
+			var c = player.GetComponent<Courage>();
+			if (c == null) { c = new Courage(); EntityManager.AddComponent(player, c); }
+			EventManager.Publish(new ModifyCourageRequestEvent { Delta = 1 });
 		}
 	}
 }
-
 

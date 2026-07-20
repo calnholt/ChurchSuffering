@@ -8,6 +8,7 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.Diagnostics;
 using Microsoft.Xna.Framework;
 
@@ -184,11 +185,17 @@ namespace Crusaders30XX.ECS.Systems
 
 			if (enemyId == EnemyId.FallenShepherd)
 			{
+				var climb = SaveCache.GetClimbState();
 				EventManager.Publish(new ClimbEndedEvent
 				{
-					TimeReached = SaveCache.GetClimbState()?.time ?? ClimbRuleService.MaxTime,
+					TimeReached = climb?.time ?? ClimbRuleService.MaxTime,
 					CompletedFinalBoss = true,
 					Abandoned = false,
+				});
+				EventManager.Publish(new ClimbCompletedEvent
+				{
+					StartingWeaponId = climb?.startingWeaponId ?? "sword",
+					Difficulty = climb?.difficulty ?? RunDifficulty.Easy,
 				});
 				SaveCache.RecordWayStationClimbCompletion();
 				WayStationArrivalContextService.Set(EntityManager, WayStationArrivalKind.ReturnedFromCompletedClimb);
@@ -220,17 +227,6 @@ namespace Crusaders30XX.ECS.Systems
 						Kind = PostVictoryKind.ShowQuestReward,
 						QuestReward = new ShowQuestRewardOverlay
 						{
-							Message = "Encounter Complete!",
-							TitleLine1 = "Encounter",
-							TitleLine2 = "Complete!",
-							RewardGold = 0,
-							HasCardReward = climbCompletion.DeckRewardOffer?.options != null && climbCompletion.DeckRewardOffer.options.Count > 0,
-							RewardCardKeys = climbCompletion.DeckRewardOffer?.options?
-								.Select(o => string.Equals(o.kind, DeckRewardOfferKinds.Exchange, StringComparison.OrdinalIgnoreCase)
-									? o.incomingCardKey
-									: o.upgradedCardKey)
-								.Where(k => !string.IsNullOrWhiteSpace(k))
-								.ToList() ?? new List<string>(),
 							DeckRewardOffer = climbCompletion.DeckRewardOffer,
 							IsEncounterReward = true,
 							ClimbResources = climbCompletion.Resources,

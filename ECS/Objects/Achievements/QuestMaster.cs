@@ -20,7 +20,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Column = 2;
             StartsVisible = false;
             TargetValue = RequiredQuests;
-            Points = 25;
         }
 
         public override void RegisterListeners()

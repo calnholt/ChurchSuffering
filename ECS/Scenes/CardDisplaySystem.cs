@@ -16,11 +16,12 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Crusaders30XX.ECS.Systems
 {
     [DebugTab("Card Display")]
-    public class CardDisplaySystem : Core.System
+    public class CardDisplaySystem : Core.System, IDebugInspectableChildren
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
         private readonly ImageAssetService _imageAssets;
+        private readonly CardRenderPipeline _pipeline;
         private readonly Dictionary<(string assetName, int artW, int artH, int artX, int artY, int cardW, int cardH, int radius), Texture2D> _clippedArtCache = new();
         private readonly WeightedLruCache<CardBaseRenderModel, CachedCardSurface> _baseSurfaceCache;
         private readonly Texture2D _pixelTexture;
@@ -29,6 +30,9 @@ namespace Crusaders30XX.ECS.Systems
         private CardGeometrySettings _settings;
         private int _cacheRenderWidth;
         private int _cacheRenderHeight;
+        private long _baseCacheHits;
+        private long _baseCacheMisses;
+        private long _baseCacheBypasses;
         private const long BaseSurfaceCacheBudgetBytes = 64L * 1024L * 1024L;
 
         internal readonly struct CardDescriptionTextLayout
@@ -209,12 +213,18 @@ namespace Crusaders30XX.ECS.Systems
         [DebugEditable(DisplayName = "Colorless Surface B", Step = 1, Min = 0, Max = 255)]
         public int ColorlessSurfaceB { get; set; } = 66;
 
-        public CardDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ImageAssetService imageAssets)
+        internal CardDisplaySystem(
+            EntityManager entityManager,
+            GraphicsDevice graphicsDevice,
+            SpriteBatch spriteBatch,
+            ImageAssetService imageAssets,
+            CardRenderPipeline pipeline)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
             _imageAssets = imageAssets;
+            _pipeline = pipeline;
             _pixelTexture = _imageAssets.GetPixel(Color.White);
             _baseSurfaceCache = new WeightedLruCache<CardBaseRenderModel, CachedCardSurface>(
                 BaseSurfaceCacheBudgetBytes,
@@ -223,11 +233,11 @@ namespace Crusaders30XX.ECS.Systems
             _cacheRenderHeight = Game1.Display.RenderHeight;
 
             LoadTypeIconTextures();
-            EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent);
+            EventManager.Subscribe<CardRenderEvent>(OnCardRenderEvent, CardRenderEvent.BaseRendererPriority);
             EventManager.Subscribe<CardRenderScaledEvent>(OnCardRenderScaledEvent);
             EventManager.Subscribe<CardRenderScaledRotatedEvent>(OnCardRenderScaledRotatedEvent);
-            EventManager.Subscribe<DeleteCachesEvent>(_ => ClearRenderCaches());
-            _graphicsDevice.DeviceReset += (_, _) => ClearRenderCaches();
+            EventManager.Subscribe<DeleteCachesEvent>(_ => ResetRenderResources());
+            _graphicsDevice.DeviceReset += (_, _) => ResetRenderResources();
         }
 
         private void LoadTypeIconTextures()
@@ -242,6 +252,13 @@ namespace Crusaders30XX.ECS.Systems
         protected override IEnumerable<Entity> GetRelevantEntities()
         {
             return EntityManager.GetEntitiesWithComponent<CardData>();
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            if (!IsActive) return;
+            _pipeline.Update(gameTime);
+            base.Update(gameTime);
         }
 
         protected override void UpdateEntity(Entity entity, GameTime gameTime)
@@ -388,11 +405,19 @@ namespace Crusaders30XX.ECS.Systems
         private void OnCardRenderEvent(CardRenderEvent evt)
         {
             var transform = evt.Card.GetComponent<Transform>();
-            RenderCardWithLifecycle(
+            CachedCardSurface cached = evt.PreferCachedBase
+                ? GetOrCreateCachedBase(
+                    evt.Card,
+                    evt.Position,
+                    transform?.Scale.X ?? 1f,
+                    transform?.Rotation ?? 0f)
+                : RecordBaseCacheBypass();
+            RenderCard(
                 evt.Card,
                 evt.Position,
                 transform?.Scale.X ?? 1f,
-                transform?.Rotation ?? 0f);
+                transform?.Rotation ?? 0f,
+                cached);
         }
 
         private void OnCardRenderScaledEvent(CardRenderScaledEvent evt)
@@ -414,8 +439,8 @@ namespace Crusaders30XX.ECS.Systems
                         transform.Rotation = evt.Rotation;
                         CachedCardSurface cached = evt.PreferCachedBase
                             ? GetOrCreateCachedBase(evt.Card, evt.Position, evt.Scale, evt.Rotation)
-                            : null;
-                        RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
+                            : RecordBaseCacheBypass();
+                        RenderCard(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
                     }
                     finally
                     {
@@ -434,8 +459,8 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     CachedCardSurface cached = evt.PreferCachedBase
                         ? GetOrCreateCachedBase(evt.Card, evt.Position, evt.Scale, evt.Rotation)
-                        : null;
-                    RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
+                        : RecordBaseCacheBypass();
+                    RenderCard(evt.Card, evt.Position, evt.Scale, evt.Rotation, cached);
                 }
             }
             finally
@@ -454,18 +479,18 @@ namespace Crusaders30XX.ECS.Systems
                 Vector2 originalPosition = transform.Position;
                 transform.Position = evt.Position;
                 var ui = evt.Card.GetComponent<UIElement>();
-                RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, transform.Rotation);
+                RenderCard(evt.Card, evt.Position, evt.Scale, transform.Rotation);
                 transform.Scale = originalScale;
                 transform.Position = originalPosition;
                 if (ui != null) ui.Bounds = CardGeometryService.GetVisualRect(GetSettings(), evt.Position, evt.Scale);
             }
             else
             {
-                RenderCardWithLifecycle(evt.Card, evt.Position, evt.Scale, 0f);
+                RenderCard(evt.Card, evt.Position, evt.Scale, 0f);
             }
         }
 
-        private void RenderCardWithLifecycle(
+        private void RenderCard(
             Entity card,
             Vector2 position,
             float scale,
@@ -475,14 +500,10 @@ namespace Crusaders30XX.ECS.Systems
             var transform = card.GetComponent<Transform>();
             var ui = card.GetComponent<UIElement>();
             EventManager.Publish(new HighlightRenderEvent { Entity = card, Transform = transform, UI = ui });
-            EventManager.Publish(new CardBaseRenderStartedEvent
-            {
-                Card = card,
-                Position = position,
-                Scale = scale,
-                Rotation = rotation
-            });
-            try
+
+			_pipeline.Render(
+				new CardRenderRequest(card, position, scale, rotation),
+				() =>
             {
                 if (cachedBase != null)
                 {
@@ -498,41 +519,41 @@ namespace Crusaders30XX.ECS.Systems
                         0f);
                 }
                 else
-                {
-                    DrawCard(card, position);
-                }
-            }
-            finally
-            {
-                EventManager.Publish(new CardBaseRenderCompletedEvent
-                {
-                    Card = card,
-                    Position = position,
-                    Scale = scale,
-                    Rotation = rotation
-                });
-            }
+				{
+					DrawCard(card, position);
+				}
+			},
+			() =>
+			{
+				var secondaryColor = card.GetComponent<DualColor>();
+				if (secondaryColor != null)
+				{
+					DrawCard(card, position, secondaryColor.SecondaryColor);
+				}
+			});
         }
 
         private CachedCardSurface GetOrCreateCachedBase(Entity card, Vector2 position, float scale, float rotation)
         {
-            if (!CanCacheBase(card, scale)) return null;
+            if (!CanCacheBase(card, scale)) return RecordBaseCacheBypass();
             EnsureCacheMatchesRenderScale();
 
-            CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
+            Rectangle logicalBounds = CardRenderBoundsService.GetBaseBounds(
                 EntityManager,
                 card,
                 position,
                 scale,
                 rotation);
-            Rectangle logicalBounds = geometry.Bounds;
             int physicalWidth = Math.Max(1, (int)MathF.Ceiling(logicalBounds.Width * Game1.Display.RenderScaleX));
             int physicalHeight = Math.Max(1, (int)MathF.Ceiling(logicalBounds.Height * Game1.Display.RenderScaleY));
             CardBaseRenderModel model = CreateRenderModel(card, scale, rotation, physicalWidth, physicalHeight);
             if (_baseSurfaceCache.TryGet(model, out CachedCardSurface cached) && !cached.Texture.IsDisposed)
             {
+                _baseCacheHits++;
                 return new CachedCardSurface(cached.Texture, logicalBounds);
             }
+
+            _baseCacheMisses++;
 
             if (!SpriteBatchRenderTargetCompositor.TryGetPrimaryRenderTarget(
                 _graphicsDevice,
@@ -583,6 +604,24 @@ namespace Crusaders30XX.ECS.Systems
             return cached;
         }
 
+        private CachedCardSurface RecordBaseCacheBypass()
+        {
+            _baseCacheBypasses++;
+            return null;
+        }
+
+        internal void ResetBaseCacheDiagnostics()
+        {
+            _baseCacheHits = 0;
+            _baseCacheMisses = 0;
+            _baseCacheBypasses = 0;
+        }
+
+        internal CardBaseCacheDiagnostics GetBaseCacheDiagnostics() => new(
+            _baseCacheHits,
+            _baseCacheMisses,
+            _baseCacheBypasses);
+
         private bool CanCacheBase(Entity card, float scale)
         {
             CardBase definition = card?.GetComponent<CardData>()?.Card;
@@ -620,6 +659,7 @@ namespace Crusaders30XX.ECS.Systems
                 card.GetDisplayText() ?? string.Empty,
                 string.Join("|", card.Cost ?? new List<string>()),
                 data.Color,
+				entity.GetComponent<DualColor>()?.SecondaryColor,
                 card.Type,
                 card.Damage,
                 card.Block,
@@ -634,6 +674,7 @@ namespace Crusaders30XX.ECS.Systems
                 alternate?.TreatsAsAttack == true,
                 alternate?.AttackDamage ?? 0,
                 alternate?.IsFreeAction == true,
+                phase?.Sub ?? SubPhase.StartBattle,
                 GetStyleFingerprint(),
                 scale,
                 rotation,
@@ -728,7 +769,31 @@ namespace Crusaders30XX.ECS.Systems
             _clippedArtCache.Clear();
         }
 
-        public void DrawCard(Entity entity, Vector2 position)
+        private void ResetRenderResources()
+        {
+            ClearRenderCaches();
+            _pipeline.Reset();
+        }
+
+        internal void SetPoisonOverlaySnapshotTime(float timeSeconds)
+        {
+            _pipeline.SetSnapshotTime<PoisonCardOverlayPass>(timeSeconds);
+        }
+
+        internal void SetAllOverlaySnapshotTimes(float timeSeconds)
+        {
+            _pipeline.SetAllSnapshotTimes(timeSeconds);
+        }
+
+        IEnumerable<object> IDebugInspectableChildren.GetDebugInspectableChildren()
+        {
+            return _pipeline.Passes.Cast<object>();
+        }
+
+		public void DrawCard(
+			Entity entity,
+			Vector2 position,
+			CardData.CardColor? paletteColorOverride = null)
         {
             var cardData = entity.GetComponent<CardData>();
             var transform = entity.GetComponent<Transform>();
@@ -739,7 +804,7 @@ namespace Crusaders30XX.ECS.Systems
             float rotation = transform?.Rotation ?? 0f;
             CardBase card = cardData.Card;
             bool hasDef = card != null;
-            var cc = cardData.Color;
+			var cc = paletteColorOverride ?? cardData.Color;
             bool isColorless = entity.HasComponent<Colorless>();
 
             var rect = CardGeometryService.GetVisualRect(settings, position, vs);
@@ -1152,7 +1217,9 @@ namespace Crusaders30XX.ECS.Systems
             bool suppressDelta = entity.HasComponent<SuppressStatDeltaDisplay>();
 
             int printedBlock = card.Block;
-            int blackCardBlockBonus = GetBlackCardBlockBonus(entity);
+			int blackCardBlockBonus = CardColorQualificationService.QualifiesAs(
+				entity,
+				CardData.CardColor.Black) ? 1 : 0;
             int blockValue = suppressDelta
                 ? printedBlock + blackCardBlockBonus
                 : BlockValueService.GetTotalBlockValue(entity);
@@ -1582,23 +1649,6 @@ namespace Crusaders30XX.ECS.Systems
             {
                 return Math.Max(0, card.Damage);
             }
-        }
-
-        private static int GetBlackCardBlockBonus(Entity entity)
-        {
-            if (entity.HasComponent<Colorless>()) return 0;
-            var modifiedBlock = entity.GetComponent<ModifiedBlock>();
-            if (modifiedBlock?.Modifications == null) return 0;
-
-            int bonus = 0;
-            foreach (var mod in modifiedBlock.Modifications)
-            {
-                if (mod.Reason == "Black card")
-                {
-                    bonus += mod.Delta;
-                }
-            }
-            return bonus;
         }
 
         private Color ColorlessBackground => new(

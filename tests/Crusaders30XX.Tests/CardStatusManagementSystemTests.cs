@@ -152,6 +152,31 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	}
 
 	[Fact]
+	public void Poisoned_card_tooltip_describes_status_effect()
+	{
+		var entityManager = new EntityManager();
+		var card = CreateCard(entityManager, "StatusCard");
+		entityManager.AddComponent(card, new Poisoned { Owner = card });
+
+		var tooltip = TooltipTextService.BuildCardTooltip(card, "Strike");
+
+		Assert.Contains("This card is poisoned - when used to block, lose 1 HP.", tooltip);
+	}
+
+	[Fact]
+	public void Poisoned_card_tooltip_block_is_registered()
+	{
+		var entityManager = new EntityManager();
+		var card = CreateCard(entityManager, "StatusCard");
+		entityManager.AddComponent(card, new Poisoned { Owner = card });
+
+		var blocks = TooltipTextService.BuildTooltipBlocks(card, string.Empty);
+
+		Assert.Equal(["poisoned"], blocks.Select(block => block.Id).ToArray());
+		Assert.Contains("This card is poisoned - when used to block, lose 1 HP.", blocks[0].Text);
+	}
+
+	[Fact]
 	public void Keyword_tooltip_blocks_are_recursive_and_deduplicated()
 	{
 		var sharpenBlocks = TooltipTextService.GetKeywordTooltipBlocks("Gain 5 sharpen.");
@@ -170,7 +195,48 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	{
 		Assert.Contains("X Darkness - The enemy loses X damage", TooltipTextService.GetKeywordTooltip("Gain darkness."));
 		Assert.Contains("X Silenced - You cannot play pledged cards", TooltipTextService.GetKeywordTooltip("Gain silenced."));
-		Assert.Contains("Sealed - Sealed cards cost HP", TooltipTextService.GetKeywordTooltip("Add 2 seals."));
+		Assert.Contains("Sealed - Cannot be pledged. Lose 1 seal when used to block.", TooltipTextService.GetKeywordTooltip("Add 2 seals."));
+	}
+
+	[Fact]
+	public void Applied_passive_tooltip_excludes_its_own_keyword()
+	{
+		var bleedText = TooltipTextService.GetPassiveText(AppliedPassiveType.Bleed, isPlayer: true, stacks: 2);
+		var blocks = TooltipTextService.BuildTooltipBlocks(
+			null,
+			bleedText,
+			excludedKeywordIds: [TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Bleed)]);
+
+		Assert.Equal(["base"], blocks.Select(block => block.Id).ToArray());
+		Assert.Equal(bleedText, blocks[0].Text);
+	}
+
+	[Fact]
+	public void Applied_passive_tooltip_excludes_stem_matched_keyword()
+	{
+		var poisonText = TooltipTextService.GetPassiveText(AppliedPassiveType.Poison, isPlayer: true, stacks: 1);
+		var blocks = TooltipTextService.BuildTooltipBlocks(
+			null,
+			poisonText,
+			excludedKeywordIds: [TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Poison)]);
+
+		Assert.Equal("poisoned", TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Poison));
+		Assert.Equal(["base"], blocks.Select(block => block.Id).ToArray());
+		Assert.Equal(poisonText, blocks[0].Text);
+	}
+
+	[Fact]
+	public void Applied_passive_tooltip_still_expands_related_keywords()
+	{
+		var infernoText = TooltipTextService.GetPassiveText(AppliedPassiveType.Inferno, isPlayer: true, stacks: 3);
+		var blocks = TooltipTextService.BuildTooltipBlocks(
+			null,
+			infernoText,
+			excludedKeywordIds: [TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Inferno)]);
+
+		Assert.Equal(["base", "burn"], blocks.Select(block => block.Id).ToArray());
+		Assert.Equal(infernoText, blocks[0].Text);
+		Assert.Contains("X Burn - At the start of the turn, take X damage.", blocks[1].Text);
 	}
 
 	private static Entity CreateCard(EntityManager entityManager, string name)

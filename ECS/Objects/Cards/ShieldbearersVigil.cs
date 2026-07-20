@@ -1,0 +1,60 @@
+using System.Collections.Generic;
+using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Systems;
+
+namespace Crusaders30XX.ECS.Objects.Cards
+{
+    public class ShieldbearersVigil : CardBase, ICardStatModifierProvider
+    {
+        private const int BlockBonus = 1;
+        private const int DamageUpgrade = 1;
+
+        public ShieldbearersVigil()
+        {
+            CardId = "shieldbearers_vigil";
+            Name = "Shieldbearer's Vigil";
+            Target = "Enemy";
+            Text = "When this card is in your hand and not pledged, your other cards gain +1 block.";
+            VisualEffectRecipe = PlayerAttackEffect();
+            Damage = 3;
+            Block = 3;
+
+            OnPlay = (entityManager, card) =>
+            {
+                EventManager.Publish(new ModifyHpRequestEvent
+                {
+                    Source = entityManager.GetEntity("Player"),
+                    Target = entityManager.GetEntity(Target),
+                    Delta = -GetDerivedDamage(entityManager, card),
+                    AttackCard = card,
+                    DamageType = ModifyTypeEnum.Attack
+                });
+            };
+
+            OnUpgrade = (entityManager, card) =>
+            {
+                if (card != null)
+                {
+                    Damage += DamageUpgrade;
+                }
+            };
+        }
+
+        public IEnumerable<CardStatModifier> GetStatModifiers(CardStatQuery query)
+        {
+            if (query?.Kind != CardStatKind.Block) yield break;
+            if (CardEntity == null || query.Card == null || query.Card == CardEntity) yield break;
+            if (CardEntity.HasComponent<Pledge>()) yield break;
+
+            yield return new CardStatModifier
+            {
+                Delta = BlockBonus,
+                Reason = Name,
+                SourceId = CardId,
+                SourceType = "Card",
+            };
+        }
+    }
+}

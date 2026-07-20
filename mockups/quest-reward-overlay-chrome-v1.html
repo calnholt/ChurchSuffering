@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Quest Reward Overlay Chrome</title>
+<style>
+  /*
+    Chrome exploration for RewardModalDisplaySystem.cs.
+    All three variants use a 1920x1080 virtual canvas and preserve the vertical
+    three-column card replacement layout from quest-reward-modal-v4.html.
+  */
+  @font-face {
+    font-family: "New Rocker";
+    src: url("../Content/Fonts/NewRocker.ttf") format("truetype");
+  }
+  @font-face {
+    font-family: "Chakra Petch";
+    src: url("../Content/Fonts/ChakraPetch.ttf") format("truetype");
+    font-weight: 400 700;
+  }
+  @font-face {
+    font-family: "Grenze";
+    src: url("../Content/Fonts/Grenze.ttf") format("truetype");
+  }
+
+  :root {
+    --ink: #050606;
+    --charcoal: #101112;
+    --iron: #242628;
+    --bone: #eee9df;
+    --bone-dim: #aaa59d;
+    --blood: #c41e3a;
+    --blood-dark: #5d0713;
+    --game-w: 1920px;
+    --game-h: 1080px;
+    --card-w: 244px;
+    --card-h: 342px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: #070809;
+    color: var(--bone);
+    font-family: "Chakra Petch", sans-serif;
+  }
+  button { font: inherit; }
+
+  .page-header {
+    display: grid;
+    grid-template-columns: minmax(360px, 1fr) auto;
+    gap: 28px;
+    align-items: center;
+    padding: 24px 36px 22px;
+    background: #0b0c0d;
+    border-bottom: 1px solid #2a2c2e;
+  }
+  .page-title {
+    margin: 0 0 6px;
+    font: 34px/1 "New Rocker", serif;
+    letter-spacing: 2px;
+  }
+  .page-description {
+    max-width: 870px;
+    min-height: 42px;
+    margin: 0;
+    color: #aaa;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .motion-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .motion-chip {
+    min-width: 112px;
+    padding: 8px 11px;
+    border: 1px solid #393c3e;
+    background: #151719;
+    color: #aaa;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .motion-chip:hover { border-color: #777; color: #fff; }
+  .replay-button { color: #ddd; }
+  .page-main { padding: 28px 36px 54px; }
+  .viewport-scaler {
+    position: relative;
+    width: min(100%, 1440px);
+    min-height: 360px;
+    margin: 0 auto;
+    overflow: hidden;
+    background: #111;
+    border: 1px solid #303234;
+    box-shadow: 0 28px 90px #000;
+  }
+  .viewport {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--game-w);
+    height: var(--game-h);
+    overflow: hidden;
+    transform-origin: top center;
+  }
+  .scene {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(5, 6, 7, .12), rgba(4, 4, 5, .56)),
+      url("../Content/Battle_Backgrounds/gothic-battle-background.png") center / cover no-repeat;
+    filter: saturate(.56) contrast(1.04);
+    transform: scale(1.03);
+  }
+  .veil {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 40%, transparent 0 28%, rgba(0, 0, 0, .37) 75%, rgba(0, 0, 0, .88) 100%),
+      linear-gradient(90deg, rgba(0, 0, 0, .72), rgba(0, 0, 0, .32) 24%, rgba(0, 0, 0, .32) 76%, rgba(0, 0, 0, .72));
+    transition: background .35s ease;
+  }
+  .grain {
+    position: absolute;
+    inset: 0;
+    opacity: .12;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light;
+  }
+
+  /* Shared overlay structure */
+  .reward-overlay {
+    position: absolute;
+    inset: 0;
+    isolation: isolate;
+  }
+  .atmosphere,
+  .chrome { position: absolute; inset: 0; pointer-events: none; }
+  .atmosphere::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -180px;
+    width: 980px;
+    height: 560px;
+    translate: -50% 0;
+    background: radial-gradient(ellipse, rgba(196, 30, 58, .2), transparent 67%);
+    filter: blur(22px);
+  }
+  .overlay-layout {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-rows: 145px 1fr 74px;
+    padding: 26px 86px 28px;
+  }
+  .masthead {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .masthead h2 {
+    margin: 0;
+    color: #fff;
+    font: 48px/.95 "New Rocker", serif;
+    letter-spacing: 4px;
+    text-shadow: 0 4px 22px #000;
+  }
+  .masthead-rule {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 13px;
+  }
+  .masthead-rule::before,
+  .masthead-rule::after {
+    content: "";
+    width: 80px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--blood));
+  }
+  .masthead-rule::after { transform: scaleX(-1); }
+  .masthead-rule span {
+    width: 7px;
+    height: 7px;
+    rotate: 45deg;
+    background: var(--blood);
+    box-shadow: 0 0 12px rgba(196, 30, 58, .75);
+  }
+  .reward-columns {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(3, 330px);
+    justify-content: center;
+    gap: 26px;
+    min-height: 0;
+  }
+  .reward-column {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 4px 34px 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: filter .22s ease;
+  }
+  .reward-column::before,
+  .reward-column::after { content: ""; position: absolute; pointer-events: none; }
+  .reward-column:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+  .column-kicker {
+    position: absolute;
+    top: 5px;
+    left: 14px;
+    z-index: 8;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #8d8982;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    transition: color .16s ease, text-shadow .16s ease;
+  }
+  .column-kicker b {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid #615f5a;
+    border-radius: 50%;
+    color: var(--bone);
+    font: 16px/1 "Grenze", serif;
+    transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
+  }
+  .reward-column:hover .column-kicker,
+  .reward-column.is-selected .column-kicker {
+    color: #fff;
+    text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  .reward-column:hover .column-kicker b,
+  .reward-column.is-selected .column-kicker b {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 48%, #111);
+    color: #fff;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 16px color-mix(in srgb, var(--accent) 58%, transparent);
+  }
+  .reward-column[data-kind="replace"]:hover .column-kicker,
+  .reward-column[data-kind="replace"].is-selected .column-kicker {
+    text-shadow: 0 0 12px rgba(196, 30, 58, .7);
+  }
+  .reward-column[data-kind="replace"]:hover .column-kicker b,
+  .reward-column[data-kind="replace"].is-selected .column-kicker b {
+    border-color: var(--blood);
+    background: color-mix(in srgb, var(--blood) 48%, #111);
+    box-shadow: 0 0 0 2px rgba(196, 30, 58, .18), 0 0 16px rgba(196, 30, 58, .58);
+  }
+  .column-stack {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .swap-mark {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 42px;
+    color: var(--blood);
+  }
+  .swap-mark svg { width: 30px; height: 38px; overflow: visible; }
+  .reward-column[data-kind="upgrade"] .swap-mark { color: var(--bone); }
+
+  /* Card approximation using current card art and current reward data. */
+  .card {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    overflow: hidden;
+    border-radius: 10px;
+    background: #d8d4cc;
+    color: #161616;
+    box-shadow: 0 15px 28px rgba(0, 0, 0, .56);
+    text-align: left;
+    transform: translateZ(0);
+    transition: transform .22s ease, box-shadow .22s ease, opacity .22s ease;
+  }
+  .card.red { background: #650a0c; color: #f4e8dc; }
+  .card.black { background: #111; color: #f2f2f0; }
+  .card.outgoing { opacity: .79; filter: saturate(.72) brightness(.9); }
+  .reward-column:hover .card.incoming,
+  .reward-column.is-selected .card.incoming { transform: scale(1.025); }
+  .reward-column.is-selected .card.incoming {
+    box-shadow: 0 0 0 2px var(--accent, var(--blood)), 0 0 32px color-mix(in srgb, var(--accent, var(--blood)) 45%, transparent), 0 18px 36px #000;
+  }
+  .card-header {
+    position: relative;
+    z-index: 4;
+    height: 62px;
+    margin-left: 53px;
+    padding: 15px 10px 0;
+  }
+  .card-name {
+    display: block;
+    overflow: hidden;
+    color: inherit;
+    font: 21px/1 "New Rocker", serif;
+    letter-spacing: .6px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card-type {
+    position: absolute;
+    right: 8px;
+    bottom: 5px;
+    color: #777;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .red .card-type { color: #ba7777; }
+  .black .card-type { color: #777; }
+  .card-rule {
+    position: absolute;
+    z-index: 4;
+    left: 62px;
+    right: 11px;
+    top: 60px;
+    height: 2px;
+    background: rgba(20, 20, 20, .18);
+  }
+  .red .card-rule { background: rgba(255, 255, 255, .16); }
+  .black .card-rule { background: #343434; }
+  .card-gutter {
+    position: absolute;
+    z-index: 5;
+    inset: 63px auto 0 0;
+    width: 54px;
+    background: rgba(255, 255, 255, .16);
+  }
+  .red .card-gutter { background: rgba(40, 0, 0, .32); }
+  .black .card-gutter { background: rgba(0, 0, 0, .46); }
+  .stats {
+    position: absolute;
+    z-index: 7;
+    left: 10px;
+    top: 70px;
+    bottom: 12px;
+    width: 35px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .stat {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 35px;
+    height: 50px;
+    border-radius: 4px;
+    color: white;
+    font: 27px/1 "New Rocker", serif;
+  }
+  .stat::before {
+    content: attr(data-label);
+    position: absolute;
+    top: 3px;
+    color: rgba(255, 255, 255, .86);
+    font: 7px/1 "Chakra Petch", sans-serif;
+    letter-spacing: .5px;
+  }
+  .stat.block { background: #4b8bb4; }
+  .stat.damage { background: #d11f27; }
+  .stat.ap { margin-top: auto; background: #505052; }
+  .delta {
+    position: absolute;
+    right: -12px;
+    bottom: -2px;
+    padding: 2px 4px;
+    background: #16912b;
+    color: #fff;
+    font: 9px/1 "Chakra Petch", sans-serif;
+  }
+  .card-copy {
+    position: absolute;
+    z-index: 5;
+    left: 63px;
+    right: 10px;
+    top: 70px;
+    min-height: 65px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+  .red .card-copy { color: #e8d7ce; }
+  .black .card-copy { color: #eee; }
+  .card-art {
+    position: absolute;
+    z-index: 2;
+    left: 54px;
+    right: 0;
+    bottom: -3px;
+    width: 190px;
+    height: 252px;
+    object-fit: contain;
+    object-position: bottom right;
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .2));
+  }
+  .discard-cost {
+    position: absolute;
+    z-index: 6;
+    left: 64px;
+    top: 69px;
+    color: #858585;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+  }
+  .discard-cost + .card-copy { top: 90px; }
+
+  .overlay-footer {
+    position: relative;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+  .action-button {
+    height: 48px;
+    padding: 0 26px;
+    border: 1px solid rgba(255, 255, 255, .38);
+    background: rgba(6, 6, 6, .7);
+    color: #bdb9b2;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .action-button:hover { border-color: #fff; color: #fff; }
+  /* Borderless cinematic overlay. */
+  .variant-cinematic .veil {
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, .88) 0, rgba(0, 0, 0, .38) 19%, rgba(0, 0, 0, .46) 78%, rgba(0, 0, 0, .9) 100%),
+      radial-gradient(ellipse at 50% 48%, transparent 0 32%, rgba(0, 0, 0, .5) 87%);
+  }
+  .variant-cinematic .chrome::before,
+  .variant-cinematic .chrome::after {
+    content: "";
+    position: absolute;
+    left: 96px;
+    right: 96px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .3) 18%, rgba(255, 255, 255, .3) 82%, transparent);
+  }
+  .variant-cinematic .chrome::before { top: 171px; }
+  .variant-cinematic .chrome::after { bottom: 101px; }
+  .variant-cinematic .reward-column {
+    background: linear-gradient(180deg, rgba(0, 0, 0, .12), rgba(0, 0, 0, .58) 48%, rgba(0, 0, 0, .16));
+  }
+  .variant-cinematic .reward-column::before {
+    inset: 0 0 auto;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: .35;
+    transition: opacity .2s;
+  }
+  .variant-cinematic .reward-column[data-kind="replace"]::before {
+    background: linear-gradient(90deg, transparent, var(--blood), transparent);
+  }
+  .variant-cinematic .reward-column:hover::before,
+  .variant-cinematic .reward-column.is-selected::before { opacity: 1; }
+  .variant-cinematic .reward-column.is-selected {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), rgba(0, 0, 0, .68) 50%, color-mix(in srgb, var(--accent) 6%, transparent));
+  }
+
+  /* Judgment Flash entrance. */
+  .reward-overlay::before,
+  .reward-overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .reward-overlay.is-entering .reward-column { pointer-events: none; }
+
+  .enter-judgment .reward-overlay.is-entering::after {
+    background:
+      linear-gradient(90deg, transparent 48.8%, rgba(196, 30, 58, .8) 49.8% 50.2%, transparent 51.2%),
+      linear-gradient(0deg, transparent 48.8%, rgba(196, 30, 58, .56) 49.8% 50.2%, transparent 51.2%);
+    mix-blend-mode: screen;
+    animation: judgment-flash 820ms ease-out both;
+  }
+  .enter-judgment .reward-overlay.is-entering .masthead { animation: judgment-title 620ms cubic-bezier(.15, 1.35, .35, 1) 120ms both; }
+  .enter-judgment .reward-overlay.is-entering .reward-column {
+    animation: judgment-column 680ms cubic-bezier(.16, 1, .3, 1) both;
+  }
+  .enter-judgment .reward-overlay.is-entering .reward-column:nth-child(1) { animation-delay: 330ms; }
+  .enter-judgment .reward-overlay.is-entering .reward-column:nth-child(2) { animation-delay: 230ms; }
+  .enter-judgment .reward-overlay.is-entering .reward-column:nth-child(3) { animation-delay: 330ms; }
+  .enter-judgment .reward-overlay.is-entering .overlay-footer { animation: soft-arrive 420ms ease 690ms both; }
+
+  @keyframes soft-arrive { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes judgment-flash { 0% { opacity: 0; transform: scale(.4); } 18% { opacity: .95; } 100% { opacity: 0; transform: scale(2.2); } }
+  @keyframes judgment-title { from { opacity: 0; transform: scale(1.65); filter: blur(10px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes judgment-column { from { opacity: 0; transform: scale(.72); filter: grayscale(1) blur(9px); } to { opacity: 1; transform: none; filter: none; } }
+
+  /* Immediate Ascend claim + overlay exit. */
+  .reward-overlay.is-claiming .reward-column,
+  .reward-overlay.is-skipping .reward-column { pointer-events: none; }
+  .reward-overlay.is-claiming .reward-column:not(.is-selected) {
+    animation: choices-dismiss 430ms ease-in both;
+  }
+  .reward-overlay.is-claiming .masthead,
+  .reward-overlay.is-claiming .overlay-footer,
+  .reward-overlay.is-skipping .masthead,
+  .reward-overlay.is-skipping .overlay-footer {
+    animation: chrome-dismiss 380ms ease-in both;
+  }
+
+  .claim-ascend.reward-overlay.is-claiming .reward-column.is-selected .outgoing {
+    animation: old-card-drop 520ms cubic-bezier(.55, 0, 1, .45) both;
+  }
+  .claim-ascend.reward-overlay.is-claiming .reward-column.is-selected .swap-mark,
+  .claim-ascend.reward-overlay.is-claiming .reward-column.is-selected .column-kicker {
+    animation: chrome-dismiss 260ms ease both;
+  }
+  .claim-ascend.reward-overlay.is-claiming .reward-column.is-selected .incoming {
+    animation: reward-ascend 1370ms linear 80ms both;
+  }
+  .claim-ascend.reward-overlay.is-claiming { animation: overlay-release 1370ms linear 80ms both; }
+
+  .reward-overlay.is-skipping { animation: skip-overlay-out 760ms ease-in both; }
+
+  @keyframes choices-dismiss { to { opacity: 0; transform: scale(.86); filter: blur(9px); } }
+  @keyframes chrome-dismiss { to { opacity: 0; transform: translateY(-18px); } }
+  @keyframes old-card-drop { to { opacity: 0; transform: translateY(110px) rotate(-5deg) scale(.86); filter: blur(7px); } }
+  @keyframes reward-ascend {
+    0% {
+      opacity: 1;
+      transform: scale(1.025);
+      filter: brightness(1) blur(0);
+      animation-timing-function: cubic-bezier(.16, 1, .3, 1);
+    }
+    32% {
+      opacity: 1;
+      transform: translateY(-150px) scale(1.18);
+      filter: brightness(1.12) blur(0);
+      animation-timing-function: linear;
+    }
+    68% {
+      opacity: 1;
+      transform: translateY(-150px) scale(1.18);
+      filter: brightness(1.12) blur(0);
+      animation-timing-function: cubic-bezier(.55, 0, 1, .45);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-330px) scale(.72);
+      filter: brightness(1.55) blur(10px);
+    }
+  }
+  @keyframes overlay-release { 0%, 68% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes skip-overlay-out { to { opacity: 0; transform: translateY(24px); filter: blur(7px); } }
+
+  @media (max-width: 850px) {
+    .page-header { grid-template-columns: 1fr; }
+    .motion-controls { justify-content: flex-start; }
+    .page-main { padding: 18px 12px 36px; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <div>
+    <h1 class="page-title">Quest Reward — Cinematic Overlay</h1>
+    <p class="page-description">Judgment Flash introduces the overlay. Clicking a reward commits it immediately and carries the chosen card away with Ascend.</p>
+  </div>
+  <div class="motion-controls">
+    <button class="motion-chip replay-button" id="replay-button" type="button">Replay entrance</button>
+  </div>
+</header>
+
+<main class="page-main">
+  <div class="viewport-scaler">
+    <div class="viewport variant-cinematic enter-judgment" id="viewport">
+      <div class="scene"></div>
+      <div class="veil"></div>
+      <div class="grain"></div>
+
+      <section class="reward-overlay" id="reward-overlay" aria-label="Quest reward selection">
+        <div class="atmosphere"></div>
+        <div class="chrome"></div>
+
+        <div class="overlay-layout">
+          <header class="masthead">
+            <h2>Quest Complete!</h2>
+            <div class="masthead-rule" aria-hidden="true"><span></span></div>
+          </header>
+
+          <div class="reward-columns" id="reward-columns"></div>
+
+          <footer class="overlay-footer">
+            <button class="action-button skip-button" id="skip-button" type="button">Skip deck reward</button>
+          </footer>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+
+  const REWARDS = [
+    {
+      kind: "replace",
+      accent: "#c41e3a",
+      out: { name: "Strike", tone: "light", block: 3, damage: 3, ap: 1, copy: "50% chance to gain 2 courage.", art: "strike.png" },
+      incoming: { name: "Smite", tone: "red", block: 3, damage: 3, ap: 1, copy: "", art: "smite.png" }
+    },
+    {
+      kind: "replace",
+      accent: "#c41e3a",
+      out: { name: "Reckoning", tone: "light", block: 2, damage: 6, ap: 1, discard: 2, copy: "", art: "reckoning.png" },
+      incoming: { name: "Unburdened Strike", tone: "black", block: 3, blockDelta: 1, damage: 6, ap: 1, discard: 2, copy: "If no cards were discarded to play this, this gains +3 damage.", art: "unburdened_strike.png" }
+    },
+    {
+      kind: "upgrade",
+      accent: "#e8e2d7",
+      out: { name: "Smite", tone: "light", block: 3, damage: 3, ap: 1, copy: "", art: "smite.png" },
+      incoming: { name: "Smite+", tone: "light", block: 3, damage: 3, ap: 1, copy: "When this is pledged, gain 1 temperance.", art: "smite.png" }
+    }
+  ];
+
+  let selectedIndex = -1;
+  let isAnimating = false;
+  let motionTimer = 0;
+
+  function fitViewport() {
+    const scaler = document.querySelector(".viewport-scaler");
+    const viewport = document.getElementById("viewport");
+    const scale = scaler.clientWidth / GAME_W;
+    viewport.style.transform = `translateX(-50%) scale(${scale})`;
+    scaler.style.height = `${GAME_H * scale}px`;
+  }
+
+  function statHtml(label, value, className, delta = 0) {
+    return `<span class="stat ${className}" data-label="${label}">${value}${delta ? `<i class="delta">+${delta}</i>` : ""}</span>`;
+  }
+
+  function cardHtml(card, role) {
+    const discard = card.discard
+      ? `<span class="discard-cost">Discard ${"◆".repeat(card.discard)}</span>`
+      : "";
+    return `
+      <article class="card ${card.tone} ${role}">
+        <header class="card-header">
+          <strong class="card-name">${card.name}</strong>
+          <span class="card-type">Attack</span>
+        </header>
+        <span class="card-rule"></span>
+        <span class="card-gutter"></span>
+        <div class="stats">
+          ${statHtml("BLOCK", card.block, "block", card.blockDelta)}
+          ${statHtml("DAMAGE", card.damage, "damage")}
+          ${statHtml("AP", card.ap, "ap")}
+        </div>
+        ${discard}
+        ${card.copy ? `<p class="card-copy">${card.copy}</p>` : ""}
+        <img class="card-art" src="../Content/CardArt/${card.art}" alt="">
+      </article>`;
+  }
+
+  function swapHtml(kind) {
+    if (kind === "upgrade") {
+      return `<span class="swap-mark" aria-label="Upgrade"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30" fill="none" stroke="currentColor" stroke-width="4"/></svg></span>`;
+    }
+    return `<span class="swap-mark" aria-label="Replace"><svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 3v36M8 28l12 12 12-12" fill="none" stroke="currentColor" stroke-width="4"/></svg></span>`;
+  }
+
+  function rewardLabel(reward) {
+    return reward.kind === "upgrade"
+      ? `Upgrade ${reward.out.name} to ${reward.incoming.name}`
+      : `Replace ${reward.out.name} with ${reward.incoming.name}`;
+  }
+
+  function renderRewards() {
+    const columns = document.getElementById("reward-columns");
+    columns.innerHTML = REWARDS.map((reward, index) => `
+      <button
+        class="reward-column${selectedIndex === index ? " is-selected" : ""}"
+        type="button"
+        data-index="${index}"
+        data-kind="${reward.kind}"
+        style="--accent:${reward.accent}"
+        aria-pressed="${selectedIndex === index}"
+        aria-label="${rewardLabel(reward)}">
+        <span class="column-kicker"><b>${index + 1}</b>${reward.kind === "upgrade" ? "Upgrade" : "Replace"}</span>
+        <span class="column-stack">
+          ${cardHtml(reward.out, "outgoing")}
+          ${swapHtml(reward.kind)}
+          ${cardHtml(reward.incoming, "incoming")}
+        </span>
+      </button>`).join("");
+
+    columns.querySelectorAll(".reward-column").forEach(column => {
+      column.addEventListener("click", () => claimReward(Number(column.dataset.index)));
+    });
+  }
+
+  function playEntrance() {
+    window.clearTimeout(motionTimer);
+    selectedIndex = -1;
+    renderRewards();
+
+    const overlay = document.getElementById("reward-overlay");
+    overlay.className = "reward-overlay";
+    void overlay.offsetWidth;
+    overlay.classList.add("is-entering");
+    isAnimating = true;
+
+    motionTimer = window.setTimeout(() => {
+      overlay.classList.remove("is-entering");
+      isAnimating = false;
+    }, 1250);
+  }
+
+  function claimReward(index) {
+    if (isAnimating) return;
+    selectedIndex = index;
+    const overlay = document.getElementById("reward-overlay");
+    renderRewards();
+    overlay.classList.add("is-claiming", "claim-ascend");
+    isAnimating = true;
+
+    motionTimer = window.setTimeout(() => {
+      isAnimating = false;
+      playEntrance();
+    }, 1650);
+  }
+
+  function skipReward() {
+    if (isAnimating) return;
+    selectedIndex = -1;
+    const overlay = document.getElementById("reward-overlay");
+    overlay.classList.add("is-skipping");
+    isAnimating = true;
+    motionTimer = window.setTimeout(() => {
+      isAnimating = false;
+      playEntrance();
+    }, 850);
+  }
+
+  document.getElementById("replay-button").addEventListener("click", playEntrance);
+  document.getElementById("skip-button").addEventListener("click", skipReward);
+  window.addEventListener("keydown", event => {
+    if (["1", "2", "3"].includes(event.key)) claimReward(Number(event.key) - 1);
+    if (event.key === "Escape") skipReward();
+  });
+  window.addEventListener("resize", fitViewport);
+  window.addEventListener("load", fitViewport);
+
+  renderRewards();
+  fitViewport();
+  playEntrance();
+</script>
+</body>
+</html>

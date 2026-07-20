@@ -373,6 +373,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			state,
 			BoosterPackOpeningAnimationService.CanDismiss(state.ElapsedSeconds, timing));
 		UpdateRumble(state, timing);
+		EnsureEquipmentTooltipEntity();
 		_equipmentTooltipDisplaySystem?.Update(gameTime);
 	}
 
@@ -493,6 +494,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		state.NextChargeParticleSeconds = timing.ChargeStart + Math.Max(0.001f, timing.ChargeParticleInterval);
 		state.Loot = CreateLootPreviews(timing, pack);
 		EnsureBlocker();
+		EnsureEquipmentTooltipEntity();
 		SetDismissEnabled(state, false);
 		SetBlockerActive(true);
 		UpdateRewardInteractions(state, timing);

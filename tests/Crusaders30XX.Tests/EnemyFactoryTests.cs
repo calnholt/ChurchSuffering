@@ -13,6 +13,30 @@ namespace Crusaders30XX.Tests;
 public class EnemyFactoryTests
 {
 	[Fact]
+	public void Melee_skeleton_variants_share_base_stats_and_throughout_pool()
+	{
+		EnemyId[] meleeSkeletons =
+		{
+			EnemyId.Skeleton,
+			EnemyId.FireSkeleton,
+			EnemyId.EarthSkeleton,
+			EnemyId.FrostSkeleton,
+			EnemyId.CursedSkeleton,
+		};
+
+		foreach (EnemyId id in meleeSkeletons)
+		{
+			var enemy = EnemyFactory.Create(id);
+			Assert.NotNull(enemy);
+			Assert.Equal(26, enemy.HP);
+			Assert.Equal(ClimbEncounterPool.Throughout, enemy.ClimbPool);
+			Assert.True(EnemyPortraitContent.HasPortrait(id));
+		}
+
+		Assert.Equal(ClimbEncounterPool.Early, EnemyFactory.Create(EnemyId.SkeletalArcher).ClimbPool);
+	}
+
+	[Fact]
 	public void Fallen_shepherd_is_registered_as_a_boss()
 	{
 		var enemy = EnemyFactory.Create(EnemyId.FallenShepherd);
@@ -42,6 +66,7 @@ public class EnemyFactoryTests
 			var enemy = EnemyFactory.Create(enemyId);
 			Assert.NotNull(enemy);
 			Assert.False(enemy.IsBoss, $"{enemyId} is marked as a boss");
+			Assert.NotEqual(ClimbEncounterPool.None, enemy.ClimbPool);
 			Assert.True(EnemyPortraitContent.HasPortrait(enemyId));
 		}
 	}

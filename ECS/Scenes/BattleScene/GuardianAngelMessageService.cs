@@ -27,6 +27,8 @@ namespace Crusaders30XX.ECS.Systems
             new Dictionary<CardId, string[]>
             {
                 [CardId.Absolution] = ["A clean heart fights lighter!", "Leave that burden behind!"],
+                [CardId.AboundingGrace] = ["Grace rises with the dawn!", "What was lost returns to hand!"],
+                [CardId.AnsweredPrayer] = ["Heaven heard you. Strike!", "Your prayers return as power!"],
                 [CardId.ArkOfTheCovenant] = ["The Ark goes before us!", "Stand firm beneath His promise!"],
                 [CardId.BatteringBlow] = ["Open the way!", "That guard will not hold!"],
                 [CardId.BattleScars] = ["Those scars still shine!", "Every scar taught us courage!"],
@@ -39,6 +41,7 @@ namespace Crusaders30XX.ECS.Systems
                 [CardId.CrimsonRite] = ["A solemn bargain. Stay true!", "Let the sacrifice mean something!"],
                 [CardId.Crusade] = ["Forward with faithful hearts!", "Our cause carries us onward!"],
                 [CardId.Curse] = ["Do not let it cling to you!", "We can outlast this darkness!"],
+                [CardId.Hex] = ["Shake that hex loose!", "Do not let the mark take hold!"],
                 [CardId.Dagger] = ["Quick and clean!", "A small blade finds its mark!"],
                 [CardId.DeusVult] = ["Then let His will be done!", "Answer boldly!"],
                 [CardId.DivineProtection] = ["You are sheltered!", "Grace stands between you and harm!"],
@@ -61,6 +64,7 @@ namespace Crusaders30XX.ECS.Systems
                 [CardId.LitanyOfWrath] = ["Let every word strike true!", "A fierce prayer for a fierce hour!"],
                 [CardId.Mantlet] = ["Shelter behind it!", "A little wall at the right time!"],
                 [CardId.MaleficRite] = ["Dark work. Keep your soul guarded!", "Use it, but do not trust it!"],
+                [CardId.MarkOfAnathema] = ["Mark them for judgment!", "Let the curse cling to our foe!"],
                 [CardId.QuickWit] = ["A clever answer!", "Good thinking, quick as light!"],
                 [CardId.RallyTheFaithful] = ["Hearts together, now!", "Call them back to courage!"],
                 [CardId.RelentlessStrike] = ["Again, and do not falter!", "Keep the pressure true!"],
@@ -71,15 +75,18 @@ namespace Crusaders30XX.ECS.Systems
                 [CardId.RazorStorm] = ["A storm with an edge!", "Duck after you throw those!"],
                 [CardId.Reckoning] = ["The account comes due!", "Now answer for it!"],
                 [CardId.Reap] = ["Gather what the battle sowed!", "The harvest is ours!"],
+                [CardId.RecklessBarrage] = ["Wild and costly. Make it count!", "Throw caution. Keep the faith!"],
                 [CardId.RenounceAndHone] = ["Cast it off and sharpen your purpose!", "Less burden, keener edge!"],
                 [CardId.Sacrifice] = ["Give only what you must!", "Let this gift bring hope!"],
                 [CardId.SerpentCrush] = ["No room left to slither!", "Pin that serpent down!"],
                 [CardId.Seize] = ["Take the opening!", "Ours now!"],
+                [CardId.ShieldbearersVigil] = ["Your shield steadies every hand!", "Stand watch. We guard together!"],
                 [CardId.ShieldOfFaith] = ["Faith before fear!", "That shield is more than steel!"],
                 [CardId.Smite] = ["A bright little thunderbolt!", "Smite with purpose!"],
                 [CardId.Stab] = ["Right where it hurts!", "A quick point well made!"],
                 [CardId.SteadfastResolve] = ["Nothing shakes that heart!", "Plant your feet and mean it!"],
                 [CardId.Stalwart] = ["Solid as the chapel doors!", "You will not be moved!"],
+                [CardId.SteelPrayer] = ["Steel your heart in prayer!", "Courage rises with every word!"],
                 [CardId.SteelTheSpirit] = ["Make your spirit stronger than steel!", "Let courage take an edge!"],
                 [CardId.StokedAssault] = ["The furnace is roaring now!", "Strike while the coals are bright!"],
                 [CardId.Strike] = ["A good honest strike!", "Simple and true!"],
@@ -128,6 +135,7 @@ namespace Crusaders30XX.ECS.Systems
                 [MedalId.StChristopher] = ["Saint Christopher, carry us through!", "Strong shoulders, safe passage!"],
                 [MedalId.StLawrence] = ["Saint Lawrence, keep us bright!", "Even the fire cannot dim us!"],
                 [MedalId.StLazarus] = ["Saint Lazarus, rise once more!", "The grave does not get the last word!"],
+                [MedalId.StAdrian] = ["Saint Adrian, risk it all!", "Courage spent can still buy victory!"],
             };
 
         private static readonly IReadOnlyDictionary<EnemyAttackId, string[]> EnemyAttackMessages =
@@ -203,13 +211,9 @@ namespace Crusaders30XX.ECS.Systems
                 [EnemyAttackId.StoneBarrage] = ["A whole quarry is flying at us!", "Cover up from the stones!"],
                 [EnemyAttackId.EarthenWall] = ["It is hiding behind the earth!", "That wall will make it stubborn!"],
                 [EnemyAttackId.HaveNoMercy] = ["It means to finish this cruelly!", "Give everything to this defense!"],
-                [EnemyAttackId.Gaze] = ["Do not meet those eyes!", "Look to the side, quickly!"],
-                [EnemyAttackId.BasiliskGlare] = ["That glare can stop us cold!", "Eyes down before stone takes hold!"],
-                [EnemyAttackId.SerpentStrike] = ["The serpent is darting in!", "Fast fangs. Faster guard!"],
-                [EnemyAttackId.PetrifyingGaze] = ["She means to turn us to stone!", "Keep your eyes away from hers!"],
-                [EnemyAttackId.StoneSkin] = ["Her scales are hardening!", "We will need a stronger answer!"],
-                [EnemyAttackId.VipersCurse] = ["Venom and malice together!", "Do not let that curse coil around you!"],
-                [EnemyAttackId.CrumblingStone] = ["The stone is breaking toward us!", "Mind the falling shards!"],
+                [EnemyAttackId.WardenSeal] = ["Break the ward with your shield!", "Block with it to crack the seal!"],
+				[EnemyAttackId.VenomLash] = ["Keep that venomous tongue away!", "One firm guard stops the poison!"],
+				[EnemyAttackId.ToxicDeluge] = ["The whole spray is poison!", "Put enough shield into this one!"],
                 [EnemyAttackId.WyvernStrike] = ["Talons diving from above!", "The wyvern is committed now!"],
                 [EnemyAttackId.WyvernThreat] = ["It is gathering itself for worse!", "That warning is no bluff!"],
                 [EnemyAttackId.FallenShepherdPhase1] = ["His crooked staff is raised!", "Do not follow that false shepherd!"],
@@ -224,6 +228,8 @@ namespace Crusaders30XX.ECS.Systems
                 [EnemyAttackId.FallenShepherdPurgeTheHeretic] = ["He has named us for the fire!", "His judgment is false. Stand firm!"],
                 [EnemyAttackId.FallenShepherdFearTheShepherd] = ["Fear is the only crook he has left!", "We bow to no false shepherd!"],
                 [EnemyAttackId.FallenShepherdFinalSermon] = ["His final sermon ends here!", "Let truth have the last word!"],
+                [EnemyAttackId.ChronoSlice] = ["That blade is cutting through time!", "Guard carefully. It will bury the first card!"],
+                [EnemyAttackId.AeonWard] = ["The ice is hardening around him!", "Strike through that frozen ward!"],
             };
 
         public static string GetMessage(GuardianAmbientMessageType type) => Select($"ambient:{type}", AmbientMessages[type]);

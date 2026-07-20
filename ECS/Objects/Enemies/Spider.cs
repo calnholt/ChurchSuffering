@@ -19,6 +19,7 @@ public class Spider : EnemyBase
     Id = EnemyId.Spider;
     Name = "Spider";
     HP = 28;
+    ClimbPool = ClimbEncounterPool.Late;
 
     OnStartOfBattle = (entityManager) =>
     {

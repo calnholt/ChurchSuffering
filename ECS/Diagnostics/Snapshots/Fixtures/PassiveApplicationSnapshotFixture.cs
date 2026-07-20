@@ -4,6 +4,7 @@ using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.VisualEffects;
 using Crusaders30XX.ECS.Events;
+using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -38,7 +39,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 			_pixel = new Texture2D(ctx.GraphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
 			_playerTexture = ctx.ImageAssets.GetRequiredTexture("crusader_hammer");
-			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Skeleton");
+			_enemyTexture = ctx.ImageAssets.GetRequiredTexture("Enemies/Skeleton");
 			_player = CreateActor(ctx, "SnapshotPlayer", PlayerAnchor, true, _playerTexture, .36f);
 			_enemy = CreateActor(ctx, "Enemy", EnemyAnchor, false, _enemyTexture, .62f);
 
@@ -74,7 +75,8 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					IsPreview = true,
 					SourceKind = VisualEffectSourceKind.EnemyAttack,
 				});
-				_attackDisplay = new ModularEffectPrimitiveDisplaySystem(ctx.World.EntityManager, ctx.GraphicsDevice, ctx.SpriteBatch);
+				var resources = new ModularEffectRenderResources(ctx.GraphicsDevice, ctx.ImageAssets.GetPixel(Color.White));
+				_attackDisplay = new ModularEffectPrimitiveDisplaySystem(ctx.World.EntityManager, ctx.SpriteBatch, resources);
 			}
 
 			_statusDisplay.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(SampleSeconds())));

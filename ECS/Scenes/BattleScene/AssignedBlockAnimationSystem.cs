@@ -46,6 +46,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var entities = GetRelevantEntities()
 				.Where(entity => entity.GetComponent<AssignedBlockPresentation>() != null)
+				.Where(entity => entity.GetComponent<CardToDiscardFlight>() == null)
 				.OrderBy(entity => entity.GetComponent<AssignedBlockCard>().AssignedAtTicks)
 				.ToList();
 			if (entities.Count == 0) return;

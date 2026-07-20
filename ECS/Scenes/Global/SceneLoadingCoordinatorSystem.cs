@@ -203,15 +203,20 @@ namespace Crusaders30XX.ECS.Systems
 		private static IEnumerable<string> ResolveEffectAssets(SceneId scene)
 		{
 			if (!ShaderRuntimeOptions.ShadersEnabled) yield break;
-			if (scene == SceneId.Climb) yield return "Shaders/LayeredHoles";
+			if (scene == SceneId.Climb)
+			{
+				yield return "Shaders/LayeredHoles";
+				yield return "Shaders/GaussianBlur";
+				yield return "Shaders/ClimbChoiceFilter";
+			}
 			if (scene == SceneId.Achievement) yield return "Shaders/AchievementBackground";
 		}
 
 		private MusicTrack ResolveMusicTrack(SceneId scene)
 		{
 			if (scene == SceneId.Climb) return MusicTrack.Climb;
-			if (scene == SceneId.Achievement) return MusicTrack.Achievements;
-			if (scene == SceneId.WayStation || scene == SceneId.TitleMenu) return MusicTrack.Customize;
+			if (scene == SceneId.TitleMenu) return MusicTrack.Title;
+			if (scene == SceneId.WayStation) return MusicTrack.WayStation;
 			if (scene != SceneId.Battle) return MusicTrack.None;
 			var queued = EntityManager.GetEntitiesWithComponent<QueuedEvents>()
 				.FirstOrDefault()?.GetComponent<QueuedEvents>();

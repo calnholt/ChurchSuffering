@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 
 namespace Crusaders30XX.ECS.Events
@@ -6,14 +9,14 @@ namespace Crusaders30XX.ECS.Events
 	{
 		public Entity Card;
 		public int DeltaBlock;
-		public string Color; // "Red" | "White" | "Black"
+		public IReadOnlyList<CardData.CardColor> Colors = Array.Empty<CardData.CardColor>();
 	}
 
 	public class BlockAssignmentRemoved
 	{
 		public Entity Card;
 		public int DeltaBlock;
-		public string Color; // optional, e.g., "Red", "White", "Black"
+		public IReadOnlyList<CardData.CardColor> Colors = Array.Empty<CardData.CardColor>();
 	}
 
 	public class AssignedBlockReturnCompleted

@@ -11,6 +11,7 @@ namespace Crusaders30XX.ECS.Objects.Equipment
             Slot = EquipmentSlot.Chest;
             Block = 2;
             Color = CardData.CardColor.Black;
+            FlavorText = "Standard issue of the order. Meant to turn the blow that would stop the charge.";
             CanActivate = () => false;
         }
     }

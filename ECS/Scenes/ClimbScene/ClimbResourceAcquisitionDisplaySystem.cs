@@ -36,6 +36,13 @@ namespace Crusaders30XX.ECS.Systems
 			public float EndSeconds;
 			public float NextAudioSeconds;
 			public bool HeaderPulsePublished;
+			public bool ReleasesClimbTurnover;
+		}
+
+		private sealed class AnimationRequest
+		{
+			public ClimbResourceSave Resources = new();
+			public bool ReleasesClimbTurnover;
 		}
 
 		private const string InputEntityName = "Climb_ResourceAcquisitionInput";
@@ -50,7 +57,7 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly SpriteBatch _spriteBatch;
 		private readonly ImageAssetService _imageAssets;
 		private readonly Texture2D _pixel;
-		private readonly Queue<ClimbResourceSave> _queue = new();
+		private readonly Queue<AnimationRequest> _queue = new();
 		private readonly Action<ClimbResourceAcquisitionAnimationRequested> _requestHandler;
 		private readonly Action<DeleteCachesEvent> _deleteCachesHandler;
 		private Texture2D _redGem;
@@ -142,8 +149,10 @@ namespace Crusaders30XX.ECS.Systems
 			PublishHeaderPulseIfReady();
 			if (!_snapshotTimeLocked && _active.ElapsedSeconds >= _active.EndSeconds)
 			{
+				bool releasesClimbTurnover = _active.ReleasesClimbTurnover;
 				_active = null;
 				DeactivateInputContext();
+				PublishTurnoverRelease(releasesClimbTurnover);
 				TryStartNext();
 			}
 		}
@@ -177,7 +186,11 @@ namespace Crusaders30XX.ECS.Systems
 		private void OnAnimationRequested(ClimbResourceAcquisitionAnimationRequested evt)
 		{
 			if (!HasResources(evt?.Resources)) return;
-			_queue.Enqueue(CloneResources(evt.Resources));
+			_queue.Enqueue(new AnimationRequest
+			{
+				Resources = CloneResources(evt.Resources),
+				ReleasesClimbTurnover = evt.DelayClimbTurnoverUntilComplete,
+			});
 			TryStartNext();
 		}
 
@@ -187,13 +200,22 @@ namespace Crusaders30XX.ECS.Systems
 			Start(_queue.Dequeue());
 		}
 
-		private void Start(ClimbResourceSave resources)
+		private void Start(AnimationRequest request)
 		{
+			ClimbResourceSave resources = request?.Resources;
 			var types = BuildGemSequence(resources);
-			if (types.Count == 0) return;
+			if (types.Count == 0)
+			{
+				PublishTurnoverRelease(request?.ReleasesClimbTurnover == true);
+				return;
+			}
 
 			float stagger = CalculateStaggerSeconds(types.Count);
-			var active = new ActiveAnimation { Resources = CloneResources(resources) };
+			var active = new ActiveAnimation
+			{
+				Resources = CloneResources(resources),
+				ReleasesClimbTurnover = request.ReleasesClimbTurnover,
+			};
 			float centerX = Game1.VirtualWidth * 0.5f;
 			for (int i = 0; i < types.Count; i++)
 			{
@@ -367,7 +389,9 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void ClearAll()
 		{
+			foreach (var request in _queue) PublishTurnoverRelease(request.ReleasesClimbTurnover);
 			_queue.Clear();
+			PublishTurnoverRelease(_active?.ReleasesClimbTurnover == true);
 			_active = null;
 			_snapshotTimeLocked = false;
 			DeactivateInputContext();
@@ -383,7 +407,7 @@ namespace Crusaders30XX.ECS.Systems
 		internal void SetSnapshotState(ClimbResourceSave resources, float elapsedSeconds)
 		{
 			ClearAll();
-			Start(CloneResources(resources));
+			Start(new AnimationRequest { Resources = CloneResources(resources) });
 			if (_active == null) return;
 			_active.ElapsedSeconds = MathHelper.Clamp(elapsedSeconds, 0f, _active.EndSeconds);
 			foreach (var gem in _active.Gems) gem.AudioPublished = true;
@@ -431,6 +455,12 @@ namespace Crusaders30XX.ECS.Systems
 			return (resources?.red ?? 0) > 0
 				|| (resources?.white ?? 0) > 0
 				|| (resources?.black ?? 0) > 0;
+		}
+
+		private static void PublishTurnoverRelease(bool releasesClimbTurnover)
+		{
+			if (releasesClimbTurnover)
+				EventManager.Publish(new ClimbResourceAcquisitionAnimationCompleted { ReleasesClimbTurnover = true });
 		}
 
 		private static ClimbResourceSave CloneResources(ClimbResourceSave resources)

@@ -93,12 +93,13 @@ namespace Crusaders30XX.ECS.Systems
 
 			var center = layout.RenderCenter;
 			var color = tooltip.CardColor ?? layout.CardData?.Color ?? CardData.CardColor.White;
+			var secondaryColor = layout.Entity.GetComponent<DualColor>()?.SecondaryColor;
 			var previewRestrictions = BuildPreviewRestrictions(tooltip, layout.Entity);
 
 			if (tooltip.CrossfadeUpgradePreview)
 			{
-				var baseCard = GetOrCreateTooltipCard(tooltip.CardId, color, isUpgraded: false, previewRestrictions);
-				var upgradedCard = GetOrCreateTooltipCard(tooltip.CardId, color, isUpgraded: true, previewRestrictions);
+				var baseCard = GetOrCreateTooltipCard(tooltip.CardId, color, secondaryColor, isUpgraded: false, previewRestrictions);
+				var upgradedCard = GetOrCreateTooltipCard(tooltip.CardId, color, secondaryColor, isUpgraded: true, previewRestrictions);
 				if (baseCard == null || upgradedCard == null) return;
 
 				// Draw base card always at full opacity underneath
@@ -127,7 +128,7 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
-			var cardEntity = GetOrCreateTooltipCard(tooltip.CardId, color, tooltip.IsUpgraded, previewRestrictions);
+			var cardEntity = GetOrCreateTooltipCard(tooltip.CardId, color, secondaryColor, tooltip.IsUpgraded, previewRestrictions);
 			if (cardEntity == null) return;
 
 			EventManager.Publish(new CardRenderScaledEvent { Card = cardEntity, Position = center, Scale = tooltip.TooltipScale });
@@ -136,16 +137,25 @@ namespace Crusaders30XX.ECS.Systems
 		private Entity GetOrCreateTooltipCard(
 			string cardId,
 			CardData.CardColor color,
+			CardData.CardColor? secondaryColor,
 			bool isUpgraded,
 			IReadOnlyList<string> previewRestrictions)
 		{
 			var restrictionKey = string.Join(",", NormalizeRestrictions(previewRestrictions));
-			var key = cardId + "|" + color + (isUpgraded ? "|upgraded" : "") + "|" + restrictionKey;
+			var key = cardId + "|" + color + "|" + secondaryColor + (isUpgraded ? "|upgraded" : "") + "|" + restrictionKey;
 			if (!_tooltipCardCache.TryGetValue(key, out var cardEntity) || cardEntity == null)
 			{
 				cardEntity = ECS.Factories.EntityFactory.CreateCardFromDefinition(EntityManager, cardId, color, allowWeapons: true, index: 0, isUpgraded: isUpgraded);
 				if (cardEntity != null)
 				{
+					if (secondaryColor.HasValue)
+					{
+						EntityManager.AddComponent(cardEntity, new DualColor
+						{
+							Owner = cardEntity,
+							SecondaryColor = secondaryColor.Value,
+						});
+					}
 					var ui = cardEntity.GetComponent<UIElement>();
 					if (ui != null)
 					{
@@ -195,6 +205,9 @@ namespace Crusaders30XX.ECS.Systems
 						break;
 					case RunScopedStateService.RestrictionColorless:
 						EntityManager.AddComponent(cardEntity, new Colorless { Owner = cardEntity });
+						break;
+					case RunScopedStateService.RestrictionSealed:
+						EntityManager.AddComponent(cardEntity, new Sealed { Owner = cardEntity, Seals = 2 });
 						break;
 					case RunScopedStateService.RestrictionCursed:
 						CursedManagementSystem.ApplyCursedRuntime(EntityManager, cardEntity);

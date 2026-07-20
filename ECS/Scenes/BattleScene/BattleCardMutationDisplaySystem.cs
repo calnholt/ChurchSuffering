@@ -13,7 +13,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Crusaders30XX.ECS.Systems
 {
 	/// <summary>
-	/// Plays the card restriction mutation cutscene during battle when restrictions are applied.
+	/// Applies hand-card restrictions immediately and plays the mutation cutscene for other battle zones.
 	/// </summary>
 	[DebugTab("Battle Mutation Anim")]
 	public class BattleCardMutationDisplaySystem : Core.System
@@ -23,6 +23,7 @@ namespace Crusaders30XX.ECS.Systems
 		private sealed class MutationRequest
 		{
 			public Entity TargetCard;
+			public int StacksPerCard;
 			public CardApplicationType Type;
 		}
 
@@ -95,11 +96,15 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (!IsBattleScene() || evt?.TargetCard == null) return;
 
-			_queue.Enqueue(new MutationRequest
+			var request = new MutationRequest
 			{
 				TargetCard = evt.TargetCard,
+				StacksPerCard = evt.StacksPerCard,
 				Type = evt.Type,
-			});
+			};
+			if (TryHandleImmediatelyInHand(request)) return;
+
+			_queue.Enqueue(request);
 
 			SyncInputGate();
 			if (_active == null) TryStartNext();
@@ -123,17 +128,19 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			var target = request?.TargetCard;
 			if (target == null || !target.IsActive) return false;
-			if (CardApplicationService.IsApplied(target, request.Type)) return false;
+			if (CardApplicationService.IsApplied(target, request.Type) && request.Type != CardApplicationType.Sealed) return false;
+			if (TryHandleImmediatelyInHand(request)) return false;
 
 			var (baseCard, finalCard) = CardRestrictionMutationDisplayFactory.CreateDisplayPairFromBattleCard(
 				EntityManager,
 				target,
-				request.Type);
+				request.Type,
+				request.StacksPerCard);
 			if (baseCard == null || finalCard == null)
 			{
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, baseCard);
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, finalCard);
-				CardApplicationService.ApplyRestriction(EntityManager, target, request.Type);
+				CardApplicationService.ApplyRestriction(EntityManager, target, request.Type, request.StacksPerCard);
 				return false;
 			}
 
@@ -149,7 +156,7 @@ namespace Crusaders30XX.ECS.Systems
 				BaseCard = baseCard,
 				FinalCard = finalCard,
 				SfxRestrictionName = CardRestrictionMutationDisplayFactory.ToRestrictionName(request.Type),
-				OnSwap = () => CardApplicationService.ApplyRestriction(EntityManager, target, request.Type),
+				OnSwap = () => CardApplicationService.ApplyRestriction(EntityManager, target, request.Type, request.StacksPerCard),
 			};
 
 			_active = new ActiveMutation
@@ -164,6 +171,40 @@ namespace Crusaders30XX.ECS.Systems
 			_animator.Start(animation);
 			SyncInputGate();
 			return true;
+		}
+
+		private bool TryHandleImmediatelyInHand(MutationRequest request)
+		{
+			var target = request?.TargetCard;
+			if (target == null || !target.IsActive || !IsCardInHand(target)) return false;
+			if (CardApplicationService.IsApplied(target, request.Type) && request.Type != CardApplicationType.Sealed)
+			{
+				return true;
+			}
+
+			CardApplicationService.ApplyRestriction(
+				EntityManager,
+				target,
+				request.Type,
+				request.StacksPerCard);
+			PlayModificationSfx(request.Type);
+			return true;
+		}
+
+		private bool IsCardInHand(Entity card)
+		{
+			return EntityManager.GetEntitiesWithComponent<Deck>()
+				.FirstOrDefault()
+				?.GetComponent<Deck>()
+				?.Hand.Contains(card) == true;
+		}
+
+		private static void PlayModificationSfx(CardApplicationType type)
+		{
+			string restrictionName = CardRestrictionMutationDisplayFactory.ToRestrictionName(type);
+			SfxTrack track = CardRestrictionMutationDisplayFactory.ToModificationSfx(restrictionName);
+			if (track == SfxTrack.None) return;
+			EventManager.Publish(new PlaySfxEvent { Track = track, Volume = 0.5f });
 		}
 
 		private void CompleteActiveAnimation()

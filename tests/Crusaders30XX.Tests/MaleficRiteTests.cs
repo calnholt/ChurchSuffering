@@ -52,7 +52,7 @@ public sealed class MaleficRiteTests : IDisposable
 	}
 
 	[Fact]
-	public void Base_play_gains_four_plus_twice_curses_removed_this_climb()
+	public void Base_play_gains_aggression_equal_to_curses_removed_this_climb()
 	{
 		var (entityManager, maleficRiteEntity) = BuildWorldWithMaleficRite();
 		SetCursesRemoved(entityManager, 2);
@@ -63,11 +63,11 @@ public sealed class MaleficRiteTests : IDisposable
 
 		var evt = Assert.Single(passiveEvents);
 		Assert.Equal(AppliedPassiveType.Aggression, evt.Type);
-		Assert.Equal(8, evt.Delta);
+		Assert.Equal(2, evt.Delta);
 	}
 
 	[Fact]
-	public void Upgraded_play_gains_four_plus_thrice_curses_removed_this_climb()
+	public void Upgraded_play_gains_twice_curses_removed_this_climb()
 	{
 		var (entityManager, maleficRiteEntity) = BuildWorldWithMaleficRite(isUpgraded: true);
 		SetCursesRemoved(entityManager, 2);
@@ -78,7 +78,7 @@ public sealed class MaleficRiteTests : IDisposable
 
 		var evt = Assert.Single(passiveEvents);
 		Assert.Equal(AppliedPassiveType.Aggression, evt.Type);
-		Assert.Equal(10, evt.Delta);
+		Assert.Equal(4, evt.Delta);
 	}
 
 	[Fact]

@@ -520,11 +520,19 @@ namespace Crusaders30XX.ECS.Systems
 
         private void UpdateTooltipUi((int ownerId, AppliedPassiveType type) key, Rectangle rect, string text)
         {
+            var excludedKeywordId = TooltipTextService.GetPassiveKeywordId(key.type);
             if (!_tooltipUiByKey.TryGetValue(key, out var uiEntity) || uiEntity == null)
             {
                 uiEntity = EntityManager.CreateEntity($"UI_PassiveTooltip_{key.ownerId}_{key.type}");
                 EntityManager.AddComponent(uiEntity, new Transform { Position = new Vector2(rect.X, rect.Y), ZOrder = 10001 });
-                EntityManager.AddComponent(uiEntity, new UIElement { Bounds = rect, IsInteractable = false, Tooltip = text ?? string.Empty, TooltipPosition = TooltipPosition.Below });
+                EntityManager.AddComponent(uiEntity, new UIElement
+                {
+                    Bounds = rect,
+                    IsInteractable = false,
+                    Tooltip = text ?? string.Empty,
+                    TooltipExcludedKeywordId = excludedKeywordId,
+                    TooltipPosition = TooltipPosition.Below,
+                });
                 _tooltipUiByKey[key] = uiEntity;
             }
             else
@@ -540,6 +548,7 @@ namespace Crusaders30XX.ECS.Systems
                 {
                     ui.Bounds = rect;
                     ui.Tooltip = text ?? string.Empty;
+                    ui.TooltipExcludedKeywordId = excludedKeywordId;
                     ui.TooltipPosition = TooltipPosition.Below;
                     ui.IsInteractable = false;
                 }

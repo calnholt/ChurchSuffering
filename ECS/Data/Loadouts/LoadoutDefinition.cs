@@ -6,9 +6,12 @@ namespace Crusaders30XX.ECS.Data.Loadouts
 	{
 		public string entryId { get; set; } = string.Empty;
 		public string cardKey { get; set; } = string.Empty;
+		public string secondaryColor { get; set; } = string.Empty;
 		public bool isStarter { get; set; }
 		public bool countsAsTraded { get; set; }
 		public List<string> restrictions { get; set; } = new();
+		/// <summary>Exact stack counts for persistent stacked restrictions, keyed by restriction name.</summary>
+		public Dictionary<string, int> restrictionStacks { get; set; } = new();
 	}
 
 	public class LoadoutDefinition
@@ -25,5 +28,3 @@ namespace Crusaders30XX.ECS.Data.Loadouts
 		public List<string> medalIds { get; set; } = new();
 	}
 }
-
-

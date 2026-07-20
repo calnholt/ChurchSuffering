@@ -1,4 +1,5 @@
 using Crusaders30XX.ECS.Components;
+using Crusaders30XX.ECS.Data.Dialog;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.Diagnostics;
@@ -50,11 +51,21 @@ public class TitleMenuResumeRoutingTests
 		TutorialLaunchOptions.ConfigureFromArgs(["skip-tutorials"]);
 		try
 		{
-			Assert.Equal(SceneId.WayStation, TitleMenuResumeService.ResolveDirectTransitionScene());
+			TitleMenuResumeService.PersistSkipTutorialsIfRequested();
+
+			SaveCache.Reload();
 			Assert.True(SaveCache.IsGuidedTutorialCompleted());
 			Assert.False(SaveCache.IsRunActive());
 			Assert.Contains("teach_pledge", SaveCache.GetAll().seenTutorials);
 			Assert.Contains("guided_tutorial", SaveCache.GetAll().seenTutorials);
+			Assert.True(SaveCache.HasSeenWayStationDialogueSegment(
+				WayStationDialogueCatalog.KeeperCharacterId,
+				WayStationDialogueCatalog.KeeperIntroSegmentId));
+			Assert.Null(WayStationDialoguePlanner.TryGetAutoDialogue(SaveCache.GetWayStationMeta()));
+
+			TutorialLaunchOptions.ConfigureFromArgs([]);
+			Assert.Equal(SceneId.WayStation, TitleMenuResumeService.ResolveDirectTransitionScene());
+			Assert.Null(WayStationDialoguePlanner.TryGetAutoDialogue(SaveCache.GetWayStationMeta()));
 		}
 		finally
 		{

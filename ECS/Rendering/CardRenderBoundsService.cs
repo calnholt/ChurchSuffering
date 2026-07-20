@@ -18,7 +18,38 @@ public static class CardRenderBoundsService
         Entity card,
         Vector2 position,
         float scale,
-        float rotation)
+        float rotation) => CalculateBounds(
+            entityManager,
+            card,
+            position,
+            scale,
+            rotation,
+            includeStatusOverflow: true);
+
+    /// <summary>
+    /// Calculates a padded, rotation-aware surface for the static card face only.
+    /// Dynamic status overflow is intentionally excluded from cached base surfaces.
+    /// </summary>
+    public static Rectangle GetBaseBounds(
+        EntityManager entityManager,
+        Entity card,
+        Vector2 position,
+        float scale,
+        float rotation) => CalculateBounds(
+            entityManager,
+            card,
+            position,
+            scale,
+            rotation,
+            includeStatusOverflow: false);
+
+    private static Rectangle CalculateBounds(
+        EntityManager entityManager,
+        Entity card,
+        Vector2 position,
+        float scale,
+        float rotation,
+        bool includeStatusOverflow)
     {
         CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
             entityManager,
@@ -33,7 +64,7 @@ public static class CardRenderBoundsService
         float top = SamplingMargin;
         float bottom = SamplingMargin;
 
-        if (card?.GetComponent<Brittle>() != null)
+        if (includeStatusOverflow && card?.GetComponent<Brittle>() != null)
         {
             float chunk = 22f * Math.Max(0.001f, scale);
             left = Math.Max(left, chunk * 2.2f);
@@ -41,13 +72,13 @@ public static class CardRenderBoundsService
             top = Math.Max(top, chunk);
             bottom = Math.Max(bottom, chunk * 13f);
         }
-        if (card?.GetComponent<Frozen>() != null)
+        if (includeStatusOverflow && card?.GetComponent<Frozen>() != null)
         {
             left = Math.Max(left, width * 0.25f);
             right = Math.Max(right, width * 0.25f);
             top = Math.Max(top, height);
         }
-        if (card?.GetComponent<Scorched>() != null)
+        if (includeStatusOverflow && card?.GetComponent<Scorched>() != null)
         {
             float firePadding = height * 0.25f;
             left = Math.Max(left, firePadding);

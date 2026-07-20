@@ -75,14 +75,20 @@ namespace Crusaders30XX.ECS.Services
 			var entryId = card.GetComponent<RunDeckCard>()?.EntryId;
 			if (string.IsNullOrWhiteSpace(entryId)) return;
 			var names = new List<string>();
+			var stacks = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 			if (card.HasComponent<Frozen>()) names.Add(RestrictionFrozen);
-			if (card.HasComponent<Sealed>()) names.Add(RestrictionSealed);
+			var sealedComponent = card.GetComponent<Sealed>();
+			if (sealedComponent != null)
+			{
+				names.Add(RestrictionSealed);
+				stacks[RestrictionSealed] = Math.Max(1, sealedComponent.Seals);
+			}
 			if (card.HasComponent<Brittle>()) names.Add(RestrictionBrittle);
 			if (card.HasComponent<Scorched>()) names.Add(RestrictionScorched);
 			if (card.HasComponent<Thorned>()) names.Add(RestrictionThorned);
 			if (card.HasComponent<Colorless>()) names.Add(RestrictionColorless);
 			if (card.HasComponent<Cursed>()) names.Add(RestrictionCursed);
-			SaveCache.SetRunDeckEntryRestrictions(RunDeckService.PrimaryLoadoutId, entryId, names);
+			SaveCache.SetRunDeckEntryRestrictionState(RunDeckService.PrimaryLoadoutId, entryId, names, stacks);
 		}
 
 		public static void ClearRunCardRestrictionComponents(EntityManager entityManager)
@@ -104,13 +110,18 @@ namespace Crusaders30XX.ECS.Services
 			string resolvedLoadoutId = string.IsNullOrWhiteSpace(loadoutId)
 				? RunDeckService.PrimaryLoadoutId
 				: loadoutId;
+			var entry = SaveCache.GetRunDeckEntry(resolvedLoadoutId, entryId);
 			foreach (var restriction in SaveCache.GetRunDeckEntryRestrictions(resolvedLoadoutId, entryId))
 			{
-				ApplyRestrictionComponent(entityManager, card, restriction);
+				int stacks = entry?.restrictionStacks != null
+					&& entry.restrictionStacks.TryGetValue(restriction, out var persistedStacks)
+					? persistedStacks
+					: 2;
+				ApplyRestrictionComponent(entityManager, card, restriction, stacks);
 			}
 		}
 
-		private static void ApplyRestrictionComponent(EntityManager entityManager, Entity card, string restrictionName)
+		private static void ApplyRestrictionComponent(EntityManager entityManager, Entity card, string restrictionName, int stacks = 1)
 		{
 			switch (restrictionName)
 			{
@@ -123,7 +134,7 @@ namespace Crusaders30XX.ECS.Services
 				case RestrictionSealed:
 					if (card.GetComponent<Sealed>() == null)
 					{
-						if (entityManager != null) entityManager.AddComponent(card, new Sealed { Owner = card, Seals = 1 });
+						if (entityManager != null) entityManager.AddComponent(card, new Sealed { Owner = card, Seals = Math.Max(1, stacks) });
 					}
 					break;
 				case RestrictionBrittle:
@@ -166,6 +177,7 @@ namespace Crusaders30XX.ECS.Services
 			if (card.HasComponent<Scorched>()) entityManager.RemoveComponent<Scorched>(card);
 			if (card.HasComponent<Thorned>()) entityManager.RemoveComponent<Thorned>(card);
 			if (card.HasComponent<Colorless>()) entityManager.RemoveComponent<Colorless>(card);
+			if (card.HasComponent<Hexed>()) HexManagementSystem.RemoveHexRuntime(entityManager, card);
 			if (card.HasComponent<Cursed>()) CursedManagementSystem.RemoveCursedRuntime(entityManager, card);
 		}
 	}

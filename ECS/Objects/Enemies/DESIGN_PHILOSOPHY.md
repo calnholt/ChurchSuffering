@@ -147,7 +147,7 @@ The player has **20 HP**. All enemy stats should be understood relative to this.
 | Tough | 95-120 | Sorcerer (120), Glacial Guardian (110) | Extended battles, scaling threats |
 | Boss-tier | 120+ | Shadow (150) | Marathon fights, attrition-based |
 
-Enemy max HP scales with **deck size**, not difficulty: set `HP` (max HP at a 20-card reference deck) on the enemy; at spawn, `MaxHealth = Round(HP * deckWeight / 20)`. Difficulty affects spawn HP via `EnemyHealthModifier` and attacks/passives where coded.
+Enemy max HP uses authored `HP` as the base. At spawn: `MaxHealth = HP`, then difficulty via `EnemyHealthModifier` (Easy 0.7 / Normal 0.85 / Hard 1.0), then climb time adds `+10%` of post-difficulty HP per shop-refresh interval (every 8 climb time). Attacks/passives may still scale by difficulty where coded.
 
 ### Attack Damage Ranges
 
@@ -247,7 +247,7 @@ Predictable rotation between attack types across turns.
 
 **Core fantasy**: Your cards don't work the way you want
 
-**Examples**: Glacial Guardian (freezes hand), Sorcerer (mills deck), Shadow (silences), Medusa (petrifies)
+**Examples**: Glacial Guardian (freezes hand), Sorcerer (mills deck), Shadow (silences), Azure Warden (seals)
 
 **Design notes**:
 - Restrict, don't remove - afflicted cards should still be able to do SOMETHING

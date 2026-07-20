@@ -15,6 +15,7 @@ public class DustWuurm : EnemyBase
     Id = EnemyId.DustWuurm;
     Name = "Dust Wuurm";
     HP = 31;
+    ClimbPool = ClimbEncounterPool.Early;
 
     OnStartOfBattle = (entityManager) =>
     {

@@ -106,6 +106,28 @@ public sealed class CardStatModifierServiceTests : IDisposable
         Assert.Equal(6, resolvedDamage.Value);
     }
 
+    [Fact]
+    public void StAdrian_adds_base_damage_per_hit_only_while_armed()
+    {
+        var entityManager = BuildCombatWorld(out var player, out _);
+        var medal = new StAdrian { ProcChancePercent = 100 };
+        EquipMedal(entityManager, player, medal);
+
+        var armed = EntityFactory.CreateCardFromDefinition(entityManager, "strike", CardData.CardColor.Red);
+        var other = EntityFactory.CreateCardFromDefinition(entityManager, "strike", CardData.CardColor.Red);
+        int baseDamage = armed.GetComponent<CardData>().Card.Damage;
+
+        Assert.Equal(baseDamage, CardStatModifierService.GetCardDamage(entityManager, armed, CardStatQueryMode.Preview).TotalValue);
+        Assert.Equal(baseDamage, CardStatModifierService.GetCardDamage(entityManager, armed, CardStatQueryMode.Resolution).TotalValue);
+
+        EventManager.Publish(new PlayCardRequested { Card = armed, CostsPaid = true });
+
+        Assert.Equal(baseDamage, CardStatModifierService.GetCardDamage(entityManager, armed, CardStatQueryMode.Preview).TotalValue);
+        Assert.Equal(baseDamage + 2, CardStatModifierService.GetCardDamage(entityManager, armed, CardStatQueryMode.Resolution).TotalValue);
+        Assert.Equal(baseDamage + 2, CardStatModifierService.GetCardDamage(entityManager, armed, CardStatQueryMode.Resolution).TotalValue);
+        Assert.Equal(baseDamage, CardStatModifierService.GetCardDamage(entityManager, other, CardStatQueryMode.Resolution).TotalValue);
+    }
+
     private static EntityManager BuildCombatWorld(out Entity player, out Entity enemy)
     {
         var entityManager = new EntityManager();

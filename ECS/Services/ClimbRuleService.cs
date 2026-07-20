@@ -9,6 +9,8 @@ using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
+using Crusaders30XX.ECS.Objects.Enemies;
+using Crusaders30XX.ECS.Singletons;
 
 namespace Crusaders30XX.ECS.Services
 {
@@ -23,7 +25,7 @@ namespace Crusaders30XX.ECS.Services
 		public const int EncounterMaxDuration = 5;
 		private const int EncounterMinDistinctEnemies = 2;
 		private const int EncounterMinDistinctLocations = 2;
-		private const int EncounterDiversityMaxIterations = 6;
+		private const int EncounterMaxSkeletonFamily = 1;
 		private const int RngSalt = unchecked((int)0xC11A1B00);
 		private const int ClimbEventRngSalt = unchecked((int)0xE71E5A17);
 		private const int ClimbEventResolutionSalt = unchecked((int)0x4E5A1D0B);
@@ -35,6 +37,15 @@ namespace Crusaders30XX.ECS.Services
 			"training_demon",
 		};
 
+		private static readonly HashSet<string> ClimbSkeletonEnemyIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			EnemyId.Skeleton.ToKey(),
+			EnemyId.FireSkeleton.ToKey(),
+			EnemyId.EarthSkeleton.ToKey(),
+			EnemyId.FrostSkeleton.ToKey(),
+			EnemyId.CursedSkeleton.ToKey(),
+		};
+
 		private static readonly CardData.CardColor[] ResourceColors =
 		{
 			CardData.CardColor.Red,
@@ -42,10 +53,15 @@ namespace Crusaders30XX.ECS.Services
 			CardData.CardColor.Black
 		};
 
-		public static ClimbSaveState CreateInitialState(int seed, LoadoutDefinition loadout = null)
+		public static ClimbSaveState CreateInitialState(
+			int seed,
+			LoadoutDefinition loadout = null,
+			RunDifficulty difficulty = RunDifficulty.Easy)
 		{
 			var state = new ClimbSaveState
 			{
+				startingWeaponId = string.IsNullOrWhiteSpace(loadout?.weaponId) ? "sword" : loadout.weaponId,
+				difficulty = difficulty,
 				time = 0,
 				resources = new ClimbResourceSave { red = 1, white = 1, black = 1 },
 				shopSlots = new List<ClimbShopSlotSave>(),
@@ -217,7 +233,6 @@ namespace Crusaders30XX.ECS.Services
 				var constraints = BuildEncounterRollConstraints(state.encounterSlots);
 				state.encounterSlots.Add(RollEncounterSlot(state, loadout, seed, rng, $"encounter_{i}", constraints));
 			}
-			EnsureEncounterSlotDiversity(state, seed, loadout, rng);
 		}
 
 		public static bool ReplenishEncounterSlots(ClimbSaveState state, int seed, LoadoutDefinition loadout = null)
@@ -260,7 +275,17 @@ namespace Crusaders30XX.ECS.Services
 				}
 
 				string slotId = string.IsNullOrWhiteSpace(slot?.id) ? $"encounter_{i}" : slot.id;
-				var constraints = EncounterRollConstraints.ForExcludedEnemy(slot?.enemyId);
+				var siblings = state.encounterSlots
+					.Where((_, index) => index != i)
+					.ToList();
+				var constraints = BuildEncounterRollConstraints(siblings);
+				if (!string.IsNullOrWhiteSpace(slot?.enemyId))
+				{
+					constraints = constraints with
+					{
+						ExcludedEnemyIds = MergeExcludedEnemyIds(constraints.ExcludedEnemyIds, new[] { slot.enemyId }),
+					};
+				}
 				state.encounterSlots[i] = RollEncounterSlot(state, loadout, seed, rng, slotId, constraints);
 				changed = true;
 			}
@@ -268,11 +293,6 @@ namespace Crusaders30XX.ECS.Services
 			if (state.encounterSlots.Count > EncounterSlotCount)
 			{
 				state.encounterSlots = state.encounterSlots.Take(EncounterSlotCount).ToList();
-				changed = true;
-			}
-
-			if (EnsureEncounterSlotDiversity(state, seed, loadout, rng))
-			{
 				changed = true;
 			}
 
@@ -297,12 +317,32 @@ namespace Crusaders30XX.ECS.Services
 			return applied;
 		}
 
+		public static ClimbEncounterPool ResolveClimbEncounterPool(int climbTime)
+		{
+			return ClampTime(climbTime) < MaxTime / 2
+				? ClimbEncounterPool.Early
+				: ClimbEncounterPool.Late;
+		}
+
 		public static IReadOnlyList<string> GetClimbEncounterEnemyPool()
 		{
 			return EnemyPortraitContent.GetClimbEncounterEnemyPool()
 				.Where(IsValidClimbEncounterEnemy)
 				.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
 				.ToList();
+		}
+
+		public static IReadOnlyList<string> GetClimbEncounterEnemyPool(ClimbEncounterPool pool)
+		{
+			return EnemyPortraitContent.GetClimbEncounterEnemyPool(pool)
+				.Where(IsValidClimbEncounterEnemy)
+				.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+				.ToList();
+		}
+
+		public static IReadOnlyList<string> GetClimbEncounterEnemyPoolForTime(int climbTime)
+		{
+			return GetClimbEncounterEnemyPool(ResolveClimbEncounterPool(climbTime));
 		}
 
 		public static void RefreshEventSlots(ClimbSaveState state, int seed)
@@ -587,6 +627,7 @@ namespace Crusaders30XX.ECS.Services
 				StringComparer.OrdinalIgnoreCase);
 			var pool = CardFactory.GetAllCards().Values
 				.Where(card => card != null && card.CanAddToLoadout && !card.IsWeapon && !card.IsToken)
+				.Where(card => card.IsEligibleForWeapon(loadout?.weaponId))
 				.Where(card => unlockedCards.Contains(card.CardId))
 				.Where(card => !string.IsNullOrWhiteSpace(card.CardId))
 				.Where(card => !deckIds.Contains(card.CardId) || card.Rarity != Rarity.Starter)
@@ -633,8 +674,16 @@ namespace Crusaders30XX.ECS.Services
 			}
 			else if (kind == ClimbShopSlotKinds.Equipment)
 			{
+				var occupiedSlots = GetOccupiedEquipmentSlots(loadout);
 				var unlockedEquipment = new HashSet<string>(SaveCache.GetCollection().equipmentIds, StringComparer.OrdinalIgnoreCase);
-				var allEquipment = EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey()).Where(unlockedEquipment.Contains);
+				var allEquipment = EquipmentFactory.GetAllEquipment().Keys
+					.Select(id => id.ToKey())
+					.Where(unlockedEquipment.Contains)
+					.Where(id =>
+					{
+						var equipment = EquipmentFactory.Create(id);
+						return equipment != null && !occupiedSlots.Contains(equipment.Slot);
+					});
 				slot.itemId = PickUnshown(allEquipment, state.shownEquipmentIds, rng);
 				if (string.IsNullOrWhiteSpace(slot.itemId)) slot.kind = ClimbShopSlotKinds.Empty;
 				else AddDistinct(state.shownEquipmentIds, slot.itemId);
@@ -665,41 +714,60 @@ namespace Crusaders30XX.ECS.Services
 			return slot;
 		}
 
+		private readonly struct EncounterEnemyLocationPair
+		{
+			public string EnemyId { get; init; }
+			public BattleLocation Location { get; init; }
+		}
+
 		private readonly struct EncounterRollConstraints
 		{
 			public IReadOnlyList<string> ExcludedEnemyIds { get; init; }
 			public IReadOnlyList<BattleLocation> ExcludedLocations { get; init; }
-
-			public static EncounterRollConstraints ForExcludedEnemy(string excludedEnemyId)
-			{
-				if (string.IsNullOrWhiteSpace(excludedEnemyId)) return default;
-				return new EncounterRollConstraints
-				{
-					ExcludedEnemyIds = new[] { excludedEnemyId },
-				};
-			}
+			public IReadOnlyList<EncounterEnemyLocationPair> UsedPairs { get; init; }
 		}
 
 		private static EncounterRollConstraints BuildEncounterRollConstraints(IReadOnlyList<ClimbEncounterSlotSave> existingSlots)
 		{
-			if (existingSlots == null || existingSlots.Count < 2) return default;
+			if (existingSlots == null || existingSlots.Count == 0) return default;
 
-			var enemies = existingSlots
-				.Select(slot => slot?.enemyId)
-				.Where(id => !string.IsNullOrWhiteSpace(id))
+			var activeSlots = existingSlots
+				.Where(slot => slot != null && !slot.isFinal && !string.IsNullOrWhiteSpace(slot.enemyId))
 				.ToList();
-			var locations = existingSlots
-				.Where(slot => slot != null)
+
+			var enemies = activeSlots
+				.Select(slot => slot.enemyId)
+				.ToList();
+			var locations = activeSlots
 				.Select(slot => slot.battleLocation)
 				.ToList();
+			var usedPairs = activeSlots
+				.Select(slot => new EncounterEnemyLocationPair
+				{
+					EnemyId = slot.enemyId,
+					Location = slot.battleLocation,
+				})
+				.ToList();
 
-			var constraints = new EncounterRollConstraints();
+			var constraints = new EncounterRollConstraints
+			{
+				UsedPairs = usedPairs.Count == 0 ? null : usedPairs,
+			};
 			if (enemies.Count >= 2
 				&& enemies.Distinct(StringComparer.OrdinalIgnoreCase).Count() < EncounterMinDistinctEnemies)
 			{
 				constraints = constraints with
 				{
 					ExcludedEnemyIds = new[] { enemies[0] },
+				};
+			}
+
+			int skeletonCount = enemies.Count(IsClimbSkeletonEnemy);
+			if (skeletonCount >= EncounterMaxSkeletonFamily)
+			{
+				constraints = constraints with
+				{
+					ExcludedEnemyIds = MergeExcludedEnemyIds(constraints.ExcludedEnemyIds, ClimbSkeletonEnemyIds),
 				};
 			}
 
@@ -715,93 +783,29 @@ namespace Crusaders30XX.ECS.Services
 			return constraints;
 		}
 
-		private static bool SatisfiesEncounterSlotDiversity(IReadOnlyList<ClimbEncounterSlotSave> slots)
+		internal static bool IsClimbSkeletonEnemy(string enemyId) =>
+			!string.IsNullOrWhiteSpace(enemyId) && ClimbSkeletonEnemyIds.Contains(enemyId);
+
+		private static IReadOnlyList<string> MergeExcludedEnemyIds(
+			IReadOnlyList<string> existing,
+			IEnumerable<string> additional)
 		{
-			var activeSlots = (slots ?? Array.Empty<ClimbEncounterSlotSave>())
-				.Where(slot => slot != null && !slot.isFinal && !string.IsNullOrWhiteSpace(slot.enemyId))
-				.ToList();
-			if (activeSlots.Count < EncounterSlotCount) return true;
-
-			int distinctEnemies = activeSlots
-				.Select(slot => slot.enemyId)
-				.Distinct(StringComparer.OrdinalIgnoreCase)
-				.Count();
-			int distinctLocations = activeSlots
-				.Select(slot => slot.battleLocation)
-				.Distinct()
-				.Count();
-			return distinctEnemies >= EncounterMinDistinctEnemies
-				&& distinctLocations >= EncounterMinDistinctLocations;
-		}
-
-		private static bool EnsureEncounterSlotDiversity(
-			ClimbSaveState state,
-			int seed,
-			LoadoutDefinition loadout,
-			Random rng)
-		{
-			if (state?.encounterSlots == null) return false;
-
-			bool changed = false;
-			for (int iteration = 0;
-				iteration < EncounterDiversityMaxIterations && !SatisfiesEncounterSlotDiversity(state.encounterSlots);
-				iteration++)
+			var merged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			if (existing != null)
 			{
-				var activeSlots = state.encounterSlots
-					.Select((slot, index) => (slot, index))
-					.Where(entry => entry.slot != null && !entry.slot.isFinal && !string.IsNullOrWhiteSpace(entry.slot.enemyId))
-					.ToList();
-				if (activeSlots.Count < EncounterSlotCount) break;
-
-				int distinctEnemies = activeSlots
-					.Select(entry => entry.slot.enemyId)
-					.Distinct(StringComparer.OrdinalIgnoreCase)
-					.Count();
-				int distinctLocations = activeSlots
-					.Select(entry => entry.slot.battleLocation)
-					.Distinct()
-					.Count();
-
-				if (distinctEnemies < EncounterMinDistinctEnemies)
+				foreach (string id in existing)
 				{
-					string majorityEnemy = activeSlots
-						.GroupBy(entry => entry.slot.enemyId, StringComparer.OrdinalIgnoreCase)
-						.OrderByDescending(group => group.Count())
-						.ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-						.First()
-						.Key;
-					var candidates = activeSlots
-						.Where(entry => string.Equals(entry.slot.enemyId, majorityEnemy, StringComparison.OrdinalIgnoreCase))
-						.ToList();
-					var (slot, index) = candidates[rng.Next(candidates.Count)];
-					string slotId = string.IsNullOrWhiteSpace(slot.id) ? $"encounter_{index}" : slot.id;
-					slot.enemyId = RollClimbEncounterEnemyId(rng, new[] { majorityEnemy });
-					changed = true;
-				}
-				else if (distinctLocations < EncounterMinDistinctLocations)
-				{
-					BattleLocation majorityLocation = activeSlots
-						.GroupBy(entry => entry.slot.battleLocation)
-						.OrderByDescending(group => group.Count())
-						.ThenBy(group => group.Key)
-						.First()
-						.Key;
-					var candidates = activeSlots
-						.Where(entry => entry.slot.battleLocation == majorityLocation)
-						.ToList();
-					var (slot, index) = candidates[rng.Next(candidates.Count)];
-					string slotId = string.IsNullOrWhiteSpace(slot.id) ? $"encounter_{index}" : slot.id;
-					slot.battleLocation = BattleLocationAssetService.RollClimbEncounterLocation(rng, new[] { majorityLocation });
-					AssignEncounterMutationTarget(state, slot, seed, loadout, slotId);
-					changed = true;
-				}
-				else
-				{
-					break;
+					if (!string.IsNullOrWhiteSpace(id)) merged.Add(id);
 				}
 			}
-
-			return changed;
+			if (additional != null)
+			{
+				foreach (string id in additional)
+				{
+					if (!string.IsNullOrWhiteSpace(id)) merged.Add(id);
+				}
+			}
+			return merged.Count == 0 ? null : merged.ToList();
 		}
 
 		private static ClimbEncounterSlotSave RollEncounterSlot(
@@ -813,14 +817,31 @@ namespace Crusaders30XX.ECS.Services
 			EncounterRollConstraints constraints = default)
 		{
 			int timeCost = rng.Next(1, 4);
+			string enemyId = RollClimbEncounterEnemyId(rng, constraints.ExcludedEnemyIds, state?.time ?? 0);
+			var excludedLocations = new List<BattleLocation>();
+			if (constraints.ExcludedLocations != null)
+			{
+				excludedLocations.AddRange(constraints.ExcludedLocations);
+			}
+			if (constraints.UsedPairs != null)
+			{
+				foreach (var pair in constraints.UsedPairs)
+				{
+					if (string.Equals(pair.EnemyId, enemyId, StringComparison.OrdinalIgnoreCase))
+					{
+						excludedLocations.Add(pair.Location);
+					}
+				}
+			}
+
 			var slot = new ClimbEncounterSlotSave
 			{
 				id = slotId ?? string.Empty,
-				enemyId = RollClimbEncounterEnemyId(rng, constraints.ExcludedEnemyIds),
+				enemyId = enemyId,
 				generatedAtTime = ClampTime(state?.time ?? 0),
 				duration = rng.Next(EncounterMinDuration, EncounterMaxDuration + 1),
 				timeCost = timeCost,
-				battleLocation = BattleLocationAssetService.RollClimbEncounterLocation(rng, constraints.ExcludedLocations),
+				battleLocation = BattleLocationAssetService.RollClimbEncounterLocation(rng, excludedLocations),
 				rewardResources = GenerateReward(rng, timeCost, timeCost),
 				hasDeckReward = true,
 				isFinal = false,
@@ -887,11 +908,13 @@ namespace Crusaders30XX.ECS.Services
 			return cost;
 		}
 
-		private static string RollClimbEncounterEnemyId(Random rng, IEnumerable<string> excludedEnemyIds)
+		private static string RollClimbEncounterEnemyId(Random rng, IEnumerable<string> excludedEnemyIds, int climbTime)
 		{
 			rng ??= Random.Shared;
-			var pool = GetClimbEncounterEnemyPool().ToList();
-			if (pool.Count == 0) return "skeleton";
+			var pool = GetClimbEncounterEnemyPoolForTime(climbTime).ToList();
+			if (pool.Count == 0) return ResolveClimbEncounterPool(climbTime) == ClimbEncounterPool.Early
+				? "skeleton"
+				: "spider";
 
 			var excluded = (excludedEnemyIds ?? Array.Empty<string>())
 				.Where(id => !string.IsNullOrWhiteSpace(id))
@@ -914,6 +937,7 @@ namespace Crusaders30XX.ECS.Services
 			return enemy != null
 				&& !enemy.IsBoss
 				&& !enemy.IsTutorialOnly
+				&& enemy.ClimbPool != ClimbEncounterPool.None
 				&& EnemyPortraitContent.HasPortrait(enemyId);
 		}
 
@@ -1011,6 +1035,17 @@ namespace Crusaders30XX.ECS.Services
 
 			if (eligible.Count == 0) return (-1, string.Empty, string.Empty);
 			return eligible[rng.Next(eligible.Count)];
+		}
+
+		private static HashSet<EquipmentSlot> GetOccupiedEquipmentSlots(LoadoutDefinition loadout)
+		{
+			var occupied = new HashSet<EquipmentSlot>();
+			if (loadout == null) return occupied;
+			if (!string.IsNullOrWhiteSpace(loadout.headId)) occupied.Add(EquipmentSlot.Head);
+			if (!string.IsNullOrWhiteSpace(loadout.chestId)) occupied.Add(EquipmentSlot.Chest);
+			if (!string.IsNullOrWhiteSpace(loadout.armsId)) occupied.Add(EquipmentSlot.Arms);
+			if (!string.IsNullOrWhiteSpace(loadout.legsId)) occupied.Add(EquipmentSlot.Legs);
+			return occupied;
 		}
 
 		private static string PickUnshown(IEnumerable<string> allIds, List<string> shownIds, Random rng)

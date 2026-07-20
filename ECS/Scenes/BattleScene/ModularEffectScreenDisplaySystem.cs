@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
@@ -20,8 +19,8 @@ namespace Crusaders30XX.ECS.Systems
 		private static readonly Color SmokeCore = new(55, 47, 50);
 		private static readonly Color BlackSmoke = new(12, 10, 12);
 
-		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
+		private readonly ModularEffectRenderResources _resources;
 		private readonly Texture2D _pixel;
 
 		[DebugEditable(DisplayName = "White Wash Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
@@ -51,12 +50,11 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Punch Zoom Amount", Step = 0.01f, Min = 0f, Max = 0.4f)]
 		public float PunchZoomAmount { get; set; } = 0.075f;
 
-		public ModularEffectScreenDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(entityManager)
+		public ModularEffectScreenDisplaySystem(EntityManager entityManager, SpriteBatch spriteBatch, ModularEffectRenderResources resources) : base(entityManager)
 		{
-			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_resources = resources ?? throw new ArgumentNullException(nameof(resources));
+			_pixel = resources.Pixel;
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities() => Array.Empty<Entity>();
@@ -69,13 +67,15 @@ namespace Crusaders30XX.ECS.Systems
 			transform.Offset = Vector2.Zero;
 			transform.Scale = Vector2.One;
 
-			foreach (var effect in GetActiveEffects())
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>())
 			{
-				if (effect.Recipe.Modules.Contains(VisualEffectModule.Shake))
+				var effect = entity.GetComponent<ActiveVisualEffect>();
+				if (effect == null || effect.ElapsedSeconds < 0f) continue;
+				if (effect.Recipe.HasModule(VisualEffectModule.Shake))
 				{
 					transform.Offset += ComputeImpactShake(effect) * ShakePixels * Math.Max(0f, effect.Recipe.Intensity);
 				}
-				if (effect.Recipe.Modules.Contains(VisualEffectModule.PunchZoom))
+				if (effect.Recipe.HasModule(VisualEffectModule.PunchZoom))
 				{
 					float pulse = ComputePunchScale(effect, Math.Max(0f, effect.Recipe.Intensity));
 					transform.Scale = new Vector2(Math.Max(transform.Scale.X, pulse), Math.Max(transform.Scale.Y, pulse));
@@ -85,14 +85,16 @@ namespace Crusaders30XX.ECS.Systems
 
 		public void Draw()
 		{
-			foreach (var effect in GetActiveEffects())
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>())
 			{
-				var modules = effect.Recipe.Modules;
-				if (modules.Contains(VisualEffectModule.WhiteWash)) DrawWhiteWash(effect);
-				if (modules.Contains(VisualEffectModule.RedVignette)) DrawRedVignette(effect);
-				if (modules.Contains(VisualEffectModule.Shockwave)) DrawShockwave(effect);
-				if (modules.Contains(VisualEffectModule.SlashBand)) DrawSlashBand(effect);
-				if (modules.Contains(VisualEffectModule.SmokeScreen)) DrawSmokeScreen(effect);
+				var effect = entity.GetComponent<ActiveVisualEffect>();
+				if (effect == null || effect.ElapsedSeconds < 0f) continue;
+				var recipe = effect.Recipe;
+				if (recipe.HasModule(VisualEffectModule.WhiteWash)) DrawWhiteWash(effect);
+				if (recipe.HasModule(VisualEffectModule.RedVignette)) DrawRedVignette(effect);
+				if (recipe.HasModule(VisualEffectModule.Shockwave)) DrawShockwave(effect);
+				if (recipe.HasModule(VisualEffectModule.SlashBand)) DrawSlashBand(effect);
+				if (recipe.HasModule(VisualEffectModule.SmokeScreen)) DrawSmokeScreen(effect);
 			}
 		}
 
@@ -131,7 +133,7 @@ namespace Crusaders30XX.ECS.Systems
 			float alpha = ShockwaveRingAlpha * effect.Recipe.Intensity * (1f - VisualEffectDisplayMath.EaseOutCubic(recovery));
 			if (alpha <= 0f) return;
 			float scale = MathHelper.Lerp(0.32f, 12.5f, VisualEffectDisplayMath.EaseOutCubic(recovery));
-			var ring = PrimitiveTextureFactory.GetAntialiasedRingMask(_graphicsDevice, 48, 48, 3f);
+			var ring = _resources.ShockwaveRingMask;
 			DrawMask(ring, effect.ImpactAnchor, Color.White * (alpha * 0.88f), 0f, new Vector2(scale));
 			DrawMask(ring, effect.ImpactAnchor, colors.Glow * (alpha * 0.34f), 0f, new Vector2(scale * 1.38f));
 		}
@@ -189,13 +191,6 @@ namespace Crusaders30XX.ECS.Systems
 			return transform;
 		}
 
-		private IEnumerable<ActiveVisualEffect> GetActiveEffects()
-		{
-			return EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>()
-				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null && e.ElapsedSeconds >= 0f);
-		}
-
 		private static Vector2 ComputeImpactShake(ActiveVisualEffect effect)
 		{
 			float approach = VisualEffectDisplayMath.ApproachProgress(effect);
@@ -238,9 +233,9 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawSoftCircle(Vector2 center, float diameter, Color color, float alpha, float innerStop, float outerStop)
 		{
-			int size = Math.Max(1, (int)MathF.Round(diameter));
-			var texture = PrimitiveTextureFactory.GetSoftRadialCircle(_graphicsDevice, size, innerStop, outerStop);
-			DrawMask(texture, center, color * alpha, 0f, Vector2.One);
+			var texture = _resources.GetRadialMask(innerStop, outerStop);
+			float scale = Math.Max(1f, diameter) / texture.Width;
+			DrawMask(texture, center, color * alpha, 0f, new Vector2(scale));
 		}
 
 		private void DrawMask(Texture2D texture, Vector2 center, Color color, float rotation, Vector2 scale)

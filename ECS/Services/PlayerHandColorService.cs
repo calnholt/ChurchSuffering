@@ -12,9 +12,7 @@ namespace Crusaders30XX.ECS.Services
 			var handCards = GetComponentHelper.GetHandOfCards(entityManager);
 			if (handCards == null || handCards.Count == 0) return null;
 			var colors = handCards
-				.Select(CardColorQualificationService.GetQualifiedColor)
-				.Where(color => color.HasValue)
-				.Select(color => color.Value)
+				.SelectMany(CardColorQualificationService.GetQualifiedColors)
 				.Distinct()
 				.ToList();
 			if (colors.Count == 0) return null;

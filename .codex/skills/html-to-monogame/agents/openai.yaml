@@ -1,7 +1,0 @@
-interface:
-  display_name: "HTML to MonoGame"
-  short_description: "Plan MonoGame UI from HTML mockups"
-  default_prompt: "Use $html-to-monogame to turn an HTML/CSS mockup into a pixel-accurate Crusaders30XX MonoGame UI plan."
-
-policy:
-  allow_implicit_invocation: true

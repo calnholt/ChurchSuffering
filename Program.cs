@@ -2,6 +2,7 @@
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.Diagnostics.Snapshots;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Services;
 
 ShaderRuntimeOptions.ConfigureFromArgs(args);
 GpuProfilingRuntimeOptions.ConfigureFromArgs(args);
@@ -21,17 +22,39 @@ if (GpuProfilingRuntimeOptions.Enabled)
 
 var appArgs = TutorialLaunchOptions.StripLaunchFlag(
     NewGameLaunchOptions.StripLaunchFlag(
-        UnlockLaunchOptions.StripLaunchFlag(
+        UnlockLaunchOptions.StripLaunchFlags(
             GpuProfilingRuntimeOptions.StripLaunchFlag(ShaderRuntimeOptions.StripLaunchFlags(args)))));
 
 DisplaySnapshotLaunchOptions snapshotOptions = null;
 TestFightLaunchOptions testFightOptions = null;
 CardListProfileLaunchOptions cardListProfileOptions = null;
+BattleRenderProfileLaunchOptions battleRenderProfileOptions = null;
 try
 {
-    if (CardListProfileLaunchOptions.TryParse(appArgs, out var parsedCardListProfile))
+    if (BattleRenderProfileLaunchOptions.TryParse(appArgs, out var parsedBattleRenderProfile))
     {
-        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch || UnlockLaunchOptions.UnlockAllCollectionItems)
+        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch ||
+            UnlockLaunchOptions.UnlockAllCollectionItems ||
+            UnlockLaunchOptions.UnlockAllRunSetupOptions)
+        {
+            throw new BattleRenderProfileSetupException(
+                "The new and unlock flags cannot be combined with battle-render-profile");
+        }
+        battleRenderProfileOptions = parsedBattleRenderProfile;
+        testFightOptions = new TestFightLaunchOptions
+        {
+            WeaponId = "hammer",
+            EnemyId = "skeleton",
+            Difficulty = Crusaders30XX.ECS.Singletons.RunDifficulty.Hard,
+        };
+        TutorialLaunchOptions.ForceSkip();
+        Console.WriteLine("[Launch] Battle render profile: fixed skeleton battle, 1920x1080, 180 warm-up + 300 measured frames");
+    }
+    else if (CardListProfileLaunchOptions.TryParse(appArgs, out var parsedCardListProfile))
+    {
+        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch ||
+            UnlockLaunchOptions.UnlockAllCollectionItems ||
+            UnlockLaunchOptions.UnlockAllRunSetupOptions)
         {
             throw new CardListProfileSetupException("The new and unlock flags cannot be combined with card-list-profile");
         }
@@ -41,7 +64,9 @@ try
     }
     else if (TestFightLaunchOptions.TryParse(appArgs, out var parsedTestFight))
     {
-        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch || UnlockLaunchOptions.UnlockAllCollectionItems)
+        if (NewGameLaunchOptions.DeleteSaveBeforeLaunch ||
+            UnlockLaunchOptions.UnlockAllCollectionItems ||
+            UnlockLaunchOptions.UnlockAllRunSetupOptions)
         {
             throw new TestFightSetupException(
                 "The new and unlock flags cannot be combined with test-fight because test fights do not modify saves.");
@@ -56,7 +81,7 @@ try
         snapshotOptions = parsed;
     }
 }
-catch (Exception ex) when (ex is DisplaySnapshotSetupException or TestFightSetupException or CardListProfileSetupException)
+catch (Exception ex) when (ex is DisplaySnapshotSetupException or TestFightSetupException or CardListProfileSetupException or BattleRenderProfileSetupException)
 {
     Console.Error.WriteLine($"[Launch] {ex.Message}");
     Environment.ExitCode = 1;
@@ -73,11 +98,23 @@ if (NewGameLaunchOptions.DeleteSaveBeforeLaunch)
     SaveCache.DeleteSaveFilesIfPresent();
 }
 
+TitleMenuResumeService.PersistSkipTutorialsIfRequested();
+
 if (UnlockLaunchOptions.UnlockAllCollectionItems)
 {
     SaveCache.UnlockAllCollectionItems();
     Console.WriteLine("[Launch] Collection unlocked (cards, medals, equipment)");
 }
 
-using var game = new Crusaders30XX.Game1(snapshotOptions, testFightOptions, cardListProfileOptions);
+if (UnlockLaunchOptions.UnlockAllRunSetupOptions)
+{
+    SaveCache.UnlockAllRunSetupOptions();
+    Console.WriteLine("[Launch] Run setup unlocked (weapons, difficulties)");
+}
+
+using var game = new Crusaders30XX.Game1(
+    snapshotOptions,
+    testFightOptions,
+    cardListProfileOptions,
+    battleRenderProfileOptions);
 game.Run();

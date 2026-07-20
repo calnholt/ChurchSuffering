@@ -18,6 +18,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
       Id = EnemyId.Shadow;
       Name = "Shadow";
       HP = 42;
+      ClimbPool = ClimbEncounterPool.Late;
 
       OnStartOfBattle = (entityManager) =>
       {

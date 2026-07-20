@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Data.Loadouts;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
+using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
 using Xunit;
 
@@ -33,7 +35,7 @@ public class ClimbRuleServiceTests
 			Assert.InRange(slot.timeCost, 1, 3);
 			Assert.Equal(state.time, slot.generatedAtTime);
 			Assert.InRange(slot.duration, ClimbRuleService.EncounterMinDuration, ClimbRuleService.EncounterMaxDuration);
-			Assert.Contains(slot.enemyId, ClimbRuleService.GetClimbEncounterEnemyPool(), StringComparer.OrdinalIgnoreCase);
+			Assert.Contains(slot.enemyId, ClimbRuleService.GetClimbEncounterEnemyPoolForTime(state.time), StringComparer.OrdinalIgnoreCase);
 			Assert.Contains(slot.battleLocation, BattleLocationAssetService.ClimbEncounterLocations);
 			Assert.NotEqual(BattleLocation.TheGate, slot.battleLocation);
 			Assert.Equal(ClimbRuleService.GetEncounterMutationRestrictionName(slot.battleLocation), slot.cardMutationRestrictionName);
@@ -276,6 +278,61 @@ public class ClimbRuleServiceTests
 	}
 
 	[Fact]
+	public void Replenish_encounters_avoids_duplicate_location_enemy_pairs()
+	{
+		var loadout = TestLoadout();
+		for (int seed = 1; seed <= 80; seed++)
+		{
+			var state = new ClimbSaveState
+			{
+				time = 5,
+				encounterSlots = new List<ClimbEncounterSlotSave>
+				{
+					new()
+					{
+						id = "encounter_a",
+						enemyId = "skeleton",
+						generatedAtTime = 0,
+						duration = 2,
+						timeCost = 1,
+						battleLocation = BattleLocation.Desert,
+						rewardResources = new ClimbResourceSave { red = 1, white = 0, black = 0 },
+					},
+					new()
+					{
+						id = "encounter_b",
+						enemyId = "skeleton",
+						generatedAtTime = 5,
+						duration = 5,
+						timeCost = 1,
+						battleLocation = BattleLocation.Desert,
+						rewardResources = new ClimbResourceSave { red = 0, white = 1, black = 0 },
+					},
+					new()
+					{
+						id = "encounter_c",
+						enemyId = "demon",
+						generatedAtTime = 5,
+						duration = 5,
+						timeCost = 1,
+						battleLocation = BattleLocation.Tundra,
+						rewardResources = new ClimbResourceSave { red = 0, white = 0, black = 1 },
+					},
+				},
+			};
+
+			Assert.True(ClimbRuleService.ReplenishEncounterSlots(state, seed, loadout));
+
+			var replaced = state.encounterSlots.Single(slot => slot.id == "encounter_a");
+			Assert.False(
+				string.Equals(replaced.enemyId, "skeleton", StringComparison.OrdinalIgnoreCase)
+				&& replaced.battleLocation == BattleLocation.Desert,
+				$"seed={seed} recreated (Desert, skeleton)");
+			AssertEncounterSlotDiversity(state.encounterSlots);
+		}
+	}
+
+	[Fact]
 	public void Event_slots_assign_complete_deterministic_schedule_in_exact_bands()
 	{
 		var state = ClimbRuleService.CreateInitialState(123, TestLoadout());
@@ -509,6 +566,60 @@ public class ClimbRuleServiceTests
 	}
 
 	[Fact]
+	public void Shop_equipment_excludes_occupied_loadout_slots()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+
+		var loadout = TestLoadout();
+		loadout.headId = "knightly_helm";
+		var equipmentIndex = Array.IndexOf(ClimbShopSlotKinds.DisplayOrder, ClimbShopSlotKinds.Equipment);
+
+		for (int seed = 1; seed <= 40; seed++)
+		{
+			var state = new ClimbSaveState
+			{
+				time = 0,
+				resources = new ClimbResourceSave(),
+				shopSlots = new List<ClimbShopSlotSave>(),
+				encounterSlots = new List<ClimbEncounterSlotSave>(),
+				eventSlots = new List<ClimbEventSlotSave>(),
+				shownMedalIds = new List<string>(),
+				shownEquipmentIds = new List<string>(),
+			};
+			ClimbRuleService.RefreshShopSlots(state, seed, loadout);
+
+			var equipmentSlot = state.shopSlots[equipmentIndex];
+			Assert.Equal(ClimbShopSlotKinds.Equipment, equipmentSlot.kind, ignoreCase: true);
+
+			var equipment = EquipmentFactory.Create(equipmentSlot.itemId);
+			Assert.NotNull(equipment);
+			Assert.NotEqual(EquipmentSlot.Head, equipment.Slot);
+		}
+	}
+
+	[Fact]
+	public void Shop_equipment_is_empty_when_all_loadout_slots_are_occupied()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+
+		var loadout = TestLoadout();
+		loadout.headId = "knightly_helm";
+		loadout.chestId = "knightly_chest";
+		loadout.armsId = "knightly_gauntlets";
+		loadout.legsId = "knightly_grieves";
+
+		var state = ClimbRuleService.CreateInitialState(123, loadout);
+		var equipmentIndex = Array.IndexOf(ClimbShopSlotKinds.DisplayOrder, ClimbShopSlotKinds.Equipment);
+		var equipmentSlot = state.shopSlots[equipmentIndex];
+
+		Assert.Equal(ClimbShopSlotKinds.Empty, equipmentSlot.kind, ignoreCase: true);
+		Assert.Equal(0, equipmentSlot.timeCost);
+		Assert.Equal(0, ResourcePips(equipmentSlot.cost));
+	}
+
+	[Fact]
 	public void Shop_costs_use_time_adjusted_item_specific_resource_weights()
 	{
 		AssertShopCost(ClimbShopSlotKinds.Upgrade, 0, expectedTotal: 3, expectedDominant: "red");
@@ -562,14 +673,112 @@ public class ClimbRuleServiceTests
 		Assert.DoesNotContain("horde", pool);
 		Assert.DoesNotContain("sand_corpse", pool);
 		Assert.DoesNotContain("training_demon", pool);
+		Assert.DoesNotContain("ninja", pool);
 		foreach (string enemyId in pool)
 		{
 			var enemy = EnemyFactory.Create(enemyId);
 			Assert.NotNull(enemy);
 			Assert.False(enemy.IsBoss);
 			Assert.False(enemy.IsTutorialOnly);
+			Assert.NotEqual(ClimbEncounterPool.None, enemy.ClimbPool);
 			Assert.True(EnemyPortraitContent.HasPortrait(enemyId));
 		}
+	}
+
+	[Fact]
+	public void Early_and_late_pools_include_throughout_skeletons()
+	{
+		var early = ClimbRuleService.GetClimbEncounterEnemyPool(ClimbEncounterPool.Early);
+		var late = ClimbRuleService.GetClimbEncounterEnemyPool(ClimbEncounterPool.Late);
+
+		string[] throughoutSkeletons =
+		{
+			"cursed_skeleton", "earth_skeleton", "fire_skeleton", "frost_skeleton", "skeleton",
+		};
+		string[] expectedEarlyOnly =
+		{
+			"berserker", "blighttongue", "demon", "dust_wuurm", "earth_demon", "ice_demon",
+			"mummy", "ogre", "sand_golem", "skeletal_archer", "thornreaver",
+		};
+		string[] expectedLateOnly =
+		{
+			"azure_warden", "cinderbolt_demon", "frostbound_aeon", "glacial_guardian",
+			"hex_bailiff", "shadow", "sorcerer", "spider", "succubus", "wyvern",
+		};
+
+		Assert.Equal(
+			expectedEarlyOnly.Concat(throughoutSkeletons).OrderBy(id => id, StringComparer.OrdinalIgnoreCase),
+			early);
+		Assert.Equal(
+			expectedLateOnly.Concat(throughoutSkeletons).OrderBy(id => id, StringComparer.OrdinalIgnoreCase),
+			late);
+		Assert.Equal(
+			throughoutSkeletons.OrderBy(id => id, StringComparer.OrdinalIgnoreCase),
+			early.Intersect(late, StringComparer.OrdinalIgnoreCase).OrderBy(id => id, StringComparer.OrdinalIgnoreCase));
+		Assert.DoesNotContain("ninja", early.Concat(late));
+	}
+
+	[Fact]
+	public void Encounter_boards_cap_melee_skeletons_at_one()
+	{
+		var loadout = TestLoadout();
+		for (int seed = 0; seed < 80; seed++)
+		{
+			foreach (int climbTime in new[] { 0, 15, 16, 31 })
+			{
+				var state = ClimbRuleService.CreateInitialState(seed, loadout);
+				state.time = climbTime;
+				ClimbRuleService.RefreshEncounterSlots(state, seed, loadout);
+
+				int meleeSkeletonCount = state.encounterSlots.Count(slot =>
+					ClimbRuleService.IsClimbSkeletonEnemy(slot.enemyId));
+				Assert.True(
+					meleeSkeletonCount <= 1,
+					$"seed={seed} time={climbTime} meleeSkeletons={meleeSkeletonCount} enemies=[{string.Join(",", state.encounterSlots.Select(s => s.enemyId))}]");
+			}
+		}
+
+		Assert.False(ClimbRuleService.IsClimbSkeletonEnemy("skeletal_archer"));
+	}
+
+	[Theory]
+	[InlineData(0, ClimbEncounterPool.Early)]
+	[InlineData(15, ClimbEncounterPool.Early)]
+	[InlineData(16, ClimbEncounterPool.Late)]
+	[InlineData(31, ClimbEncounterPool.Late)]
+	public void ResolveClimbEncounterPool_uses_midpoint(int climbTime, ClimbEncounterPool expected)
+	{
+		Assert.Equal(expected, ClimbRuleService.ResolveClimbEncounterPool(climbTime));
+	}
+
+	[Theory]
+	[InlineData(0)]
+	[InlineData(15)]
+	public void Encounter_rolls_before_midpoint_use_early_pool(int climbTime)
+	{
+		var loadout = TestLoadout();
+		var state = ClimbRuleService.CreateInitialState(42, loadout);
+		state.time = climbTime;
+		ClimbRuleService.RefreshEncounterSlots(state, 42, loadout);
+
+		var early = ClimbRuleService.GetClimbEncounterEnemyPool(ClimbEncounterPool.Early);
+		Assert.All(state.encounterSlots, slot =>
+			Assert.Contains(slot.enemyId, early, StringComparer.OrdinalIgnoreCase));
+	}
+
+	[Theory]
+	[InlineData(16)]
+	[InlineData(31)]
+	public void Encounter_rolls_at_or_after_midpoint_use_late_pool(int climbTime)
+	{
+		var loadout = TestLoadout();
+		var state = ClimbRuleService.CreateInitialState(42, loadout);
+		state.time = climbTime;
+		ClimbRuleService.RefreshEncounterSlots(state, 42, loadout);
+
+		var late = ClimbRuleService.GetClimbEncounterEnemyPool(ClimbEncounterPool.Late);
+		Assert.All(state.encounterSlots, slot =>
+			Assert.Contains(slot.enemyId, late, StringComparer.OrdinalIgnoreCase));
 	}
 
 	[Fact]
@@ -641,6 +850,12 @@ public class ClimbRuleServiceTests
 			.Select(slot => slot.battleLocation)
 			.Distinct()
 			.Count() >= 2);
+		Assert.True(activeSlots.Count(slot => ClimbRuleService.IsClimbSkeletonEnemy(slot.enemyId)) <= 1);
+
+		var pairs = activeSlots
+			.Select(slot => (EnemyId: slot.enemyId.ToLowerInvariant(), slot.battleLocation))
+			.ToList();
+		Assert.Equal(pairs.Count, pairs.Distinct().Count());
 	}
 
 	private static LoadoutDefinition TestLoadout()

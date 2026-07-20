@@ -174,12 +174,15 @@ namespace Crusaders30XX.ECS.Systems
                     continue;
                 }
 
-                switch (CardColorQualificationService.GetQualifiedColor(cardEntity))
-                {
-                    case CardData.CardColor.Red:   red++;   break;
-                    case CardData.CardColor.White: white++; break;
-                    case CardData.CardColor.Black: black++; break;
-                }
+				foreach (var color in CardColorQualificationService.GetQualifiedColors(cardEntity))
+				{
+					switch (color)
+					{
+						case CardData.CardColor.Red: red++; break;
+						case CardData.CardColor.White: white++; break;
+						case CardData.CardColor.Black: black++; break;
+					}
+				}
             }
         }
 

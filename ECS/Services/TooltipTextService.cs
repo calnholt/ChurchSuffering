@@ -43,6 +43,7 @@ namespace Crusaders30XX.ECS.Services
 			new() { Id = "sharpen", Aliases = ["sharpen"], Tooltip = "X Sharpen - Your next weapon attack this turn gains +X damage." },
 			new() { Id = "might", Aliases = ["might"], Tooltip = "X Might - Your attacks deal +X damage this turn." },
 			new() { Id = "vigor", Aliases = ["vigor"], Tooltip = "X Vigor - The next non-weapon card with a cost you play costs X discard less." },
+			new() { Id = "grace", Aliases = ["grace"], Tooltip = "X Grace - At the start of your turn (after draw), resurrect 1. Lose 1 grace." },
 			new() { Id = "scar", Aliases = ["scar", "scars"], Tooltip = "X Scar - Lose X max HP. At the start of battle, lose 1 scar. Max HP is not restored until the next battle recalculates from remaining scars." },
 			new() { Id = "fear", Aliases = ["fear"], Tooltip = "X Fear - All enemy attacks become ambush attacks. At the end of a battle, lose 1 fear." },
 			new() { Id = "wounded", Aliases = ["wounded"], Tooltip = "X Wounded - Take X more damage from all sources this battle." },
@@ -56,9 +57,10 @@ namespace Crusaders30XX.ECS.Services
 			new() { Id = "brittle", Aliases = ["brittle"], Tooltip = "Brittle - If you block an attack with only this card, mill 1." },
 			new() { Id = "scorched", Aliases = ["scorched"], Tooltip = "Scorched - When pledged, lose 1 HP." },
 			new() { Id = "thorned", Aliases = ["thorned"], Tooltip = "Thorned - When discarded to pay a card cost, gain 1 scar." },
+			new() { Id = "poisoned", Aliases = ["poisoned"], Tooltip = "Poisoned - When used to block, lose 1 HP." },
 			new() { Id = "darkness", Aliases = ["darkness"], Tooltip = "X Darkness - The enemy loses X damage when you pledge a card." },
 			new() { Id = "silenced", Aliases = ["silenced"], Tooltip = "X Silenced - You cannot play pledged cards. Remove 1 silenced at the end of your action phase." },
-			new() { Id = "sealed", Aliases = ["seal", "seals", "sealed"], Tooltip = "Sealed - Sealed cards cost HP equal to remaining seals when played or discarded to pay for costs. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed." },
+			new() { Id = "sealed", Aliases = ["seal", "seals", "sealed"], Tooltip = "Sealed - Cannot be pledged. Lose 1 seal when used to block. At 0 seals, the card is freed." },
 		];
 
 		/// <summary>
@@ -69,11 +71,21 @@ namespace Crusaders30XX.ECS.Services
 			Entity entity,
 			string baseText,
 			EntityManager entityManager = null,
-			string keywordSource = null)
+			string keywordSource = null,
+			IEnumerable<string> excludedKeywordIds = null)
 		{
 			var blocks = new List<TooltipTextBlock>();
 			var shownKeywordIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			var scanTexts = new List<string>();
+
+			if (excludedKeywordIds != null)
+			{
+				foreach (var id in excludedKeywordIds)
+				{
+					if (!string.IsNullOrWhiteSpace(id))
+						shownKeywordIds.Add(id);
+				}
+			}
 
 			if (!string.IsNullOrWhiteSpace(keywordSource))
 				scanTexts.Add(keywordSource);
@@ -90,6 +102,37 @@ namespace Crusaders30XX.ECS.Services
 			blocks.AddRange(BuildRecursiveKeywordBlocks(scanTexts, shownKeywordIds));
 			return blocks;
 		}
+
+		/// <summary>
+		/// Keyword registry id for an applied passive (exact id/alias match, else stem match).
+		/// </summary>
+		public static string GetPassiveKeywordId(AppliedPassiveType type)
+		{
+			var name = type.ToString().ToLowerInvariant();
+			string stemMatchId = null;
+
+			foreach (var definition in KeywordDefinitions)
+			{
+				if (string.Equals(definition.Id, name, StringComparison.OrdinalIgnoreCase)
+					|| definition.Aliases.Any(alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)))
+				{
+					return definition.Id;
+				}
+
+				if (stemMatchId == null
+					&& (IsStemMatch(definition.Id, name)
+						|| definition.Aliases.Any(alias => IsStemMatch(alias, name))))
+				{
+					stemMatchId = definition.Id;
+				}
+			}
+
+			return stemMatchId ?? name;
+		}
+
+		private static bool IsStemMatch(string a, string b) =>
+			a.StartsWith(b, StringComparison.OrdinalIgnoreCase)
+			|| b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
 
 		/// <summary>
 		/// Returns the full tooltip text for compatibility with string-based callers.
@@ -111,6 +154,7 @@ namespace Crusaders30XX.ECS.Services
 			AddStatusBlock<Brittle>(entity, blocks, shownKeywordIds, "brittle", "This card is brittle - if you block an attack with only this card, mill 1. Lasts for the rest of the climb.");
 			AddStatusBlock<Scorched>(entity, blocks, shownKeywordIds, "scorched", "This card is scorched - when pledged, lose 1 HP. Lasts for the rest of the climb.");
 			AddStatusBlock<Thorned>(entity, blocks, shownKeywordIds, "thorned", "This card is thorned - when discarded to pay a card cost, gain 1 scar. Lasts for the rest of the climb.");
+			AddStatusBlock<Poisoned>(entity, blocks, shownKeywordIds, "poisoned", "This card is poisoned - when used to block, lose 1 HP.");
 
 			if (entity.GetComponent<Colorless>() != null && !ShouldSuppressColorlessStatus(entityManager))
 				blocks.Add(new TooltipTextBlock("colorless", ColorlessStatus));
@@ -133,7 +177,7 @@ namespace Crusaders30XX.ECS.Services
 			if (entity.GetComponent<Sealed>() != null)
 			{
 				shownKeywordIds.Add("sealed");
-				blocks.Add(new TooltipTextBlock("sealed", "This card is sealed - costs HP equal to remaining seals to play. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed. Cannot be pledged."));
+				blocks.Add(new TooltipTextBlock("sealed", "This card is sealed - cannot be pledged. Lose 1 seal when used to block. At 0 seals, the card is freed."));
 			}
 
 			var recoil = entity.GetComponent<Recoil>();
@@ -207,7 +251,7 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Power:
 					return $"{(isPlayer ? "Your" : "The enemy's")} attacks deal +{stacks} damage this battle.";
 				case AppliedPassiveType.Poison:
-					return "Every 60 seconds, lose 1 HP.";
+					return "At the start of each block phase, one card in your hand becomes poisoned. Blocking with it loses 1 HP. At the end of your turn, lose 1 poison.";
 				case AppliedPassiveType.Shield:
 					return "Prevent all damage from the first source each turn.";
 				case AppliedPassiveType.Guard:
@@ -247,13 +291,15 @@ namespace Crusaders30XX.ECS.Services
 				case AppliedPassiveType.Silenced:
 					return "You cannot play pledged cards. Remove 1 silenced at the end of your action phase.";
 				case AppliedPassiveType.Sealed:
-					return "Sealed cards cost HP equal to remaining seals when played or discarded to pay for costs. Seals decrease: -1 per block, -1 per card played. At 0 seals, card is freed.";
+					return "Sealed cards cannot be pledged. Lose 1 seal when used to block. At 0 seals, the card is freed.";
 				case AppliedPassiveType.Plunder:
 					return "At the start of the block phase, steals a card from your deck. Deal enough damage to rescue it.";
 				case AppliedPassiveType.CarpeDiem:
 					return "At the end of the turn, lose all courage.";
 				case AppliedPassiveType.SwordIntoShield:
 					return $"Your next non-weapon attack card this turn gains +{stacks} damage this climb.";
+				case AppliedPassiveType.Grace:
+					return "At the start of your turn (after draw), resurrect 1. Lose 1 grace.";
 				default:
 					return StringUtils.ToSentenceCase(type.ToString());
 			}

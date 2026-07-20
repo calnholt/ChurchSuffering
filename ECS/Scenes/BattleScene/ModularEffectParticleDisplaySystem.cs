@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
@@ -26,18 +25,11 @@ namespace Crusaders30XX.ECS.Systems
 		private static readonly Color DebrisColor = new(29, 23, 25);
 		private static readonly Color SmokeColor = new(130, 116, 116);
 
-		private static readonly Vector2[] JaggedParticleMask =
-		{
-			new(0.50f, 0.00f),
-			new(1.00f, 0.76f),
-			new(0.62f, 1.00f),
-			new(0.00f, 0.42f)
-		};
-
-		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteBatch _spriteBatch;
-		private readonly Texture2D _pixel;
+		private readonly ModularEffectRenderResources _resources;
 		private readonly Dictionary<Guid, List<Particle>> _particlesByRequest = new();
+		private readonly HashSet<Guid> _activeRequestIds = new();
+		private readonly List<Guid> _staleRequestIds = new();
 
 		[DebugEditable(DisplayName = "Particle Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float ParticleAlpha { get; set; } = 1f;
@@ -51,12 +43,10 @@ namespace Crusaders30XX.ECS.Systems
 		[DebugEditable(DisplayName = "Smoke Alpha", Step = 0.01f, Min = 0f, Max = 2f)]
 		public float SmokeAlpha { get; set; } = 0.82f;
 
-		public ModularEffectParticleDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(entityManager)
+		public ModularEffectParticleDisplaySystem(EntityManager entityManager, SpriteBatch spriteBatch, ModularEffectRenderResources resources) : base(entityManager)
 		{
-			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
-			_pixel = new Texture2D(graphicsDevice, 1, 1);
-			_pixel.SetData(new[] { Color.White });
+			_resources = resources ?? throw new ArgumentNullException(nameof(resources));
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities() => Array.Empty<Entity>();
@@ -65,29 +55,35 @@ namespace Crusaders30XX.ECS.Systems
 		public override void Update(GameTime gameTime)
 		{
 			if (!IsActive) return;
-			var active = EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>()
-				.Select(e => e.GetComponent<ActiveVisualEffect>())
-				.Where(e => e != null && e.ElapsedSeconds >= 0f)
-				.ToDictionary(e => e.RequestId, e => e);
-
-			foreach (var effect in active.Values)
+			_activeRequestIds.Clear();
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>())
 			{
+				var effect = entity.GetComponent<ActiveVisualEffect>();
+				if (effect == null || effect.ElapsedSeconds < 0f) continue;
+				_activeRequestIds.Add(effect.RequestId);
 				if (!_particlesByRequest.ContainsKey(effect.RequestId))
 				{
 					_particlesByRequest[effect.RequestId] = Spawn(effect);
 				}
 			}
 
-			foreach (var stale in _particlesByRequest.Keys.Where(id => !active.ContainsKey(id)).ToList())
+			_staleRequestIds.Clear();
+			foreach (var requestId in _particlesByRequest.Keys)
 			{
-				_particlesByRequest.Remove(stale);
+				if (!_activeRequestIds.Contains(requestId)) _staleRequestIds.Add(requestId);
+			}
+			foreach (var requestId in _staleRequestIds)
+			{
+				_particlesByRequest.Remove(requestId);
 			}
 		}
 
 		public void Draw()
 		{
-			foreach (var active in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>().Select(e => e.GetComponent<ActiveVisualEffect>()).Where(e => e != null && e.ElapsedSeconds >= 0f))
+			foreach (var entity in EntityManager.GetEntitiesWithComponent<ActiveVisualEffect>())
 			{
+				var active = entity.GetComponent<ActiveVisualEffect>();
+				if (active == null || active.ElapsedSeconds < 0f) continue;
 				if (!_particlesByRequest.TryGetValue(active.RequestId, out var particles)) continue;
 				float t = VisualEffectDisplayMath.RecoveryProgress(active);
 				foreach (var p in particles)
@@ -111,7 +107,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void AddJaggedParticles(ActiveVisualEffect effect, VisualEffectModule module, ParticleKind kind, int baseCount, List<Particle> particles, Random random, VisualEffectColors colors)
 		{
-			if (!effect.Recipe.Modules.Contains(module)) return;
+			if (!effect.Recipe.HasModule(module)) return;
 			int count = Math.Max(0, (int)Math.Round(baseCount * effect.Recipe.ParticleMultiplier));
 			bool targetRight = effect.DirectionSign >= 0;
 			float startDeg = targetRight ? -175f : 165f;
@@ -141,7 +137,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void AddSmokeParticles(ActiveVisualEffect effect, int baseCount, List<Particle> particles, Random random, VisualEffectColors colors)
 		{
-			if (!effect.Recipe.Modules.Contains(VisualEffectModule.SmokeBlobs)) return;
+			if (!effect.Recipe.HasModule(VisualEffectModule.SmokeBlobs)) return;
 			int count = Math.Max(0, (int)Math.Round(baseCount * effect.Recipe.ParticleMultiplier));
 			bool targetRight = effect.DirectionSign >= 0;
 			for (int i = 0; i < count; i++)
@@ -171,7 +167,7 @@ namespace Crusaders30XX.ECS.Systems
 			var pos = particle.Start + particle.Offset * eased * ScatterDistance + new Vector2(0f, gravity * t * t);
 			float scale = MathHelper.Lerp(0.5f, particle.Scale, eased) * ParticleSize;
 			float rotation = particle.Rotation * eased;
-			var mask = PrimitiveTextureFactory.GetAntialiasedPolygonMask(_graphicsDevice, 22, 34, "modular_fx_jagged_particle", JaggedParticleMask);
+			var mask = _resources.JaggedParticleMask;
 			if (particle.Kind == ParticleKind.Debris)
 			{
 				DrawMask(mask, pos, particle.Glow * (alpha * 0.14f), rotation, new Vector2(scale * 1.16f));
@@ -190,10 +186,11 @@ namespace Crusaders30XX.ECS.Systems
 			float eased = VisualEffectDisplayMath.EaseOutCubic(t);
 			var pos = particle.Start + new Vector2(0f, 10f) * (1f - eased) + particle.Offset * eased;
 			float scale = MathHelper.Lerp(0.48f, 1.28f, eased) * particle.Scale * ParticleSize;
-			int diameter = Math.Max(1, (int)MathF.Round(48f * scale));
-			var smoke = PrimitiveTextureFactory.GetSoftRadialCircle(_graphicsDevice, diameter, 0f, 0.86f);
-			DrawMask(smoke, pos, particle.Color * alpha, 0f, Vector2.One);
-			DrawMask(smoke, pos, particle.Glow * (alpha * 0.22f), 0f, new Vector2(1.18f));
+			float diameter = Math.Max(1f, 48f * scale);
+			var smoke = _resources.GetRadialMask(0f, 0.86f);
+			float textureScale = diameter / smoke.Width;
+			DrawMask(smoke, pos, particle.Color * alpha, 0f, new Vector2(textureScale));
+			DrawMask(smoke, pos, particle.Glow * (alpha * 0.22f), 0f, new Vector2(textureScale * 1.18f));
 		}
 
 		private void DrawMask(Texture2D texture, Vector2 center, Color color, float rotation, Vector2 scale)

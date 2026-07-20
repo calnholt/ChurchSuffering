@@ -52,17 +52,22 @@ namespace Crusaders30XX.ECS.Services
 				}
 
 				if (!RunDeckService.TryParseCardKey(entry.cardKey, out _, out var color, out _)) continue;
-				switch (color)
+				var colors = new[] { color };
+				if (System.Enum.TryParse(entry.secondaryColor, true, out CardData.CardColor secondaryColor)
+					&& CardColorQualificationService.IsPlayableColor(secondaryColor)
+					&& secondaryColor != color)
 				{
-					case CardData.CardColor.Red:
-						red++;
-						break;
-					case CardData.CardColor.White:
-						white++;
-						break;
-					case CardData.CardColor.Black:
-						black++;
-						break;
+					colors = [color, secondaryColor];
+				}
+
+				foreach (var qualifiedColor in colors)
+				{
+					switch (qualifiedColor)
+					{
+						case CardData.CardColor.Red: red++; break;
+						case CardData.CardColor.White: white++; break;
+						case CardData.CardColor.Black: black++; break;
+					}
 				}
 			}
 

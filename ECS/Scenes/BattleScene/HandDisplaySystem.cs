@@ -388,13 +388,61 @@ namespace Crusaders30XX.ECS.Systems
                 var transform = entity.GetComponent<Transform>();
                 if (transform == null) continue;
 
-                EventManager.Publish(new CardRenderEvent
+                var renderEvent = new CardRenderEvent
                 {
                     Card = entity,
                     Position = transform.Position,
                     IsInHand = true,
-                });
+                    PreferCachedBase = IsStableForCachedBase(
+                        entity,
+                        _handScaleByEntityId.TryGetValue(entity.Id, out float scale)
+                            ? scale
+                            : transform.Scale.X,
+                        HandRestScale),
+                };
+#if DEBUG
+                EventManager.PublishPartitioned(
+                    renderEvent,
+                    CardRenderEvent.BaseRendererPriority,
+                    action => FrameProfiler.Measure("Battle.HandBaseCards", action),
+                    action => FrameProfiler.Measure("Battle.HandDecorations", action));
+#else
+                EventManager.Publish(renderEvent);
+#endif
             }
+        }
+
+        internal static bool IsStableForCachedBase(
+            Entity entity,
+            float currentHandScale,
+            float restScale)
+        {
+            if (entity == null) return false;
+            var transform = entity.GetComponent<Transform>();
+            if (transform == null) return false;
+            if (entity.GetComponent<UIElement>()?.IsHovered == true) return false;
+            if (MathF.Abs(currentHandScale - restScale) > 0.001f ||
+                MathF.Abs(transform.Scale.X - restScale) > 0.001f ||
+                MathF.Abs(transform.Scale.Y - restScale) > 0.001f)
+            {
+                return false;
+            }
+
+            var tween = entity.GetComponent<PositionTween>();
+            if (tween != null && (!tween.Initialized ||
+                Vector2.DistanceSquared(tween.Current, tween.Target) > 0.0625f))
+            {
+                return false;
+            }
+
+            var animation = entity.GetComponent<Animation>();
+            if (animation?.IsPlaying == true) return false;
+            if (entity.GetComponent<SelectedForPayment>() != null) return false;
+            if (entity.GetComponent<CardToDiscardFlight>() != null) return false;
+            if (entity.GetComponent<PlunderSnatchFlight>() != null) return false;
+            if (entity.GetComponent<PlunderRescueFlight>() != null) return false;
+            return entity.GetComponent<AssignedBlockPresentation>()?.Phase !=
+                AssignedBlockPresentation.PhaseState.Returning;
         }
 
         private static bool ShouldDrawInHand(Entity entity)

@@ -34,6 +34,7 @@ namespace Crusaders30XX.ECS.Systems
 			public string RestrictionName = string.Empty;
 			public List<string> CurrentRestrictionNames = new List<string>();
 			public bool TransitionToBattleOnComplete;
+			public bool ReleasesClimbTurnover;
 		}
 
 		private class ActiveClimbAnimation
@@ -45,6 +46,7 @@ namespace Crusaders30XX.ECS.Systems
 			public string DeckEntryId = string.Empty;
 			public string RestrictionName = string.Empty;
 			public bool TransitionToBattleOnComplete;
+			public bool ReleasesClimbTurnover;
 			public CardRestrictionMutationAnimator.MutationAnimation Animation;
 		}
 
@@ -109,8 +111,10 @@ namespace Crusaders30XX.ECS.Systems
 			_queue.Enqueue(new CardAnimRequest
 			{
 				Mode = ClimbCardAnimMode.Upgrade,
+				DeckEntryId = evt.DeckEntryId,
 				BaseCardKey = evt.BaseCardKey,
 				UpgradedCardKey = evt.UpgradedCardKey,
+				ReleasesClimbTurnover = evt.DelayClimbTurnoverUntilComplete,
 			});
 			if (_active == null) TryStartNext();
 		}
@@ -145,24 +149,27 @@ namespace Crusaders30XX.ECS.Systems
 			var request = _queue.Dequeue();
 			Entity baseCard;
 			Entity finalCard;
+			CardData.CardColor? secondaryColor = ResolveSecondaryColor(request.DeckEntryId);
 			if (request.Mode == ClimbCardAnimMode.Mutation)
 			{
 				(baseCard, finalCard) = CardRestrictionMutationDisplayFactory.CreateDisplayPairFromKeys(
 					EntityManager,
 					request.MutationCardKey,
 					request.CurrentRestrictionNames,
-					request.RestrictionName);
+					request.RestrictionName,
+					secondaryColor);
 			}
 			else
 			{
-				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey);
-				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey);
+				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey, secondaryColor: secondaryColor);
+				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey, secondaryColor: secondaryColor);
 			}
 
 			if (baseCard == null || finalCard == null)
 			{
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, baseCard);
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, finalCard);
+				PublishTurnoverRelease(request.ReleasesClimbTurnover);
 				TryStartNext();
 				return;
 			}
@@ -187,6 +194,7 @@ namespace Crusaders30XX.ECS.Systems
 				DeckEntryId = request.DeckEntryId,
 				RestrictionName = request.RestrictionName,
 				TransitionToBattleOnComplete = request.TransitionToBattleOnComplete,
+				ReleasesClimbTurnover = request.ReleasesClimbTurnover,
 				Animation = animation,
 			};
 
@@ -194,16 +202,29 @@ namespace Crusaders30XX.ECS.Systems
 			BlockInput();
 		}
 
+		private static CardData.CardColor? ResolveSecondaryColor(string entryId)
+		{
+			if (string.IsNullOrWhiteSpace(entryId)) return null;
+			var entry = SaveCache.GetRunDeckEntry(RunDeckService.PrimaryLoadoutId, entryId);
+			return Enum.TryParse(entry?.secondaryColor, true, out CardData.CardColor color)
+				&& CardColorQualificationService.IsPlayableColor(color)
+				? color
+				: null;
+		}
+
 		private void CompleteActiveAnimation()
 		{
 			bool transitionToBattle = false;
+			bool releasesClimbTurnover = false;
 			if (_active != null)
 			{
 				transitionToBattle = _active.TransitionToBattleOnComplete;
+				releasesClimbTurnover = _active.ReleasesClimbTurnover;
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, _active.BaseCard);
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, _active.FinalCard);
 				_active = null;
 			}
+			PublishTurnoverRelease(releasesClimbTurnover);
 
 			if (_queue.Count > 0)
 			{
@@ -220,9 +241,11 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void ClearAll()
 		{
+			foreach (var request in _queue) PublishTurnoverRelease(request.ReleasesClimbTurnover);
 			_queue.Clear();
 			if (_active != null)
 			{
+				PublishTurnoverRelease(_active.ReleasesClimbTurnover);
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, _active.BaseCard);
 				CardRestrictionMutationDisplayFactory.DestroyDisplayCard(EntityManager, _active.FinalCard);
 				_active = null;
@@ -230,6 +253,12 @@ namespace Crusaders30XX.ECS.Systems
 
 			_animator.Cancel();
 			UnblockInput();
+		}
+
+		private static void PublishTurnoverRelease(bool releasesClimbTurnover)
+		{
+			if (releasesClimbTurnover)
+				EventManager.Publish(new ClimbCardUpgradeAnimationCompleted { ReleasesClimbTurnover = true });
 		}
 
 		private void BlockInput()

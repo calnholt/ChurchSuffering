@@ -3,6 +3,7 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Rendering;
 using Crusaders30XX.ECS.Services;
@@ -146,6 +147,18 @@ namespace Crusaders30XX.ECS.Systems
 		private void OnOpenClimbSettingsModal(OpenWayStationClimbSettingsModalEvent e)
 		{
 			if (!IsWayStationActive()) return;
+			var meta = SaveCache.GetWayStationMeta();
+			if (!ClimbUnlockProgressionRules.ShouldShowSettingsModal(meta))
+			{
+				if (_departInProgress) return;
+				WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
+				WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+				_departInProgress = true;
+				WayStationRunSetupService.Depart(_world);
+				return;
+			}
+
+			NormalizeSelection(meta);
 			OpenModal();
 		}
 
@@ -169,17 +182,19 @@ namespace Crusaders30XX.ECS.Systems
 			var animation = GetModalAnimation();
 			bool modalInteractive = animation?.Phase == ModalAnimationPhase.Visible;
 			bool modalOpen = animation != null && (animation.RequestedVisible || animation.Phase != ModalAnimationPhase.Hidden);
-			var layout = ComputeLayout(Game1.VirtualWidth, Game1.VirtualHeight);
+			var meta = SaveCache.GetWayStationMeta();
+			NormalizeSelection(meta);
+			var layout = ComputeLayout(Game1.VirtualWidth, Game1.VirtualHeight, meta);
 			var render = ModalAnimationRenderState.From(animation, layout.Panel);
 
 			SyncModalPanel(render.Transform(layout.Panel), modalOpen);
 			SyncButton(WayStationSceneConstants.CloseButtonName, render.Transform(layout.CloseButton), modalInteractive);
-			SyncButton(WayStationSceneConstants.SwordButtonName, render.Transform(layout.SwordButton), modalInteractive);
-			SyncButton(WayStationSceneConstants.DaggerButtonName, render.Transform(layout.DaggerButton), modalInteractive);
-			SyncButton(WayStationSceneConstants.HammerButtonName, render.Transform(layout.HammerButton), modalInteractive);
-			SyncButton(WayStationSceneConstants.EasyButtonName, render.Transform(layout.EasyButton), modalInteractive);
-			SyncButton(WayStationSceneConstants.NormalButtonName, render.Transform(layout.NormalButton), modalInteractive);
-			SyncButton(WayStationSceneConstants.HardButtonName, render.Transform(layout.HardButton), modalInteractive);
+			SyncChoiceButton(WayStationSceneConstants.SwordButtonName, layout.SwordButton, render, modalInteractive);
+			SyncChoiceButton(WayStationSceneConstants.DaggerButtonName, layout.DaggerButton, render, modalInteractive);
+			SyncChoiceButton(WayStationSceneConstants.HammerButtonName, layout.HammerButton, render, modalInteractive);
+			SyncChoiceButton(WayStationSceneConstants.EasyButtonName, layout.EasyButton, render, modalInteractive);
+			SyncChoiceButton(WayStationSceneConstants.NormalButtonName, layout.NormalButton, render, modalInteractive);
+			SyncChoiceButton(WayStationSceneConstants.HardButtonName, layout.HardButton, render, modalInteractive);
 			SyncButton(WayStationSceneConstants.DepartButtonName, render.Transform(layout.DepartButton), modalInteractive);
 
 			if (!modalInteractive) return;
@@ -190,15 +205,16 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
-			if (WasClicked(WayStationSceneConstants.SwordButtonName)) WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
-			if (WasClicked(WayStationSceneConstants.DaggerButtonName)) WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Dagger;
-			if (WasClicked(WayStationSceneConstants.HammerButtonName)) WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Hammer;
-			if (WasClicked(WayStationSceneConstants.EasyButtonName)) WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
-			if (WasClicked(WayStationSceneConstants.NormalButtonName)) WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Normal;
-			if (WasClicked(WayStationSceneConstants.HardButtonName)) WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Hard;
+			if (WasClicked(WayStationSceneConstants.SwordButtonName)) SelectWeapon(meta, StartingWeapon.Sword);
+			if (WasClicked(WayStationSceneConstants.DaggerButtonName)) SelectWeapon(meta, StartingWeapon.Dagger);
+			if (WasClicked(WayStationSceneConstants.HammerButtonName)) SelectWeapon(meta, StartingWeapon.Hammer);
+			if (WasClicked(WayStationSceneConstants.EasyButtonName)) SelectDifficulty(meta, RunDifficulty.Easy);
+			if (WasClicked(WayStationSceneConstants.NormalButtonName)) SelectDifficulty(meta, RunDifficulty.Normal);
+			if (WasClicked(WayStationSceneConstants.HardButtonName)) SelectDifficulty(meta, RunDifficulty.Hard);
 
 			if (!_departInProgress && WasClicked(WayStationSceneConstants.DepartButtonName))
 			{
+				NormalizeSelection(meta);
 				_departInProgress = true;
 				WayStationRunSetupService.Depart(_world);
 			}
@@ -211,7 +227,7 @@ namespace Crusaders30XX.ECS.Systems
 				?.GetComponent<SceneState>();
 			if (scene == null || (scene.Current != SceneId.WayStation && scene.Current != SceneId.Snapshot)) return;
 
-			var layout = ComputeLayout(Game1.VirtualWidth, Game1.VirtualHeight);
+			var layout = ComputeLayout(Game1.VirtualWidth, Game1.VirtualHeight, SaveCache.GetWayStationMeta());
 			var animation = GetModalAnimation();
 			if (animation == null) return;
 			var render = ModalAnimationRenderState.From(animation, layout.Panel);
@@ -223,7 +239,7 @@ namespace Crusaders30XX.ECS.Systems
 			DrawButtons(layout, render);
 		}
 
-		private WayStationLayout ComputeLayout(int vw, int vh)
+		private WayStationLayout ComputeLayout(int vw, int vh, WayStationMetaSave meta)
 		{
 			var panel = new Rectangle((vw - PanelWidth) / 2, (vh - PanelHeight) / 2, PanelWidth, PanelHeight);
 			var footer = new Rectangle(panel.X, panel.Bottom - FooterHeight, panel.Width, FooterHeight);
@@ -241,20 +257,46 @@ namespace Crusaders30XX.ECS.Systems
 			var weaponLabelPos = new Vector2(panel.Center.X - weaponLabelSize.X / 2f, cursorY);
 			cursorY += weaponLabelSize.Y + LabelGap;
 
-			int weaponRowWidth = WeaponButtonSize * 3 + ChoiceGap * 2;
+			var unlockedWeapons = ClimbUnlockProgressionRules.GetUnlockedWeapons(meta);
+			int weaponRowWidth = WeaponButtonSize * unlockedWeapons.Count + ChoiceGap * System.Math.Max(0, unlockedWeapons.Count - 1);
 			int weaponX = panel.Center.X - weaponRowWidth / 2;
-			var sword = new Rectangle(weaponX, (int)System.Math.Round(cursorY), WeaponButtonSize, WeaponButtonSize);
-			var dagger = new Rectangle(sword.Right + ChoiceGap, sword.Y, WeaponButtonSize, WeaponButtonSize);
-			var hammer = new Rectangle(dagger.Right + ChoiceGap, sword.Y, WeaponButtonSize, WeaponButtonSize);
+			int weaponY = (int)System.Math.Round(cursorY);
+			var sword = Rectangle.Empty;
+			var dagger = Rectangle.Empty;
+			var hammer = Rectangle.Empty;
+			for (int i = 0; i < unlockedWeapons.Count; i++)
+			{
+				var rect = new Rectangle(weaponX + i * (WeaponButtonSize + ChoiceGap), weaponY, WeaponButtonSize, WeaponButtonSize);
+				switch (unlockedWeapons[i])
+				{
+					case StartingWeapon.Sword: sword = rect; break;
+					case StartingWeapon.Dagger: dagger = rect; break;
+					case StartingWeapon.Hammer: hammer = rect; break;
+				}
+			}
 
 			var difficultyLabelSize = Measure(_bodyFont, "DIFFICULTY", LabelScale);
 			var difficultyLabelPos = new Vector2(panel.Center.X - difficultyLabelSize.X / 2f, panel.Y + DifficultyLabelOffsetY);
 
 			int difficultyButtonWidth = (DifficultyRowWidth - DifficultyChoiceGap * 2) / 3;
-			int difficultyX = panel.Center.X - DifficultyRowWidth / 2;
-			var easy = new Rectangle(difficultyX, panel.Y + DifficultyRowOffsetY, difficultyButtonWidth, DifficultyButtonHeight);
-			var normal = new Rectangle(easy.Right + DifficultyChoiceGap, easy.Y, difficultyButtonWidth, DifficultyButtonHeight);
-			var hard = new Rectangle(normal.Right + DifficultyChoiceGap, easy.Y, difficultyButtonWidth, DifficultyButtonHeight);
+			var unlockedDifficulties = ClimbUnlockProgressionRules.GetUnlockedDifficulties(meta, WayStationRunSetupSingleton.SelectedWeapon);
+			int difficultyWidth = difficultyButtonWidth * unlockedDifficulties.Count
+				+ DifficultyChoiceGap * System.Math.Max(0, unlockedDifficulties.Count - 1);
+			int difficultyX = panel.Center.X - difficultyWidth / 2;
+			int difficultyY = panel.Y + DifficultyRowOffsetY;
+			var easy = Rectangle.Empty;
+			var normal = Rectangle.Empty;
+			var hard = Rectangle.Empty;
+			for (int i = 0; i < unlockedDifficulties.Count; i++)
+			{
+				var rect = new Rectangle(difficultyX + i * (difficultyButtonWidth + DifficultyChoiceGap), difficultyY, difficultyButtonWidth, DifficultyButtonHeight);
+				switch (unlockedDifficulties[i])
+				{
+					case RunDifficulty.Easy: easy = rect; break;
+					case RunDifficulty.Normal: normal = rect; break;
+					case RunDifficulty.Hard: hard = rect; break;
+				}
+			}
 
 			var depart = new Rectangle(
 				panel.Center.X - ProceedButtonWidth / 2,
@@ -316,12 +358,12 @@ namespace Crusaders30XX.ECS.Systems
 		private void DrawButtons(WayStationLayout layout, ModalAnimationRenderState render)
 		{
 			DrawCloseButton(render.Transform(layout.CloseButton), IsHovered(WayStationSceneConstants.CloseButtonName), render);
-			DrawWeaponChoiceButton(render.Transform(layout.SwordButton), _swordArt, "Sword", IsSelected(StartingWeapon.Sword), IsHovered(WayStationSceneConstants.SwordButtonName), render);
-			DrawWeaponChoiceButton(render.Transform(layout.DaggerButton), _daggerArt, "Dagger", IsSelected(StartingWeapon.Dagger), IsHovered(WayStationSceneConstants.DaggerButtonName), render);
-			DrawWeaponChoiceButton(render.Transform(layout.HammerButton), _hammerArt, "Hammer", IsSelected(StartingWeapon.Hammer), IsHovered(WayStationSceneConstants.HammerButtonName), render);
-			DrawChoiceButton(render.Transform(layout.EasyButton), "Easy", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Easy), IsHovered(WayStationSceneConstants.EasyButtonName), render);
-			DrawChoiceButton(render.Transform(layout.NormalButton), "Normal", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Normal), IsHovered(WayStationSceneConstants.NormalButtonName), render);
-			DrawChoiceButton(render.Transform(layout.HardButton), "Hard", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Hard), IsHovered(WayStationSceneConstants.HardButtonName), render);
+			if (!layout.SwordButton.IsEmpty) DrawWeaponChoiceButton(render.Transform(layout.SwordButton), _swordArt, "Sword", IsSelected(StartingWeapon.Sword), IsHovered(WayStationSceneConstants.SwordButtonName), render);
+			if (!layout.DaggerButton.IsEmpty) DrawWeaponChoiceButton(render.Transform(layout.DaggerButton), _daggerArt, "Dagger", IsSelected(StartingWeapon.Dagger), IsHovered(WayStationSceneConstants.DaggerButtonName), render);
+			if (!layout.HammerButton.IsEmpty) DrawWeaponChoiceButton(render.Transform(layout.HammerButton), _hammerArt, "Hammer", IsSelected(StartingWeapon.Hammer), IsHovered(WayStationSceneConstants.HammerButtonName), render);
+			if (!layout.EasyButton.IsEmpty) DrawChoiceButton(render.Transform(layout.EasyButton), "Easy", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Easy), IsHovered(WayStationSceneConstants.EasyButtonName), render);
+			if (!layout.NormalButton.IsEmpty) DrawChoiceButton(render.Transform(layout.NormalButton), "Normal", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Normal), IsHovered(WayStationSceneConstants.NormalButtonName), render);
+			if (!layout.HardButton.IsEmpty) DrawChoiceButton(render.Transform(layout.HardButton), "Hard", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Hard), IsHovered(WayStationSceneConstants.HardButtonName), render);
 			DrawProceedButton(render.Transform(layout.DepartButton), IsHovered(WayStationSceneConstants.DepartButtonName), render);
 		}
 
@@ -520,6 +562,16 @@ namespace Crusaders30XX.ECS.Systems
 			InputContextService.EnsureMember(EntityManager, entity, WayStationSceneConstants.ModalContextId);
 		}
 
+		private void SyncChoiceButton(
+			string name,
+			Rectangle bounds,
+			ModalAnimationRenderState render,
+			bool modalInteractive)
+		{
+			bool unlocked = !bounds.IsEmpty;
+			SyncButton(name, unlocked ? render.Transform(bounds) : Rectangle.Empty, modalInteractive && unlocked);
+		}
+
 		private void AddModalMarker(Entity entity, string name)
 		{
 			if (name == WayStationSceneConstants.CloseButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalCloseButton());
@@ -618,6 +670,37 @@ namespace Crusaders30XX.ECS.Systems
 		private static bool IsSelected(RunDifficulty difficulty)
 		{
 			return WayStationRunSetupSingleton.SelectedDifficulty == difficulty;
+		}
+
+		private static void SelectWeapon(WayStationMetaSave meta, StartingWeapon weapon)
+		{
+			if (!ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, weapon)) return;
+			WayStationRunSetupSingleton.SelectedWeapon = weapon;
+			if (!ClimbUnlockProgressionRules.IsDifficultyUnlocked(meta, weapon, WayStationRunSetupSingleton.SelectedDifficulty))
+			{
+				WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+			}
+		}
+
+		private static void SelectDifficulty(WayStationMetaSave meta, RunDifficulty difficulty)
+		{
+			if (!ClimbUnlockProgressionRules.IsDifficultyUnlocked(meta, WayStationRunSetupSingleton.SelectedWeapon, difficulty)) return;
+			WayStationRunSetupSingleton.SelectedDifficulty = difficulty;
+		}
+
+		private static void NormalizeSelection(WayStationMetaSave meta)
+		{
+			if (!ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, WayStationRunSetupSingleton.SelectedWeapon))
+			{
+				WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
+			}
+			if (!ClimbUnlockProgressionRules.IsDifficultyUnlocked(
+				meta,
+				WayStationRunSetupSingleton.SelectedWeapon,
+				WayStationRunSetupSingleton.SelectedDifficulty))
+			{
+				WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+			}
 		}
 	}
 }

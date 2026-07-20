@@ -144,14 +144,14 @@ namespace Crusaders30XX.ECS.Systems
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc = new AssignedBlockCard { BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, IsEquipment = true, ColorKey = NormalizeColorKey(color), Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
+						abc = new AssignedBlockCard { BlockAmount = blockVal, AssignedAtTicks = System.DateTime.UtcNow.Ticks, IsEquipment = true, ColorKeys = [comp.Equipment.Color], Tooltip = BuildEquipmentTooltip(comp), DisplayBgColor = ResolveEquipmentBgColor(color), DisplayFgColor = ResolveFgForBg(ResolveEquipmentBgColor(color)), ReturnTargetPos = returnPos, EquipmentType = comp.Equipment.Slot.ToString() };
 						EntityManager.AddComponent(eqEntity, abc);
 					}
 					else
 					{
 						var equipZone = eqEntity.GetComponent<EquipmentZone>();
 						var returnPos = (equipZone != null && equipZone.LastPanelCenter != Vector2.Zero) ? equipZone.LastPanelCenter : panelCenter;
-						abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.IsEquipment = true; abc.ColorKey = NormalizeColorKey(color); abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
+						abc.BlockAmount = blockVal; abc.AssignedAtTicks = System.DateTime.UtcNow.Ticks; abc.IsEquipment = true; abc.ColorKeys = [comp.Equipment.Color]; abc.Tooltip = BuildEquipmentTooltip(comp); abc.DisplayBgColor = ResolveEquipmentBgColor(color); abc.DisplayFgColor = ResolveFgForBg(abc.DisplayBgColor); abc.ReturnTargetPos = returnPos; abc.EquipmentType = comp.Equipment.Slot.ToString();
 					}
 					var assignedPresentation = eqEntity.GetComponent<AssignedBlockPresentation>();
 					if (assignedPresentation == null)
@@ -177,7 +177,7 @@ namespace Crusaders30XX.ECS.Systems
 						assignedPresentation.Elapsed = 0f;
 						assignedPresentation.ReturnCompletionPublished = false;
 					}
-					EventManager.Publish(new BlockAssignmentAdded { Card = eqEntity, DeltaBlock = blockVal, Color = color });
+					EventManager.Publish(new BlockAssignmentAdded { Card = eqEntity, DeltaBlock = blockVal, Colors = [comp.Equipment.Color] });
 					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.Equip, Volume = 0.5f });
 					// Mark the assigned equipment to unassign via delegate when clicked on its assigned tile
 					{
@@ -225,18 +225,6 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			EventManager.Publish(new CantPlayCardMessage { Message = message });
 		}
-		private static string NormalizeColorKey(string c)
-		{
-			if (string.IsNullOrWhiteSpace(c)) return "White";
-			switch (c.Trim().ToLowerInvariant())
-			{
-				case "r": case "red": return "Red";
-				case "w": case "white": return "White";
-				case "b": case "black": return "Black";
-				default: return char.ToUpperInvariant(c[0]) + c.Substring(1);
-			}
-		}
-
 		private static Microsoft.Xna.Framework.Color ResolveEquipmentBgColor(string c)
 		{
 			switch ((c ?? "").Trim().ToLowerInvariant())

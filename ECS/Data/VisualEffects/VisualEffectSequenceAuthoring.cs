@@ -80,19 +80,21 @@ public static class VisualEffectSequenceAuthoring
 
 	internal static bool HasExplicitCardChoreography(CardId id) => id switch
 	{
-		CardId.Absolution or CardId.ArkOfTheCovenant or CardId.BatteringBlow or CardId.BattleScars or CardId.BloodPrice or CardId.Burn or CardId.CarpeDiem or CardId.Colorless3Block or CardId.Consecrate or CardId.Courageous or CardId.CrimsonRite or CardId.Crusade or CardId.Curse or CardId.Dagger or CardId.DeusVult or CardId.DivineProtection or CardId.DowseWithHolyWater or CardId.EmberHarvest or CardId.Exaltation or CardId.Excavate or CardId.Fervor or CardId.ForgeStrike or CardId.Fury or CardId.Graveward or CardId.HoldTheLine or CardId.Hammer or CardId.HiddenKunai or CardId.Impale or CardId.IncreaseFaith or CardId.IronCovenant or CardId.Kunai or CardId.Lacerate or CardId.LitanyOfWrath or CardId.Mantlet or CardId.MaleficRite or CardId.QuickWit or CardId.RallyTheFaithful or CardId.RelentlessStrike or CardId.PierceThrough or CardId.PouchOfKunai or CardId.Purge or CardId.Ravage or CardId.RazorStorm or CardId.Reckoning or CardId.Reap or CardId.RenounceAndHone or CardId.Sacrifice or CardId.SerpentCrush or CardId.Seize or CardId.ShieldOfFaith or CardId.Smite or CardId.Stab or CardId.SteadfastResolve or CardId.Stalwart or CardId.SteelTheSpirit or CardId.StokedAssault or CardId.Strike or CardId.SuddenThrust or CardId.StokeTheFurnace or CardId.Sword or CardId.SwordIntoShield or CardId.TemperTheBlade or CardId.Tempest or CardId.Thaw or CardId.UnburdenedStrike or CardId.VanguardsPromise or CardId.Vindicate or CardId.Whirlwind or CardId.ZealousVow => true,
+		CardId.Absolution or CardId.AboundingGrace or CardId.AnsweredPrayer or CardId.ArkOfTheCovenant or CardId.BatteringBlow or CardId.BattleScars or CardId.BloodPrice or CardId.Burn or CardId.CarpeDiem or CardId.Colorless3Block or CardId.Consecrate or CardId.Courageous or CardId.CrimsonRite or CardId.Crusade or CardId.Curse or CardId.Hex or CardId.Dagger or CardId.DeusVult or CardId.DivineProtection or CardId.DowseWithHolyWater or CardId.EmberHarvest or CardId.Exaltation or CardId.Excavate or CardId.Fervor or CardId.ForgeStrike or CardId.Fury or CardId.Graveward or CardId.HoldTheLine or CardId.Hammer or CardId.HiddenKunai or CardId.Impale or CardId.IncreaseFaith or CardId.IronCovenant or CardId.Kunai or CardId.Lacerate or CardId.LitanyOfWrath or CardId.Mantlet or CardId.MaleficRite or CardId.MarkOfAnathema or CardId.QuickWit or CardId.RallyTheFaithful or CardId.RelentlessStrike or CardId.PierceThrough or CardId.PouchOfKunai or CardId.Purge or CardId.Ravage or CardId.RazorStorm or CardId.Reckoning or CardId.Reap or CardId.RecklessBarrage or CardId.RenounceAndHone or CardId.Sacrifice or CardId.SerpentCrush or CardId.Seize or CardId.ShieldbearersVigil or CardId.ShieldOfFaith or CardId.Smite or CardId.Stab or CardId.SteadfastResolve or CardId.Stalwart or CardId.SteelPrayer or CardId.SteelTheSpirit or CardId.StokedAssault or CardId.Strike or CardId.SuddenThrust or CardId.StokeTheFurnace or CardId.Sword or CardId.SwordIntoShield or CardId.TemperTheBlade or CardId.Tempest or CardId.Thaw or CardId.UnburdenedStrike or CardId.VanguardsPromise or CardId.Vindicate or CardId.Whirlwind or CardId.ZealousVow => true,
 		_ => false
 	};
 
 	internal static bool HasExplicitEnemyAttackChoreography(EnemyAttackId id) => id switch
 	{
-		EnemyAttackId.PummelIntoSubmission or EnemyAttackId.TreeStomp or EnemyAttackId.SlamTrunk or EnemyAttackId.FakeOut or EnemyAttackId.Thud or EnemyAttackId.BoneStrike or EnemyAttackId.Sweep or EnemyAttackId.Calcify or EnemyAttackId.SkullCrusher or EnemyAttackId.PiercingShot or EnemyAttackId.WeatheringShot or EnemyAttackId.QuickShot or EnemyAttackId.Snipe or EnemyAttackId.Slice or EnemyAttackId.Dice or EnemyAttackId.DuskFlick or EnemyAttackId.CloakedReaver or EnemyAttackId.SilencingStab or EnemyAttackId.SharpenBlade or EnemyAttackId.ShadowStep or EnemyAttackId.NightveilGuillotine or EnemyAttackId.RazorMaw or EnemyAttackId.ScorchingClaw or EnemyAttackId.InfernalExecution or EnemyAttackId.Pounce or EnemyAttackId.TutorialHordeStrike or EnemyAttackId.TutorialHordeStrike3 or EnemyAttackId.TutorialHordeStrike5 or EnemyAttackId.TutorialHordeStrike6 or EnemyAttackId.TutorialHordeStrike7 or EnemyAttackId.TutorialHordeStrike8 or EnemyAttackId.TutorialHordeStrike9 or EnemyAttackId.SandBlast or EnemyAttackId.SandStorm or EnemyAttackId.TutorialSandBlast or EnemyAttackId.TutorialSandStorm or EnemyAttackId.SandPound or EnemyAttackId.SandSlam or EnemyAttackId.SuffocatingSilk or EnemyAttackId.MandibleBreaker or EnemyAttackId.Entomb or EnemyAttackId.Mummify or EnemyAttackId.Leprosy or EnemyAttackId.VelvetFangs or EnemyAttackId.SoulSiphon or EnemyAttackId.EnthrallingGaze or EnemyAttackId.CrushingAdoration or EnemyAttackId.TeasingNip or EnemyAttackId.SawtoothRend or EnemyAttackId.DustStorm or EnemyAttackId.StrangeForce or EnemyAttackId.IcyBlade or EnemyAttackId.FrozenClaw or EnemyAttackId.FrostEater or EnemyAttackId.GlacialStrike or EnemyAttackId.GlacialBlast or EnemyAttackId.Cinderbolt or EnemyAttackId.InsidiousBolt or EnemyAttackId.Rage or EnemyAttackId.TrainingStrike or EnemyAttackId.ShadowStrike or EnemyAttackId.DissipatingDarkness or EnemyAttackId.SnuffOutTheLight or EnemyAttackId.NightFall or EnemyAttackId.FromTheShadows or EnemyAttackId.UmbraSlice or EnemyAttackId.TremorStrike or EnemyAttackId.StoneBarrage or EnemyAttackId.EarthenWall or EnemyAttackId.HaveNoMercy or EnemyAttackId.Gaze or EnemyAttackId.BasiliskGlare or EnemyAttackId.SerpentStrike or EnemyAttackId.PetrifyingGaze or EnemyAttackId.StoneSkin or EnemyAttackId.VipersCurse or EnemyAttackId.CrumblingStone or EnemyAttackId.WyvernStrike or EnemyAttackId.WyvernThreat or EnemyAttackId.FallenShepherdPhase1 or EnemyAttackId.FallenShepherdCrooksScar or EnemyAttackId.FallenShepherdBreakFaith or EnemyAttackId.FallenShepherdBloodletting or EnemyAttackId.FallenShepherdCowTheFlock or EnemyAttackId.FallenShepherdPhase2 or EnemyAttackId.FallenShepherdShepherdsVigil or EnemyAttackId.FallenShepherdHush or EnemyAttackId.FallenShepherdPhase3 or EnemyAttackId.FallenShepherdPurgeTheHeretic or EnemyAttackId.FallenShepherdFearTheShepherd or EnemyAttackId.FallenShepherdFinalSermon => true,
+		EnemyAttackId.PummelIntoSubmission or EnemyAttackId.TreeStomp or EnemyAttackId.SlamTrunk or EnemyAttackId.FakeOut or EnemyAttackId.Thud or EnemyAttackId.BoneStrike or EnemyAttackId.BurialStrike or EnemyAttackId.SearingStrike or EnemyAttackId.RimeStrike or EnemyAttackId.DreadStrike or EnemyAttackId.Sweep or EnemyAttackId.Calcify or EnemyAttackId.SkullCrusher or EnemyAttackId.PiercingShot or EnemyAttackId.WeatheringShot or EnemyAttackId.QuickShot or EnemyAttackId.Snipe or EnemyAttackId.Slice or EnemyAttackId.Dice or EnemyAttackId.DuskFlick or EnemyAttackId.CloakedReaver or EnemyAttackId.SilencingStab or EnemyAttackId.SharpenBlade or EnemyAttackId.ShadowStep or EnemyAttackId.NightveilGuillotine or EnemyAttackId.RazorMaw or EnemyAttackId.ScorchingClaw or EnemyAttackId.InfernalExecution or EnemyAttackId.Pounce or EnemyAttackId.TutorialHordeStrike or EnemyAttackId.TutorialHordeStrike3 or EnemyAttackId.TutorialHordeStrike5 or EnemyAttackId.TutorialHordeStrike6 or EnemyAttackId.TutorialHordeStrike7 or EnemyAttackId.TutorialHordeStrike8 or EnemyAttackId.TutorialHordeStrike9 or EnemyAttackId.SandBlast or EnemyAttackId.SandStorm or EnemyAttackId.TutorialSandBlast or EnemyAttackId.TutorialSandStorm or EnemyAttackId.SandPound or EnemyAttackId.SandSlam or EnemyAttackId.SuffocatingSilk or EnemyAttackId.MandibleBreaker or EnemyAttackId.Entomb or EnemyAttackId.Mummify or EnemyAttackId.Leprosy or EnemyAttackId.VelvetFangs or EnemyAttackId.SoulSiphon or EnemyAttackId.EnthrallingGaze or EnemyAttackId.CrushingAdoration or EnemyAttackId.TeasingNip or EnemyAttackId.SawtoothRend or EnemyAttackId.DustStorm or EnemyAttackId.StrangeForce or EnemyAttackId.IcyBlade or EnemyAttackId.FrozenClaw or EnemyAttackId.FrostEater or EnemyAttackId.GlacialStrike or EnemyAttackId.GlacialBlast or EnemyAttackId.Cinderbolt or EnemyAttackId.InsidiousBolt or EnemyAttackId.Rage or EnemyAttackId.TrainingStrike or EnemyAttackId.ShadowStrike or EnemyAttackId.DissipatingDarkness or EnemyAttackId.SnuffOutTheLight or EnemyAttackId.NightFall or EnemyAttackId.FromTheShadows or EnemyAttackId.UmbraSlice or EnemyAttackId.TremorStrike or EnemyAttackId.StoneBarrage or EnemyAttackId.EarthenWall or EnemyAttackId.HaveNoMercy or EnemyAttackId.WardenSeal or EnemyAttackId.VenomLash or EnemyAttackId.ToxicDeluge or EnemyAttackId.WyvernStrike or EnemyAttackId.WyvernThreat or EnemyAttackId.FallenShepherdPhase1 or EnemyAttackId.FallenShepherdCrooksScar or EnemyAttackId.FallenShepherdBreakFaith or EnemyAttackId.FallenShepherdBloodletting or EnemyAttackId.FallenShepherdCowTheFlock or EnemyAttackId.FallenShepherdPhase2 or EnemyAttackId.FallenShepherdShepherdsVigil or EnemyAttackId.FallenShepherdHush or EnemyAttackId.FallenShepherdPhase3 or EnemyAttackId.FallenShepherdPurgeTheHeretic or EnemyAttackId.FallenShepherdFearTheShepherd or EnemyAttackId.FallenShepherdFinalSermon or EnemyAttackId.WritOfMalice or EnemyAttackId.ChronoSlice or EnemyAttackId.AeonWard => true,
 		_ => false
 	};
 
 	private static CardDirection CardDirectionFor(CardId id) => id switch
 	{
 		CardId.Absolution => Card(CardStyle.HolyStrike, EffectWeight.Epic, VisualEffectModule.Beam, 0.06f),
+		CardId.AboundingGrace => Card(CardStyle.HolySupport, EffectWeight.Medium, VisualEffectModule.Halo, 0.08f),
+		CardId.AnsweredPrayer => Card(CardStyle.HolyStrike, EffectWeight.Heavy, VisualEffectModule.CrossBloom, 0.04f),
 		CardId.ArkOfTheCovenant => Card(CardStyle.HolySupport, EffectWeight.Heavy, VisualEffectModule.ResourceMotes, 0.03f),
 		CardId.BatteringBlow => Card(CardStyle.Heavy, EffectWeight.Heavy, VisualEffectModule.Shockwave, -0.02f),
 		CardId.BattleScars => Card(CardStyle.BloodStrike, EffectWeight.Heavy, VisualEffectModule.Shards, 0.04f),
@@ -105,6 +107,7 @@ public static class VisualEffectSequenceAuthoring
 		CardId.CrimsonRite => Card(CardStyle.BloodStrike, EffectWeight.Medium, VisualEffectModule.SoulSiphon, 0.01f),
 		CardId.Crusade => Card(CardStyle.HolyStrike, EffectWeight.Heavy, VisualEffectModule.Rays, 0.09f),
 		CardId.Curse => Card(CardStyle.ShadowStrike, EffectWeight.Light, VisualEffectModule.ColorDrain, 0.11f),
+		CardId.Hex => Card(CardStyle.ShadowStrike, EffectWeight.Medium, VisualEffectModule.ColorDrain, 0.03f),
 		CardId.Dagger => Card(CardStyle.Thrust, EffectWeight.Light, VisualEffectModule.ThrownBladeVolley, -0.06f),
 		CardId.DeusVult => Card(CardStyle.HolyStrike, EffectWeight.Epic, VisualEffectModule.PunchZoom, 0.12f),
 		CardId.DivineProtection => Card(CardStyle.Guard, EffectWeight.Medium, VisualEffectModule.Halo, -0.02f),
@@ -127,6 +130,7 @@ public static class VisualEffectSequenceAuthoring
 		CardId.LitanyOfWrath => Card(CardStyle.HolySupport, EffectWeight.Heavy, VisualEffectModule.RedVignette, 0.10f),
 		CardId.Mantlet => Card(CardStyle.Guard, EffectWeight.Medium, VisualEffectModule.Debris, -0.01f),
 		CardId.MaleficRite => Card(CardStyle.Ritual, EffectWeight.Heavy, VisualEffectModule.ShadowTendrils, 0.09f),
+		CardId.MarkOfAnathema => Card(CardStyle.ShadowStrike, EffectWeight.Heavy, VisualEffectModule.ColorDrain, 0.05f),
 		CardId.QuickWit => Card(CardStyle.Thrust, EffectWeight.Light, VisualEffectModule.Rays, -0.09f),
 		CardId.RallyTheFaithful => Card(CardStyle.HolySupport, EffectWeight.Epic, VisualEffectModule.CrossBloom, 0.13f),
 		CardId.RelentlessStrike => Card(CardStyle.Slash, EffectWeight.Heavy, VisualEffectModule.SlashBand, 0.04f),
@@ -137,15 +141,18 @@ public static class VisualEffectSequenceAuthoring
 		CardId.RazorStorm => Card(CardStyle.Whirlwind, EffectWeight.Epic, VisualEffectModule.ThrownBladeVolley, 0.12f),
 		CardId.Reckoning => Card(CardStyle.Heavy, EffectWeight.Epic, VisualEffectModule.CrossBloom, 0.14f),
 		CardId.Reap => Card(CardStyle.ShadowStrike, EffectWeight.Heavy, VisualEffectModule.SoulSiphon, 0.06f),
+		CardId.RecklessBarrage => Card(CardStyle.Whirlwind, EffectWeight.Heavy, VisualEffectModule.Debris, 0.04f),
 		CardId.RenounceAndHone => Card(CardStyle.Ritual, EffectWeight.Heavy, VisualEffectModule.ResourceMotes, 0.04f),
 		CardId.Sacrifice => Card(CardStyle.Ritual, EffectWeight.Epic, VisualEffectModule.SoulSiphon, 0.11f),
 		CardId.SerpentCrush => Card(CardStyle.Heavy, EffectWeight.Medium, VisualEffectModule.PoisonCloud, 0.00f),
 		CardId.Seize => Card(CardStyle.Thrust, EffectWeight.Light, VisualEffectModule.HitFlash, -0.05f),
+		CardId.ShieldbearersVigil => Card(CardStyle.HolyStrike, EffectWeight.Light, VisualEffectModule.ShieldWard, -0.07f),
 		CardId.ShieldOfFaith => Card(CardStyle.Guard, EffectWeight.Heavy, VisualEffectModule.WhiteWash, 0.06f),
 		CardId.Smite => Card(CardStyle.HolyStrike, EffectWeight.Light, VisualEffectModule.CrossBloom, -0.04f),
 		CardId.Stab => Card(CardStyle.Thrust, EffectWeight.Medium, VisualEffectModule.RedVignette, -0.02f),
 		CardId.SteadfastResolve => Card(CardStyle.Support, EffectWeight.Medium, VisualEffectModule.ShieldWard, 0.03f),
 		CardId.Stalwart => Card(CardStyle.Guard, EffectWeight.Heavy, VisualEffectModule.Cracks, 0.05f),
+		CardId.SteelPrayer => Card(CardStyle.HolySupport, EffectWeight.Heavy, VisualEffectModule.Rays, 0.06f),
 		CardId.SteelTheSpirit => Card(CardStyle.Ritual, EffectWeight.Medium, VisualEffectModule.ShieldWard, 0.01f),
 		CardId.StokedAssault => Card(CardStyle.FireStrike, EffectWeight.Medium, VisualEffectModule.SlashBand, -0.03f),
 		CardId.Strike => Card(CardStyle.Slash, EffectWeight.Light, VisualEffectModule.Debris, -0.06f),
@@ -172,6 +179,10 @@ public static class VisualEffectSequenceAuthoring
 		EnemyAttackId.FakeOut => Enemy(EnemyStyle.Slash, EffectWeight.Light, VisualEffectModule.SmokeBlobs, -0.08f),
 		EnemyAttackId.Thud => Enemy(EnemyStyle.Heavy, EffectWeight.Medium, VisualEffectModule.Ring, -0.02f),
 		EnemyAttackId.BoneStrike => Enemy(EnemyStyle.Slash, EffectWeight.Medium, VisualEffectModule.Shards, -0.01f),
+		EnemyAttackId.BurialStrike => Enemy(EnemyStyle.Rock, EffectWeight.Medium, VisualEffectModule.Debris, -0.015f),
+		EnemyAttackId.SearingStrike => Enemy(EnemyStyle.Fire, EffectWeight.Medium, VisualEffectModule.FlameBurst, -0.012f),
+		EnemyAttackId.RimeStrike => Enemy(EnemyStyle.Frost, EffectWeight.Medium, VisualEffectModule.FrostBurst, -0.011f),
+		EnemyAttackId.DreadStrike => Enemy(EnemyStyle.Shadow, EffectWeight.Medium, VisualEffectModule.ShadowTendrils, -0.013f),
 		EnemyAttackId.Sweep => Enemy(EnemyStyle.Slash, EffectWeight.Heavy, VisualEffectModule.SlashBand, 0.04f),
 		EnemyAttackId.Calcify => Enemy(EnemyStyle.Rock, EffectWeight.Medium, VisualEffectModule.ShieldWard, 0.03f),
 		EnemyAttackId.SkullCrusher => Enemy(EnemyStyle.Heavy, EffectWeight.Epic, VisualEffectModule.Cracks, 0.09f),
@@ -236,13 +247,9 @@ public static class VisualEffectSequenceAuthoring
 		EnemyAttackId.StoneBarrage => Enemy(EnemyStyle.Rock, EffectWeight.Epic, VisualEffectModule.Shards, 0.10f),
 		EnemyAttackId.EarthenWall => Enemy(EnemyStyle.Rock, EffectWeight.Heavy, VisualEffectModule.ShieldWard, 0.08f),
 		EnemyAttackId.HaveNoMercy => Enemy(EnemyStyle.Slash, EffectWeight.Heavy, VisualEffectModule.RedVignette, 0.06f),
-		EnemyAttackId.Gaze => Enemy(EnemyStyle.Arcane, EffectWeight.Medium, VisualEffectModule.SealStamp, 0.03f),
-		EnemyAttackId.BasiliskGlare => Enemy(EnemyStyle.Poison, EffectWeight.Heavy, VisualEffectModule.FrostBind, 0.08f),
-		EnemyAttackId.SerpentStrike => Enemy(EnemyStyle.Poison, EffectWeight.Heavy, VisualEffectModule.ClawSlash, 0.02f),
-		EnemyAttackId.PetrifyingGaze => Enemy(EnemyStyle.Rock, EffectWeight.Heavy, VisualEffectModule.SealStamp, 0.09f),
-		EnemyAttackId.StoneSkin => Enemy(EnemyStyle.Rock, EffectWeight.Medium, VisualEffectModule.ShieldWard, 0.04f),
-		EnemyAttackId.VipersCurse => Enemy(EnemyStyle.Poison, EffectWeight.Heavy, VisualEffectModule.ColorDrain, 0.07f),
-		EnemyAttackId.CrumblingStone => Enemy(EnemyStyle.Rock, EffectWeight.Medium, VisualEffectModule.BrittleFracture, 0.01f),
+		EnemyAttackId.WardenSeal => Enemy(EnemyStyle.Arcane, EffectWeight.Heavy, VisualEffectModule.SealStamp, 0.06f),
+		EnemyAttackId.VenomLash => Enemy(EnemyStyle.Poison, EffectWeight.Medium, VisualEffectModule.PoisonCloud, 0.03f),
+		EnemyAttackId.ToxicDeluge => Enemy(EnemyStyle.Poison, EffectWeight.Heavy, VisualEffectModule.SmokeScreen, 0.08f),
 		EnemyAttackId.WyvernStrike => Enemy(EnemyStyle.Claw, EffectWeight.Heavy, VisualEffectModule.Shards, 0.03f),
 		EnemyAttackId.WyvernThreat => Enemy(EnemyStyle.Fire, EffectWeight.Heavy, VisualEffectModule.Rays, 0.09f),
 		EnemyAttackId.FallenShepherdPhase1 => Enemy(EnemyStyle.Heavy, EffectWeight.Heavy, VisualEffectModule.ShieldWard, 0.06f),
@@ -257,6 +264,9 @@ public static class VisualEffectSequenceAuthoring
 		EnemyAttackId.FallenShepherdPurgeTheHeretic => Enemy(EnemyStyle.Fire, EffectWeight.Heavy, VisualEffectModule.FlameBurst, 0.08f),
 		EnemyAttackId.FallenShepherdFearTheShepherd => Enemy(EnemyStyle.Shadow, EffectWeight.Heavy, VisualEffectModule.SmokeScreen, 0.10f),
 		EnemyAttackId.FallenShepherdFinalSermon => Enemy(EnemyStyle.Arcane, EffectWeight.Epic, VisualEffectModule.Rays, 0.15f),
+		EnemyAttackId.WritOfMalice => Enemy(EnemyStyle.Shadow, EffectWeight.Heavy, VisualEffectModule.ColorDrain, 0.04f),
+		EnemyAttackId.ChronoSlice => Enemy(EnemyStyle.Frost, EffectWeight.Heavy, VisualEffectModule.SwordArc, 0.03f),
+		EnemyAttackId.AeonWard => Enemy(EnemyStyle.Frost, EffectWeight.Medium, VisualEffectModule.ShieldWard, 0.06f),
 		_ => Enemy(EnemyStyle.Slash, EffectWeight.Medium, VisualEffectModule.HitFlash, 0f)
 	};
 

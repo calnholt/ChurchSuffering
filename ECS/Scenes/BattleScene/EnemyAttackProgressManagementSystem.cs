@@ -91,11 +91,10 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnBlockAssignmentAdded(BlockAssignmentAdded e)
 		{
-			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentAdded", new System.Text.Json.Nodes.JsonObject { ["color"] = e.Color, ["deltaBlock"] = e.DeltaBlock });
 			if (e == null) return;
+			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentAdded", new System.Text.Json.Nodes.JsonObject { ["colors"] = string.Join(",", e.Colors ?? Array.Empty<CardData.CardColor>()), ["deltaBlock"] = e.DeltaBlock });
 			if (!EnemyAttackFlowService.TryGetCurrentEnemyAttack(EntityManager, out var enemy, out var intent, out var planned)) return;
 
-			string color = NormalizeColorKey(e.Color);
 			var p = EnemyAttackFlowService.GetOrCreateCurrentProgress(EntityManager, enemy, intent, planned);
 			if (p == null) return;
 
@@ -104,11 +103,14 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				p.AssignedBlockTotal = SafeInc(p.AssignedBlockTotal, e.DeltaBlock);
 			}
-			switch (color)
+			foreach (var color in (e.Colors ?? Array.Empty<CardData.CardColor>()).Distinct())
 			{
-				case "Red": p.PlayedRed = SafeInc(p.PlayedRed); break;
-				case "White": p.PlayedWhite = SafeInc(p.PlayedWhite); break;
-				case "Black": p.PlayedBlack = SafeInc(p.PlayedBlack); break;
+				switch (color)
+				{
+					case CardData.CardColor.Red: p.PlayedRed = SafeInc(p.PlayedRed); break;
+					case CardData.CardColor.White: p.PlayedWhite = SafeInc(p.PlayedWhite); break;
+					case CardData.CardColor.Black: p.PlayedBlack = SafeInc(p.PlayedBlack); break;
+				}
 			}
 			Recompute(p);
 			PrintProgress(p);
@@ -116,21 +118,23 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void OnBlockAssignmentRemoved(BlockAssignmentRemoved e)
 		{
-			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentRemoved", new System.Text.Json.Nodes.JsonObject { ["color"] = e.Color, ["deltaBlock"] = e.DeltaBlock });
 			if (e == null) return;
+			LoggingService.Append("EnemyAttackProgressManagementSystem.OnBlockAssignmentRemoved", new System.Text.Json.Nodes.JsonObject { ["colors"] = string.Join(",", e.Colors ?? Array.Empty<CardData.CardColor>()), ["deltaBlock"] = e.DeltaBlock });
 			if (!EnemyAttackFlowService.TryGetCurrentProgress(EntityManager, out var progress)) return;
 
 			long nextAssigned = (long)progress.AssignedBlockTotal + e.DeltaBlock;
 			progress.AssignedBlockTotal = nextAssigned < 0 ? 0 : (int)nextAssigned;
 
-			if (!string.IsNullOrWhiteSpace(e.Color) && e.DeltaBlock < 0)
+			if (e.DeltaBlock < 0)
 			{
-				string color = NormalizeColorKey(e.Color);
-				switch (color)
+				foreach (var color in (e.Colors ?? Array.Empty<CardData.CardColor>()).Distinct())
 				{
-					case "Red": progress.PlayedRed = SafeDec(progress.PlayedRed); break;
-					case "White": progress.PlayedWhite = SafeDec(progress.PlayedWhite); break;
-					case "Black": progress.PlayedBlack = SafeDec(progress.PlayedBlack); break;
+					switch (color)
+					{
+						case CardData.CardColor.Red: progress.PlayedRed = SafeDec(progress.PlayedRed); break;
+						case CardData.CardColor.White: progress.PlayedWhite = SafeDec(progress.PlayedWhite); break;
+						case CardData.CardColor.Black: progress.PlayedBlack = SafeDec(progress.PlayedBlack); break;
+					}
 				}
 			}
 			progress.PlayedCards = SafeDec(progress.PlayedCards);
@@ -241,22 +245,6 @@ namespace Crusaders30XX.ECS.Systems
 				if (p == null) continue;
 				p.AegisTotal = SafeInc(p.AegisTotal, e.Delta);
 				Recompute(p);
-			}
-		}
-
-		private static string NormalizeColorKey(string color)
-		{
-			if (string.IsNullOrWhiteSpace(color)) return string.Empty;
-			string c = color.Trim().ToLowerInvariant();
-			switch (c)
-			{
-				case "r":
-				case "red": return "Red";
-				case "w":
-				case "white": return "White";
-				case "b":
-				case "black": return "Black";
-				default: return char.ToUpperInvariant(color[0]) + color.Substring(1);
 			}
 		}
 

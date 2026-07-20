@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Crusaders30XX.ECS.Components;
 using static Crusaders30XX.ECS.Systems.MustBeBlockedSystem;
-using Crusaders30XX.ECS.Rendering;
 
 namespace Crusaders30XX.ECS.Events
 {
@@ -12,9 +11,16 @@ namespace Crusaders30XX.ECS.Events
     /// </summary>
     public class CardRenderEvent
     {
+        public const int BaseRendererPriority = 100;
+
         public Entity Card { get; set; }
         public Vector2 Position { get; set; }
         public bool IsInHand { get; set; }
+        /// <summary>
+        /// Reuses a renderer-owned base-card surface when the card presentation is static.
+        /// Highlights and status effects are still rendered live.
+        /// </summary>
+        public bool PreferCachedBase { get; set; } = false;
     }
 
     /// <summary>
@@ -49,33 +55,6 @@ namespace Crusaders30XX.ECS.Events
     }
 
     /// <summary>
-    /// Event published immediately before the base card art is rendered.
-    /// </summary>
-    public class CardBaseRenderStartedEvent
-    {
-        public Entity Card { get; set; }
-        public Vector2 Position { get; set; }
-        public float Scale { get; set; } = 1f;
-        public float Rotation { get; set; }
-    }
-
-    /// <summary>
-    /// Event published immediately after the base card art is rendered.
-    /// </summary>
-    public class CardBaseRenderCompletedEvent
-    {
-        public Entity Card { get; set; }
-        public Vector2 Position { get; set; }
-        public float Scale { get; set; } = 1f;
-        public float Rotation { get; set; }
-    }
-
-    internal sealed class CardShaderPassEvent
-    {
-        public CardShaderPassContext Context { get; init; }
-    }
-
-    /// <summary>
     /// Unified highlight render event for both cards and equipment. Carries the UIElement and Transform for accurate bounds/rotation.
     /// </summary>
     public class HighlightRenderEvent
@@ -105,6 +84,12 @@ namespace Crusaders30XX.ECS.Events
     public class DebugCommandEvent
     {
         public string Command { get; set; }
+    }
+
+    public class ApplyDualColorEvent
+    {
+        public Entity Card { get; set; }
+        public CardData.CardColor SecondaryColor { get; set; }
     }
 
     /// <summary>
@@ -492,6 +477,8 @@ namespace Crusaders30XX.ECS.Events
         Climb = 11,
         VolcanoBattle = 12,
         GothicBattle = 13,
+        Title = 14,
+        WayStation = 15,
     }
 
     /// <summary>
@@ -688,6 +675,8 @@ namespace Crusaders30XX.ECS.Events
     {
         public Entity Card { get; set; }
         public int Amount { get; set; }
+        /// <summary>Number of stacks applied to each selected card. Used by stacked restrictions such as Sealed.</summary>
+        public int StacksPerCard { get; set; } = 1;
         public CardApplicationType Type { get; set; }
         public CardApplicationTarget Target { get; set; }
     }
@@ -695,6 +684,7 @@ namespace Crusaders30XX.ECS.Events
     public class CardRestrictionMutationAnimationRequested
     {
         public Entity TargetCard { get; set; }
+        public int StacksPerCard { get; set; } = 1;
         public CardApplicationType Type { get; set; }
     }
 
@@ -718,7 +708,9 @@ namespace Crusaders30XX.ECS.Events
         Scorched,
         Thorned,
         Colorless,
+        Sealed,
         Cursed,
+        Hex,
     }
 
     public class RemoveRandomCardEvent
@@ -740,31 +732,6 @@ namespace Crusaders30XX.ECS.Events
         Hand,
         Deck,
     }
-
-    public enum SealType
-    {
-        Hand,           // Random from hand
-        TopOfDrawPile,  // Top card(s) of draw pile
-    }
-
-    public class SealCardsEvent
-    {
-        public int Amount { get; set; }
-        public SealType Type { get; set; }
-    }
-
-    /// <summary>
-    /// Modifies seals on all sealed cards. Positive Delta adds seals, negative removes seals.
-    /// </summary>
-    public class ModifySealsEvent
-    {
-        public int Delta { get; set; }
-    }
-
-    /// <summary>
-    /// Shuffles sealed cards from hand back into the draw pile.
-    /// </summary>
-    public class ShuffleSealedIntoDrawPileEvent { }
 
     public class CardPlayedEvent
     {

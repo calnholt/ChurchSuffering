@@ -14,6 +14,7 @@ using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Data.Climb;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.Diagnostics;
+using Crusaders30XX.ECS.Singletons;
 
 namespace Crusaders30XX.ECS.Data.Save
 {
@@ -70,6 +71,27 @@ namespace Crusaders30XX.ECS.Data.Save
 					collection.equipmentIds,
 					EquipmentFactory.GetAllEquipment().Keys.Select(id => id.ToKey()));
 				_save.collection = collection;
+				Persist();
+			}
+		}
+
+		public static void UnlockAllRunSetupOptions()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				EnsureWayStationMetaLocked();
+				foreach (var weapon in Enum.GetValues<StartingWeapon>())
+				{
+					string weaponId = weapon.ToString().ToLowerInvariant();
+					RecordCompletedClimbLocked(weaponId, RunDifficulty.Easy);
+					RecordCompletedClimbLocked(weaponId, RunDifficulty.Normal);
+				}
+
+				int prerequisiteCompletionCount = Enum.GetValues<StartingWeapon>().Length * 2;
+				_save.waystation.climbCompletions = Math.Max(
+					_save.waystation.climbCompletions,
+					prerequisiteCompletionCount);
 				Persist();
 			}
 		}
@@ -212,7 +234,8 @@ namespace Crusaders30XX.ECS.Data.Save
 
 		public static void ConfigurePrimaryRunSetup(
 			string weaponId,
-			string temperanceId)
+			string temperanceId,
+			RunDifficulty difficulty)
 		{
 			EnsureLoaded();
 			lock (_lock)
@@ -243,7 +266,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				savedLoadout.headId ??= string.Empty;
 				savedLoadout.medalIds ??= new List<string>();
 
-				_save.climb = ClimbRuleService.CreateInitialState(_save.runMapSeed, savedLoadout);
+				_save.climb = ClimbRuleService.CreateInitialState(_save.runMapSeed, savedLoadout, difficulty);
 				Persist();
 			}
 		}
@@ -478,6 +501,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				EnsureWayStationMetaLocked();
 				if (arrivalKind == WayStationArrivalKind.ReturnedFromCompletedClimb)
 				{
+					RecordCompletedClimbLocked(_save.climb);
 					_save.waystation.climbCompletions = Math.Max(0, _save.waystation.climbCompletions) + 1;
 				}
 
@@ -1188,6 +1212,24 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
+		public static bool SetRunDeckEntrySecondaryColor(
+			string loadoutId,
+			string entryId,
+			string secondaryColor)
+		{
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				if (entry == null) return false;
+				entry.secondaryColor = secondaryColor?.Trim() ?? string.Empty;
+				Persist();
+				return true;
+			}
+		}
+
 		public static bool TryRemoveRunDeckEntry(
 			string loadoutId,
 			string entryId,
@@ -1606,11 +1648,39 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 		}
 
+		public static bool SetRunDeckEntryRestrictionState(
+			string loadoutId,
+			string entryId,
+			IReadOnlyCollection<string> restrictionNames,
+			IReadOnlyDictionary<string, int> restrictionStacks)
+		{
+			if (string.IsNullOrWhiteSpace(loadoutId) || string.IsNullOrWhiteSpace(entryId)) return false;
+			EnsureLoaded();
+			lock (_lock)
+			{
+				var loadout = _save?.loadouts?.FirstOrDefault(l => l.id == loadoutId);
+				var entry = FindEntry(loadout, entryId);
+				if (entry == null) return false;
+				entry.restrictions = restrictionNames == null
+					? new List<string>()
+					: restrictionNames.Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+				entry.restrictionStacks = restrictionStacks == null
+					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+					: restrictionStacks
+						.Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && pair.Value > 0)
+						.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+				Persist();
+				return true;
+			}
+		}
+
 		private static ClimbSaveState CloneClimbState(ClimbSaveState state)
 		{
 			if (state == null) return null;
 			return new ClimbSaveState
 			{
+				startingWeaponId = string.IsNullOrWhiteSpace(state.startingWeaponId) ? "sword" : state.startingWeaponId,
+				difficulty = state.difficulty,
 				time = ClimbRuleService.ClampTime(state.time),
 				resources = CloneClimbResources(state.resources),
 				shopSlots = CloneClimbShopSlots(state.shopSlots),
@@ -1891,6 +1961,15 @@ namespace Crusaders30XX.ECS.Data.Save
 				totalPoints = Math.Max(0, collection.totalPoints),
 				pendingClimbPoints = Math.Max(0, collection.pendingClimbPoints),
 				processedRewardLevels = Math.Max(0, collection.processedRewardLevels),
+				pendingClimbPointAward = collection.pendingClimbPointAward == null
+					? null
+					: new PendingClimbPointAwardSave
+					{
+						timeReached = Math.Max(0, collection.pendingClimbPointAward.timeReached),
+						abandoned = collection.pendingClimbPointAward.abandoned,
+						completedFinalBoss = collection.pendingClimbPointAward.completedFinalBoss,
+						pointsAwarded = Math.Max(0, collection.pendingClimbPointAward.pointsAwarded),
+					},
 				pendingBoosterPacks = new List<BoosterPackSave>(),
 			};
 			foreach (var pack in collection.pendingBoosterPacks ?? new List<BoosterPackSave>())
@@ -1930,6 +2009,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				climbAttempts = Math.Max(0, meta?.climbAttempts ?? 0),
 				climbCompletions = Math.Max(0, meta?.climbCompletions ?? 0),
+				completedClimbs = CloneCompletedClimbs(meta?.completedClimbs),
 				deferredNpcDialogueCounter = Math.Clamp(meta?.deferredNpcDialogueCounter ?? 0, 0, WayStationNpcDialogueCounterThreshold),
 				pendingNpcDialogueOffer = meta?.pendingNpcDialogueOffer == true,
 				purchasedMedalIds = CloneStringList(meta?.purchasedMedalIds),
@@ -1947,6 +2027,50 @@ namespace Crusaders30XX.ECS.Data.Save
 			}
 
 			return clone;
+		}
+
+		private static void RecordCompletedClimbLocked(ClimbSaveState climb)
+		{
+			if (climb == null) return;
+			string weaponId = string.IsNullOrWhiteSpace(climb.startingWeaponId)
+				? "sword"
+				: climb.startingWeaponId.Trim().ToLowerInvariant();
+			RecordCompletedClimbLocked(weaponId, climb.difficulty);
+		}
+
+		private static void RecordCompletedClimbLocked(string weaponId, RunDifficulty difficulty)
+		{
+			_save.waystation.completedClimbs ??= new List<CompletedClimbSave>();
+			if (_save.waystation.completedClimbs.Any(entry =>
+				entry != null
+					&& string.Equals(entry.startingWeaponId, weaponId, StringComparison.OrdinalIgnoreCase)
+					&& entry.difficulty == difficulty))
+			{
+				return;
+			}
+
+			_save.waystation.completedClimbs.Add(new CompletedClimbSave
+			{
+				startingWeaponId = weaponId,
+				difficulty = difficulty,
+			});
+		}
+
+		private static List<CompletedClimbSave> CloneCompletedClimbs(IEnumerable<CompletedClimbSave> completedClimbs)
+		{
+			if (completedClimbs == null) return new List<CompletedClimbSave>();
+			return completedClimbs
+				.Where(entry => entry != null && !string.IsNullOrWhiteSpace(entry.startingWeaponId))
+				.GroupBy(
+					entry => $"{entry.startingWeaponId.Trim().ToLowerInvariant()}|{entry.difficulty}",
+					StringComparer.OrdinalIgnoreCase)
+				.Select(group => group.First())
+				.Select(entry => new CompletedClimbSave
+				{
+					startingWeaponId = entry.startingWeaponId.Trim().ToLowerInvariant(),
+					difficulty = entry.difficulty,
+				})
+				.ToList();
 		}
 
 		private static WayStationVisitSave CloneWayStationVisit(WayStationVisitSave visit)
@@ -1991,9 +2115,11 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				entryId = AllocateRunDeckEntryIdLocked(),
 				cardKey = cardKey?.Trim() ?? string.Empty,
+				secondaryColor = string.Empty,
 				isStarter = isStarter,
 				countsAsTraded = countsAsTraded,
 				restrictions = new List<string>(),
+				restrictionStacks = new Dictionary<string, int>(),
 			};
 		}
 
@@ -2017,9 +2143,13 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				entryId = entry.entryId ?? string.Empty,
 				cardKey = entry.cardKey ?? string.Empty,
+				secondaryColor = entry.secondaryColor ?? string.Empty,
 				isStarter = entry.isStarter,
 				countsAsTraded = entry.countsAsTraded,
 				restrictions = CloneStringList(entry.restrictions),
+				restrictionStacks = entry.restrictionStacks == null
+					? new Dictionary<string, int>()
+					: new Dictionary<string, int>(entry.restrictionStacks, StringComparer.OrdinalIgnoreCase),
 			};
 		}
 

@@ -14,7 +14,7 @@ public class HaveNoMercy : EnemyAttackBase
   {
     Id = EnemyAttackId.HaveNoMercy;
     Name = "Have No Mercy";
-    Damage = 5;
+    Damage = 3;
     ConditionType = ConditionType.OnBlockedByAtLeast1Card;
 
     OnAttackReveal = (entityManager) =>

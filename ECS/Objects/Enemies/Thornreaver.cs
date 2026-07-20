@@ -19,6 +19,7 @@ public class Thornreaver : EnemyBase
     Id = EnemyId.Thornreaver;
     Name = "Thornreaver";
     HP = 34;
+    ClimbPool = ClimbEncounterPool.Early;
   }
 
   public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
@@ -40,7 +41,7 @@ public class SawtoothRend : EnemyAttackBase
 
     OnAttackReveal = (entityManager) =>
     {
-      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
+      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager);
       Text = Color.HasValue
         ? $"Gain {Bleed} bleed for each {Color.Value.ToString().ToLower()} card that blocks this."
         : $"Gain {Bleed} bleed for each card of the selected color that blocks this. No color is selected.";
@@ -48,8 +49,7 @@ public class SawtoothRend : EnemyAttackBase
 
     OnBlockProcessed = (entityManager, card) =>
     {
-      var color = CardColorQualificationService.GetQualifiedColor(card);
-      if (color == Color)
+      if (Color.HasValue && CardColorQualificationService.QualifiesAs(card, Color.Value))
       {
         EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Bleed, Delta = Bleed });
       }

@@ -320,31 +320,29 @@ namespace Crusaders30XX.ECS.Components
 			public string ResolutionContextId { get; set; } = string.Empty;
 		}
 
+		public enum QuestRewardPresentationPhase
+		{
+			Hidden,
+			Entering,
+			Visible,
+			Claiming,
+			Skipping,
+		}
+
 		public class QuestRewardOverlayState : IComponent
 		{
 			public Entity Owner { get; set; }
 			public bool IsOpen { get; set; } = false;
-			public string Message { get; set; } = "Encounter Complete";
-			public string TitleLine1 { get; set; } = "Encounter";
-			public string TitleLine2 { get; set; } = "Complete!";
-			public int RewardGold { get; set; } = 0;
-			public bool HasCardReward { get; set; } = false;
-			public string RewardCardKey { get; set; } = string.Empty;
-			public List<string> RewardCardKeys { get; set; } = new List<string>();
 			public DeckRewardOfferSave DeckRewardOffer { get; set; }
 			public bool HasDeckRewardOffer => DeckRewardOffer?.options != null && DeckRewardOffer.options.Count > 0;
-			public bool HasMedalReward { get; set; } = false;
-			public string RewardMedalId { get; set; } = string.Empty;
-			public bool HasEquipmentReward { get; set; } = false;
-			public string RewardEquipmentId { get; set; } = string.Empty;
 			public bool IsEncounterReward { get; set; } = false;
 			public ClimbResourceSave ClimbResources { get; set; }
-			public bool DismissToLocation { get; set; } = true;
 			public SceneId DismissScene { get; set; } = SceneId.Climb;
 			public bool DismissInProgress { get; set; } = false;
-			public bool CardSelectionInProgress { get; set; } = false;
-			public int SelectedRewardCardIndex { get; set; } = -1;
-			public float CardSelectionElapsedSeconds { get; set; } = 0f;
+			public bool IsPreviewOnly { get; set; } = false;
+			public bool PendingAutoContinue { get; set; } = false;
+			public QuestRewardPresentationPhase Phase { get; set; } = QuestRewardPresentationPhase.Hidden;
+			public float PhaseElapsedSeconds { get; set; } = 0f;
 			public bool DeckColumnSelectionInProgress { get; set; } = false;
 			public int SelectedDeckRewardColumnIndex { get; set; } = -1;
 			public float DeckColumnSelectionElapsedSeconds { get; set; } = 0f;

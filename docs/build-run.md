@@ -18,7 +18,7 @@ dotnet run -- new
 dotnet run -- no-shaders
 dotnet run --launch-profile no-shaders
 
-# Run without in-battle tutorials
+# Skip guided intro + Keeper intro (persisted to save) and in-battle teach tips
 dotnet run -- skip-tutorials
 
 # DEBUG only: asynchronous GPU command timing and rendering workload counters
@@ -27,9 +27,16 @@ dotnet run -- profile-gpu
 # DEBUG only: deterministic 60-card, 4K card-list performance benchmark
 dotnet run -- card-list-profile profile-gpu --render-scale 2
 
+# DEBUG only: deterministic 1080p Battle rendering performance benchmark
+dotnet run -- battle-render-profile profile-gpu
+
 # Unlock every collectible card, medal, and equipment item in the current save
 dotnet run -- unlock
 dotnet run --launch-profile unlock
+
+# Unlock every starting weapon and difficulty in the current save
+dotnet run -- unlock-run-setup
+dotnet run --launch-profile unlock-run-setup
 
 # Repeated isolated balance fight; tutorials and persistence are disabled
 dotnet run -- test-fight hammer skeleton hard

@@ -24,7 +24,6 @@ namespace Crusaders30XX.ECS.Objects.Achievements
             Column = 2;
             StartsVisible = false;
             TargetValue = RequiredKunai;
-            Points = 20;
         }
 
         public override void RegisterListeners()

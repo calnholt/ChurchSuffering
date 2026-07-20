@@ -16,14 +16,18 @@ namespace Crusaders30XX.Tests;
 public class DeckManagementSystemTests
 {
     [Fact]
-    public void DrawCard_clears_stale_filtered_from_hand_marker()
+    public void DrawCard_restores_stale_transient_input_state()
     {
         EventManager.Clear();
         var entityManager = new EntityManager();
         var deck = new Deck();
         var card = CreateCard(entityManager);
+        var ui = card.GetComponent<UIElement>();
+        ui.IsHidden = true;
+        ui.LayerType = UILayerType.Overlay;
         entityManager.AddComponent(card, new FilteredFromHand());
         entityManager.AddComponent(card, new HotKey { Button = FaceButton.B, Position = HotKeyPosition.Top });
+        entityManager.AddComponent(card, new InputContextMember { ContextId = "overlay.card-list" });
         deck.DrawPile.Add(card);
         var system = new DeckManagementSystem(entityManager);
 
@@ -34,6 +38,11 @@ public class DeckManagementSystemTests
         Assert.DoesNotContain(card, deck.DrawPile);
         Assert.False(card.HasComponent<FilteredFromHand>());
         Assert.False(card.HasComponent<HotKey>());
+        Assert.False(card.HasComponent<InputContextMember>());
+        Assert.False(ui.IsHidden);
+        Assert.Equal(UILayerType.Default, ui.LayerType);
+        Assert.True(ui.IsInteractable);
+        Assert.Equal(UIElementEventType.CardClicked, ui.EventType);
         Assert.True(HandStateLoggingService.CountsForHandLayout(card));
     }
 

@@ -69,6 +69,27 @@ public class HandStateLoggingServiceTests
         Assert.True(snapshot["mismatch"]!.GetValue<bool>());
     }
 
+    [Fact]
+    public void BuildCardSnapshot_includes_input_routing_state()
+    {
+        var entityManager = new EntityManager();
+        var card = CreateCard(entityManager, new Strike());
+        var ui = card.GetComponent<UIElement>();
+        ui.IsHidden = true;
+        ui.LayerType = UILayerType.Overlay;
+        ui.IsPreventDefaultClick = true;
+        entityManager.AddComponent(card, new InputContextMember { ContextId = "overlay.card-list" });
+
+        var snapshot = HandStateLoggingService.BuildCardSnapshot(card);
+
+        Assert.True(snapshot.ContainsKey("isHidden"), snapshot.ToJsonString());
+        Assert.True(snapshot["isHidden"]!.GetValue<bool>());
+        Assert.Equal("Overlay", snapshot["uiLayerType"]!.GetValue<string>());
+        Assert.True(snapshot["isPreventDefaultClick"]!.GetValue<bool>());
+        Assert.Equal("overlay.card-list", snapshot["inputContextId"]!.GetValue<string>());
+        Assert.Equal(0, snapshot["zOrder"]!.GetValue<int>());
+    }
+
     private static Entity CreateCard(EntityManager entityManager, CardBase card)
     {
         var entity = entityManager.CreateEntity(card.CardId);

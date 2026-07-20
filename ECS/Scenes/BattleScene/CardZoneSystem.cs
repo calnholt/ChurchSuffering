@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Systems
         public CardZoneSystem(EntityManager entityManager) : base(entityManager)
         {
             EventManager.Subscribe<CardMoveRequested>(OnCardMoveRequested);
-            EventManager.Subscribe<CardMoved>(OnCardMoved);
+            EventManager.Subscribe<CardBlockedEvent>(OnCardBlocked);
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
             EventManager.Subscribe<CardMoveFinalizeRequested>(OnCardMoveFinalizeRequested);
             EventManager.Subscribe<BeginDefeatPresentationEvent>(OnBeginDefeatPresentation);
@@ -40,15 +40,12 @@ namespace Crusaders30XX.ECS.Systems
 			deck.Hand.Add(evt.Card);
 		}
 
-        private void OnCardMoved(CardMoved evt)
+        private void OnCardBlocked(CardBlockedEvent evt)
         {
-            if (evt.From == CardZoneType.AssignedBlock && (evt.To == CardZoneType.DiscardPile || evt.To == CardZoneType.ExhaustPile))
+            var attackDef = GetComponentHelper.GetPlannedAttack(EntityManager);
+            if (attackDef != null && attackDef.OnBlockProcessed != null)
             {
-                var attackDef = GetComponentHelper.GetPlannedAttack(EntityManager);
-                if (attackDef != null && attackDef.OnBlockProcessed != null)
-                {
-                    attackDef.OnBlockProcessed(EntityManager, evt.Card);
-                }
+                attackDef.OnBlockProcessed(EntityManager, evt.Card);
             }
         }
 
@@ -364,8 +361,7 @@ namespace Crusaders30XX.ECS.Systems
                             BlockAmount = BlockValueService.GetTotalBlockValue(evt.Card),
                             AssignedAtTicks = DateTime.UtcNow.Ticks,
                             IsEquipment = false,
-                            ColorKey = NormalizeColorKey(
-                                CardColorQualificationService.GetQualifiedColor(evt.Card)?.ToString()),
+							ColorKeys = CardColorQualificationService.GetQualifiedColors(evt.Card).ToList(),
                             Tooltip = ResolveCardName(cd),
                             DisplayBgColor = bg,
                             DisplayFgColor = fg
@@ -677,18 +673,6 @@ namespace Crusaders30XX.ECS.Systems
                 || destination == CardZoneType.DiscardPile
                 || destination == CardZoneType.DrawPile
                 || destination == CardZoneType.ExhaustPile;
-        }
-
-        private static string NormalizeColorKey(string c)
-        {
-            if (string.IsNullOrWhiteSpace(c)) return string.Empty;
-            switch (c.Trim().ToLowerInvariant())
-            {
-                case "r": case "red": return "Red";
-                case "w": case "white": return "White";
-                case "b": case "black": return "Black";
-                default: return char.ToUpperInvariant(c[0]) + c.Substring(1);
-            }
         }
 
         private static Microsoft.Xna.Framework.Color ResolveCardBgColor(CardData.CardColor color)

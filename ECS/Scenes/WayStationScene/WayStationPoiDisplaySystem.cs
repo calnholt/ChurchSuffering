@@ -3,9 +3,11 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
+using Crusaders30XX.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -18,7 +20,9 @@ namespace Crusaders30XX.ECS.Systems
 		private readonly Texture2D _background;
 		private readonly Texture2D _climbPoi;
 		private readonly Texture2D _achievementPoi;
+		private readonly Texture2D _achievementBadgeCircle;
 		private readonly Texture2D _medalPoi;
+		private readonly SpriteFont _achievementBadgeFont;
 
 		[DebugEditable(DisplayName = "Climb POI World X", Step = 10, Min = 0, Max = 4096)]
 		public float ClimbPoiWorldX { get; set; } = 1350f;
@@ -37,6 +41,14 @@ namespace Crusaders30XX.ECS.Systems
 		public int AchievementPoiIconSize { get; set; } = 100;
 		[DebugEditable(DisplayName = "Achievement POI Hover Scale", Step = 0.01f, Min = 1f, Max = 2f)]
 		public float AchievementPoiHoverScale { get; set; } = 1.16f;
+		[DebugEditable(DisplayName = "Achievement Badge Size", Step = 2, Min = 16, Max = 80)]
+		public int AchievementBadgeSize { get; set; } = 34;
+		[DebugEditable(DisplayName = "Achievement Badge X Offset", Step = 1, Min = -80, Max = 80)]
+		public int AchievementBadgeOffsetX { get; set; } = -4;
+		[DebugEditable(DisplayName = "Achievement Badge Y Offset", Step = 1, Min = -80, Max = 80)]
+		public int AchievementBadgeOffsetY { get; set; } = -4;
+		[DebugEditable(DisplayName = "Achievement Badge Text Scale", Step = 0.01f, Min = 0.05f, Max = 0.5f)]
+		public float AchievementBadgeTextScale { get; set; } = 0.18f;
 
 		[DebugEditable(DisplayName = "Medal POI Right Margin", Step = 2, Min = 0, Max = 600)]
 		public int MedalPoiRightMargin { get; set; } = 48;
@@ -57,7 +69,9 @@ namespace Crusaders30XX.ECS.Systems
 			_background = imageAssets.GetRequiredTexture("waystation");
 			_climbPoi = imageAssets.GetRequiredTexture("waystation/climb-poi");
 			_achievementPoi = imageAssets.GetRequiredTexture("waystation/achievement-poi");
+			_achievementBadgeCircle = imageAssets.GetAntiAliasedCircle(AchievementBadgeSize / 2);
 			_medalPoi = imageAssets.GetRequiredTexture("waystation/medal-poi");
+			_achievementBadgeFont = FontSingleton.TitleFont;
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -132,7 +146,37 @@ namespace Crusaders30XX.ECS.Systems
 
 			DrawPoi(_climbPoi, WayStationSceneConstants.ClimbPoiName);
 			DrawPoi(_achievementPoi, WayStationSceneConstants.AchievementPoiName);
+			DrawAchievementBadge();
 			DrawPoi(_medalPoi, WayStationSceneConstants.SaintsMedalsPoiName);
+		}
+
+		private void DrawAchievementBadge()
+		{
+			var ui = EntityManager.GetEntity(WayStationSceneConstants.AchievementPoiName)?.GetComponent<UIElement>();
+			if (ui == null || ui.IsHidden || !HasAchievementRewardsToClaim()) return;
+
+			int size = System.Math.Max(1, AchievementBadgeSize);
+			int centerX = ui.Bounds.Right + AchievementBadgeOffsetX;
+			int centerY = ui.Bounds.Bottom + AchievementBadgeOffsetY;
+			var bounds = new Rectangle(centerX - size / 2, centerY - size / 2, size, size);
+			_spriteBatch.Draw(_achievementBadgeCircle, bounds, new Color(174, 20, 36));
+
+			if (_achievementBadgeFont == null) return;
+			const string label = "!";
+			Vector2 textSize = _achievementBadgeFont.MeasureString(label) * AchievementBadgeTextScale;
+			var textPosition = new Vector2(
+				bounds.Center.X - textSize.X / 2f,
+				bounds.Center.Y - textSize.Y / 2f);
+			_spriteBatch.DrawString(
+				_achievementBadgeFont,
+				label,
+				textPosition,
+				Color.White,
+				0f,
+				Vector2.Zero,
+				AchievementBadgeTextScale,
+				SpriteEffects.None,
+				0f);
 		}
 
 		private void SyncPoi(
@@ -279,6 +323,12 @@ namespace Crusaders30XX.ECS.Systems
 		private static bool HasPurchasedAnyMedals()
 		{
 			return SaveCache.GetPurchasedWayStationMedalIds().Count > 0;
+		}
+
+		private static bool HasAchievementRewardsToClaim()
+		{
+			return SaveCache.GetCollection().pendingClimbPoints > 0
+				|| AchievementManager.GetUnseenCount() > 0;
 		}
 
 		private static bool IsWayStationScene(SceneState scene)

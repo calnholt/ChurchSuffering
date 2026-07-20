@@ -17,6 +17,7 @@ namespace Crusaders30XX.ECS.Objects.Enemies
             Id = EnemyId.CinderboltDemon;
             Name = "Cinderbolt Demon";
             HP = 30;
+            ClimbPool = ClimbEncounterPool.Late;
         }
 
         public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
@@ -44,7 +45,7 @@ public class Cinderbolt : EnemyAttackBase
         Damage = 10;
         OnAttackReveal = (entityManager) =>
         {
-          Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
+          Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager);
           Text = Color.HasValue
             ? $"Gain {Burn} burn if at least one {Color.Value.ToString().ToLower()} card blocks this."
             : $"Gain {Burn} burn if a card of the selected color blocks this. No color is selected.";
@@ -52,8 +53,7 @@ public class Cinderbolt : EnemyAttackBase
 
         OnBlockProcessed = (entityManager, card) =>
         {
-          var color = CardColorQualificationService.GetQualifiedColor(card);
-          if (color == Color && !AppliedBurn)
+		  if (Color.HasValue && CardColorQualificationService.QualifiesAs(card, Color.Value) && !AppliedBurn)
           {
             EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Burn, Delta = Burn });
             AppliedBurn = true;
@@ -75,7 +75,7 @@ public class InsidiousBolt : EnemyAttackBase
 
     OnAttackReveal = (entityManager) =>
     {
-      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(EntityManager);
+      Color = PlayerHandColorService.GetRandomCardColorInPlayerHand(entityManager);
       Text = Color.HasValue
         ? $"Gain {Scar} scar if at least one {Color.Value.ToString().ToLower()} card blocks this."
         : $"Gain {Scar} scar if a card of the selected color blocks this. No color is selected.";
@@ -83,8 +83,7 @@ public class InsidiousBolt : EnemyAttackBase
 
     OnBlockProcessed = (entityManager, card) =>
     {
-      var color = CardColorQualificationService.GetQualifiedColor(card);
-      if (color == Color && !AppliedScar)
+	  if (Color.HasValue && CardColorQualificationService.QualifiesAs(card, Color.Value) && !AppliedScar)
       {
         EventManager.Publish(new ApplyPassiveEvent { Target = entityManager.GetEntity("Player"), Type = AppliedPassiveType.Scar, Delta = Scar });
         AppliedScar = true;

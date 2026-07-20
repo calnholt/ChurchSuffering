@@ -1,152 +1,118 @@
 ---
 name: create-card
-description: Create new Crusaders30XX cards (CardBase classes in ECS/Objects/Cards). Use when the user asks to create, add, or implement a new card, describes card text/stats/upgrades, or references card factory registration.
+description: Create or update Crusaders30XX CardBase cards, including typed IDs, factory registration, combat behavior, upgrades, stat providers, VFX choreography, Guardian dialogue, and verification. Use when the user asks to add or implement a card, supplies card text/stats/upgrades, or mentions card registration.
 ---
 
 # Create Card
 
-Add a new card to Crusaders30XX: one `CardBase` subclass + factory registration + `dotnet build`.
+Add a card using the repository's current typed-ID and authored-presentation pipeline.
 
-**Read first:** [ECS/Objects/Cards/CLAUDE.md](../../../ECS/Objects/Cards/CLAUDE.md)
+**Read first:** [ECS/Objects/Cards/CLAUDE.md](../../../ECS/Objects/Cards/CLAUDE.md) and the relevant verification section in [docs/build-run.md](../../../docs/build-run.md).
 
 ## Workflow
 
-```
-- [ ] 1. Parse spec (name, stats, text, cost, upgrade, conditionals)
-- [ ] 2. Ask only if blocked (name, spend vs gate, ambiguous condition)
-- [ ] 3. Find 1-2 similar cards in ECS/Objects/Cards/ and match their pattern
-- [ ] 4. Create ECS/Objects/Cards/{PascalName}.cs
-- [ ] 5. Register snake_case id in CardFactory.Create() and GetAllCards() (alphabetical)
-- [ ] 6. dotnet build — fix compile errors before done
-```
+1. Parse name, stats, text, cost, type, free-action status, upgrade, and conditions. Ask only when a missing choice changes behavior.
+2. Inspect 1-2 similar cards and the services/components used by the requested effect.
+3. Add `ECS/Objects/Cards/{PascalName}.cs`.
+4. Register the card everywhere listed under **Registration**.
+5. Update affected fixed-count/catalog tests.
+6. Run required verification and fix regressions caused by the change.
 
-Do **not** edit deck JSON, shop pools, or reward tables unless the user asks.
+Do not edit deck JSON, starter decks, shops, or reward tables unless requested. `CardFactory.GetAllCards()` already exposes collectible cards to shared pools.
 
-## Naming
+## Naming and defaults
 
-| Item | Convention | Example |
-|------|------------|---------|
-| Class / file | PascalCase | `EmberHarvest.cs` |
-| `CardId` / factory key | snake_case | `ember_harvest` |
-| Display `Name` | Title Case | `Ember Harvest` |
+| Item | Convention / default |
+|---|---|
+| Class / file | PascalCase, e.g. `EmberHarvest` |
+| `CardId` enum | PascalCase, e.g. `EmberHarvest` |
+| Serialized `CardId` | snake_case, e.g. `ember_harvest` |
+| Display `Name` | Title Case |
+| Type / target | `Attack` / `"Enemy"`; prayers use `Prayer` / `"Player"` |
+| Cost | `[]` |
+| Free action | `false` |
+| Rarity | default `Common`; omit unless different |
+| Visual recipe | `PlayerAttackEffect()`; prayers use `HolySupportEffect()` |
 
-## Spec defaults (when omitted)
+## Common patterns
 
-| Field | Default |
-|-------|---------|
-| `Type` | `CardType.Attack` |
-| `Target` | `"Enemy"` for attacks, `"Player"` for prayers |
-| `IsFreeAction` | `false` |
-| `Cost` | `[]` |
-| `VisualEffectRecipe` | `PlayerAttackEffect()` for attacks, `HolySupportEffect()` for prayers |
-| `Rarity` | omit unless user specifies |
-
-## Archetype picker
-
-| User intent | Pattern cards | Key hooks |
-|-------------|---------------|-----------|
-| Vanilla attack | `Smite`, `Fervor` | `OnPlay` -> `ModifyHpRequestEvent` + `GetDerivedDamage` |
-| Attack + block | `Impale`, `StokedAssault` | set `Damage`/`Block`; damage in `OnPlay` only |
-| Free action attack | `Impale`, `Stab` | `IsFreeAction = true` |
-| Courage **spend** on play | `Stab`, `Impale` | spend in `OnPlay`; `CanPlay`/`OnCantPlay`; text: "As an additional cost, lose {N} courage." |
-| Courage **gate** only | rare — confirm with user | `CanPlay` only, no spend in `OnPlay` |
-| Vigor **gate** only | `StokedAssault` | `VigorService.GetPlayerVigorStacks`; no vigor delta in `OnPlay` |
-| Payment conditional | `EmberHarvest`, `Reap`, `BatteringBlow` | read `LastPaymentCache.PaymentCards` in `OnPlay` or `GetConditionalDamage` |
-| Scorched payment check | `EmberHarvest` | `paymentCard.GetComponent<Scorched>() != null` |
-| Red payment conditional | `Reap` | `CardColorQualificationService.QualifiesAs(paymentCard, CardColor.Red)` |
-| No payment bonus | `UnburdenedStrike`, `BatteringBlow` | `paymentCards == null \|\| paymentCards.Count == 0` |
-| Might on condition | `DowseWithHolyWater`, `EmberHarvest` | `ApplyPassiveEvent` + `GetX(IsUpgraded)` helper |
-| Prayer / buff | `IncreaseFaith`, `LitanyOfWrath` | `Type = CardType.Prayer`, `Target = "Player"` |
+| Intent | References / implementation |
+|---|---|
+| Vanilla attack | `Smite`, `Fervor`; publish `ModifyHpRequestEvent` with `GetDerivedDamage` |
+| Attack + block | `Impale`, `StokedAssault`; set `Block`, do not apply it in `OnPlay` |
+| Courage spend | `Stab`, `Impale`; validate, spend in `OnPlay`, and publish `CantPlayCardMessage` |
+| Vigor gate | `StokedAssault`; validate only, do not spend vigor |
+| Payment conditional | `EmberHarvest`, `Reap`, `BatteringBlow`; inspect `LastPaymentCache` |
+| Hand-based stat aura | `ShieldbearersVigil`; implement `ICardStatModifierProvider` and let `CardStatModifierService` discover hand providers |
+| Prayer / passive | `IncreaseFaith`, `LitanyOfWrath`; publish events rather than mutate state |
 
 ## Implementation rules
 
-1. **Damage:** always `GetDerivedDamage(entityManager, card)` in `OnPlay` — never raw `Damage`.
-2. **Block:** set `Block` property; play pipeline applies it (do not duplicate in `OnPlay` unless card has custom `OnBlock`).
-3. **Constants:** private `const` or fields; interpolate into `Text` via helpers like `GetMightGained(IsUpgraded)`.
-4. **CanPlay:** pure bool, no side effects.
-5. **OnCantPlay:** publish `CantPlayCardMessage` with ASCII-only text (e.g. `"Requires 2 vigor!"`).
-6. **OnUpgrade:** stat bumps (`Damage +=`, `Block +=`); refresh `Text` when numbers in text change. Guard `card == null` only for one-time meta effects (see CLAUDE.md).
-7. **Payment cache:** populated before `OnPlay` — safe to read in `OnPlay`:
+- Damage must resolve through `GetDerivedDamage(entityManager, card)`, never raw `Damage`.
+- Set printed block through `Block`; use `ICardStatModifierProvider` for live conditional damage/block bonuses instead of adding/removing stored modifiers on zone events.
+- Keep `CanPlay` side-effect free. Put rejection text in `OnCantPlay`; all rendered strings must be ASCII.
+- Use constants for effect values. Refresh `Text` only when an upgrade changes displayed numbers.
+- `OnUpgrade` runs with a non-null card during upgraded-instance initialization and with null arguments for one-time meta application. Guard per-instance stat changes with `if (card != null)`.
+- Event subscriptions belong in `Initialize`/`Dispose`; one-shot setup belongs in `OnCreate`.
+- For payment effects, `LastPaymentCache.PaymentCards` is populated before `OnPlay`.
+
+## Minimal attack
 
 ```csharp
-var cacheEntity = entityManager.GetEntitiesWithComponent<LastPaymentCache>().FirstOrDefault();
-var paymentCards = cacheEntity?.GetComponent<LastPaymentCache>()?.PaymentCards;
-```
-
-8. **Strings:** ASCII only in anything drawn with `SpriteFont` (card text, `CantPlayCardMessage`).
-
-## Minimal attack template
-
-```csharp
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-
-namespace Crusaders30XX.ECS.Objects.Cards
+public class MyCard : CardBase
 {
-    public class MyCard : CardBase
-    {
-        public MyCard()
-        {
-            CardId = "my_card";
-            Name = "My Card";
-            Target = "Enemy";
-            Cost = ["Any"];
-            VisualEffectRecipe = PlayerAttackEffect();
-            Damage = 7;
-            Block = 2;
+    private const int DamageUpgrade = 1;
 
-            OnPlay = (entityManager, card) =>
+    public MyCard()
+    {
+        CardId = "my_card";
+        Name = "My Card";
+        Target = "Enemy";
+        VisualEffectRecipe = PlayerAttackEffect();
+        Damage = 7;
+        Block = 2;
+
+        OnPlay = (entityManager, card) =>
+        {
+            EventManager.Publish(new ModifyHpRequestEvent
             {
-                EventManager.Publish(new ModifyHpRequestEvent
-                {
-                    Source = entityManager.GetEntity("Player"),
-                    Target = entityManager.GetEntity(Target),
-                    Delta = -GetDerivedDamage(entityManager, card),
-                    AttackCard = card,
-                    DamageType = ModifyTypeEnum.Attack
-                });
-            };
-        }
+                Source = entityManager.GetEntity("Player"),
+                Target = entityManager.GetEntity(Target),
+                Delta = -GetDerivedDamage(entityManager, card),
+                AttackCard = card,
+                DamageType = ModifyTypeEnum.Attack
+            });
+        };
+
+        OnUpgrade = (_, card) =>
+        {
+            if (card != null) Damage += DamageUpgrade;
+        };
     }
 }
 ```
 
-## Factory registration
+## Registration
 
-In [ECS/Factories/CardFactory.cs](../../../ECS/Factories/CardFactory.cs), add **both**:
+Keep each catalog entry near its alphabetical neighbors:
 
-```csharp
-"my_card" => new MyCard(),
-// ...
-{ "my_card", new MyCard() },
-```
+1. Add the enum value and snake_case `ToKey` mapping in `ECS/Data/Ids/GameIds.cs`.
+2. Add one constructor entry to `CardFactory.CardConstructors`; `Create()` and `GetAllCards()` derive from this registry.
+3. Add explicit, unique choreography in `VisualEffectSequenceAuthoring`. Attack cards must use an attack-compatible `CardStyle`, even when their theme is defensive.
+4. Add two distinct ASCII Guardian lines (maximum 80 characters) in `GuardianAngelMessageService`.
 
-Keep entries **alphabetical** by `CardId`.
+## Clarify only when needed
 
-## Clarify before implementing
-
-Ask only when the spec is ambiguous:
-
-1. **Card name** — if not given, offer 2-3 thematic options (avoid reusing overused words like "Strike" unless requested).
-2. **Spend vs gate** — courage/vigor "can't play without X" may mean gate-only (keep stacks) or spend-on-play (like `Stab`). Default: match wording; ask if unclear.
-3. **Payment condition** — "a scorched card" = at least one payment card has `Scorched`.
+- Missing name: offer 2-3 thematic options.
+- “Requires X courage/vigor”: confirm gate versus spend when wording is unclear.
+- Payment wording: “a scorched card” means at least one payment card has `Scorched`.
 
 ## Verification
 
-- [ ] `CardId` matches factory key exactly
-- [ ] Both factory sites updated
-- [ ] `dotnet build` passes with 0 errors
-- [ ] No tests added unless user requested
-
-## Reference implementations
-
-| Card | Why |
-|------|-----|
-| `StokedAssault` | Vigor gate, free action, +damage upgrade |
-| `EmberHarvest` | Payment scorched check, might reward, multi-stat upgrade |
-| `Impale` | Courage spend, free action, damage+block |
-| `Reap` | `GetConditionalDamage` from payment colors |
-| `UnburdenedStrike` | Bonus when zero payment cards |
-| `DowseWithHolyWater` | Conditional might + `GetMight(IsUpgraded)` |
+- Confirm the class ID, enum value, key mapping, and factory entry agree.
+- Update the registered-card count in `VisualEffectSequenceAuthoringTests`.
+- Run `dotnet build` from the repo root; zero errors are required.
+- Run focused tests for changed services plus `VisualEffectSequenceAuthoringTests` and `GuardianAngelMessageServiceTests`.
+- For card/combat changes, run the broader test command and `dotnet run -- test-fight hammer skeleton hard` from `docs/build-run.md`; report unrelated baseline failures separately.
 
 More examples: [examples.md](examples.md)

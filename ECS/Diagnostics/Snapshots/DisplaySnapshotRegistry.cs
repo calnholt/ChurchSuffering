@@ -16,7 +16,11 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new ThornedCardSnapshotFixture());
             Register(new ScorchedCardSnapshotFixture());
             Register(new CursedCardSnapshotFixture());
+            Register(new PoisonCardSnapshotFixture());
+            Register(new PoisonScorchedCardSnapshotFixture());
+            Register(new CardRenderPipelineSnapshotFixture());
             Register(new ColorlessCardSnapshotFixture());
+			Register(new DualColorCardSnapshotFixture());
             Register(new QuestRewardModalSnapshotFixture());
             Register(new ModularFxSnapshotFixture());
 			Register(new PassiveApplicationSnapshotFixture());
@@ -45,17 +49,22 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CharacterDialog));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ActiveEvents));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.HoverPreview));
-            Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.MedalTooltipHover));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.MedalTooltipHover));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardTooltipHover));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.EquipmentTooltipHover));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.SoldShopSlot));
-            Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.EncounterRewardModal));
             Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.ReplacementModal));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryOverlay));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.InventoryEquipmentTooltip));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListTop));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListMiddle));
 			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.CardListBottom));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.V2Entrance));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.V2Ashes));
+			Register(new ClimbSnapshotFixture(ClimbSnapshotVariant.V2Purchase));
 			Register(new ClimbHeaderSnapshotFixture());
 			Register(new ClimbResourceAcquisitionSnapshotFixture());
+			Register(new ClimbPointsAwardSnapshotFixture());
         }
 
         public static void Register(IDisplaySnapshotFixture fixture)

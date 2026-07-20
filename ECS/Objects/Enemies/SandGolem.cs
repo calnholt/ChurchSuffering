@@ -16,6 +16,7 @@ public class SandGolem : EnemyBase
     Id = EnemyId.SandGolem;
     Name = "Sand Golem";
     HP = 30;
+    ClimbPool = ClimbEncounterPool.Early;
   }
   public override IEnumerable<EnemyAttackId> GetAttackIds(EntityManager entityManager, int turnNumber)
   {

@@ -20,6 +20,7 @@ public class Succubus : EnemyBase
     Id = EnemyId.Succubus;
     Name = "Succubus";
     HP = 26;
+    ClimbPool = ClimbEncounterPool.Late;
     StartingHealthBelowMax = 3;
 
     OnStartOfBattle = (entityManager) =>

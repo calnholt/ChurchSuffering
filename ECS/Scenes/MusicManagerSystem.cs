@@ -64,8 +64,8 @@ namespace Crusaders30XX.ECS.Systems
 
             var sceneTrack = scene.Current switch
             {
-                SceneId.TitleMenu => MusicTrack.Customize,
-                SceneId.WayStation => MusicTrack.Customize,
+                SceneId.TitleMenu => MusicTrack.Title,
+                SceneId.WayStation => MusicTrack.WayStation,
                 _ => MusicTrack.None
             };
 
@@ -213,6 +213,8 @@ namespace Crusaders30XX.ECS.Systems
                 MusicTrack.VolcanoBattle => "Music/volcano",
                 MusicTrack.TheGateBattle => "Music/the-gate",
                 MusicTrack.GothicBattle => "Music/gothic",
+                MusicTrack.Title => "Music/title",
+                MusicTrack.WayStation => "Music/waystation",
                 _ => null
             };
             if (string.IsNullOrEmpty(assetName)) return null;

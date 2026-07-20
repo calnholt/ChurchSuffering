@@ -7,7 +7,7 @@ namespace Crusaders30XX.ECS.Objects.Cards
 {
     public class DivineProtection : CardBase
     {
-        private int AegisGained = 4;
+        private int AegisGained = 5;
         private int AegisGainedUpgrade = 1;
         public DivineProtection()
         {

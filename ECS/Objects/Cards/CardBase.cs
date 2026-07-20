@@ -25,6 +25,15 @@ namespace Crusaders30XX.ECS.Objects.Cards
         Uncommon,
         Rare,
     }
+
+    public enum EligibleWeapon
+    {
+        All,
+        Sword,
+        Dagger,
+        Hammer
+    }
+
     public class CardBase : IDisposable
     {
         public EntityManager EntityManager { get; set; }
@@ -101,6 +110,25 @@ namespace Crusaders30XX.ECS.Objects.Cards
         public bool CanDiscardForCost => !IsWeapon && !IsToken;
         public bool IsStarter { get; set; } = false;
         public Rarity Rarity { get; set; } = Rarity.Common;
+        public EligibleWeapon[] EligibleWeapons { get; set; } = [EligibleWeapon.All];
+
+        public bool IsEligibleForWeapon(string weaponId)
+        {
+            if (EligibleWeapons == null || EligibleWeapons.Length == 0) return false;
+            if (Array.IndexOf(EligibleWeapons, EligibleWeapon.All) >= 0) return true;
+
+            if (string.IsNullOrWhiteSpace(weaponId)) return false;
+
+            EligibleWeapon? matched = weaponId.Trim().ToLowerInvariant() switch
+            {
+                "sword" => EligibleWeapon.Sword,
+                "dagger" => EligibleWeapon.Dagger,
+                "hammer" => EligibleWeapon.Hammer,
+                _ => null
+            };
+            return matched.HasValue && Array.IndexOf(EligibleWeapons, matched.Value) >= 0;
+        }
+
         private string _tooltip = "";
         public string Tooltip 
         {

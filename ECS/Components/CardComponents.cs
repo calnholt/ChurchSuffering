@@ -233,6 +233,7 @@ namespace Crusaders30XX.ECS.Components
         NumberOfAttacksHitPlayer,
         CardsMilled,
         CursesRemoved,
+        PrayersPlayed,
     }
     
     /// <summary>
@@ -338,6 +339,7 @@ namespace Crusaders30XX.ECS.Components
         public bool IsClicked { get; set; } = false;
         public string Tooltip { get; set; } = "";
         public string TooltipKeywordSource { get; set; } = "";
+        public string TooltipExcludedKeywordId { get; set; } = "";
         public TooltipType TooltipType { get; set; } = TooltipType.Text;
         public TooltipPosition TooltipPosition { get; set; } = TooltipPosition.Above;
         public int TooltipOffsetPx { get; set; } = 6; // gap from element to tooltip
@@ -495,6 +497,12 @@ namespace Crusaders30XX.ECS.Components
         public Entity Owner { get; set; }
     }
 
+    /// <summary>Marks a hand card that will deal 1 damage to its owner when used to block this turn.</summary>
+    public class Poisoned : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
     /// <summary>
     /// Marks a card as frozen. Frozen cards lose frozen when used to block. Frozen cards cannot be played during action phase
     /// </summary>
@@ -537,8 +545,17 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
-    /// Stores the original runtime definition for a card that is currently shown
-    /// and played as Curse.
+    /// Marks a card temporarily covered by Hex. Hex expires at the end of the
+    /// player turn unless it is played, in which case it becomes Cursed.
+    /// </summary>
+    public class Hexed : IComponent
+    {
+        public Entity Owner { get; set; }
+    }
+
+    /// <summary>
+    /// Stores the original runtime definition for a card currently covered by
+    /// Curse or Hex.
     /// </summary>
     public class CursedOriginalCard : IComponent
     {
@@ -559,6 +576,15 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
+    /// Gives a card a second playable color while retaining its printed color.
+    /// </summary>
+    public class DualColor : IComponent
+    {
+        public Entity Owner { get; set; }
+        public CardData.CardColor SecondaryColor { get; set; }
+    }
+
+    /// <summary>
     /// Marks a card with recoil stacks. If the card is not used to block the current attack,
     /// the player takes damage equal to Stacks. Removed each attack resolve.
     /// </summary>
@@ -569,13 +595,13 @@ namespace Crusaders30XX.ECS.Components
     }
 
     /// <summary>
-    /// Marks a card as sealed (petrified). Sealed cards cannot be played or pledged, but can block.
-    /// Seals count down: -1 per block, -1 per card played. At 0 seals, card is freed.
+    /// Marks a card as sealed. Sealed cards cannot be pledged and lose one seal when used to block.
+    /// At zero seals, the card is freed.
     /// </summary>
     public class Sealed : IComponent
     {
         public Entity Owner { get; set; }
-        public int Seals { get; set; } = 3;
+        public int Seals { get; set; } = 2;
     }
 
     /// <summary>
@@ -1068,7 +1094,7 @@ namespace Crusaders30XX.ECS.Components
 
 } 
 
-// New component used to animate assigned block cards flying to the discard pile
+    // Component used to animate assigned block cards flying to their resolution destination.
 namespace Crusaders30XX.ECS.Components
 {
     /// <summary>
@@ -1130,6 +1156,7 @@ namespace Crusaders30XX.ECS.Components
         public float StartScale { get; set; } = 0.35f;
         public float EndScale { get; set; } = 0.3f;
         public bool Completed { get; set; }
+        public CardZoneType Destination { get; set; } = CardZoneType.DiscardPile;
     }
 
     /// <summary>
@@ -1199,7 +1226,8 @@ namespace Crusaders30XX.ECS.Components
         Vigor,
         CarpeDiem,
         Galvanize,
-        SwordIntoShield
+        SwordIntoShield,
+        Grace
     }
 
     public class PassiveMeterComponent : IComponent

@@ -255,17 +255,14 @@ namespace Crusaders30XX.ECS.Systems
 
 		private Entity EnsureTooltip(Entity root)
 		{
-			var tooltips = EntityManager.GetEntitiesWithComponent<EquipmentTooltipState>()
-				.OrderBy(entity => entity.Id)
-				.ToList();
-			var tooltip = tooltips.FirstOrDefault();
-			foreach (var duplicate in tooltips.Skip(1))
+			var tooltip = EntityManager.GetEntity(TooltipEntityName);
+			if (tooltip?.GetComponent<EquipmentTooltipState>() == null)
 			{
-				EntityManager.DestroyEntity(duplicate.Id);
-			}
+				if (tooltip != null)
+				{
+					EntityManager.DestroyEntity(tooltip.Id);
+				}
 
-			if (tooltip == null)
-			{
 				tooltip = EntityManager.CreateEntity(TooltipEntityName);
 				EntityManager.AddComponent(tooltip, new EquipmentTooltipState());
 				EntityManager.AddComponent(tooltip, new Transform { ZOrder = 10002 });
@@ -278,7 +275,6 @@ namespace Crusaders30XX.ECS.Systems
 				});
 			}
 
-			tooltip.Name = TooltipEntityName;
 			EnsureParent(tooltip, root);
 			if (tooltip.HasComponent<ParallaxLayer>())
 			{
@@ -584,9 +580,10 @@ namespace Crusaders30XX.ECS.Systems
 					equipment.GetComponent<Transform>().Position = worldPosition;
 				}
 			}
-			foreach (var tooltip in EntityManager.GetEntitiesWithComponent<EquipmentTooltipState>().ToList())
+			var battleTooltip = EntityManager.GetEntity(TooltipEntityName);
+			if (battleTooltip?.GetComponent<EquipmentTooltipState>() != null)
 			{
-				EntityManager.DestroyEntity(tooltip.Id);
+				EntityManager.DestroyEntity(battleTooltip.Id);
 			}
 			EntityManager.DestroyEntity(root.Id);
 			_lastConfiguredAnchor = null;

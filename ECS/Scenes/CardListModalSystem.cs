@@ -38,6 +38,7 @@ namespace Crusaders30XX.ECS.Systems
         private readonly Texture2D _pixel;
         private readonly RasterizerState _scissorRasterizer;
         private readonly Dictionary<int, bool> _previousCardHoverHighlight = new();
+        private readonly HashSet<int> _modalCardIds = new();
         private readonly HashSet<int> _inventoryAuxCardIds = new();
         private readonly EquipmentTooltipDisplaySystem _equipmentTooltipDisplaySystem;
         private readonly List<Entity> _orderedCards = new();
@@ -137,7 +138,7 @@ namespace Crusaders30XX.ECS.Systems
             EventManager.Subscribe<OpenCardListModalEvent>(OpenModal);
             EventManager.Subscribe<CloseCardListModalEvent>(_ => CloseModal());
             EventManager.Subscribe<CardListModalCardSelectedEvent>(OnCardSelected);
-            EventManager.Subscribe<DeleteCachesEvent>(_ => ClearPresentationCache());
+            EventManager.Subscribe<DeleteCachesEvent>(OnDeleteCaches);
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -172,6 +173,10 @@ namespace Crusaders30XX.ECS.Systems
             UpdateScroll(modal, mode, layout, gameTime);
             LayoutCards(modal, layout);
             UpdateInventoryTooltipEntities(modal, mode, layout);
+            if (mode == CardListModalMode.Inventory)
+            {
+                EnsureEquipmentTooltipEntity();
+            }
             UpdateEquipmentTooltip(gameTime, mode);
             TryPublishSelection(modal);
         }
@@ -783,7 +788,9 @@ namespace Crusaders30XX.ECS.Systems
         private void OpenModal(OpenCardListModalEvent evt)
         {
             RestoreModalHoverHighlightState();
+            ReleaseTrackedModalCards();
             CleanupOverlayTooltipEntities();
+            CleanupInventoryAuxCards();
 
             var entity = EntityManager.GetEntitiesWithComponent<CardListModal>().FirstOrDefault();
             if (entity == null)
@@ -806,13 +813,14 @@ namespace Crusaders30XX.ECS.Systems
 
             if (evt.Mode == CardListModalMode.Inventory)
             {
+                EnsureEquipmentTooltipEntity();
                 EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.OpenInventory, Volume = 0.5f });
             }
 
             EnsureModalRoot(entity, modal);
             foreach (Entity card in modal.Cards)
             {
-                InputContextService.EnsureMember(EntityManager, card, ContextId);
+                TrackModalCard(card);
                 EnsureCardTooltip(card);
             }
         }
@@ -854,24 +862,7 @@ namespace Crusaders30XX.ECS.Systems
 
             modal.IsOpen = false;
             modal.SelectedCardIndex = -1;
-            foreach (var card in modal.Cards ?? new List<Entity>())
-            {
-                InputContextService.RemoveMember(EntityManager, card, ContextId);
-                var ui = card.GetComponent<UIElement>();
-                if (ui != null)
-                {
-                    ui.LayerType = UILayerType.Default;
-                    ui.IsInteractable = false;
-                    ui.IsHovered = false;
-                    ui.IsClicked = false;
-                    ui.Bounds = Rectangle.Empty;
-                }
-
-                if (card.GetComponent<CardListModalSelectionMetadata>() != null)
-                {
-                    EntityManager.RemoveComponent<CardListModalSelectionMetadata>(card);
-                }
-            }
+            ReleaseTrackedModalCards();
 
             RestoreModalHoverHighlightState();
             modal.IsSelectable = false;
@@ -1001,7 +992,7 @@ namespace Crusaders30XX.ECS.Systems
                 ui.Bounds = interactable ? visual : Rectangle.Empty;
                 ui.TooltipPosition = TooltipPosition.Right;
                 ApplyModalHoverHighlightState(card, ui, modal);
-                InputContextService.EnsureMember(EntityManager, card, ContextId);
+                TrackModalCard(card);
                 EnsureCardTooltip(card);
             }
         }
@@ -1035,13 +1026,20 @@ namespace Crusaders30XX.ECS.Systems
                         ui.IsHidden = ui.Bounds == Rectangle.Empty;
                     }
 
-                    InputContextService.EnsureMember(EntityManager, weapon, ContextId);
+                    TrackModalCard(weapon);
                     _inventoryAuxCardIds.Add(weapon.Id);
                     EnsureCardTooltip(weapon);
                     continue;
                 }
 
-                var entity = EnsureTooltipEntity(region.Key, region.Bounds, layout.BuildClip, region.Type, region.Tooltip, region.TooltipKeywordSource);
+                var entity = EnsureTooltipEntity(
+                    region.Key,
+                    region.Bounds,
+                    layout.BuildClip,
+                    region.Type,
+                    region.Tooltip,
+                    region.TooltipKeywordSource,
+                    region.TooltipExcludedKeywordId);
                 SyncEquipmentTooltipSource(entity, region.EquipmentEntity);
             }
 
@@ -1152,7 +1150,8 @@ namespace Crusaders30XX.ECS.Systems
                     TooltipType.Text,
                     TooltipTextService.GetPassiveText(kv.Key, isPlayer: true, kv.Value),
                     string.Empty,
-                    null);
+                    null,
+                    TooltipTextService.GetPassiveKeywordId(kv.Key));
                 cursorX += chipW + 10;
                 rowH = Math.Max(rowH, chipH);
             }
@@ -1172,13 +1171,90 @@ namespace Crusaders30XX.ECS.Systems
                     ui.IsHovered = false;
                     ui.IsClicked = false;
                     ui.IsInteractable = false;
+                    ui.IsHidden = false;
                     ui.LayerType = UILayerType.Default;
                 }
             }
             _inventoryAuxCardIds.Clear();
         }
 
-        private Entity EnsureTooltipEntity(string key, Rectangle bounds, Rectangle buildClip, TooltipType type, string tooltip, string tooltipKeywordSource)
+        private void TrackModalCard(Entity card)
+        {
+            if (card == null) return;
+            _modalCardIds.Add(card.Id);
+            InputContextService.EnsureMember(EntityManager, card, ContextId);
+        }
+
+        private void ReleaseTrackedModalCards()
+        {
+            foreach (int id in _modalCardIds.ToList())
+            {
+                ReleaseCardFromModal(EntityManager, EntityManager.GetEntity(id));
+            }
+            _modalCardIds.Clear();
+        }
+
+        internal static void ReleaseCardFromModal(EntityManager entityManager, Entity card)
+        {
+            if (entityManager == null || card == null) return;
+
+            InputContextService.RemoveMember(entityManager, card, ContextId);
+            var ui = card.GetComponent<UIElement>();
+            if (ui != null)
+            {
+                ui.LayerType = UILayerType.Default;
+                ui.IsInteractable = ShouldRestoreHandInteraction(entityManager, card);
+                ui.IsHovered = false;
+                ui.IsClicked = false;
+                ui.IsHidden = false;
+                ui.Bounds = Rectangle.Empty;
+            }
+
+            if (card.GetComponent<CardListModalSelectionMetadata>() != null)
+            {
+                entityManager.RemoveComponent<CardListModalSelectionMetadata>(card);
+            }
+        }
+
+        private static bool ShouldRestoreHandInteraction(EntityManager entityManager, Entity card)
+        {
+            if (!HandStateLoggingService.CountsForHandLayout(card)) return false;
+
+            return entityManager.GetEntitiesWithComponent<Deck>()
+                .Select(entity => entity.GetComponent<Deck>())
+                .Any(deck => deck?.Hand?.Contains(card) == true);
+        }
+
+        private void OnDeleteCaches(DeleteCachesEvent _)
+        {
+            var modal = EntityManager.GetEntitiesWithComponent<CardListModal>()
+                .FirstOrDefault()
+                ?.GetComponent<CardListModal>();
+            if (modal != null)
+            {
+                modal.IsOpen = false;
+                modal.SelectedCardIndex = -1;
+                modal.IsSelectable = false;
+                modal.SelectionContext = string.Empty;
+                modal.Mode = CardListModalMode.Auto;
+            }
+
+            ReleaseTrackedModalCards();
+            CleanupInventoryAuxCards();
+            CleanupOverlayTooltipEntities();
+            RestoreModalHoverHighlightState();
+            SetCloseButtonActive(false);
+            ClearPresentationCache();
+        }
+
+        private Entity EnsureTooltipEntity(
+            string key,
+            Rectangle bounds,
+            Rectangle buildClip,
+            TooltipType type,
+            string tooltip,
+            string tooltipKeywordSource,
+            string tooltipExcludedKeywordId = "")
         {
             string name = TooltipEntityPrefix + key;
             var entity = EntityManager.GetEntity(name);
@@ -1200,6 +1276,7 @@ namespace Crusaders30XX.ECS.Systems
             ui.TooltipType = type;
             ui.Tooltip = tooltip ?? string.Empty;
             ui.TooltipKeywordSource = tooltipKeywordSource ?? string.Empty;
+            ui.TooltipExcludedKeywordId = tooltipExcludedKeywordId ?? string.Empty;
             ui.TooltipPosition = TooltipPosition.Right;
             ui.TooltipOffsetPx = 12;
             return entity;
@@ -1291,9 +1368,9 @@ namespace Crusaders30XX.ECS.Systems
             _orderedCards.AddRange(OrderCardsForPresentation(modal?.Cards));
             _ledgerSummary = new CardLedgerSummary(
                 _orderedCards.Count,
-                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.White),
-                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Red),
-                _orderedCards.Count(card => card.GetComponent<CardData>()?.Color == CardData.CardColor.Black));
+				_orderedCards.Count(card => CardColorQualificationService.QualifiesAs(card, CardData.CardColor.White)),
+				_orderedCards.Count(card => CardColorQualificationService.QualifiesAs(card, CardData.CardColor.Red)),
+				_orderedCards.Count(card => CardColorQualificationService.QualifiesAs(card, CardData.CardColor.Black)));
             _visibleCards.Clear();
         }
 
@@ -1580,7 +1657,8 @@ namespace Crusaders30XX.ECS.Systems
             TooltipType Type,
             string Tooltip,
             string TooltipKeywordSource,
-            Entity EquipmentEntity);
+            Entity EquipmentEntity,
+            string TooltipExcludedKeywordId = "");
 
         private readonly record struct VisibleCardPresentation(
             Entity Card,

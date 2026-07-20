@@ -28,6 +28,7 @@ namespace Crusaders30XX.ECS.Systems
 		private string _pendingOfferId = string.Empty;
 		private string _pendingCharacterId = string.Empty;
 		private string _pendingSegmentId = string.Empty;
+		private bool _arrivalTransitionDeferredForAward;
 
 		[DebugEditable(DisplayName = "Keeper POI Screen X", Step = 2, Min = 0, Max = 1920)]
 		public float KeeperPoiScreenX { get; set; } = 832f;
@@ -65,6 +66,7 @@ namespace Crusaders30XX.ECS.Systems
 			EventManager.Subscribe<TransitionCompleteEvent>(OnTransitionComplete);
 			EventManager.Subscribe<WayStationDialoguePoiSelectedEvent>(OnDialoguePoiSelected);
 			EventManager.Subscribe<DialogueSequenceCompleted>(OnDialogueSequenceCompleted);
+			EventManager.Subscribe<ClimbPointsAwardOverlayDismissedEvent>(OnClimbPointsAwardOverlayDismissed);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -113,11 +115,29 @@ namespace Crusaders30XX.ECS.Systems
 			_pendingOfferId = string.Empty;
 			_pendingCharacterId = string.Empty;
 			_pendingSegmentId = string.Empty;
+			_arrivalTransitionDeferredForAward = false;
 		}
 
 		private void OnTransitionComplete(TransitionCompleteEvent evt)
 		{
 			if (evt?.Scene != SceneId.WayStation) return;
+			if (SaveCache.GetCollection().pendingClimbPointAward != null)
+			{
+				_arrivalTransitionDeferredForAward = true;
+				return;
+			}
+			CompleteWayStationArrival();
+		}
+
+		private void OnClimbPointsAwardOverlayDismissed(ClimbPointsAwardOverlayDismissedEvent evt)
+		{
+			if (evt?.WasAuthoritative != true || !_arrivalTransitionDeferredForAward || !IsWayStationActive()) return;
+			_arrivalTransitionDeferredForAward = false;
+			CompleteWayStationArrival();
+		}
+
+		private void CompleteWayStationArrival()
+		{
 			var auto = WayStationDialoguePlanner.TryGetAutoDialogue(SaveCache.GetWayStationMeta());
 			if (auto != null)
 			{
