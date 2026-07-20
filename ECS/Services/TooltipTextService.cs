@@ -71,11 +71,21 @@ namespace Crusaders30XX.ECS.Services
 			Entity entity,
 			string baseText,
 			EntityManager entityManager = null,
-			string keywordSource = null)
+			string keywordSource = null,
+			IEnumerable<string> excludedKeywordIds = null)
 		{
 			var blocks = new List<TooltipTextBlock>();
 			var shownKeywordIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			var scanTexts = new List<string>();
+
+			if (excludedKeywordIds != null)
+			{
+				foreach (var id in excludedKeywordIds)
+				{
+					if (!string.IsNullOrWhiteSpace(id))
+						shownKeywordIds.Add(id);
+				}
+			}
 
 			if (!string.IsNullOrWhiteSpace(keywordSource))
 				scanTexts.Add(keywordSource);
@@ -92,6 +102,12 @@ namespace Crusaders30XX.ECS.Services
 			blocks.AddRange(BuildRecursiveKeywordBlocks(scanTexts, shownKeywordIds));
 			return blocks;
 		}
+
+		/// <summary>
+		/// Keyword registry id for an applied passive (matches KeywordDefinitions ids when present).
+		/// </summary>
+		public static string GetPassiveKeywordId(AppliedPassiveType type) =>
+			type.ToString().ToLowerInvariant();
 
 		/// <summary>
 		/// Returns the full tooltip text for compatibility with string-based callers.

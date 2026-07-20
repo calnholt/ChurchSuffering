@@ -61,6 +61,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `scorched-card` | Scorched card shader | One scorched card on a patterned backdrop |
 | `cursed-card` | Cursed card shader | One cursed card on a patterned backdrop |
 | `poison-card` | Poison card shader | One poisoned card on a patterned backdrop |
+| `poison-scorched-card` | Poison + Scorched composition | One card with both Poisoned and Scorched on a patterned backdrop |
 | `card-render-pipeline` | Card render pipeline | Ordered all-status and sheen composition variants |
 | `colorless-card` | Card display | Colorless cards across all three printed colors and cost-pip colors |
 | `dual-color-card` | Card display | Dual-color diagonal split pairings, including black secondary block bonuses |
@@ -442,6 +443,21 @@ dotnet run -- snapshot poison-card --verify
 ```
 
 Output: `debug/snapshots/poison-card/<cardId>.png`
+
+---
+
+## `poison-scorched-card`
+
+Renders one White card with both `Poisoned` and `Scorched` attached, locking overlay time so slime stays on the card face while fire overflow remains outside it.
+
+```bash
+dotnet run -- snapshot poison-scorched-card
+dotnet run -- snapshot poison-scorched-card fireball
+dotnet run -- snapshot poison-scorched-card no-shaders
+dotnet run -- snapshot poison-scorched-card --verify
+```
+
+Output: `debug/snapshots/poison-scorched-card/<cardId>.png`
 
 ---
 

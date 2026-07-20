@@ -130,7 +130,10 @@ namespace Crusaders30XX.ECS.Systems
 					top.E,
 					top.UI.Tooltip,
 					EntityManager,
-					top.UI.TooltipKeywordSource);
+					top.UI.TooltipKeywordSource,
+					string.IsNullOrWhiteSpace(top.UI.TooltipExcludedKeywordId)
+						? null
+						: [top.UI.TooltipExcludedKeywordId]);
 				if (blocks.Count > 0)
 				{
 					var medalAnchor = top.E.GetComponent<ClimbMedalTooltipAnchor>();
@@ -229,7 +232,10 @@ namespace Crusaders30XX.ECS.Systems
 				layout.Entity,
 				string.Empty,
 				EntityManager,
-				layout.UI.TooltipKeywordSource);
+				layout.UI.TooltipKeywordSource,
+				string.IsNullOrWhiteSpace(layout.UI.TooltipExcludedKeywordId)
+					? null
+					: [layout.UI.TooltipExcludedKeywordId]);
 			if (blocks.Count == 0) return;
 
 			int gap = System.Math.Max(0, CardTooltipTextGap);

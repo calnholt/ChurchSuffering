@@ -21,7 +21,7 @@ public sealed class ClimbChoiceLayerCompositor
 
 	public bool IsAvailable => _blur.IsAvailable && _filter.IsAvailable;
 
-	public void DrawLayer(Action draw, float blur, float grayscale, float sepia, float brightness)
+	public void DrawLayer(Action draw, float blur, float grayscale, float sepia, float brightness, float opacity)
 	{
 		if (!IsAvailable || draw == null) { draw?.Invoke(); return; }
 		RenderTargetBinding[] targets = _graphicsDevice.GetRenderTargets();
@@ -63,6 +63,7 @@ public sealed class ClimbChoiceLayerCompositor
 			_filter.Grayscale = MathHelper.Clamp(grayscale, 0f, 1f);
 			_filter.Sepia = MathHelper.Clamp(sepia, 0f, 1f);
 			_filter.Brightness = Math.Max(0f, brightness);
+			_filter.Opacity = MathHelper.Clamp(opacity, 0f, 1f);
 			_filter.Begin(_batch); _filter.Draw(_batch, source); _filter.End(_batch);
 		}
 		finally

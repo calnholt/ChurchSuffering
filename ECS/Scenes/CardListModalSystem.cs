@@ -1032,7 +1032,14 @@ namespace Crusaders30XX.ECS.Systems
                     continue;
                 }
 
-                var entity = EnsureTooltipEntity(region.Key, region.Bounds, layout.BuildClip, region.Type, region.Tooltip, region.TooltipKeywordSource);
+                var entity = EnsureTooltipEntity(
+                    region.Key,
+                    region.Bounds,
+                    layout.BuildClip,
+                    region.Type,
+                    region.Tooltip,
+                    region.TooltipKeywordSource,
+                    region.TooltipExcludedKeywordId);
                 SyncEquipmentTooltipSource(entity, region.EquipmentEntity);
             }
 
@@ -1143,7 +1150,8 @@ namespace Crusaders30XX.ECS.Systems
                     TooltipType.Text,
                     TooltipTextService.GetPassiveText(kv.Key, isPlayer: true, kv.Value),
                     string.Empty,
-                    null);
+                    null,
+                    TooltipTextService.GetPassiveKeywordId(kv.Key));
                 cursorX += chipW + 10;
                 rowH = Math.Max(rowH, chipH);
             }
@@ -1239,7 +1247,14 @@ namespace Crusaders30XX.ECS.Systems
             ClearPresentationCache();
         }
 
-        private Entity EnsureTooltipEntity(string key, Rectangle bounds, Rectangle buildClip, TooltipType type, string tooltip, string tooltipKeywordSource)
+        private Entity EnsureTooltipEntity(
+            string key,
+            Rectangle bounds,
+            Rectangle buildClip,
+            TooltipType type,
+            string tooltip,
+            string tooltipKeywordSource,
+            string tooltipExcludedKeywordId = "")
         {
             string name = TooltipEntityPrefix + key;
             var entity = EntityManager.GetEntity(name);
@@ -1261,6 +1276,7 @@ namespace Crusaders30XX.ECS.Systems
             ui.TooltipType = type;
             ui.Tooltip = tooltip ?? string.Empty;
             ui.TooltipKeywordSource = tooltipKeywordSource ?? string.Empty;
+            ui.TooltipExcludedKeywordId = tooltipExcludedKeywordId ?? string.Empty;
             ui.TooltipPosition = TooltipPosition.Right;
             ui.TooltipOffsetPx = 12;
             return entity;
@@ -1641,7 +1657,8 @@ namespace Crusaders30XX.ECS.Systems
             TooltipType Type,
             string Tooltip,
             string TooltipKeywordSource,
-            Entity EquipmentEntity);
+            Entity EquipmentEntity,
+            string TooltipExcludedKeywordId = "");
 
         private readonly record struct VisibleCardPresentation(
             Entity Card,

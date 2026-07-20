@@ -143,8 +143,20 @@ internal sealed class PoisonCardOverlayPass : ICardOverlayPass, ICardOverlaySnap
         float reachMin = Math.Max(0.01f, BlobReachMin);
         float thresholdLow = Math.Max(0f, ThresholdLow);
 
+        CardVisualGeometry geometry = CardGeometryService.GetVisualGeometry(
+            _entityManager,
+            context.Card,
+            context.Position,
+            Math.Max(0.001f, context.Scale),
+            context.Rotation);
+
         _overlay.Resolution = context.LogicalSize;
         _overlay.Time = _timeSeconds;
+        _overlay.CardCenter = context.ToSurface(geometry.Center);
+        _overlay.CardSize = new Vector2(
+            Math.Max(1f, geometry.Bounds.Width),
+            Math.Max(1f, geometry.Bounds.Height));
+        _overlay.CardRotation = context.Rotation;
         _overlay.BlobFrequency = Math.Max(0.1f, BlobFrequency);
         _overlay.BlobStretch = Math.Max(0.01f, BlobStretch);
         _overlay.BlobReachMin = reachMin;

@@ -198,6 +198,33 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 		Assert.Contains("Sealed - Cannot be pledged. Lose 1 seal when used to block.", TooltipTextService.GetKeywordTooltip("Add 2 seals."));
 	}
 
+	[Fact]
+	public void Applied_passive_tooltip_excludes_its_own_keyword()
+	{
+		var bleedText = TooltipTextService.GetPassiveText(AppliedPassiveType.Bleed, isPlayer: true, stacks: 2);
+		var blocks = TooltipTextService.BuildTooltipBlocks(
+			null,
+			bleedText,
+			excludedKeywordIds: [TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Bleed)]);
+
+		Assert.Equal(["base"], blocks.Select(block => block.Id).ToArray());
+		Assert.Equal(bleedText, blocks[0].Text);
+	}
+
+	[Fact]
+	public void Applied_passive_tooltip_still_expands_related_keywords()
+	{
+		var infernoText = TooltipTextService.GetPassiveText(AppliedPassiveType.Inferno, isPlayer: true, stacks: 3);
+		var blocks = TooltipTextService.BuildTooltipBlocks(
+			null,
+			infernoText,
+			excludedKeywordIds: [TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Inferno)]);
+
+		Assert.Equal(["base", "burn"], blocks.Select(block => block.Id).ToArray());
+		Assert.Equal(infernoText, blocks[0].Text);
+		Assert.Contains("X Burn - At the start of the turn, take X damage.", blocks[1].Text);
+	}
+
 	private static Entity CreateCard(EntityManager entityManager, string name)
 	{
 		var card = entityManager.CreateEntity(name);

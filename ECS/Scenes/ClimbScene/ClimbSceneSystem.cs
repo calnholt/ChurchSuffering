@@ -179,7 +179,6 @@ namespace Crusaders30XX.ECS.Systems
 			if (_resourcesDisplaySystem != null) FrameProfiler.Measure("PlayerResourcesDisplaySystem.Draw", _resourcesDisplaySystem.Draw);
 			if (_overviewDisplaySystem != null) FrameProfiler.Measure("ClimbOverviewButtonDisplaySystem.Draw", _overviewDisplaySystem.Draw);
 			FrameProfiler.Measure("ClimbV2Choices.Draw", DrawChoices);
-			if (_previewDisplaySystem != null) FrameProfiler.Measure("ClimbChoicePreviewDisplaySystem.Draw", _previewDisplaySystem.Draw);
 			if (_medalTooltipDisplaySystem != null) FrameProfiler.Measure("MedalTooltipDisplaySystem.Draw", _medalTooltipDisplaySystem.Draw);
 			if (_cardUpgradeDisplaySystem != null) FrameProfiler.Measure("ClimbCardUpgradeDisplaySystem.Draw", _cardUpgradeDisplaySystem.Draw);
 			if (_resourceAcquisitionDisplaySystem != null) FrameProfiler.Measure("ClimbResourceAcquisitionDisplaySystem.Draw", _resourceAcquisitionDisplaySystem.Draw);
@@ -202,23 +201,29 @@ namespace Crusaders30XX.ECS.Systems
 				.OrderBy(entity => entity.GetComponent<Transform>()?.ZOrder ?? 0)
 				.ThenBy(entity => entity.Id))
 			{
-				Action draw = () => DrawChoice(entity);
 				var motion = entity.GetComponent<ClimbV2ChoiceMotion>();
-				bool filtered = ShaderRuntimeOptions.ShadersEnabled
+				var expiry = entity.GetComponent<ClimbChoiceExpiryPreviewPresentation>();
+				float opacity = MathHelper.Clamp(expiry?.OpacityMultiplier ?? 1f, 0f, 1f);
+				float grayscale = 1f - (1f - MathHelper.Clamp(motion?.Grayscale ?? 0f, 0f, 1f))
+					* (1f - MathHelper.Clamp(expiry?.Grayscale ?? 0f, 0f, 1f));
+				bool composite = ShaderRuntimeOptions.ShadersEnabled
 					&& _choiceCompositor?.IsAvailable == true
-					&& motion != null
-					&& (motion.Blur > 0.05f || motion.Grayscale > 0.01f || motion.Sepia > 0.01f || Math.Abs(motion.Brightness - 1f) > 0.01f);
-				if (filtered) _choiceCompositor.DrawLayer(draw, motion.Blur, motion.Grayscale, motion.Sepia, motion.Brightness);
+					&& (motion != null || expiry != null)
+					&& ((motion?.Blur ?? 0f) > 0.05f || grayscale > 0.01f || opacity < 0.999f
+						|| (motion?.Sepia ?? 0f) > 0.01f || Math.Abs((motion?.Brightness ?? 1f) - 1f) > 0.01f);
+				Action draw = () => DrawChoice(entity, composite ? 1f : opacity);
+				if (composite) _choiceCompositor.DrawLayer(
+					draw, motion?.Blur ?? 0f, grayscale, motion?.Sepia ?? 0f, motion?.Brightness ?? 1f, opacity);
 				else draw();
 			}
 		}
 
-		private void DrawChoice(Entity entity)
+		private void DrawChoice(Entity entity, float opacityMultiplier)
 		{
-			if (entity.GetComponent<ClimbShopItemPresentation>() != null) _shopItemDisplaySystem?.DrawEntity(entity);
-			else if (entity.GetComponent<ClimbEncounterPresentation>() != null) _encounterDisplaySystem?.DrawEntity(entity);
-			else if (entity.GetComponent<ClimbEventPresentation>() != null) _eventDisplaySystem?.DrawEntity(entity);
-			_railDisplaySystem?.DrawForSource(entity);
+			if (entity.GetComponent<ClimbShopItemPresentation>() != null) _shopItemDisplaySystem?.DrawEntity(entity, opacityMultiplier);
+			else if (entity.GetComponent<ClimbEncounterPresentation>() != null) _encounterDisplaySystem?.DrawEntity(entity, opacityMultiplier);
+			else if (entity.GetComponent<ClimbEventPresentation>() != null) _eventDisplaySystem?.DrawEntity(entity, opacityMultiplier);
+			_railDisplaySystem?.DrawForSource(entity, opacityMultiplier);
 		}
 
 		private void EnsureEffectsLoaded()
@@ -334,6 +339,15 @@ namespace Crusaders30XX.ECS.Systems
 
 				var preview = entity.GetComponent<ClimbPreviewState>();
 				preview?.Clear();
+				var expiry = entity.GetComponent<ClimbChoiceExpiryPreviewPresentation>();
+				if (expiry != null)
+				{
+					expiry.IsActive = false;
+					expiry.PulseElapsedSeconds = 0f;
+					expiry.Strength = 0f;
+					expiry.OpacityMultiplier = 1f;
+					expiry.Grayscale = 0f;
+				}
 			}
 		}
 	}

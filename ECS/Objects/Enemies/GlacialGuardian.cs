@@ -16,7 +16,7 @@ public class GlacialGuardian : EnemyBase
   {
     Id = EnemyId.GlacialGuardian;
     Name = "Glacial Guardian";
-    HP = 24;
+    HP = 30;
     ClimbPool = ClimbEncounterPool.Late;
 
     OnStartOfBattle = (entityManager) =>

@@ -790,6 +790,7 @@ namespace Crusaders30XX.ECS.Factories
                 IsInteractable = true,
                 Tooltip = sourceUIElement?.Tooltip ?? "",
                 TooltipKeywordSource = sourceUIElement?.TooltipKeywordSource ?? "",
+                TooltipExcludedKeywordId = sourceUIElement?.TooltipExcludedKeywordId ?? "",
                 TooltipType = sourceUIElement?.TooltipType ?? TooltipType.Text,
                 TooltipPosition = sourceUIElement?.TooltipPosition ?? TooltipPosition.Above,
                 TooltipOffsetPx = sourceUIElement?.TooltipOffsetPx ?? 30,

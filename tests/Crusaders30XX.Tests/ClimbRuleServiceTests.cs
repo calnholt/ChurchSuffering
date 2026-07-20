@@ -278,6 +278,61 @@ public class ClimbRuleServiceTests
 	}
 
 	[Fact]
+	public void Replenish_encounters_avoids_duplicate_location_enemy_pairs()
+	{
+		var loadout = TestLoadout();
+		for (int seed = 1; seed <= 80; seed++)
+		{
+			var state = new ClimbSaveState
+			{
+				time = 5,
+				encounterSlots = new List<ClimbEncounterSlotSave>
+				{
+					new()
+					{
+						id = "encounter_a",
+						enemyId = "skeleton",
+						generatedAtTime = 0,
+						duration = 2,
+						timeCost = 1,
+						battleLocation = BattleLocation.Desert,
+						rewardResources = new ClimbResourceSave { red = 1, white = 0, black = 0 },
+					},
+					new()
+					{
+						id = "encounter_b",
+						enemyId = "skeleton",
+						generatedAtTime = 5,
+						duration = 5,
+						timeCost = 1,
+						battleLocation = BattleLocation.Desert,
+						rewardResources = new ClimbResourceSave { red = 0, white = 1, black = 0 },
+					},
+					new()
+					{
+						id = "encounter_c",
+						enemyId = "demon",
+						generatedAtTime = 5,
+						duration = 5,
+						timeCost = 1,
+						battleLocation = BattleLocation.Tundra,
+						rewardResources = new ClimbResourceSave { red = 0, white = 0, black = 1 },
+					},
+				},
+			};
+
+			Assert.True(ClimbRuleService.ReplenishEncounterSlots(state, seed, loadout));
+
+			var replaced = state.encounterSlots.Single(slot => slot.id == "encounter_a");
+			Assert.False(
+				string.Equals(replaced.enemyId, "skeleton", StringComparison.OrdinalIgnoreCase)
+				&& replaced.battleLocation == BattleLocation.Desert,
+				$"seed={seed} recreated (Desert, skeleton)");
+			AssertEncounterSlotDiversity(state.encounterSlots);
+		}
+	}
+
+	[Fact]
 	public void Event_slots_assign_complete_deterministic_schedule_in_exact_bands()
 	{
 		var state = ClimbRuleService.CreateInitialState(123, TestLoadout());
@@ -796,6 +851,11 @@ public class ClimbRuleServiceTests
 			.Distinct()
 			.Count() >= 2);
 		Assert.True(activeSlots.Count(slot => ClimbRuleService.IsClimbSkeletonEnemy(slot.enemyId)) <= 1);
+
+		var pairs = activeSlots
+			.Select(slot => (EnemyId: slot.enemyId.ToLowerInvariant(), slot.battleLocation))
+			.ToList();
+		Assert.Equal(pairs.Count, pairs.Distinct().Count());
 	}
 
 	private static LoadoutDefinition TestLoadout()

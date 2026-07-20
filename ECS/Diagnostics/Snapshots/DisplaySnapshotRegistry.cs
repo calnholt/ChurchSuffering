@@ -17,6 +17,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             Register(new ScorchedCardSnapshotFixture());
             Register(new CursedCardSnapshotFixture());
             Register(new PoisonCardSnapshotFixture());
+            Register(new PoisonScorchedCardSnapshotFixture());
             Register(new CardRenderPipelineSnapshotFixture());
             Register(new ColorlessCardSnapshotFixture());
 			Register(new DualColorCardSnapshotFixture());

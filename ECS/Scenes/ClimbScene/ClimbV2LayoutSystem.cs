@@ -179,7 +179,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		EnsureMarker<ClimbV2TitlePresentation>(TitleName, TitleBounds, 2000, false);
 		EnsureMarker<DistanceClimbedTimelinePresentation>(TimelineName, TimelineBounds, 2000, false);
 		EnsureMarker<PlayerResourcesPresentation>(ResourcesName, ResourcesBounds, 2000, false);
-		var overview = EnsureMarker<ClimbOverviewButton>(OverviewName, OverviewBounds, 2100, true, UIElementEventType.OpenLoadout);
+		var overview = EnsureMarker<ClimbOverviewButton>(OverviewName, OverviewBounds, 2100, true, UIElementEventType.OpenLoadout, parallax: true);
 		if (overview.GetComponent<ClimbLoadoutButton>() == null) EntityManager.AddComponent(overview, new ClimbLoadoutButton());
 		EnsureSection(ShopContainerName, ShopBounds, ClimbV2SectionKind.Shop);
 		EnsureSection(EncounterContainerName, EncounterBounds, ClimbV2SectionKind.Encounter);
@@ -202,6 +202,9 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			bool hidden = save == null || save.isSold || string.Equals(save.kind, ClimbShopSlotKinds.Empty, StringComparison.OrdinalIgnoreCase);
 			var rect = new Rectangle(36, 120 + index * 113, 315, 105);
 			var entity = EnsureEntity($"ClimbV2_Shop_{index}");
+			ConfigureUiParallax(entity);
+			bool awaitingPurchaseReconciliation = entity.GetComponent<ClimbV2ChoiceMotion>()?.Phase
+				== ClimbV2MotionPhase.AwaitingPurchaseReconciliation;
 			string itemAsset = ResolveShopAsset(save);
 			string title = ResolveShopTitle(save);
 			string fingerprint = Fingerprint(save?.id ?? $"shop_{index}", title, Math.Max(0, save?.timeCost ?? 0), Math.Max(0, save?.generatedAtTime ?? 0), hidden, itemAsset);
@@ -232,7 +235,8 @@ public sealed class ClimbV2LayoutSystem : Core.System
 				SyncShopTooltip(entity, save, hidden);
 			}
 			SyncRail(entity, hidden ? Rectangle.Empty : rect, new Rectangle(rect.X + 86, rect.Bottom - 53, rect.Width - 99, 42),
-				ClimbChoiceRailOutcomeKind.Price, slot.Cost, slot.TimeCost, -1);
+				ClimbChoiceRailOutcomeKind.Price, slot.Cost, slot.TimeCost, showTime: true, stays: -1);
+			if (awaitingPurchaseReconciliation) ReconcilePurchasedPresentation(entity.GetComponent<ClimbV2ChoiceMotion>(), hidden);
 		}
 	}
 
@@ -250,8 +254,9 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			var rect = rects[index];
 			bool hidden = save == null || save.isCompleted || string.IsNullOrWhiteSpace(save.enemyId);
 			var entity = EnsureEntity($"ClimbV2_Encounter_{index}");
+			ConfigureUiParallax(entity);
 			var enemy = EnemyFactory.Create(save?.enemyId);
-			string title = ResolveEncounterTitle(save?.enemyId, enemy?.Name);
+			string title = enemy?.Name ?? "Encounter";
 			string portraitAsset = EnemyPortraitContent.ToAssetName(save?.enemyId ?? string.Empty);
 			string fingerprint = Fingerprint(save?.id ?? $"encounter_{index}", title, Math.Max(0, save?.timeCost ?? 0), Math.Max(0, save?.generatedAtTime ?? 0), hidden, portraitAsset);
 			if (!TryAdoptPresentation(entity, fingerprint, index + 5)) continue;
@@ -279,7 +284,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			ClearNonShopTooltips(entity);
 			int stays = Remaining(slot, climb?.time ?? 0);
 			SyncRail(entity, hidden ? Rectangle.Empty : rect, new Rectangle(rect.X + 18, rect.Bottom - 53, rect.Width - 36, 42),
-				ClimbChoiceRailOutcomeKind.Reward, slot.Reward, slot.TimeCost, stays);
+				ClimbChoiceRailOutcomeKind.Reward, slot.Reward, slot.TimeCost, showTime: true, stays);
 		}
 	}
 
@@ -294,6 +299,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			var rect = new Rectangle(1569, 135 + index * 240, 315, 225);
 			bool hidden = save == null;
 			var entity = EnsureEntity($"ClimbV2_Event_{index}");
+			ConfigureUiParallax(entity);
 			var definition = ClimbEventCatalog.Get(save?.definitionId);
 			ClimbEventKind eventKind = save?.kind ?? ClimbEventKind.Hazard;
 			string title = eventKind == ClimbEventKind.Hazard ? "Unknown Hazard" : ResolveCharacterTitle(definition?.Actor);
@@ -327,20 +333,24 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			ClearNonShopTooltips(entity);
 			int railLeft = slot.EventKind == ClimbEventKind.Character ? 115 : 95;
 			int stays = Remaining(slot, climb?.time ?? 0);
+			bool hazard = slot.EventKind == ClimbEventKind.Hazard;
 			SyncRail(entity, hidden ? Rectangle.Empty : rect, new Rectangle(rect.X + railLeft, rect.Bottom - 83, rect.Width - railLeft - 16, 42),
-				ClimbChoiceRailOutcomeKind.None, new ClimbResourceSave(), slot.TimeCost, stays);
+				hazard ? ClimbChoiceRailOutcomeKind.Reward : ClimbChoiceRailOutcomeKind.None,
+				hazard ? slot.Reward : new ClimbResourceSave(), slot.TimeCost, showTime: !hazard, stays);
 		}
 	}
 
 	private void SyncRail(Entity source, Rectangle sourceBounds, Rectangle bounds, ClimbChoiceRailOutcomeKind outcome,
-		ClimbResourceSave resources, int time, int stays)
+		ClimbResourceSave resources, int time, bool showTime, int stays)
 	{
 		var rail = EnsureEntity(source.Name + "_Rail");
+		ConfigureUiParallax(rail);
 		var presentation = EnsureComponent<ClimbChoiceRailPresentation>(rail);
 		presentation.SourceSlotId = source.GetComponent<ClimbSlotPresentation>()?.SlotId ?? string.Empty;
 		presentation.OutcomeKind = outcome;
 		presentation.Resources = Clone(resources);
 		presentation.Time = Math.Max(0, time);
+		presentation.ShowTime = showTime;
 		presentation.Stays = stays;
 		presentation.ProjectedStays = stays;
 		SetBounds(rail, sourceBounds.IsEmpty ? Rectangle.Empty : bounds, false, UIElementEventType.None, 1700, sourceBounds.IsEmpty);
@@ -444,6 +454,11 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			motion.Fingerprint = fingerprint;
 			return true;
 		}
+		if (motion.Phase == ClimbV2MotionPhase.AwaitingPurchaseReconciliation)
+		{
+			motion.Fingerprint = fingerprint;
+			return true;
+		}
 		if (motion.Phase == ClimbV2MotionPhase.Settled)
 		{
 			motion.Phase = ClimbV2MotionPhase.AshesExiting;
@@ -536,11 +551,13 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		if (entity.GetComponent<ClimbMedalTooltipAnchor>() != null) EntityManager.RemoveComponent<ClimbMedalTooltipAnchor>(entity);
 	}
 
-	private Entity EnsureMarker<T>(string name, Rectangle bounds, int zOrder, bool interactable, UIElementEventType eventType = UIElementEventType.None)
+	private Entity EnsureMarker<T>(string name, Rectangle bounds, int zOrder, bool interactable,
+		UIElementEventType eventType = UIElementEventType.None, bool parallax = false)
 		where T : class, IComponent, new()
 	{
 		var entity = EnsureEntity(name);
 		EnsureComponent<T>(entity);
+		if (parallax) ConfigureUiParallax(entity);
 		SetBounds(entity, bounds, interactable, eventType, zOrder, false);
 		return entity;
 	}
@@ -565,7 +582,17 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	private void SetBounds(Entity entity, Rectangle bounds, bool interactable, UIElementEventType eventType, int zOrder, bool hidden)
 	{
 		var transform = entity.GetComponent<Transform>();
-		transform.Position = new Vector2(bounds.Center.X, bounds.Center.Y);
+		var parent = entity.GetComponent<ParentTransform>()?.Parent;
+		bool usesLocalBounds = parent != null;
+		if (usesLocalBounds)
+		{
+			Vector2 parentWorldPosition = TransformResolverService.ResolveWorldPosition(EntityManager, parent);
+			transform.Position = new Vector2(bounds.X, bounds.Y) - parentWorldPosition;
+		}
+		else
+		{
+			transform.Position = new Vector2(bounds.Center.X, bounds.Center.Y);
+		}
 		transform.ZOrder = zOrder;
 		var ui = entity.GetComponent<UIElement>();
 		if (ui == null)
@@ -573,10 +600,57 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			ui = new UIElement();
 			EntityManager.AddComponent(entity, ui);
 		}
-		ui.Bounds = bounds;
+		ui.Bounds = usesLocalBounds ? new Rectangle(0, 0, bounds.Width, bounds.Height) : bounds;
 		ui.IsInteractable = interactable;
 		ui.EventType = eventType;
 		ui.IsHidden = hidden;
+	}
+
+	private void ConfigureUiParallax(Entity entity)
+	{
+		var settings = ParallaxLayer.GetUIParallaxLayer();
+		var parallax = entity.GetComponent<ParallaxLayer>();
+		if (parallax == null)
+		{
+			EntityManager.AddComponent(entity, settings);
+		}
+		else
+		{
+			parallax.MultiplierX = settings.MultiplierX;
+			parallax.MultiplierY = settings.MultiplierY;
+			parallax.MaxOffset = settings.MaxOffset;
+			parallax.SmoothTime = settings.SmoothTime;
+		}
+
+		var root = EntityManager.GetEntity(RootName);
+		if (root == null) return;
+		var parent = entity.GetComponent<ParentTransform>();
+		if (parent == null) EntityManager.AddComponent(entity, new ParentTransform { Parent = root });
+		else parent.Parent = root;
+	}
+
+	internal static void ReconcilePurchasedPresentation(ClimbV2ChoiceMotion motion, bool hidden)
+	{
+		if (motion?.Phase != ClimbV2MotionPhase.AwaitingPurchaseReconciliation) return;
+		motion.ElapsedSeconds = 0f;
+		motion.DelaySeconds = 0f;
+		motion.Grayscale = 0f;
+		motion.Sepia = 0f;
+		if (hidden)
+		{
+			motion.Phase = ClimbV2MotionPhase.Settled;
+			motion.Offset = Vector2.Zero;
+			motion.Opacity = 0f;
+			motion.Brightness = 1f;
+			motion.Blur = 0f;
+			return;
+		}
+
+		motion.Phase = ClimbV2MotionPhase.Entering;
+		motion.Offset = new Vector2(-105f, 0f);
+		motion.Opacity = 0f;
+		motion.Brightness = 0.68f;
+		motion.Blur = 3f;
 	}
 
 	private static string ResolveShopAsset(ClimbShopSlotSave save)
@@ -593,13 +667,6 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		if (string.Equals(save?.itemId, "st_michael", StringComparison.OrdinalIgnoreCase)) return "St. Michael";
 		return ClimbSceneDrawHelpers.ResolveShopTitle(save);
 	}
-
-	private static string ResolveEncounterTitle(string enemyId, string fallback) => enemyId?.ToLowerInvariant() switch
-	{
-		"skeleton" => "Gravebound",
-		"demon" => "Cinderfiend",
-		_ => fallback ?? "Encounter",
-	};
 
 	private static string ResolveCharacterTitle(string actor) => string.Equals(actor, "Nun", StringComparison.OrdinalIgnoreCase)
 		? "Sister Mara"

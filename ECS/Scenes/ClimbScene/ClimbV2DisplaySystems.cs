@@ -26,6 +26,33 @@ internal static class ClimbV2Draw
 	public static Rectangle Shift(Rectangle rect, Vector2 offset) => new(
 		rect.X + (int)MathF.Round(offset.X), rect.Y + (int)MathF.Round(offset.Y), rect.Width, rect.Height);
 
+	public static Rectangle ResolveBounds(EntityManager entityManager, Entity entity)
+	{
+		var ui = entity?.GetComponent<UIElement>();
+		return ui == null ? Rectangle.Empty : TransformResolverService.ResolveUIBounds(entityManager, entity, ui);
+	}
+
+	public static Rectangle ApplyChoiceHover(Rectangle rect, ClimbSlotKind kind, bool hovered)
+	{
+		if (!hovered || rect.IsEmpty) return rect;
+		int inflateY = kind == ClimbSlotKind.Shop ? 1 : 2;
+		return new Rectangle(rect.X - 2, rect.Y - inflateY, rect.Width + 4, rect.Height + inflateY * 2);
+	}
+
+	public static Rectangle Contain(Texture2D texture, Rectangle container)
+	{
+		return texture == null ? Rectangle.Empty : Contain(texture.Width, texture.Height, container);
+	}
+
+	internal static Rectangle Contain(int sourceWidth, int sourceHeight, Rectangle container)
+	{
+		if (sourceWidth <= 0 || sourceHeight <= 0 || container.Width <= 0 || container.Height <= 0) return Rectangle.Empty;
+		float scale = Math.Min(container.Width / (float)sourceWidth, container.Height / (float)sourceHeight);
+		int width = Math.Max(1, (int)Math.Round(sourceWidth * scale));
+		int height = Math.Max(1, (int)Math.Round(sourceHeight * scale));
+		return new Rectangle(container.Center.X - width / 2, container.Center.Y - height / 2, width, height);
+	}
+
 	public static void Border(SpriteBatch batch, Texture2D pixel, Rectangle rect, Color color, int thickness = 1)
 	{
 		if (rect.Width <= 0 || rect.Height <= 0) return;
@@ -105,10 +132,11 @@ internal static class ClimbV2Draw
 		batch.Draw(texture, destination, source, color);
 	}
 
-	public static (Vector2 Offset, float Alpha) Motion(Entity entity)
+	public static (Vector2 Offset, float Alpha) Motion(Entity entity, float opacityMultiplier = 1f)
 	{
 		var motion = entity?.GetComponent<ClimbV2ChoiceMotion>();
-		return (motion?.Offset ?? Vector2.Zero, MathHelper.Clamp(motion?.Opacity ?? 1f, 0f, 1f));
+		float alpha = (motion?.Opacity ?? 1f) * opacityMultiplier;
+		return (motion?.Offset ?? Vector2.Zero, MathHelper.Clamp(alpha, 0f, 1f));
 	}
 
 	public static void SoftRoundedShadow(SpriteBatch batch, ImageAssetService assets, Rectangle rect,
@@ -355,7 +383,7 @@ public sealed class ClimbOverviewButtonDisplaySystem : Core.System
 	public void Draw()
 	{
 		var entity = GetRelevantEntities().FirstOrDefault();
-		var rect = entity?.GetComponent<UIElement>()?.Bounds ?? Rectangle.Empty;
+		var rect = ClimbV2Draw.ResolveBounds(EntityManager, entity);
 		if (rect.IsEmpty) return;
 		bool hover = entity.GetComponent<UIElement>()?.IsHovered == true;
 		Color color = hover ? ClimbV2Draw.Red : Color.White;
@@ -377,11 +405,12 @@ public sealed class ShopItemDisplaySystem : Core.System
 	public ShopItemDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em) { _batch = batch; _assets = assets; _pixel = assets.GetPixel(Color.White); }
 	protected override IEnumerable<Entity> GetRelevantEntities() => EntityManager.GetEntitiesWithComponent<ClimbShopItemPresentation>();
 	protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
-	public void DrawEntity(Entity entity)
+	public void DrawEntity(Entity entity, float opacityMultiplier = 1f)
 	{
 		var ui = entity?.GetComponent<UIElement>(); if (ui == null || ui.IsHidden || ui.Bounds.IsEmpty) return;
-		var slot = entity.GetComponent<ClimbSlotPresentation>(); var item = entity.GetComponent<ClimbShopItemPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(entity);
-		var rect = ClimbV2Draw.Shift(ui.Bounds, offset); if (ui.IsHovered) rect = new Rectangle(rect.X - 2, rect.Y - 1, rect.Width + 4, rect.Height + 2);
+		var slot = entity.GetComponent<ClimbSlotPresentation>(); var item = entity.GetComponent<ClimbShopItemPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(entity, opacityMultiplier);
+		var rect = ClimbV2Draw.Shift(ClimbV2Draw.ResolveBounds(EntityManager, entity), offset);
+		rect = ClimbV2Draw.ApplyChoiceHover(rect, slot.Kind, ui.IsHovered);
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 7, 2, 2, 7, 10, 12, 0.42f, alpha);
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 7, 2, 2, 7, 3, 5, 0.28f, alpha);
 		_batch.Draw(_assets.GetRoundedRectPerCorner(rect.Width, rect.Height, 7, 2, 2, 7), rect, new Color(16, 17, 18) * (0.92f * alpha));
@@ -404,27 +433,83 @@ public sealed class ShopItemDisplaySystem : Core.System
 public sealed class EncounterDisplaySystem : Core.System
 {
 	private readonly SpriteBatch _batch; private readonly Texture2D _pixel; private readonly ImageAssetService _assets; private readonly SpriteFont _font = FontSingleton.TitleFont;
-	public EncounterDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em) { _batch = batch; _assets = assets; _pixel = assets.GetPixel(Color.White); }
+	private readonly Action<CursorStateEvent> _cursorHandler;
+	private Vector2 _cursorPosition;
+	private bool _hasCursorPosition;
+	private Vector2 _portraitParallaxOffset;
+	[DebugEditable(DisplayName = "Portrait Parallax Multiplier X", Step = 0.01f, Min = 0f, Max = 0.25f)]
+	public float PortraitParallaxMultiplierX { get; set; } = 0.01f;
+	[DebugEditable(DisplayName = "Portrait Parallax Multiplier Y", Step = 0.01f, Min = 0f, Max = 0.25f)]
+	public float PortraitParallaxMultiplierY { get; set; } = 0.01f;
+	[DebugEditable(DisplayName = "Portrait Parallax Max Offset", Step = 1f, Min = 0f, Max = 200f)]
+	public float PortraitParallaxMaxOffset { get; set; } = 151f;
+	[DebugEditable(DisplayName = "Portrait Parallax Smooth Time", Step = 0.01f, Min = 0f, Max = 0.5f)]
+	public float PortraitParallaxSmoothTime { get; set; }
+	[DebugEditable(DisplayName = "Portrait Parallax Zoom", Step = 0.01f, Min = 0.5f, Max = 1.5f)]
+	public float PortraitParallaxZoom { get; set; } = 0.8f;
+	[DebugEditable(DisplayName = "Portrait Crop Top Bias", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float PortraitCropTopBias { get; set; } = 0.07f;
+	public EncounterDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em)
+	{
+		_batch = batch; _assets = assets; _pixel = assets.GetPixel(Color.White);
+		_cursorHandler = evt => { _cursorPosition = evt.Position; _hasCursorPosition = true; };
+		EventManager.Subscribe(_cursorHandler);
+	}
 	protected override IEnumerable<Entity> GetRelevantEntities() => EntityManager.GetEntitiesWithComponent<ClimbEncounterPresentation>();
 	protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
-	public void DrawEntity(Entity entity)
+	public override void Update(GameTime gameTime)
+	{
+		base.Update(gameTime);
+		Vector2 target = ComputePortraitParallaxTarget(
+			_cursorPosition,
+			_hasCursorPosition,
+			PortraitParallaxMultiplierX,
+			PortraitParallaxMultiplierY,
+			PortraitParallaxMaxOffset);
+		float dt = Math.Max(0f, (float)(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d));
+		float smooth = Math.Max(0f, PortraitParallaxSmoothTime);
+		float alpha = smooth <= 0f ? 1f : 1f - MathF.Exp(-dt / smooth);
+		_portraitParallaxOffset = Vector2.Lerp(_portraitParallaxOffset, target, MathHelper.Clamp(alpha, 0f, 1f));
+	}
+	public void DrawEntity(Entity entity, float opacityMultiplier = 1f)
 	{
 		var ui = entity?.GetComponent<UIElement>(); if (ui == null || ui.IsHidden || ui.Bounds.IsEmpty) return;
-		var slot = entity.GetComponent<ClimbSlotPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(entity); var rect = ClimbV2Draw.Shift(ui.Bounds, offset);
-		if (ui.IsHovered) rect = new Rectangle(rect.X - 2, rect.Y - 2, rect.Width + 4, rect.Height + 4);
-		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 150, 150, 18, 18, 20, 21, 0.48f, alpha);
-		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 150, 150, 18, 18, 5, 8, 0.32f, alpha);
-		_batch.Draw(_assets.GetRoundedRectPerCorner(rect.Width, rect.Height, 150, 150, 18, 18), rect, new Color(8, 9, 10) * (0.82f * alpha));
+		var slot = entity.GetComponent<ClimbSlotPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(entity, opacityMultiplier);
+		var rect = ClimbV2Draw.Shift(ClimbV2Draw.ResolveBounds(EntityManager, entity), offset);
+		rect = ClimbV2Draw.ApplyChoiceHover(rect, slot.Kind, ui.IsHovered);
+		if (opacityMultiplier >= 0.999f)
+		{
+			ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 150, 150, 18, 18, 20, 21, 0.48f, alpha);
+			ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 150, 150, 18, 18, 5, 8, 0.32f, alpha);
+			_batch.Draw(_assets.GetRoundedRectPerCorner(rect.Width, rect.Height, 150, 150, 18, 18), rect, new Color(8, 9, 10) * (0.82f * alpha));
+		}
 		var art = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - 108);
 		var background = _assets.TryGetTexture(BattleLocationAssetService.GetBackgroundAsset(slot.BattleLocation));
 		if (background != null) ClimbV2Draw.Cover(_batch, background, art, Color.White * alpha);
-		var portrait = _assets.TryGetTexture(slot.PortraitAsset); if (portrait != null) ClimbV2Draw.Cover(_batch, portrait, art, Color.White * alpha, alignTop: true);
+		var portrait = _assets.TryGetTexture(slot.PortraitAsset);
+		if (portrait != null)
+		{
+			ClimbSceneDrawHelpers.DrawPortraitCropped(
+				_batch, portrait, art, PortraitCropTopBias, _portraitParallaxOffset, PortraitParallaxZoom, alpha);
+		}
 		_batch.Draw(_pixel, art, Color.Black * (0.08f * alpha));
 		Color body = slot.BattleLocation switch { BattleLocation.Gothic => new Color(38, 22, 48), BattleLocation.Jungle => new Color(18, 42, 28), BattleLocation.Volcano => new Color(58, 18, 25), BattleLocation.Tundra => new Color(22, 37, 60), _ => new Color(53, 41, 27) };
 		var bodyRect = new Rectangle(rect.X, rect.Bottom - 136, rect.Width, 136); _batch.Draw(_pixel, bodyRect, body * (0.96f * alpha));
 		ClimbV2Draw.Text(_batch, _font, slot.Title, new Vector2(rect.X + 18, bodyRect.Y + 18), 0.20f, Color.White * alpha);
 		ClimbV2Draw.Border(_batch, _pixel, rect, Color.Black * (0.4f * alpha));
 	}
+
+	internal static Vector2 ComputePortraitParallaxTarget(Vector2 cursor, bool hasCursor, float multiplierX, float multiplierY, float maxOffset)
+	{
+		if (!hasCursor) return Vector2.Zero;
+		var center = new Vector2(Game1.VirtualWidth / 2f, Game1.VirtualHeight / 2f);
+		var target = new Vector2((center.X - cursor.X) * multiplierX, (center.Y - cursor.Y) * multiplierY);
+		float max = Math.Max(0f, maxOffset);
+		float length = target.Length();
+		return length <= max || length <= 0f ? target : target * (max / length);
+	}
+
+	public void Shutdown() => EventManager.Unsubscribe(_cursorHandler);
 }
 
 [DebugTab("Climb V2 Events")]
@@ -434,11 +519,12 @@ public sealed class EventDisplaySystem : Core.System
 	public EventDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em) { _batch = batch; _assets = assets; _pixel = assets.GetPixel(Color.White); _glyphCircle = assets.GetAntiAliasedCircle(25); }
 	protected override IEnumerable<Entity> GetRelevantEntities() => EntityManager.GetEntitiesWithComponent<ClimbEventPresentation>();
 	protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
-	public void DrawEntity(Entity entity)
+	public void DrawEntity(Entity entity, float opacityMultiplier = 1f)
 	{
 		var ui = entity?.GetComponent<UIElement>(); if (ui == null || ui.IsHidden || ui.Bounds.IsEmpty) return;
-		var slot = entity.GetComponent<ClimbSlotPresentation>(); var item = entity.GetComponent<ClimbEventPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(entity); var rect = ClimbV2Draw.Shift(ui.Bounds, offset);
-		if (ui.IsHovered) rect = new Rectangle(rect.X - 2, rect.Y - 2, rect.Width + 4, rect.Height + 4);
+		var slot = entity.GetComponent<ClimbSlotPresentation>(); var item = entity.GetComponent<ClimbEventPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(entity, opacityMultiplier);
+		var rect = ClimbV2Draw.Shift(ClimbV2Draw.ResolveBounds(EntityManager, entity), offset);
+		rect = ClimbV2Draw.ApplyChoiceHover(rect, slot.Kind, ui.IsHovered);
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 3, 3, 3, 3, 14, 18, 0.48f, alpha);
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 3, 3, 3, 3, 4, 7, 0.26f, alpha);
 		Color fill = slot.EventKind == ClimbEventKind.Character ? new Color(63, 15, 29) : new Color(47, 33, 22);
@@ -446,7 +532,12 @@ public sealed class EventDisplaySystem : Core.System
 		int textX;
 		if (slot.EventKind == ClimbEventKind.Character)
 		{
-			var portrait = _assets.TryGetTexture(slot.PortraitAsset); if (portrait != null) _batch.Draw(portrait, new Rectangle(rect.X + 7, rect.Y + 18, 100, 155), Color.White * alpha);
+			var portrait = _assets.TryGetTexture(slot.PortraitAsset);
+			if (portrait != null)
+			{
+				var portraitBounds = ClimbV2Draw.Contain(portrait, new Rectangle(rect.X + 7, rect.Y + 18, 100, 155));
+				_batch.Draw(portrait, portraitBounds, Color.White * alpha);
+			}
 			textX = rect.X + 115;
 		}
 		else
@@ -477,24 +568,32 @@ public sealed class ChoiceStatsRailDisplaySystem : Core.System
 	public ChoiceStatsRailDisplaySystem(EntityManager em, GraphicsDevice gd, SpriteBatch batch, ImageAssetService assets) : base(em) { _batch = batch; _gd = gd; _pixel = assets.GetPixel(Color.White); _pipCircle = assets.GetAntiAliasedCircle(4); ClimbSceneDrawHelpers.EnsureResourceTextures(assets); }
 	protected override IEnumerable<Entity> GetRelevantEntities() => EntityManager.GetEntitiesWithComponent<ClimbChoiceRailPresentation>();
 	protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
-	public void DrawForSource(Entity source)
+	public void DrawForSource(Entity source, float opacityMultiplier = 1f)
 	{
 		var slot = source?.GetComponent<ClimbSlotPresentation>(); if (slot == null) return;
 		var railEntity = GetRelevantEntities().FirstOrDefault(e => string.Equals(e.GetComponent<ClimbChoiceRailPresentation>()?.SourceSlotId, slot.SlotId, StringComparison.OrdinalIgnoreCase));
 		var ui = railEntity?.GetComponent<UIElement>(); if (ui == null || ui.IsHidden || ui.Bounds.IsEmpty) return;
-		var rail = railEntity.GetComponent<ClimbChoiceRailPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(source); var rect = ClimbV2Draw.Shift(ui.Bounds, offset);
+		var rail = railEntity.GetComponent<ClimbChoiceRailPresentation>(); var (offset, alpha) = ClimbV2Draw.Motion(source, opacityMultiplier);
+		var rect = ClimbV2Draw.Shift(ClimbV2Draw.ResolveBounds(EntityManager, railEntity), offset);
+		rect = ClimbV2Draw.ApplyChoiceHover(rect, slot.Kind, source.GetComponent<UIElement>()?.IsHovered == true);
 		_batch.Draw(_pixel, rect, new Color(5, 6, 7) * (0.76f * alpha)); ClimbV2Draw.Border(_batch, _pixel, rect, Color.White * (0.17f * alpha));
-		int timeWidth = 58;
+		int timeWidth = rail.ShowTime ? 58 : 0;
 		int staysWidth = rail.Stays >= 0 ? 64 : 0;
 		int outcomeWidth = rect.Width - timeWidth - staysWidth;
 		if (rail.OutcomeKind == ClimbChoiceRailOutcomeKind.None)
 		{
 			outcomeWidth = 0;
-			timeWidth = rail.Stays >= 0 ? rect.Width / 2 : rect.Width;
-			staysWidth = rail.Stays >= 0 ? rect.Width - timeWidth : 0;
+			if (rail.ShowTime && rail.Stays >= 0)
+			{
+				timeWidth = rect.Width / 2;
+				staysWidth = rect.Width - timeWidth;
+			}
+			else if (rail.ShowTime) timeWidth = rect.Width;
+			else if (rail.Stays >= 0) staysWidth = rect.Width;
 		}
 		if (rail.OutcomeKind != ClimbChoiceRailOutcomeKind.None) DrawOutcome(new Rectangle(rect.X, rect.Y, outcomeWidth, rect.Height), rail, alpha);
-		int timeX = rect.X + Math.Max(0, outcomeWidth); DrawPips(new Rectangle(timeX, rect.Y, timeWidth, rect.Height), "TIME", rail.Time, rail.Time, Color.White, alpha);
+		int timeX = rect.X + Math.Max(0, outcomeWidth);
+		if (rail.ShowTime) DrawPips(new Rectangle(timeX, rect.Y, timeWidth, rect.Height), "TIME", rail.Time, rail.Time, Color.White, alpha);
 		if (rail.Stays >= 0) DrawPips(new Rectangle(timeX + timeWidth, rect.Y, staysWidth, rect.Height), "STAYS", rail.Stays, rail.ProjectedStays, ClimbV2Draw.Red, alpha);
 	}
 	private void DrawOutcome(Rectangle rect, ClimbChoiceRailPresentation rail, float alpha)
@@ -531,39 +630,50 @@ public sealed class ChoiceStatsRailDisplaySystem : Core.System
 [DebugTab("Climb V2 Choice Preview")]
 public sealed class ClimbChoicePreviewDisplaySystem : Core.System
 {
-	private readonly SpriteBatch _batch;
-	private readonly Texture2D _pixel;
-	private float _elapsedSeconds;
-	public ClimbChoicePreviewDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em) { _batch = batch; _pixel = assets.GetPixel(Color.White); }
+	[DebugEditable(DisplayName = "Expiry Pulse Seconds", Step = 0.01f, Min = 0.2f, Max = 4f)]
+	public float PulseSeconds { get; set; } = 1.15f;
+	[DebugEditable(DisplayName = "Expiry Minimum Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float MinimumOpacity { get; set; } = 0.35f;
+	[DebugEditable(DisplayName = "Expiry Maximum Grayscale", Step = 0.01f, Min = 0f, Max = 1f)]
+	public float MaximumGrayscale { get; set; } = 1f;
+	[DebugEditable(DisplayName = "Expiry Restore Seconds", Step = 0.01f, Min = 0.01f, Max = 1f)]
+	public float RestoreSeconds { get; set; } = 0.18f;
+
+	public ClimbChoicePreviewDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em) { }
 	protected override IEnumerable<Entity> GetRelevantEntities() => EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>();
-	protected override void UpdateEntity(Entity entity, GameTime gameTime) { }
-	public override void Update(GameTime gameTime)
-	{
-		base.Update(gameTime);
-		_elapsedSeconds += Math.Max(0f, (float)(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d));
-	}
-	public void Draw()
+	protected override void UpdateEntity(Entity entity, GameTime gameTime)
 	{
 		var preview = EntityManager.GetEntity(ClimbV2LayoutSystem.RootName)?.GetComponent<ClimbPreviewState>();
-		if (preview?.IsActive != true) return;
-		float pulse = 0.64f + 0.36f * MathF.Sin(_elapsedSeconds * MathHelper.TwoPi / 1.15f);
-		int drift = (int)(_elapsedSeconds * 14f) % 24;
-		foreach (var entity in GetRelevantEntities())
+		var slot = entity.GetComponent<ClimbSlotPresentation>();
+		var visual = entity.GetComponent<ClimbChoiceExpiryPreviewPresentation>();
+		if (visual == null)
 		{
-			var slot = entity.GetComponent<ClimbSlotPresentation>();
-			if (slot == null || string.Equals(slot.SlotId, preview.SourceSlotId, StringComparison.OrdinalIgnoreCase)
-				|| !preview.WouldVanishSlotIds.Contains(slot.SlotId)) continue;
-			var ui = entity.GetComponent<UIElement>(); if (ui == null || ui.IsHidden || ui.Bounds.IsEmpty) continue;
-			var (offset, alpha) = ClimbV2Draw.Motion(entity); var rect = ClimbV2Draw.Shift(ui.Bounds, offset);
-			_batch.Draw(_pixel, rect, new Color(63, 6, 18) * (0.34f * pulse * alpha));
-			for (int x = rect.X - rect.Height + drift; x < rect.Right; x += 24)
-			{
-				for (int y = rect.Y; y < rect.Bottom; y += 8)
-				{
-					int stripeX = x + (y - rect.Y);
-					if (stripeX >= rect.X && stripeX < rect.Right) _batch.Draw(_pixel, new Rectangle(stripeX, y, 4, Math.Min(8, rect.Bottom - y)), ClimbV2Draw.Red * (0.14f * alpha));
-				}
-			}
+			visual = new ClimbChoiceExpiryPreviewPresentation();
+			EntityManager.AddComponent(entity, visual);
 		}
+
+		bool targeted = preview?.IsActive == true
+			&& slot != null
+			&& !string.Equals(slot.SlotId, preview.SourceSlotId, StringComparison.OrdinalIgnoreCase)
+			&& preview.WouldVanishSlotIds.Contains(slot.SlotId);
+		float dt = Math.Max(0f, (float)(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d));
+		if (targeted)
+		{
+			if (!visual.IsActive) visual.PulseElapsedSeconds = 0f;
+			visual.IsActive = true;
+			visual.PulseElapsedSeconds += dt;
+			float period = Math.Max(0.01f, PulseSeconds);
+			float phase = MathHelper.TwoPi * (visual.PulseElapsedSeconds % period) / period;
+			visual.Strength = 0.5f - 0.5f * MathF.Cos(phase);
+		}
+		else
+		{
+			visual.IsActive = false;
+			visual.PulseElapsedSeconds = 0f;
+			visual.Strength = Math.Max(0f, visual.Strength - dt / Math.Max(0.01f, RestoreSeconds));
+		}
+
+		visual.OpacityMultiplier = MathHelper.Lerp(1f, MathHelper.Clamp(MinimumOpacity, 0f, 1f), visual.Strength);
+		visual.Grayscale = MathHelper.Clamp(MaximumGrayscale, 0f, 1f) * visual.Strength;
 	}
 }

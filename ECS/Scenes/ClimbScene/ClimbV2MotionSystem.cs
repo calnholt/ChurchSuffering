@@ -11,6 +11,7 @@ public sealed class ClimbV2MotionSystem : Core.System
 {
 	private const float AshesSeconds = 1.05f;
 	private const float TurnoverGapSeconds = 0.08f;
+	private const float PurchaseExitSeconds = 0.42f;
 
 	public ClimbV2MotionSystem(EntityManager entityManager) : base(entityManager) { }
 
@@ -53,12 +54,17 @@ public sealed class ClimbV2MotionSystem : Core.System
 		if (motion.Phase == ClimbV2MotionPhase.Purchasing)
 		{
 			ApplyPurchase(motion, localSeconds);
-			if (localSeconds < 0.94f) return;
-			motion.Phase = ClimbV2MotionPhase.Settled;
-			motion.Initialized = false;
-			ResetVisual(motion);
+			if (localSeconds < PurchaseExitSeconds) return;
+			motion.Phase = ClimbV2MotionPhase.AwaitingPurchaseReconciliation;
+			motion.ElapsedSeconds = 0f;
+			motion.DelaySeconds = 0f;
+			motion.Offset = new Vector2(105f, 0f);
+			motion.Opacity = 0f;
+			motion.Brightness = 0.72f;
+			motion.Blur = 3f;
 			return;
 		}
+		if (motion.Phase == ClimbV2MotionPhase.AwaitingPurchaseReconciliation) return;
 
 		float duration = entity.GetComponent<ClimbEncounterPresentation>() != null ? 0.72f : 0.62f;
 		float progress = MathHelper.Clamp(localSeconds / duration, 0f, 1f);
@@ -105,21 +111,12 @@ public sealed class ClimbV2MotionSystem : Core.System
 
 	private static void ApplyPurchase(ClimbV2ChoiceMotion motion, float seconds)
 	{
-		float progress = MathHelper.Clamp(seconds / 0.94f, 0f, 1f);
-		if (progress <= 0.44f)
-		{
-			float t = EaseInCubic(progress / 0.44f);
-			motion.Offset = new Vector2(105f * t, 0f);
-			motion.Opacity = 1f - t;
-			motion.Brightness = MathHelper.Lerp(1f, 0.72f, t);
-			motion.Blur = 3f * t;
-			return;
-		}
-		float incoming = EaseOutCubic((progress - 0.45f) / 0.55f);
-		motion.Offset = new Vector2(MathHelper.Lerp(-105f, 0f, incoming), 0f);
-		motion.Opacity = incoming;
-		motion.Brightness = MathHelper.Lerp(0.72f, 1f, incoming);
-		motion.Blur = MathHelper.Lerp(3f, 0f, incoming);
+		float progress = MathHelper.Clamp(seconds / PurchaseExitSeconds, 0f, 1f);
+		float eased = EaseInCubic(progress);
+		motion.Offset = new Vector2(105f * eased, 0f);
+		motion.Opacity = 1f - eased;
+		motion.Brightness = MathHelper.Lerp(1f, 0.72f, eased);
+		motion.Blur = 3f * eased;
 	}
 
 	private void SyncInputSuppression(bool suppress)

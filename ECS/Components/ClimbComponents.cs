@@ -60,6 +60,7 @@ namespace Crusaders30XX.ECS.Components
 		AshesExiting,
 		Entering,
 		Purchasing,
+		AwaitingPurchaseReconciliation,
 	}
 
 	public class ClimbSceneRoot : IComponent
@@ -127,9 +128,20 @@ namespace Crusaders30XX.ECS.Components
 		public ClimbChoiceRailOutcomeKind OutcomeKind { get; set; }
 		public ClimbResourceSave Resources { get; set; } = new();
 		public int Time { get; set; }
+		public bool ShowTime { get; set; } = true;
 		public int Stays { get; set; } = -1;
 		public int ProjectedStays { get; set; } = -1;
 		public float Opacity { get; set; } = 1f;
+	}
+
+	public sealed class ClimbChoiceExpiryPreviewPresentation : IComponent
+	{
+		public Entity Owner { get; set; }
+		public bool IsActive { get; set; }
+		public float PulseElapsedSeconds { get; set; }
+		public float Strength { get; set; }
+		public float OpacityMultiplier { get; set; } = 1f;
+		public float Grayscale { get; set; }
 	}
 
 	public sealed class ClimbV2ChoiceMotion : IComponent

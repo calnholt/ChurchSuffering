@@ -17,6 +17,9 @@ public sealed class PoisonCardOverlay
     public bool IsAvailable => _effect != null;
     public Vector2 Resolution { get; set; } = new(Game1.VirtualWidth, Game1.VirtualHeight);
     public float Time { get; set; }
+    public Vector2 CardCenter { get; set; }
+    public Vector2 CardSize { get; set; }
+    public float CardRotation { get; set; }
     public float BlobFrequency { get; set; } = 6f;
     public float BlobStretch { get; set; } = 1.5f;
     public float BlobReachMin { get; set; } = 0.55f;
@@ -56,6 +59,9 @@ public sealed class PoisonCardOverlay
         Set("MatrixTransform", projection);
         Set("iResolution", Resolution);
         Set("iTime", Time);
+        Set("CARD_CENTER", CardCenter);
+        Set("CARD_SIZE", CardSize);
+        Set("CARD_ROTATION", CardRotation);
         Set("BLOB_FREQ", BlobFrequency);
         Set("BLOB_STRETCH", BlobStretch);
         Set("BLOB_REACH_MIN", BlobReachMin);
