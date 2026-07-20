@@ -414,8 +414,8 @@ public sealed class ShopItemDisplaySystem : Core.System
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 7, 2, 2, 7, 10, 12, 0.42f, alpha);
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 7, 2, 2, 7, 3, 5, 0.28f, alpha);
 		_batch.Draw(_assets.GetRoundedRectPerCorner(rect.Width, rect.Height, 7, 2, 2, 7), rect, new Color(16, 17, 18) * (0.92f * alpha));
-		Color artColor = string.Equals(item.ItemKind, ClimbShopSlotKinds.Medal, StringComparison.OrdinalIgnoreCase) ? new Color(7, 8, 9)
-			: string.Equals(item.ItemKind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase) ? ClimbV2Draw.Paper : ClimbV2Draw.RedDark;
+		Color artColor = string.Equals(item.ItemKind, ClimbShopSlotKinds.Medal, StringComparison.OrdinalIgnoreCase) ? ClimbV2Draw.Paper
+			: string.Equals(item.ItemKind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase) ? new Color(7, 8, 9) : ClimbV2Draw.RedDark;
 		var art = new Rectangle(rect.X, rect.Y, 78, rect.Height); _batch.Draw(_assets.GetRoundedRectPerCorner(art.Width, art.Height, 7, 0, 0, 7), art, artColor * alpha);
 		var texture = _assets.TryGetTexture(item.ItemAsset); if (texture != null)
 		{
