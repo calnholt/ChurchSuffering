@@ -431,6 +431,39 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 	}
 
 	[Fact]
+	public void Hover_with_foreign_tooltip_present_layouts_battle_tooltip_centered_to_the_right()
+	{
+		var entityManager = BuildBattle(out var player, SubPhase.Action);
+		CreateNamedTooltip(entityManager, "Climb_EquipmentTooltip");
+		var equipment = AddEquipment(entityManager, player, "helm_of_seeing");
+		var display = new EquipmentDisplaySystem(entityManager, null, null, null);
+		var tooltipDisplay = new EquipmentTooltipDisplaySystem(
+			entityManager,
+			null,
+			null,
+			null,
+			EquipmentDisplaySystem.TooltipEntityName);
+
+		display.Update(Frame());
+		equipment.GetComponent<UIElement>().IsHovered = true;
+		tooltipDisplay.Update(Frame());
+
+		var battleTooltip = entityManager.GetEntity(EquipmentDisplaySystem.TooltipEntityName);
+		var battleState = battleTooltip.GetComponent<EquipmentTooltipState>();
+		var foreignState = entityManager.GetEntity("Climb_EquipmentTooltip")
+			.GetComponent<EquipmentTooltipState>();
+		Rectangle panelBounds = display.GetPanelWorldBounds(equipment);
+		Rectangle tooltipBounds = tooltipDisplay.GetTooltipWorldBounds();
+
+		Assert.Same(equipment, battleState.EquipmentEntity);
+		Assert.True(battleState.TargetVisible);
+		Assert.False(foreignState.TargetVisible);
+		Assert.Null(foreignState.EquipmentEntity);
+		Assert.Equal(panelBounds.Right + tooltipDisplay.TooltipGap, tooltipBounds.X);
+		Assert.InRange(tooltipBounds.Center.Y, panelBounds.Center.Y - 1, panelBounds.Center.Y + 1);
+	}
+
+	[Fact]
 	public void Teardown_destroys_only_battle_equipment_tooltip_entity()
 	{
 		var entityManager = BuildBattle(out var player, SubPhase.Action);

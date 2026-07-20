@@ -55,7 +55,7 @@ rm -rf Content/bin Content/obj && echo "Cleaned Content/bin and Content/obj" && 
 Climb Penance Levels:
 
 Fasting - Crusader gets -1HP (5)
-Mortification - Enemies get +15% more HP (2)
+Mortification - Enemies get +5% more HP (6)
 Abstinence - Start with 1 fewer starting resource (3)
 Penitential Pilgrimage - Shop reset is 1 time longer (2)
 Reparation - 1 starter is replaced with a random card with a random negative mod (8)
@@ -64,9 +64,11 @@ Reparation - 1 starter is replaced with a random card with a random negative mod
 Fasting
 Reparation
 Abstinence
+Mortification
 Fasting
 Reparation
 Abstinence
+Mortification
 Reparation
 Penitential Pilgrimage
 Fasting
@@ -74,9 +76,11 @@ Mortification
 Reparation
 Fasting
 Reparation
+Mortification
 Abstinence
 Reparation
 Penitential Pilgrimage
+Mortification
 Reparation
 Fasting
 Reparation

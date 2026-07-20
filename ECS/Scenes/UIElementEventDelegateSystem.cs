@@ -266,7 +266,6 @@ namespace Crusaders30XX.ECS.Systems
         {
             var action = entity.GetComponent<ClimbShopSlotAction>();
             if (action == null || action.SlotIndex < 0) return;
-            EventManager.Publish(new ClimbShopSlotSelectedEvent { SlotIndex = action.SlotIndex });
 
             var climb = SaveCache.GetClimbState();
             var slot = climb?.shopSlots != null && action.SlotIndex < climb.shopSlots.Count
@@ -279,6 +278,7 @@ namespace Crusaders30XX.ECS.Systems
 
             if (!string.Equals(slot.kind, ClimbShopSlotKinds.Replacement, StringComparison.OrdinalIgnoreCase))
             {
+                // ClimbShopSlotSelectedEvent is published from TryPurchaseSlot on success only.
                 ClimbShopService.TryPurchaseSlot(entityManager, action.SlotIndex);
                 return;
             }

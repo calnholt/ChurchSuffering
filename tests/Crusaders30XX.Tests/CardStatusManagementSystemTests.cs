@@ -212,6 +212,20 @@ public sealed class CardStatusManagementSystemTests : System.IDisposable
 	}
 
 	[Fact]
+	public void Applied_passive_tooltip_excludes_stem_matched_keyword()
+	{
+		var poisonText = TooltipTextService.GetPassiveText(AppliedPassiveType.Poison, isPlayer: true, stacks: 1);
+		var blocks = TooltipTextService.BuildTooltipBlocks(
+			null,
+			poisonText,
+			excludedKeywordIds: [TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Poison)]);
+
+		Assert.Equal("poisoned", TooltipTextService.GetPassiveKeywordId(AppliedPassiveType.Poison));
+		Assert.Equal(["base"], blocks.Select(block => block.Id).ToArray());
+		Assert.Equal(poisonText, blocks[0].Text);
+	}
+
+	[Fact]
 	public void Applied_passive_tooltip_still_expands_related_keywords()
 	{
 		var infernoText = TooltipTextService.GetPassiveText(AppliedPassiveType.Inferno, isPlayer: true, stacks: 3);

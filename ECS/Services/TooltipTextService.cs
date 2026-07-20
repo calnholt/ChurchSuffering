@@ -104,10 +104,35 @@ namespace Crusaders30XX.ECS.Services
 		}
 
 		/// <summary>
-		/// Keyword registry id for an applied passive (matches KeywordDefinitions ids when present).
+		/// Keyword registry id for an applied passive (exact id/alias match, else stem match).
 		/// </summary>
-		public static string GetPassiveKeywordId(AppliedPassiveType type) =>
-			type.ToString().ToLowerInvariant();
+		public static string GetPassiveKeywordId(AppliedPassiveType type)
+		{
+			var name = type.ToString().ToLowerInvariant();
+			string stemMatchId = null;
+
+			foreach (var definition in KeywordDefinitions)
+			{
+				if (string.Equals(definition.Id, name, StringComparison.OrdinalIgnoreCase)
+					|| definition.Aliases.Any(alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)))
+				{
+					return definition.Id;
+				}
+
+				if (stemMatchId == null
+					&& (IsStemMatch(definition.Id, name)
+						|| definition.Aliases.Any(alias => IsStemMatch(alias, name))))
+				{
+					stemMatchId = definition.Id;
+				}
+			}
+
+			return stemMatchId ?? name;
+		}
+
+		private static bool IsStemMatch(string a, string b) =>
+			a.StartsWith(b, StringComparison.OrdinalIgnoreCase)
+			|| b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
 
 		/// <summary>
 		/// Returns the full tooltip text for compatibility with string-based callers.

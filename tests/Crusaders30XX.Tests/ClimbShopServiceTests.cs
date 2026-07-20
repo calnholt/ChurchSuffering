@@ -84,6 +84,68 @@ public class ClimbShopServiceTests : IDisposable
 	}
 
 	[Fact]
+	public void Upgrade_purchase_across_shop_refresh_does_not_reoffer_upgraded_entry()
+	{
+		PrepareRun(new List<string> { "smite|White" });
+		var original = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards[0];
+		var state = BaseState();
+		state.time = ClimbRuleService.ShopRefreshInterval - 1;
+		state.shopSlots[0] = ShopSlot(
+			ClimbShopSlotKinds.Upgrade,
+			cardKey: "smite|White|Upgraded",
+			deckEntryId: original.entryId,
+			deckIndex: 0);
+		SaveCache.SaveClimbState(state);
+
+		Assert.True(ClimbShopService.TryPurchaseSlot(0));
+
+		var after = SaveCache.GetClimbState();
+		var upgraded = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards[0];
+		Assert.Equal("smite|White|Upgraded", upgraded.cardKey);
+		Assert.Equal(ClimbRuleService.ShopRefreshInterval, after.time);
+		Assert.DoesNotContain(
+			after.shopSlots,
+			slot => slot != null
+				&& string.Equals(slot.kind, ClimbShopSlotKinds.Upgrade, StringComparison.OrdinalIgnoreCase)
+				&& string.Equals(slot.deckEntryId, original.entryId, StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void Successful_purchase_publishes_shop_selected_event_failed_purchase_does_not()
+	{
+		EventManager.Clear();
+		PrepareRun(new List<string> { "smite|White" });
+		var original = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards[0];
+		var state = BaseState();
+		state.shopSlots[0] = ShopSlot(
+			ClimbShopSlotKinds.Upgrade,
+			cardKey: "smite|White|Upgraded",
+			deckEntryId: original.entryId,
+			deckIndex: 0);
+		SaveCache.SaveClimbState(state);
+		var selected = new List<int>();
+		EventManager.Subscribe<ClimbShopSlotSelectedEvent>(evt => selected.Add(evt.SlotIndex));
+
+		Assert.True(ClimbShopService.TryPurchaseSlot(0));
+		Assert.Equal(new[] { 0 }, selected);
+
+		selected.Clear();
+		var stale = BaseState();
+		stale.resources = new ClimbResourceSave { red = 3, white = 3, black = 3 };
+		stale.shopSlots[0] = ShopSlot(
+			ClimbShopSlotKinds.Upgrade,
+			cardKey: "smite|White|Upgraded",
+			deckEntryId: original.entryId,
+			deckIndex: 0);
+		SaveCache.SaveClimbState(stale);
+		int resourcesBefore = SaveCache.GetClimbState().resources.red;
+
+		Assert.False(ClimbShopService.TryPurchaseSlot(0));
+		Assert.Empty(selected);
+		Assert.Equal(resourcesBefore, SaveCache.GetClimbState().resources.red);
+	}
+
+	[Fact]
 	public void Replacement_open_and_cancel_do_not_spend_or_mutate_deck()
 	{
 		PrepareRun(new List<string> { "smite|White", "fervor|Red" });

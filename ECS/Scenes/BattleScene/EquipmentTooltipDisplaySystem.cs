@@ -161,11 +161,9 @@ namespace Crusaders30XX.ECS.Systems
 		public override void Update(GameTime gameTime)
 		{
 			var tooltipEntity = GetTooltipEntity();
-			var root = string.IsNullOrWhiteSpace(_tooltipEntityName)
-				? EntityManager.GetEntitiesWithComponent<EquipmentDisplayRoot>().FirstOrDefault()
-				: null;
 			if (tooltipEntity == null) return;
 
+			var root = ResolveLayoutRoot(tooltipEntity);
 			var state = tooltipEntity.GetComponent<EquipmentTooltipState>();
 			var hovered = FindHoveredEquipment();
 			state.TargetVisible = hovered != null;
@@ -286,12 +284,23 @@ namespace Crusaders30XX.ECS.Systems
 			state.Bounds = new Rectangle(0, 0, TooltipWidth, height);
 		}
 
+		private Entity ResolveLayoutRoot(Entity tooltipEntity)
+		{
+			var parent = tooltipEntity?.GetComponent<ParentTransform>()?.Parent;
+			return parent?.GetComponent<EquipmentDisplayRoot>() != null ? parent : null;
+		}
+
 		private Entity GetTooltipEntity()
 		{
 			var tooltips = EntityManager.GetEntitiesWithComponent<EquipmentTooltipState>();
 			if (string.IsNullOrWhiteSpace(_tooltipEntityName))
 			{
-				return tooltips.FirstOrDefault();
+				return tooltips.FirstOrDefault(entity =>
+						string.Equals(
+							entity.Name,
+							EquipmentDisplaySystem.TooltipEntityName,
+							StringComparison.OrdinalIgnoreCase))
+					?? tooltips.FirstOrDefault();
 			}
 			return tooltips.FirstOrDefault(entity =>
 				string.Equals(entity.Name, _tooltipEntityName, StringComparison.OrdinalIgnoreCase));
