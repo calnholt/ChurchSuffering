@@ -12,6 +12,34 @@ namespace Crusaders30XX.ECS.Data.Loadouts
 		public List<string> restrictions { get; set; } = new();
 		/// <summary>Exact stack counts for persistent stacked restrictions, keyed by restriction name.</summary>
 		public Dictionary<string, int> restrictionStacks { get; set; } = new();
+		/// <summary>Permanent run-long boons applied to this exact deck entry.</summary>
+		public List<CardBoonSave> boons { get; set; } = new();
+	}
+
+	public class CardBoonSave
+	{
+		public string type { get; set; } = string.Empty;
+		public int amount { get; set; }
+	}
+
+	public static class CardBoonKinds
+	{
+		public const string Wild = "wild";
+		public const string Overcharged = "overcharged";
+		public const string Quickened = "quickened";
+		public const string Versatile = "versatile";
+		public const string Honed = "honed";
+		public const string Guarded = "guarded";
+
+		public static readonly string[] All =
+		{
+			Wild,
+			Overcharged,
+			Quickened,
+			Versatile,
+			Honed,
+			Guarded,
+		};
 	}
 
 	public class LoadoutDefinition

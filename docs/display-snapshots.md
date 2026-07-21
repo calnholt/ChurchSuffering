@@ -108,7 +108,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 
 ## Climb scene V2
 
-The V2 fixture matrix covers the fixed no-event layout, the full mockup-bible layout,
+The V2 fixture matrix covers the fixed six-item shop/no-event layout, the full mockup-bible layout,
 hover projections, the three shop tooltip routes, transition samples, the V2 header,
 and the retained V1 resource-acquisition overlay. Run the complete matrix with:
 

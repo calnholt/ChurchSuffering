@@ -183,7 +183,7 @@ public sealed class ClimbV2MotionSystemTests
 	}
 
 	[Fact]
-	public void Turnover_waits_for_requested_upgrade_and_encounter_resource_animations()
+	public void Turnover_waits_for_requested_card_and_encounter_resource_animations()
 	{
 		EventManager.Clear();
 		var layout = new ClimbV2LayoutSystem(new EntityManager());
@@ -200,7 +200,14 @@ public sealed class ClimbV2MotionSystemTests
 				Resources = new ClimbResourceSave { red = 1 },
 				DelayClimbTurnoverUntilComplete = true,
 			});
+			EventManager.Publish(new ClimbCardBoonAnimationRequested
+			{
+				CardKey = "strike|White",
+				DelayClimbTurnoverUntilComplete = true,
+			});
 
+			Assert.True(layout.IsTurnoverHeld);
+			EventManager.Publish(new ClimbCardUpgradeAnimationCompleted { ReleasesClimbTurnover = true });
 			Assert.True(layout.IsTurnoverHeld);
 			EventManager.Publish(new ClimbCardUpgradeAnimationCompleted { ReleasesClimbTurnover = true });
 			Assert.True(layout.IsTurnoverHeld);
@@ -226,7 +233,7 @@ public sealed class ClimbV2MotionSystemTests
 	[Fact]
 	public void V2_layout_keeps_empty_event_space_fixed()
 	{
-		Assert.Equal(new Rectangle(36, 120, 315, 561), ClimbV2LayoutSystem.ShopBounds);
+		Assert.Equal(new Rectangle(36, 120, 315, 674), ClimbV2LayoutSystem.ShopBounds);
 		Assert.Equal(new Rectangle(365, 110, 1190, 915), ClimbV2LayoutSystem.EncounterBounds);
 		Assert.Equal(new Rectangle(1569, 135, 315, 465), ClimbV2LayoutSystem.EventBounds);
 	}

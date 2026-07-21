@@ -672,6 +672,10 @@ public class ClimbRuleServiceTests
 		AssertShopCost(ClimbShopSlotKinds.Replacement, 1, expectedTotal: 2, expectedDominant: "red");
 		AssertShopCost(ClimbShopSlotKinds.Replacement, 2, expectedTotal: 1, expectedDominant: "red");
 
+		AssertShopCost(ClimbShopSlotKinds.Boon, 0, expectedTotal: 3, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Boon, 1, expectedTotal: 2, expectedDominant: "red");
+		AssertShopCost(ClimbShopSlotKinds.Boon, 2, expectedTotal: 1, expectedDominant: "red");
+
 		AssertShopCost(ClimbShopSlotKinds.Medal, 0, expectedTotal: 6, expectedDominant: "white");
 		AssertShopCost(ClimbShopSlotKinds.Medal, 1, expectedTotal: 4, expectedDominant: "white");
 		AssertShopCost(ClimbShopSlotKinds.Medal, 2, expectedTotal: 2, expectedDominant: "white");

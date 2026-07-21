@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Services
 	{
 		public const int ShopCyclesPerClimb = 4;
 		public const int BaseMaxTime = PenanceRules.BaseShopRefreshInterval * ShopCyclesPerClimb;
-		public const int ShopSlotCount = 5;
+		public const int ShopSlotCount = 6;
 		public const int EncounterSlotCount = 3;
 		public const int EventSlotCount = 5;
 		public const int EnemyHealthScalingInterval = PenanceRules.BaseShopRefreshInterval;
@@ -738,6 +738,12 @@ namespace Crusaders30XX.ECS.Services
 				slot.cardKey = RollReplacementIncomingCardKey(rng, loadout);
 				if (string.IsNullOrWhiteSpace(slot.cardKey)) slot.kind = ClimbShopSlotKinds.Empty;
 			}
+			else if (kind == ClimbShopSlotKinds.Boon)
+			{
+				bool hasEligibleCard = (loadout?.cards ?? new List<LoadoutCardEntry>())
+					.Any(entry => CardBoonRules.CreateEffectiveCard(entry) != null);
+				if (!hasEligibleCard) slot.kind = ClimbShopSlotKinds.Empty;
+			}
 
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Empty, StringComparison.OrdinalIgnoreCase))
 			{
@@ -913,6 +919,12 @@ namespace Crusaders30XX.ECS.Services
 				dominant = CardData.CardColor.Black;
 				baseline = 7;
 				reductionPerExtraTime = 2;
+			}
+			else if (string.Equals(kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+			{
+				dominant = CardData.CardColor.Red;
+				baseline = 3;
+				reductionPerExtraTime = 1;
 			}
 
 			int total = Math.Max(0, baseline - Math.Max(0, timeCost) * reductionPerExtraTime);

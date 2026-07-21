@@ -391,6 +391,14 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 				},
 				new()
 				{
+					id = "shop_boon",
+					kind = ClimbShopSlotKinds.Boon,
+					cost = new ClimbResourceSave { red = 2, white = 1, black = 0 },
+					timeCost = 0,
+					generatedAtTime = time,
+				},
+				new()
+				{
 					id = "shop_medal",
 					kind = ClimbShopSlotKinds.Medal,
 					itemId = "st_luke",

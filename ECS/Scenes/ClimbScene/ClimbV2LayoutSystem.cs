@@ -27,7 +27,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	public static readonly Rectangle TimelineBounds = new(274, 32, 1264, 64);
 	public static readonly Rectangle ResourcesBounds = new(1578, 32, 250, 52);
 	public static readonly Rectangle OverviewBounds = new(1834, 32, 52, 52);
-	public static readonly Rectangle ShopBounds = new(36, 120, 315, 561);
+	public static readonly Rectangle ShopBounds = new(36, 120, 315, 674);
 	public static readonly Rectangle EncounterBounds = new(365, 110, 1190, 915);
 	public static readonly Rectangle EventBounds = new(1569, 135, 315, 465);
 
@@ -35,6 +35,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	private readonly Action<ClimbShopSlotSelectedEvent> _shopSelectedHandler;
 	private readonly Action<SceneDeactivating> _sceneDeactivatingHandler;
 	private readonly Action<ClimbCardUpgradeAnimationRequested> _upgradeAnimationRequestedHandler;
+	private readonly Action<ClimbCardBoonAnimationRequested> _boonAnimationRequestedHandler;
 	private readonly Action<ClimbCardUpgradeAnimationCompleted> _upgradeAnimationCompletedHandler;
 	private readonly Action<ClimbResourceAcquisitionAnimationRequested> _resourceAnimationRequestedHandler;
 	private readonly Action<ClimbResourceAcquisitionAnimationCompleted> _resourceAnimationCompletedHandler;
@@ -53,6 +54,8 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		_upgradeAnimationRequestedHandler = evt => HoldTurnover(evt?.DelayClimbTurnoverUntilComplete == true
 			&& !string.IsNullOrWhiteSpace(evt.BaseCardKey)
 			&& !string.IsNullOrWhiteSpace(evt.UpgradedCardKey));
+		_boonAnimationRequestedHandler = evt => HoldTurnover(evt?.DelayClimbTurnoverUntilComplete == true
+			&& !string.IsNullOrWhiteSpace(evt.CardKey));
 		_upgradeAnimationCompletedHandler = evt => ReleaseTurnover(evt?.ReleasesClimbTurnover == true);
 		_resourceAnimationRequestedHandler = evt => HoldTurnover(evt?.DelayClimbTurnoverUntilComplete == true && HasResources(evt.Resources));
 		_resourceAnimationCompletedHandler = evt => ReleaseTurnover(evt?.ReleasesClimbTurnover == true);
@@ -60,6 +63,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		EventManager.Subscribe(_shopSelectedHandler, 100);
 		EventManager.Subscribe(_sceneDeactivatingHandler);
 		EventManager.Subscribe(_upgradeAnimationRequestedHandler);
+		EventManager.Subscribe(_boonAnimationRequestedHandler);
 		EventManager.Subscribe(_upgradeAnimationCompletedHandler);
 		EventManager.Subscribe(_resourceAnimationRequestedHandler);
 		EventManager.Subscribe(_resourceAnimationCompletedHandler);
@@ -478,9 +482,9 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		return slot?.Kind switch
 		{
 			ClimbSlotKind.Shop => Math.Max(0, slot.SlotIndex),
-			ClimbSlotKind.Encounter => 5 + Math.Max(0, slot.SlotIndex),
-			ClimbSlotKind.Event => 8 + Math.Max(0, slot.SlotIndex),
-			_ => 10,
+			ClimbSlotKind.Encounter => ClimbRuleService.ShopSlotCount + Math.Max(0, slot.SlotIndex),
+			ClimbSlotKind.Event => ClimbRuleService.ShopSlotCount + ClimbRuleService.EncounterSlotCount + Math.Max(0, slot.SlotIndex),
+			_ => ClimbRuleService.ShopSlotCount + ClimbRuleService.EncounterSlotCount + ClimbRuleService.EventSlotCount,
 		};
 	}
 
@@ -512,6 +516,11 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			EntityManager.AddComponent(entity, new EquippedEquipment { Equipment = equipment });
 			EntityManager.AddComponent(entity, new EquipmentZone { Zone = EquipmentZoneType.Default });
 			ui.TooltipType = TooltipType.Equipment;
+			return;
+		}
+		if (string.Equals(save.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+		{
+			ui.Tooltip = "Permanently improves a random card in your deck. The boon is revealed after purchase.";
 			return;
 		}
 		if (!RunDeckService.TryParseCardKey(save.cardKey, out var cardId, out var color, out bool upgraded)) return;
@@ -712,6 +721,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		EventManager.Unsubscribe(_shopSelectedHandler);
 		EventManager.Unsubscribe(_sceneDeactivatingHandler);
 		EventManager.Unsubscribe(_upgradeAnimationRequestedHandler);
+		EventManager.Unsubscribe(_boonAnimationRequestedHandler);
 		EventManager.Unsubscribe(_upgradeAnimationCompletedHandler);
 		EventManager.Unsubscribe(_resourceAnimationRequestedHandler);
 		EventManager.Unsubscribe(_resourceAnimationCompletedHandler);

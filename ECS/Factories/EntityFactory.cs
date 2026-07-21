@@ -673,6 +673,10 @@ namespace Crusaders30XX.ECS.Factories
             };
             entityManager.AddComponent(clonedEntity, clonedCardData);
             clonedCardData.Card?.Initialize(entityManager, clonedEntity);
+			var sourceBoons = sourceEntity.GetComponent<CardBoonComponent>()?.Boons
+				.Select(boon => new CardBoonSave { type = boon.Type, amount = boon.Amount })
+				.ToList();
+			CardBoonApplicator.Synchronize(entityManager, clonedEntity, sourceBoons);
 
             // Deep copy ModifiedBlock (with all modifications)
             var sourceModifiedBlock = sourceEntity.GetComponent<ModifiedBlock>();

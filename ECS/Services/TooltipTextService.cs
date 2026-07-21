@@ -6,6 +6,7 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
 using Crusaders30XX.ECS.Systems;
 using Crusaders30XX.ECS.Utils;
+using Crusaders30XX.ECS.Data.Loadouts;
 
 namespace Crusaders30XX.ECS.Services
 {
@@ -183,7 +184,43 @@ namespace Crusaders30XX.ECS.Services
 			var recoil = entity.GetComponent<Recoil>();
 			if (recoil != null)
 				blocks.Add(new TooltipTextBlock("recoil", $"This card has Recoil {recoil.Stacks} - if you don't block with it this turn, take {recoil.Stacks} damage."));
+
+			AddCardBoonBlocks(entity, blocks);
 		}
+
+		private static void AddCardBoonBlocks(Entity entity, List<TooltipTextBlock> blocks)
+		{
+			var component = entity?.GetComponent<CardBoonComponent>();
+			if (component?.Boons == null) return;
+
+			foreach (var boon in component.Boons.Where(boon => boon != null && boon.Amount > 0))
+			{
+				string text = boon.Type switch
+				{
+					CardBoonKinds.Wild => "Wild - All of this card's discard costs are Any, including after upgrades.",
+					CardBoonKinds.Overcharged => $"Overcharged {FormatAmount(boon.Amount)}- This card has +{boon.Amount * 5} damage and +{boon.Amount} Any cost.",
+					CardBoonKinds.Quickened => "Quickened - This card is a Free Action.",
+					CardBoonKinds.Versatile => BuildVersatileText(entity),
+					CardBoonKinds.Honed => $"Honed {FormatAmount(boon.Amount)}- This card has +{boon.Amount} damage.",
+					CardBoonKinds.Guarded => $"Guarded {FormatAmount(boon.Amount)}- This card has +{boon.Amount} block.",
+					_ => string.Empty,
+				};
+				if (!string.IsNullOrWhiteSpace(text))
+				{
+					blocks.Add(new TooltipTextBlock($"boon-{boon.Type}", text));
+				}
+			}
+		}
+
+		private static string BuildVersatileText(Entity entity)
+		{
+			var secondary = entity?.GetComponent<DualColor>()?.SecondaryColor;
+			return secondary.HasValue
+				? $"Versatile - This card also counts as {secondary.Value}."
+				: "Versatile - This card has a second color.";
+		}
+
+		private static string FormatAmount(int amount) => amount > 1 ? $"{amount} " : string.Empty;
 
 		private static void AddStatusBlock<T>(
 			Entity entity,

@@ -423,6 +423,15 @@ public sealed class ShopItemDisplaySystem : Core.System
 		{
 			var target = new Rectangle(art.X + 7, art.Y + 10, 64, 84); var contained = EquipmentArtService.GetContainedBounds(texture, target); _batch.Draw(texture, contained, Color.White * alpha);
 		}
+		else if (string.Equals(item.ItemKind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+		{
+			const string glyph = "?";
+			const float glyphScale = 0.42f;
+			var size = _title.MeasureString(glyph) * glyphScale;
+			ClimbV2Draw.Text(_batch, _title, glyph,
+				new Vector2(art.Center.X - size.X * 0.5f, art.Center.Y - size.Y * 0.5f),
+				glyphScale, Color.White * alpha);
+		}
 		ClimbV2Draw.Text(_batch, _body, slot.Label.ToUpperInvariant(), new Vector2(rect.X + 86, rect.Y + 12), 0.064f, new Color(255, 135, 151) * alpha);
 		ClimbV2Draw.Text(_batch, _title, slot.Title, new Vector2(rect.X + 86, rect.Y + 31), 0.105f, Color.White * alpha);
 		var preview = EntityManager.GetEntity(ClimbV2LayoutSystem.RootName)?.GetComponent<ClimbPreviewState>();

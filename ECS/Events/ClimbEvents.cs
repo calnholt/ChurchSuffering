@@ -1,4 +1,5 @@
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Data.Loadouts;
 using System;
 using System.Collections.Generic;
 
@@ -101,6 +102,18 @@ namespace Crusaders30XX.ECS.Events
 	public class ClimbCardUpgradeAnimationCompleted
 	{
 		public bool ReleasesClimbTurnover { get; set; }
+	}
+
+	public class ClimbCardBoonAnimationRequested
+	{
+		public string DeckEntryId { get; set; } = string.Empty;
+		public string CardKey { get; set; } = string.Empty;
+		public List<string> RestrictionNames { get; set; } = new();
+		public List<CardBoonSave> BeforeBoons { get; set; } = new();
+		public List<CardBoonSave> AfterBoons { get; set; } = new();
+		public string BeforeSecondaryColor { get; set; } = string.Empty;
+		public string AfterSecondaryColor { get; set; } = string.Empty;
+		public bool DelayClimbTurnoverUntilComplete { get; set; }
 	}
 
 	public class ClimbCardMutationAnimationRequested

@@ -75,6 +75,19 @@ Each level adds one effect from a fixed order; effects accumulate through the se
 - **Mortification:** adds 5% enemy maximum HP per stack to the base 70% multiplier.
 - **Penitential Pilgrimage:** increases the shop refresh interval from 8 by one per stack while preserving four shop cycles per climb. The total climb is therefore 32 pips with no stacks, 36 with one stack, and 40 with two stacks. Enemy climb-time HP scaling retains its separate eight-time cadence.
 
+### Mystery Boons
+
+- Every Climb shop includes a Mystery Boon after its two card offers. Its outcome is rolled only after purchase and is shown with the standard before/after card mutation animation.
+- A uniformly shuffled boon priority decides the effect; inapplicable effects are skipped without rerolling. The first applicable effect targets a uniformly random eligible card.
+- **Wild:** all discard costs become Any, including costs changed by later upgrades.
+- **Overcharged:** an attack gains +5 damage and +1 Any cost; cards already costing four or more cannot receive it.
+- **Quickened:** a non-Free Action card becomes a Free Action.
+- **Versatile:** a card gains a random second Red, White, or Black color other than its printed color.
+- **Honed:** an attack gains +1 damage.
+- **Guarded:** a card gains +1 block.
+- Honed, Guarded, and Overcharged can stack while still applicable. Wild, Quickened, and Versatile cannot repeat on the same card.
+- Boons last for the run, survive card upgrades, and are removed when their exact deck entry is replaced or removed.
+
 ## Quest Structure
 
 - A **quest** consists of one or more battles

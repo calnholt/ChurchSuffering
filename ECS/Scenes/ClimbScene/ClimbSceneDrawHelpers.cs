@@ -455,6 +455,8 @@ namespace Crusaders30XX.ECS.Systems
 				return ResolveCardName(slot.cardKey, fallback: "Upgrade");
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Replacement, StringComparison.OrdinalIgnoreCase))
 				return ResolveCardName(slot.cardKey, fallback: "New Card");
+			if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+				return "Mystery Boon";
 			return "Empty";
 		}
 
@@ -474,6 +476,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase)) return "Gear";
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Upgrade, StringComparison.OrdinalIgnoreCase)) return "Upgrade";
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Replacement, StringComparison.OrdinalIgnoreCase)) return "Replace";
+			if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase)) return "Boon";
 			return string.Empty;
 		}
 

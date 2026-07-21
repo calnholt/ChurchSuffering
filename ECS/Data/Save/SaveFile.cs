@@ -9,7 +9,7 @@ namespace Crusaders30XX.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 26;
+		public const int CURRENT_VERSION = 27;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -264,11 +264,13 @@ namespace Crusaders30XX.ECS.Data.Save
 		public const string Equipment = "equipment";
 		public const string Upgrade = "upgrade";
 		public const string Replacement = "replacement";
+		public const string Boon = "boon";
 
 		public static readonly string[] DisplayOrder =
 		{
 			Upgrade,
 			Replacement,
+			Boon,
 			Medal,
 			Medal,
 			Equipment,

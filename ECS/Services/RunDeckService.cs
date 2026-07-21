@@ -39,6 +39,7 @@ namespace Crusaders30XX.ECS.Services
 				if (existingByEntryId.TryGetValue(entry.entryId, out var existing)
 					&& string.Equals(existing.GetComponent<RunDeckCard>()?.CardKey, entry.cardKey, StringComparison.OrdinalIgnoreCase))
 				{
+					CardBoonApplicator.Synchronize(entityManager, existing, entry.boons);
 					SynchronizeDualColor(entityManager, existing, entry);
 					continue;
 				}
@@ -255,6 +256,7 @@ namespace Crusaders30XX.ECS.Services
 					cardData.Card.IsStarter = true;
 				}
 			}
+			CardBoonApplicator.Synchronize(entityManager, entity, entry.boons);
 			SynchronizeDualColor(entityManager, entity, entry);
 			return entity;
 		}

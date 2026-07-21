@@ -1021,6 +1021,16 @@ namespace Crusaders30XX.ECS.Systems
 				return;
 			}
 
+			if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+			{
+				RemoveCardTooltip(entity);
+				RemoveEquipmentTooltip(entity);
+				RemoveMedalTooltip(entity);
+				ui.Tooltip = "Permanently improves a random card in your deck. The boon is revealed after purchase.";
+				ui.TooltipType = TooltipType.Text;
+				return;
+			}
+
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Upgrade, StringComparison.OrdinalIgnoreCase)
 				|| string.Equals(slot.kind, ClimbShopSlotKinds.Replacement, StringComparison.OrdinalIgnoreCase))
 			{

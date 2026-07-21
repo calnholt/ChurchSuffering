@@ -113,6 +113,7 @@ namespace Crusaders30XX.ECS.Systems
 						x.E.GetComponent<PledgePreview>() != null ||
 						x.E.GetComponent<Sealed>() != null ||
 						x.E.GetComponent<Recoil>() != null
+						|| x.E.GetComponent<CardBoonComponent>() != null
 					))
 				.OrderByDescending(x => x.T?.ZOrder ?? 0)
 				.ToList();

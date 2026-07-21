@@ -60,6 +60,19 @@ namespace Crusaders30XX.ECS.Components
         }
     }
 
+    /// <summary>Runtime tracking for permanent boons already applied to this card object.</summary>
+    public sealed class CardBoonComponent : IComponent
+    {
+        public Entity Owner { get; set; }
+        public List<CardBoonState> Boons { get; set; } = new();
+    }
+
+    public sealed class CardBoonState
+    {
+        public string Type { get; set; } = string.Empty;
+        public int Amount { get; set; }
+    }
+
     /// <summary>
     /// Component for entities that represent a deck
     /// </summary>

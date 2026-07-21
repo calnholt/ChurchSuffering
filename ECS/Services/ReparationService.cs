@@ -92,6 +92,7 @@ namespace Crusaders30XX.ECS.Services
 				target.countsAsTraded = false;
 				target.restrictions = new List<string> { restriction };
 				target.restrictionStacks = new Dictionary<string, int>();
+				target.boons = new List<CardBoonSave>();
 				counts[incomingId] = counts.TryGetValue(incomingId, out int incomingCount) ? incomingCount + 1 : 1;
 				applied++;
 			}

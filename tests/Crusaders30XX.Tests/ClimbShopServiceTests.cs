@@ -59,6 +59,46 @@ public class ClimbShopServiceTests : IDisposable
 	}
 
 	[Fact]
+	public void Boon_purchase_rolls_persists_animates_and_marks_slot_sold()
+	{
+		PrepareRun(new List<string> { "smite|White", "fervor|Red" });
+		var state = BaseState();
+		state.shopSlots[2] = ShopSlot(ClimbShopSlotKinds.Boon);
+		SaveCache.SaveClimbState(state);
+		ClimbCardBoonAnimationRequested animation = null;
+		EventManager.Subscribe<ClimbCardBoonAnimationRequested>(evt => animation = evt);
+
+		Assert.True(ClimbShopService.TryPurchaseSlot(null, 2, new Random(42)));
+
+		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+		var applied = loadout.cards.Single(entry => entry.boons.Count > 0);
+		Assert.Single(applied.boons);
+		Assert.Equal(1, applied.boons[0].amount);
+		Assert.True(SaveCache.GetClimbState().shopSlots[2].isSold);
+		Assert.NotNull(animation);
+		Assert.Equal(applied.entryId, animation.DeckEntryId);
+		Assert.Empty(animation.BeforeBoons);
+		Assert.Single(animation.AfterBoons);
+		Assert.True(animation.DelayClimbTurnoverUntilComplete);
+	}
+
+	[Fact]
+	public void Unaffordable_boon_purchase_does_not_roll_or_spend()
+	{
+		PrepareRun(new List<string> { "smite|White" });
+		var state = BaseState();
+		state.resources = new ClimbResourceSave { red = 0, white = 0, black = 0 };
+		state.shopSlots[2] = ShopSlot(ClimbShopSlotKinds.Boon);
+		SaveCache.SaveClimbState(state);
+		var random = new CountingRandom();
+
+		Assert.False(ClimbShopService.TryPurchaseSlot(null, 2, random));
+
+		Assert.Equal(0, random.NextCalls);
+		Assert.All(SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards, entry => Assert.Empty(entry.boons));
+	}
+
+	[Fact]
 	public void Upgrade_purchase_replaces_specific_deck_entry()
 	{
 		PrepareRun(new List<string> { "smite|White", "fervor|Red" });
@@ -190,6 +230,7 @@ public class ClimbShopServiceTests : IDisposable
 		Assert.False(replacement.isStarter);
 		Assert.True(replacement.countsAsTraded);
 		Assert.Empty(replacement.restrictions);
+		Assert.Empty(replacement.boons);
 		Assert.Equal(2, after.resources.red);
 		Assert.Equal(1, after.time);
 		Assert.True(after.shopSlots[0].isSold);
@@ -417,5 +458,16 @@ public class ClimbShopServiceTests : IDisposable
 			cost = new ClimbResourceSave { red = 1, white = 0, black = 0 },
 			timeCost = string.Equals(kind, ClimbShopSlotKinds.Empty, StringComparison.OrdinalIgnoreCase) ? 0 : 1,
 		};
+	}
+
+	private sealed class CountingRandom : Random
+	{
+		public int NextCalls { get; private set; }
+
+		public override int Next(int maxValue)
+		{
+			NextCalls++;
+			return base.Next(maxValue);
+		}
 	}
 }

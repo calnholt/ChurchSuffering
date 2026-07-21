@@ -2092,6 +2092,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				countsAsTraded = countsAsTraded,
 				restrictions = new List<string>(),
 				restrictionStacks = new Dictionary<string, int>(),
+				boons = new List<CardBoonSave>(),
 			};
 		}
 
@@ -2122,7 +2123,20 @@ namespace Crusaders30XX.ECS.Data.Save
 				restrictionStacks = entry.restrictionStacks == null
 					? new Dictionary<string, int>()
 					: new Dictionary<string, int>(entry.restrictionStacks, StringComparer.OrdinalIgnoreCase),
+				boons = CloneCardBoons(entry.boons),
 			};
+		}
+
+		private static List<CardBoonSave> CloneCardBoons(List<CardBoonSave> boons)
+		{
+			return (boons ?? new List<CardBoonSave>())
+				.Where(boon => boon != null && !string.IsNullOrWhiteSpace(boon.type) && boon.amount > 0)
+				.Select(boon => new CardBoonSave
+				{
+					type = boon.type,
+					amount = boon.amount,
+				})
+				.ToList();
 		}
 
 		private static LoadoutDefinition CloneLoadout(LoadoutDefinition loadout)
