@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// Queued event that publishes ResolveAttack for the current active attack.

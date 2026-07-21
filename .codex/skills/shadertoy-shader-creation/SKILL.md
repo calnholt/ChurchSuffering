@@ -1,6 +1,6 @@
 ---
 name: shadertoy-shader-creation
-description: Create ShaderToy-style GLSL prototype shaders for Crusaders30XX under `Content/Shaders`, with constants/tunables extracted to the top of the file. Use when the user asks for a new `.glsl` shader concept, a Shadertoy/ShaderToy-style prototype, or a source shader similar to `Content/Shaders/Brittle.glsl`, `DesertStorm.glsl`, or `DrippingBlood.glsl`. Do not use for MonoGame `.fx` conversion or runtime integration; use `monogame-shader-display` for that.
+description: Create ShaderToy-style GLSL prototype shaders for ChurchSuffering under `Content/Shaders`, with constants/tunables extracted to the top of the file. Use when the user asks for a new `.glsl` shader concept, a Shadertoy/ShaderToy-style prototype, or a source shader similar to `Content/Shaders/Brittle.glsl`, `DesertStorm.glsl`, or `DrippingBlood.glsl`. Do not use for MonoGame `.fx` conversion or runtime integration; use `monogame-shader-display` for that.
 ---
 
 # ShaderToy Shader Creation

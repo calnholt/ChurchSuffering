@@ -1,17 +1,17 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Data.Locations;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Locations;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Objects.Cards;
-using Crusaders30XX.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Objects.Enemies;
 using System;
-using Crusaders30XX.ECS.Objects.Medals;
-using Crusaders30XX.ECS.Objects.Equipment;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.ECS.Objects.Medals;
+using ChurchSuffering.ECS.Objects.Equipment;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Input;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
     /// <summary>
     /// Component that holds the basic data for a card
@@ -58,6 +58,19 @@ namespace Crusaders30XX.ECS.Components
             Black,
             Any
         }
+    }
+
+    /// <summary>Runtime tracking for permanent boons already applied to this card object.</summary>
+    public sealed class CardBoonComponent : IComponent
+    {
+        public Entity Owner { get; set; }
+        public List<CardBoonState> Boons { get; set; } = new();
+    }
+
+    public sealed class CardBoonState
+    {
+        public string Type { get; set; } = string.Empty;
+        public int Amount { get; set; }
     }
 
     /// <summary>
@@ -1095,7 +1108,7 @@ namespace Crusaders30XX.ECS.Components
 } 
 
     // Component used to animate assigned block cards flying to their resolution destination.
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
     /// <summary>
     /// Zone state for an equipment entity: either visible in the left panel (Default)

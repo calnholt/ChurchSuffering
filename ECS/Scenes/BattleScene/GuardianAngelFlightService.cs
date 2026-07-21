@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     internal readonly record struct GuardianFlightSample(Vector2 Offset, float ScaleMultiplier, float SparkleMultiplier);
 

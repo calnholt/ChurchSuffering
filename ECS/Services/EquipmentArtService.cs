@@ -1,10 +1,10 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Objects.Equipment;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Objects.Equipment;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Services;
+namespace ChurchSuffering.ECS.Services;
 
 public static class EquipmentArtService
 {

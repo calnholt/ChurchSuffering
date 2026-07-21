@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
     /// <summary>
     /// Lightweight, generic event queue manager with separate Rules and Trigger queues.

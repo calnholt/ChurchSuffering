@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Equipment;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Equipment;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Equipment Display")]
 	public class EquipmentDisplaySystem : Core.System
@@ -113,6 +113,18 @@ namespace Crusaders30XX.ECS.Systems
 
 		[DebugEditable(DisplayName = "Pulse Scale", Step = 0.01f, Min = 1f, Max = 1.5f)]
 		public float PulseScale { get; set; } = 1.12f;
+
+		[DebugEditable(DisplayName = "Use Pip Size", Step = 1, Min = 2, Max = 32)]
+		public int UsePipSize { get; set; } = 8;
+
+		[DebugEditable(DisplayName = "Use Pip Gap", Step = 1, Min = 0, Max = 32)]
+		public int UsePipGap { get; set; } = 1;
+
+		[DebugEditable(DisplayName = "Use Pip Inset Right", Step = 1, Min = 0, Max = 40)]
+		public int UsePipInsetRight { get; set; } = 6;
+
+		[DebugEditable(DisplayName = "Use Pip Inset Bottom", Step = 1, Min = 0, Max = 40)]
+		public int UsePipInsetBottom { get; set; } = 6;
 
 		public EquipmentDisplaySystem(
 			EntityManager entityManager,
@@ -370,7 +382,7 @@ namespace Crusaders30XX.ECS.Systems
 			Rectangle stableBounds = GetPanelWorldBounds(entity);
 			if (stableBounds.Width <= 0 || stableBounds.Height <= 0) return;
 			Rectangle drawBounds = ScaleAroundCenter(stableBounds, GetPulseScale(entity.Id));
-			float opacity = equipped.Equipment.IsUsed ? UsedOpacity : 1f;
+			float opacity = equipped.Equipment.IsAvailable ? 1f : UsedOpacity;
 			Color background = CardPalette.Background(equipped.Equipment.Color);
 			Color socket = CardPalette.Gutter(equipped.Equipment.Color);
 
@@ -400,6 +412,7 @@ namespace Crusaders30XX.ECS.Systems
 				hasBlock ? 0 : PanelCornerRadius);
 
 			DrawEquipmentIcon(equipped.Equipment, socketBounds, opacity);
+			DrawUsePips(equipped.Equipment, socketBounds, opacity);
 			if (hasBlock)
 			{
 				var footer = new Rectangle(drawBounds.X, socketBounds.Bottom, drawBounds.Width, footerHeight);
@@ -436,6 +449,48 @@ namespace Crusaders30XX.ECS.Systems
 				texture,
 				new Rectangle(socketBounds.Center.X - size / 2, socketBounds.Center.Y - size / 2, size, size));
 			_spriteBatch.Draw(texture, destination, Color.White * opacity);
+		}
+
+		private void DrawUsePips(EquipmentBase equipment, Rectangle socketBounds, float opacity)
+		{
+			if (_imageAssets == null || _graphicsDevice == null || equipment == null) return;
+			int count = Math.Max(0, equipment.MaxUses);
+			if (count == 0) return;
+
+			int pipSize = Math.Max(2, UsePipSize);
+			int stride = pipSize + Math.Max(0, UsePipGap);
+			int totalWidth = count * pipSize + Math.Max(0, count - 1) * Math.Max(0, UsePipGap);
+			int right = socketBounds.Right - UsePipInsetRight;
+			int bottom = socketBounds.Bottom - UsePipInsetBottom;
+			int startX = right - totalWidth;
+			int y = bottom - pipSize;
+
+			int radius = Math.Max(1, pipSize / 2);
+			Texture2D circle = _imageAssets.GetAntiAliasedCircle(radius);
+			int holeThickness = Math.Max(1, pipSize / 4);
+			Texture2D holeRing = PrimitiveTextureFactory.GetAntialiasedRingMask(
+				_graphicsDevice,
+				pipSize,
+				pipSize,
+				holeThickness);
+			Color pipColor = equipment.Color == CardData.CardColor.White ? Color.Black : Color.White;
+			int remaining = Math.Max(0, equipment.RemainingUses);
+
+			for (int i = 0; i < count; i++)
+			{
+				var pip = new Rectangle(startX + i * stride, y, pipSize, pipSize);
+				if (i < remaining)
+				{
+					int inset = Math.Max(1, pipSize / 8);
+					int fill = Math.Max(1, pipSize - inset * 2);
+					_spriteBatch.Draw(circle, pip, pipColor * (0.18f * opacity));
+					_spriteBatch.Draw(circle, new Rectangle(pip.X + inset, pip.Y + inset, fill, fill), pipColor * opacity);
+				}
+				else
+				{
+					_spriteBatch.Draw(holeRing, pip, pipColor * (0.62f * opacity));
+				}
+			}
 		}
 
 		private void DrawFooterStatChip(

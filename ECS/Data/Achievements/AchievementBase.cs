@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Data.Achievements
+namespace ChurchSuffering.ECS.Data.Achievements
 {
     /// <summary>
     /// Abstract base class for all achievements.

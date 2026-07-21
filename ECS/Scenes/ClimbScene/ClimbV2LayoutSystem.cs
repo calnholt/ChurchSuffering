@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Climb;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Climb;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems;
+namespace ChurchSuffering.ECS.Systems;
 
 public sealed class ClimbV2LayoutSystem : Core.System
 {
@@ -27,7 +27,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	public static readonly Rectangle TimelineBounds = new(274, 32, 1264, 64);
 	public static readonly Rectangle ResourcesBounds = new(1578, 32, 250, 52);
 	public static readonly Rectangle OverviewBounds = new(1834, 32, 52, 52);
-	public static readonly Rectangle ShopBounds = new(36, 120, 315, 561);
+	public static readonly Rectangle ShopBounds = new(36, 120, 315, 674);
 	public static readonly Rectangle EncounterBounds = new(365, 110, 1190, 915);
 	public static readonly Rectangle EventBounds = new(1569, 135, 315, 465);
 
@@ -35,6 +35,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	private readonly Action<ClimbShopSlotSelectedEvent> _shopSelectedHandler;
 	private readonly Action<SceneDeactivating> _sceneDeactivatingHandler;
 	private readonly Action<ClimbCardUpgradeAnimationRequested> _upgradeAnimationRequestedHandler;
+	private readonly Action<ClimbCardBoonAnimationRequested> _boonAnimationRequestedHandler;
 	private readonly Action<ClimbCardUpgradeAnimationCompleted> _upgradeAnimationCompletedHandler;
 	private readonly Action<ClimbResourceAcquisitionAnimationRequested> _resourceAnimationRequestedHandler;
 	private readonly Action<ClimbResourceAcquisitionAnimationCompleted> _resourceAnimationCompletedHandler;
@@ -53,6 +54,8 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		_upgradeAnimationRequestedHandler = evt => HoldTurnover(evt?.DelayClimbTurnoverUntilComplete == true
 			&& !string.IsNullOrWhiteSpace(evt.BaseCardKey)
 			&& !string.IsNullOrWhiteSpace(evt.UpgradedCardKey));
+		_boonAnimationRequestedHandler = evt => HoldTurnover(evt?.DelayClimbTurnoverUntilComplete == true
+			&& !string.IsNullOrWhiteSpace(evt.CardKey));
 		_upgradeAnimationCompletedHandler = evt => ReleaseTurnover(evt?.ReleasesClimbTurnover == true);
 		_resourceAnimationRequestedHandler = evt => HoldTurnover(evt?.DelayClimbTurnoverUntilComplete == true && HasResources(evt.Resources));
 		_resourceAnimationCompletedHandler = evt => ReleaseTurnover(evt?.ReleasesClimbTurnover == true);
@@ -60,6 +63,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		EventManager.Subscribe(_shopSelectedHandler, 100);
 		EventManager.Subscribe(_sceneDeactivatingHandler);
 		EventManager.Subscribe(_upgradeAnimationRequestedHandler);
+		EventManager.Subscribe(_boonAnimationRequestedHandler);
 		EventManager.Subscribe(_upgradeAnimationCompletedHandler);
 		EventManager.Subscribe(_resourceAnimationRequestedHandler);
 		EventManager.Subscribe(_resourceAnimationCompletedHandler);
@@ -107,14 +111,15 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		}
 	}
 
-	private void OnLoadScene(LoadSceneEvent evt)
-	{
-		if (evt?.Scene != SceneId.Climb) return;
+		private void OnLoadScene(LoadSceneEvent evt)
+		{
+			if (evt?.Scene != SceneId.Climb) return;
+			var climb = SaveCache.GetClimbState();
 		_restoreReturnSnapshotRequested = evt.PreviousScene == SceneId.Battle && _returnSnapshot != null;
 		_returnSnapshotActive = false;
 		if (!_restoreReturnSnapshotRequested) _returnSnapshot = null;
-		_freshEntranceRequested = evt.PreviousScene == SceneId.WayStation
-			&& ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0) == 0;
+			_freshEntranceRequested = evt.PreviousScene == SceneId.WayStation
+				&& ClimbRuleService.ClampTime(climb, climb?.time ?? 0) == 0;
 	}
 
 	private void OnSceneDeactivating(SceneDeactivating evt)
@@ -371,7 +376,8 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	private void UpdatePreview(ClimbPreviewState preview, ClimbSaveState climb)
 	{
 		if (preview == null) return;
-		int current = ClimbRuleService.ClampTime(climb?.time ?? 0);
+		int maxTime = ClimbRuleService.GetMaxTime(climb);
+		int current = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
 		var hovered = EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>()
 			.Select(e => new { Slot = e.GetComponent<ClimbSlotPresentation>(), Ui = e.GetComponent<UIElement>() })
 			.FirstOrDefault(x => x.Ui?.IsHovered == true && !x.Ui.IsHidden && x.Slot?.IsUnavailable != true
@@ -380,18 +386,18 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		{
 			preview.Clear();
 			preview.ProjectedUsedTime = current;
-			preview.ProjectedRemainingTime = ClimbRuleService.MaxTime - current;
+			preview.ProjectedRemainingTime = maxTime - current;
 			preview.ProjectedResources = Clone(climb?.resources);
 			FillAffordable(preview, climb);
 			return;
 		}
 
-		int projected = ClimbRuleService.ClampTime(current + hovered.Slot.TimeCost);
+		int projected = ClimbRuleService.ClampTime(climb, current + hovered.Slot.TimeCost);
 		preview.IsActive = projected > current || hovered.Slot.Kind == ClimbSlotKind.Event;
 		preview.SourceSlotId = hovered.Slot.SlotId;
 		preview.Amount = projected - current;
 		preview.ProjectedUsedTime = projected;
-		preview.ProjectedRemainingTime = ClimbRuleService.MaxTime - projected;
+		preview.ProjectedRemainingTime = maxTime - projected;
 		preview.ProjectedResources = Clone(climb?.resources);
 		if (hovered.Slot.Kind == ClimbSlotKind.Shop) ClimbRuleService.TrySpend(preview.ProjectedResources, hovered.Slot.Cost);
 		else if (hovered.Slot.Kind == ClimbSlotKind.Encounter || hovered.Slot.EventKind == ClimbEventKind.Hazard)
@@ -403,8 +409,9 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	private static void FillWouldVanish(ClimbPreviewState preview, ClimbSaveState climb, int projected)
 	{
 		preview.WouldVanishSlotIds.Clear();
-		int current = ClimbRuleService.ClampTime(climb?.time ?? 0);
-		int refresh = ((current / ClimbRuleService.ShopRefreshInterval) + 1) * ClimbRuleService.ShopRefreshInterval;
+		int current = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
+		int shopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb);
+		int refresh = ((current / shopRefreshInterval) + 1) * shopRefreshInterval;
 		if (projected >= refresh)
 			foreach (var slot in climb?.shopSlots ?? new List<ClimbShopSlotSave>()) if (!string.IsNullOrWhiteSpace(slot?.id)) preview.WouldVanishSlotIds.Add(slot.id);
 		foreach (var slot in climb?.encounterSlots ?? new List<ClimbEncounterSlotSave>())
@@ -475,9 +482,9 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		return slot?.Kind switch
 		{
 			ClimbSlotKind.Shop => Math.Max(0, slot.SlotIndex),
-			ClimbSlotKind.Encounter => 5 + Math.Max(0, slot.SlotIndex),
-			ClimbSlotKind.Event => 8 + Math.Max(0, slot.SlotIndex),
-			_ => 10,
+			ClimbSlotKind.Encounter => ClimbRuleService.ShopSlotCount + Math.Max(0, slot.SlotIndex),
+			ClimbSlotKind.Event => ClimbRuleService.ShopSlotCount + ClimbRuleService.EncounterSlotCount + Math.Max(0, slot.SlotIndex),
+			_ => ClimbRuleService.ShopSlotCount + ClimbRuleService.EncounterSlotCount + ClimbRuleService.EventSlotCount,
 		};
 	}
 
@@ -509,6 +516,11 @@ public sealed class ClimbV2LayoutSystem : Core.System
 			EntityManager.AddComponent(entity, new EquippedEquipment { Equipment = equipment });
 			EntityManager.AddComponent(entity, new EquipmentZone { Zone = EquipmentZoneType.Default });
 			ui.TooltipType = TooltipType.Equipment;
+			return;
+		}
+		if (string.Equals(save.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+		{
+			ui.Tooltip = "Permanently improves a random card in your deck. The boon is revealed after purchase.";
 			return;
 		}
 		if (!RunDeckService.TryParseCardKey(save.cardKey, out var cardId, out var color, out bool upgraded)) return;
@@ -685,7 +697,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 
 	private static int Remaining(ClimbSlotPresentation slot, int time) => slot == null || slot.Duration <= 0
 		? 0
-		: Math.Clamp(slot.GeneratedAtTime + slot.Duration - ClimbRuleService.ClampTime(time), 0, slot.Duration);
+		: Math.Clamp(slot.GeneratedAtTime + slot.Duration - Math.Max(0, time), 0, slot.Duration);
 
 	private static string Fingerprint(string slotId, string title, int timeCost, int generatedAtTime, bool unavailable, string asset) =>
 		$"{slotId}|{title}|{timeCost}|{generatedAtTime}|{unavailable}|{asset}";
@@ -709,6 +721,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		EventManager.Unsubscribe(_shopSelectedHandler);
 		EventManager.Unsubscribe(_sceneDeactivatingHandler);
 		EventManager.Unsubscribe(_upgradeAnimationRequestedHandler);
+		EventManager.Unsubscribe(_boonAnimationRequestedHandler);
 		EventManager.Unsubscribe(_upgradeAnimationCompletedHandler);
 		EventManager.Unsubscribe(_resourceAnimationRequestedHandler);
 		EventManager.Unsubscribe(_resourceAnimationCompletedHandler);

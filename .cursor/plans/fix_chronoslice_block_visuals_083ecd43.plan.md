@@ -46,9 +46,9 @@ OnBlocksConfirmed = entityManager =>
 
 Existing tests cover:
 
-- override marking on only the earliest card (`[Chrono_slice_marks_earliest_card_and_ignores_earlier_equipment](tests/Crusaders30XX.Tests/FrostboundAeonTests.cs)`)
-- immediate (non-animated) 2-blocker zone resolution (`[Immediate_resolution_puts_redirected_card_on_deck_bottom_and_still_grants_resources](tests/Crusaders30XX.Tests/FrostboundAeonTests.cs)`)
-- animated single-blocker draw-pile flight (`[Animated_resolution_targets_draw_pile_root_for_redirected_card](tests/Crusaders30XX.Tests/FrostboundAeonTests.cs)`)
+- override marking on only the earliest card (`[Chrono_slice_marks_earliest_card_and_ignores_earlier_equipment](tests/ChurchSuffering.Tests/FrostboundAeonTests.cs)`)
+- immediate (non-animated) 2-blocker zone resolution (`[Immediate_resolution_puts_redirected_card_on_deck_bottom_and_still_grants_resources](tests/ChurchSuffering.Tests/FrostboundAeonTests.cs)`)
+- animated single-blocker draw-pile flight (`[Animated_resolution_targets_draw_pile_root_for_redirected_card](tests/ChurchSuffering.Tests/FrostboundAeonTests.cs)`)
 
 **Gap:** no test for **animated** resolution with 2+ blockers.
 
@@ -99,7 +99,7 @@ This conflict was introduced alongside the assigned-block rail refactor (commit 
 
 ### 1. Add failing regression test (animated, multi-blocker)
 
-Extend `[tests/Crusaders30XX.Tests/FrostboundAeonTests.cs](tests/Crusaders30XX.Tests/FrostboundAeonTests.cs)` with a test like `Animated_resolution_sends_only_first_card_to_draw_pile_and_rest_to_discard`:
+Extend `[tests/ChurchSuffering.Tests/FrostboundAeonTests.cs](tests/ChurchSuffering.Tests/FrostboundAeonTests.cs)` with a test like `Animated_resolution_sends_only_first_card_to_draw_pile_and_rest_to_discard`:
 
 - Setup: `SubPhase.EnemyAttack`, deck, two blockers (`assignedAt` 1 and 2), `UI_DrawPileRoot` and `UI_DiscardPileRoot` at distinct positions
 - Run `new ChronoSlice().OnBlocksConfirmed(entityManager)` then publish `AnimateAssignedBlocksToDiscard`
@@ -143,7 +143,7 @@ Attack text says "bottom of your deck." Consider also adding `MarkedForBottomOfD
 
 - `[ECS/Scenes/BattleScene/AssignedBlockAnimationSystem.cs](ECS/Scenes/BattleScene/AssignedBlockAnimationSystem.cs)` — skip in-flight blockers
 - `[ECS/Scenes/BattleScene/AssignedBlockLateLayoutSystem.cs](ECS/Scenes/BattleScene/AssignedBlockLateLayoutSystem.cs)` — skip parallax during flight
-- `[tests/Crusaders30XX.Tests/FrostboundAeonTests.cs](tests/Crusaders30XX.Tests/FrostboundAeonTests.cs)` — multi-blocker animated regression test
+- `[tests/ChurchSuffering.Tests/FrostboundAeonTests.cs](tests/ChurchSuffering.Tests/FrostboundAeonTests.cs)` — multi-blocker animated regression test
 - Possibly `[ECS/Scenes/BattleScene/AssignedBlocksToDiscardSystem.cs](ECS/Scenes/BattleScene/AssignedBlocksToDiscardSystem.cs)` only if test reveals a kickoff bug
 
 No changes expected to `[ECS/Objects/Enemies/FrostboundAeon.cs](ECS/Objects/Enemies/FrostboundAeon.cs)` unless override marking is proven wrong.

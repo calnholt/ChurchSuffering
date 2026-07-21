@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Input;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
     public class PlayerInputState : IComponent
     {

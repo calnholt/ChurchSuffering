@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Crusaders30XX.ECS.Utils
+namespace ChurchSuffering.ECS.Utils
 {
 	public static class StringUtils
 	{

@@ -1,4 +1,4 @@
-# Crusaders30XX — domain glossary
+# Church Suffering — domain glossary
 
 Terms only. No implementation details.
 
@@ -84,7 +84,7 @@ A card play or equipment ability that can be activated during the **Action phase
 
 ## Equipment availability
 
-A battle-scoped state shared by an equipment item's block and activation behavior. Blocking with equipment or activating its ability marks the item used. A used item cannot block or activate again until the battle ends, when all equipped items refresh.
+Each equipment item has three persistent uses across a quest, shared by block and activation. Consuming a use marks the item used for the current battle (once per battle while charges remain). The per-battle lock clears at the next battle start or on enemy kill without restoring remaining uses. Remaining uses are stored on the run loadout and restored when equipment is created from the save. Exhausted equipment (zero uses left) cannot block or activate for the rest of the quest.
 
 ## Pledge available
 

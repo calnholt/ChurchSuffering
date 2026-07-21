@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.RunSetup;
 
-namespace Crusaders30XX.ECS.Data.Save
+namespace ChurchSuffering.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 25;
+		public const int CURRENT_VERSION = 27;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
 
 		public int version { get; set; } = 0;
@@ -55,6 +55,7 @@ namespace Crusaders30XX.ECS.Data.Save
 	public class PendingClimbPointAwardSave
 	{
 		public int timeReached { get; set; }
+		public int shopRefreshInterval { get; set; } = 8;
 		public bool abandoned { get; set; }
 		public bool completedFinalBoss { get; set; }
 		public int pointsAwarded { get; set; }
@@ -77,18 +78,13 @@ namespace Crusaders30XX.ECS.Data.Save
 	{
 		public int climbAttempts { get; set; }
 		public int climbCompletions { get; set; }
-		public List<CompletedClimbSave> completedClimbs { get; set; } = new List<CompletedClimbSave>();
+		public Dictionary<string, int> highestPenanceByWeapon { get; set; }
+			= new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["sword"] = 0 };
 		public int deferredNpcDialogueCounter { get; set; }
 		public bool pendingNpcDialogueOffer { get; set; }
 		public List<string> purchasedMedalIds { get; set; } = new List<string>();
 		public Dictionary<string, List<string>> completedDialogueSegments { get; set; } = new Dictionary<string, List<string>>();
 		public WayStationVisitSave currentVisit { get; set; } = new WayStationVisitSave();
-	}
-
-	public class CompletedClimbSave
-	{
-		public string startingWeaponId { get; set; } = "sword";
-		public RunDifficulty difficulty { get; set; } = RunDifficulty.Easy;
 	}
 
 	public class WayStationVisitSave
@@ -111,7 +107,7 @@ namespace Crusaders30XX.ECS.Data.Save
 	public class ClimbSaveState
 	{
 		public string startingWeaponId { get; set; } = "sword";
-		public RunDifficulty difficulty { get; set; } = RunDifficulty.Easy;
+		public int penanceLevel { get; set; }
 		public int time { get; set; }
 		public ClimbResourceSave resources { get; set; } = new ClimbResourceSave();
 		public List<ClimbShopSlotSave> shopSlots { get; set; } = new List<ClimbShopSlotSave>();
@@ -268,11 +264,13 @@ namespace Crusaders30XX.ECS.Data.Save
 		public const string Equipment = "equipment";
 		public const string Upgrade = "upgrade";
 		public const string Replacement = "replacement";
+		public const string Boon = "boon";
 
 		public static readonly string[] DisplayOrder =
 		{
 			Upgrade,
 			Replacement,
+			Boon,
 			Medal,
 			Medal,
 			Equipment,

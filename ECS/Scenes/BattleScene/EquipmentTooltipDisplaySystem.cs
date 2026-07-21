@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Equipment;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Utils;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Equipment;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Equipment Tooltip")]
 	public class EquipmentTooltipDisplaySystem : Core.System
@@ -132,6 +132,15 @@ namespace Crusaders30XX.ECS.Systems
 
 		[DebugEditable(DisplayName = "Fade Seconds", Step = 0.01f, Min = 0.01f, Max = 1f)]
 		public float FadeSeconds { get; set; } = 0.10f;
+
+		[DebugEditable(DisplayName = "Use Pip Size", Step = 1, Min = 2, Max = 32)]
+		public int UsePipSize { get; set; } = 8;
+
+		[DebugEditable(DisplayName = "Use Pip Gap", Step = 1, Min = 0, Max = 32)]
+		public int UsePipGap { get; set; } = 1;
+
+		[DebugEditable(DisplayName = "Use Pip Offset Y", Step = 1, Min = 0, Max = 40)]
+		public int UsePipOffsetY { get; set; } = 0;
 
 		public EquipmentTooltipDisplaySystem(
 			EntityManager entityManager,
@@ -341,6 +350,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				gutterHeight += GutterGap + ChipLabelHeight + ChipValueHeight;
 			}
+			gutterHeight += GutterGap + Math.Max(2, UsePipSize) + UsePipOffsetY;
 			return Math.Max(TooltipMinHeight, (int)Math.Ceiling(Math.Max(bodyHeight, gutterHeight)));
 		}
 
@@ -407,6 +417,48 @@ namespace Crusaders30XX.ECS.Systems
 					CardPalette.BlockChipBackground(equipment.Color),
 					CardPalette.BlockChipText(equipment.Color),
 					alpha);
+				y = blockChip.Bottom + GutterGap;
+			}
+
+			DrawUsePips(equipment, x, y + UsePipOffsetY, alpha);
+		}
+
+		private void DrawUsePips(EquipmentBase equipment, int centerX, int topY, float alpha)
+		{
+			if (_imageAssets == null || _graphicsDevice == null || equipment == null) return;
+			int count = Math.Max(0, equipment.MaxUses);
+			if (count == 0) return;
+
+			int pipSize = Math.Max(2, UsePipSize);
+			int gap = Math.Max(0, UsePipGap);
+			int stride = pipSize + gap;
+			int totalWidth = count * pipSize + Math.Max(0, count - 1) * gap;
+			int startX = centerX - totalWidth / 2;
+			int radius = Math.Max(1, pipSize / 2);
+			Texture2D circle = _imageAssets.GetAntiAliasedCircle(radius);
+			int holeThickness = Math.Max(1, pipSize / 4);
+			Texture2D holeRing = PrimitiveTextureFactory.GetAntialiasedRingMask(
+				_graphicsDevice,
+				pipSize,
+				pipSize,
+				holeThickness);
+			Color pipColor = equipment.Color == CardData.CardColor.White ? Color.Black : Color.White;
+			int remaining = Math.Max(0, equipment.RemainingUses);
+
+			for (int i = 0; i < count; i++)
+			{
+				var pip = new Rectangle(startX + i * stride, topY, pipSize, pipSize);
+				if (i < remaining)
+				{
+					int inset = Math.Max(1, pipSize / 8);
+					int fill = Math.Max(1, pipSize - inset * 2);
+					_spriteBatch.Draw(circle, pip, pipColor * (0.18f * alpha));
+					_spriteBatch.Draw(circle, new Rectangle(pip.X + inset, pip.Y + inset, fill, fill), pipColor * alpha);
+				}
+				else
+				{
+					_spriteBatch.Draw(holeRing, pip, pipColor * (0.62f * alpha));
+				}
 			}
 		}
 

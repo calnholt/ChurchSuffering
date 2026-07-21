@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Crusaders30XX.ECS.Data.Telemetry
+namespace ChurchSuffering.ECS.Data.Telemetry
 {
 	public enum CardUsageKind
 	{

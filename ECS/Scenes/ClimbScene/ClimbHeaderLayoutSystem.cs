@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	public class ClimbHeaderLayoutSystem : Core.System
 	{
@@ -91,7 +91,8 @@ namespace Crusaders30XX.ECS.Systems
 		private void UpdatePreview(ClimbPreviewState preview)
 		{
 			var climb = SaveCache.GetClimbState();
-			int currentTime = ClimbRuleService.ClampTime(climb?.time ?? 0);
+			int maxTime = ClimbRuleService.GetMaxTime(climb);
+			int currentTime = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
 			var hoveredSlot = EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>()
 				.Select(e => new { Entity = e, Slot = e.GetComponent<ClimbSlotPresentation>(), UI = e.GetComponent<UIElement>() })
 				.FirstOrDefault(x => x.UI?.IsHovered == true
@@ -106,18 +107,18 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				preview.Clear();
 				preview.ProjectedUsedTime = currentTime;
-				preview.ProjectedRemainingTime = ClimbRuleService.MaxTime - currentTime;
+				preview.ProjectedRemainingTime = maxTime - currentTime;
 				preview.ProjectedResources = CloneResources(climb?.resources);
 				FillAffordableShopIds(preview, climb);
 				return;
 			}
 
-			int projected = ClimbRuleService.ClampTime(currentTime + hoveredSlot.Slot.TimeCost);
+			int projected = ClimbRuleService.ClampTime(climb, currentTime + hoveredSlot.Slot.TimeCost);
 			preview.IsActive = projected > currentTime || hoveredSlot.Slot.Kind == ClimbSlotKind.Event;
 			preview.SourceSlotId = hoveredSlot.Slot.SlotId;
 			preview.Amount = projected - currentTime;
 			preview.ProjectedUsedTime = projected;
-			preview.ProjectedRemainingTime = ClimbRuleService.MaxTime - projected;
+			preview.ProjectedRemainingTime = maxTime - projected;
 			preview.ProjectedResources = CloneResources(climb?.resources);
 			if (hoveredSlot.Slot.Kind == ClimbSlotKind.Encounter)
 			{
@@ -145,8 +146,9 @@ namespace Crusaders30XX.ECS.Systems
 				preview.WouldVanishSlotIds.Add(preview.SourceSlotId);
 			}
 
-			int current = ClimbRuleService.ClampTime(climb?.time ?? 0);
-			int nextShopRefresh = ((current / ClimbRuleService.ShopRefreshInterval) + 1) * ClimbRuleService.ShopRefreshInterval;
+			int current = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
+			int shopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb);
+			int nextShopRefresh = ((current / shopRefreshInterval) + 1) * shopRefreshInterval;
 			if (projectedTime >= nextShopRefresh)
 			{
 				foreach (var slot in climb?.shopSlots ?? new List<ClimbShopSlotSave>())

@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Systems;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class RunScopedStateService
 	{
@@ -117,6 +118,22 @@ namespace Crusaders30XX.ECS.Services
 					&& entry.restrictionStacks.TryGetValue(restriction, out var persistedStacks)
 					? persistedStacks
 					: 2;
+				ApplyRestrictionComponent(entityManager, card, restriction, stacks);
+			}
+		}
+
+		public static void ApplyRestrictionsFromEntry(
+			EntityManager entityManager,
+			Entity card,
+			LoadoutCardEntry entry)
+		{
+			if (card == null || entry?.restrictions == null) return;
+			foreach (string restriction in entry.restrictions)
+			{
+				int stacks = entry.restrictionStacks != null
+					&& entry.restrictionStacks.TryGetValue(restriction, out int persistedStacks)
+						? persistedStacks
+						: 1;
 				ApplyRestrictionComponent(entityManager, card, restriction, stacks);
 			}
 		}

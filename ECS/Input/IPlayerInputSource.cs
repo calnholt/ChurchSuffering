@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Input
+namespace ChurchSuffering.ECS.Input
 {
     public interface IPlayerInputSource
     {

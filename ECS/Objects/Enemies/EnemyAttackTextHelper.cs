@@ -1,4 +1,4 @@
-using Crusaders30XX.ECS.Objects.EnemyAttacks;
+using ChurchSuffering.ECS.Objects.EnemyAttacks;
 
 public static class EnemyAttackTextHelper
   {

@@ -2,12 +2,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Numerics;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 using System;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Data.Locations
+namespace ChurchSuffering.ECS.Data.Locations
 {
 	public static class LocationRepository
 	{

@@ -1,6 +1,6 @@
 using System;
 
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
     /// <summary>
     /// Generic bridge helpers to interoperate between EventQueue and EventManager without game-specific logic.

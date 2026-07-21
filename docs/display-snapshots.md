@@ -108,7 +108,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 
 ## Climb scene V2
 
-The V2 fixture matrix covers the fixed no-event layout, the full mockup-bible layout,
+The V2 fixture matrix covers the fixed six-item shop/no-event layout, the full mockup-bible layout,
 hover projections, the three shop tooltip routes, transition samples, the V2 header,
 and the retained V1 resource-acquisition overlay. Run the complete matrix with:
 
@@ -668,23 +668,20 @@ dotnet run -- snapshot narrative-event-modal --event icebound_tithe --options 2
 
 ## `waystation`
 
-Renders the WayStation hub scene and climb settings modal progression states. The default variant includes the Achievement POI pending-reward badge; modal variants keep rewards settled. Locked choices are hidden and the remaining weapon and difficulty choices are centered.
+Renders the settled fullscreen Penance V2 modal. Sword, Dagger, and Hammer are unlocked through Penance XII; Hammer/Penance XII is selected. Pending rewards and dialogue are suppressed, animation state is pinned, and the cursor does not hover a control.
 
 ### Commands
 
 ```bash
-dotnet run -- snapshot waystation
-dotnet run -- snapshot waystation modal-first-unlock
-dotnet run -- snapshot waystation modal-hammer
-dotnet run -- snapshot waystation modal-full
-
+dotnet run -- snapshot waystation penance-12
 ./scripts/verify-waystation-snapshots.sh
-./scripts/verify-waystation-snapshots.sh --accept
 ```
+
+This feature fixture is a plain, non-baseline capture. Inspect the generated PNG directly. Do not pass `--accept` and do not add it under `tests/VisualBaselines`.
 
 ### Output file
 
-`debug/snapshots/waystation/<variant>.png`
+`debug/snapshots/waystation/penance-12.png`
 
 ---
 

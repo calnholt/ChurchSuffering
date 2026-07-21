@@ -1,10 +1,10 @@
 using System;
-using Crusaders30XX.ECS.Systems;
-using Crusaders30XX.ECS.Data.Save;
+using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Save;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures;
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures;
 
 public sealed class BoosterPackOpeningSnapshotFixture : IDisplaySnapshotFixture
 {

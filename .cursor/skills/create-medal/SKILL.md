@@ -1,6 +1,6 @@
 ---
 name: create-medal
-description: Create new Crusaders30XX medals (MedalBase subclasses in ECS/Objects/Medals). Use when the user asks to create, add, or implement a new medal, describes medal text/triggers/effects, or references medal factory registration.
+description: Create new ChurchSuffering medals (MedalBase subclasses in ECS/Objects/Medals). Use when the user asks to create, add, or implement a new medal, describes medal text/triggers/effects, or references medal factory registration.
 ---
 
 # Create Medal
@@ -17,7 +17,7 @@ Add a new medal: one `MedalBase` subclass + factory registration + tests + `dotn
 - [ ] 3. Find 1-2 similar medals in ECS/Objects/Medals/ and match their pattern
 - [ ] 4. Create ECS/Objects/Medals/{ClassName}.cs
 - [ ] 5. Register snake_case id in MedalFactory.Create() and GetAllMedals() (alphabetical)
-- [ ] 6. Add tests in tests/Crusaders30XX.Tests/MedalCounterTests.cs
+- [ ] 6. Add tests in tests/ChurchSuffering.Tests/MedalCounterTests.cs
 - [ ] 7. dotnet build — fix compile errors before done
 ```
 
@@ -78,11 +78,11 @@ Put **condition checks** in the trigger handler; put **effects** in `Activate()`
 ## Minimal event-triggered template
 
 ```csharp
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Medals
+namespace ChurchSuffering.ECS.Objects.Medals
 {
     public class StExample : MedalBase
     {
@@ -140,7 +140,7 @@ Keep entries **alphabetical** by `Id`.
 
 ## Tests
 
-Add to [tests/Crusaders30XX.Tests/MedalCounterTests.cs](../../../tests/Crusaders30XX.Tests/MedalCounterTests.cs):
+Add to [tests/ChurchSuffering.Tests/MedalCounterTests.cs](../../../tests/ChurchSuffering.Tests/MedalCounterTests.cs):
 
 | Medal type | Tests to add |
 |------------|--------------|

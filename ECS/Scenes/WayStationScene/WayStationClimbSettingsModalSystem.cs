@@ -1,165 +1,64 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
-	[DebugTab("WayStation Climb Modal")]
-	public class WayStationClimbSettingsModalSystem : Core.System
+	[DebugTab("WayStation Penance Layout")]
+	public sealed class WayStationClimbSettingsModalSystem : Core.System
 	{
-		private readonly World _world;
-		private readonly SpriteBatch _spriteBatch;
-		private readonly Texture2D _pixel;
-		private readonly Texture2D _swordArt;
-		private readonly Texture2D _daggerArt;
-		private readonly Texture2D _hammerArt;
-		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
-		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
+		private static readonly StartingWeapon[] Weapons = Enum.GetValues<StartingWeapon>();
+		private static readonly PenanceType[] TallyOrder =
+		{
+			PenanceType.Fasting,
+			PenanceType.Mortification,
+			PenanceType.Abstinence,
+			PenanceType.PenitentialPilgrimage,
+			PenanceType.Reparation,
+		};
 
+		private readonly World _world;
 		private bool _departInProgress;
 
-		private static readonly Color PanelFill = new Color(8, 8, 8) * 0.92f;
-		private static readonly Color PanelBorder = Color.White * 0.85f;
-		private static readonly Color InsetHighlight = Color.White * 0.08f;
-		private static readonly Color FooterFill = Color.Black * 0.25f;
-		private static readonly Color FooterBorder = Color.White * 0.12f;
-		private static readonly Color ChoiceFill = new Color(30, 30, 30);
-		private static readonly Color SelectedFill = new Color(160, 0, 0);
-		private static readonly Color SelectedBorder = new Color(196, 30, 58);
-		private static readonly Color SelectedGlow = new Color(196, 30, 58) * 0.45f;
-		private static readonly Color BodyText = new Color(240, 236, 230);
-		private static readonly Color MutedText = new Color(200, 192, 184);
+		[DebugEditable(DisplayName = "Outer Padding X", Step = 1, Min = 0, Max = 240)] public int OuterPaddingX { get; set; } = 90;
+		[DebugEditable(DisplayName = "Outer Padding Top", Step = 1, Min = 0, Max = 120)] public int OuterPaddingTop { get; set; } = 26;
+		[DebugEditable(DisplayName = "Outer Padding Bottom", Step = 1, Min = 0, Max = 120)] public int OuterPaddingBottom { get; set; } = 24;
+		[DebugEditable(DisplayName = "Masthead Height", Step = 1, Min = 80, Max = 240)] public int MastheadHeight { get; set; } = 150;
+		[DebugEditable(DisplayName = "Weapons Row Height", Step = 1, Min = 240, Max = 500)] public int WeaponsRowHeight { get; set; } = 380;
+		[DebugEditable(DisplayName = "Footer Height", Step = 1, Min = 70, Max = 180)] public int FooterHeight { get; set; } = 108;
+		[DebugEditable(DisplayName = "Weapon Width", Step = 1, Min = 160, Max = 360)] public int WeaponWidth { get; set; } = 250;
+		[DebugEditable(DisplayName = "Weapon Height", Step = 1, Min = 220, Max = 430)] public int WeaponHeight { get; set; } = 330;
+		[DebugEditable(DisplayName = "Weapon Gap", Step = 1, Min = 0, Max = 100)] public int WeaponGap { get; set; } = 30;
+		[DebugEditable(DisplayName = "Node Size", Step = 1, Min = 16, Max = 60)] public int NodeSize { get; set; } = 30;
+		[DebugEditable(DisplayName = "Node Gap", Step = 1, Min = 0, Max = 40)] public int NodeGap { get; set; } = 17;
+		[DebugEditable(DisplayName = "Track Padding X", Step = 1, Min = 0, Max = 80)] public int TrackPaddingX { get; set; } = 34;
+		[DebugEditable(DisplayName = "Track Padding Y", Step = 1, Min = 0, Max = 80)] public int TrackPaddingY { get; set; } = 30;
+		[DebugEditable(DisplayName = "Zone Gap", Step = 1, Min = 0, Max = 80)] public int TrackZoneGap { get; set; } = 30;
 
-		[DebugEditable(DisplayName = "Panel Width", Step = 10, Min = 400, Max = 1600)]
-		public int PanelWidth { get; set; } = 920;
-		[DebugEditable(DisplayName = "Panel Height", Step = 10, Min = 300, Max = 1000)]
-		public int PanelHeight { get; set; } = 627;
-		[DebugEditable(DisplayName = "Border Thickness", Step = 1, Min = 1, Max = 8)]
-		public int BorderThickness { get; set; } = 2;
-		[DebugEditable(DisplayName = "Shadow Offset Y", Step = 1, Min = 0, Max = 80)]
-		public int ShadowOffsetY { get; set; } = 32;
-		[DebugEditable(DisplayName = "Shadow Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
-		public float ShadowAlpha { get; set; } = 0.75f;
-		[DebugEditable(DisplayName = "Body Padding Top", Step = 2, Min = 0, Max = 120)]
-		public int BodyPaddingTop { get; set; } = 40;
-		[DebugEditable(DisplayName = "Footer Height", Step = 2, Min = 40, Max = 220)]
-		public int FooterHeight { get; set; } = 113;
-		[DebugEditable(DisplayName = "Footer Padding", Step = 2, Min = 0, Max = 80)]
-		public int FooterPadding { get; set; } = 24;
-		[DebugEditable(DisplayName = "Title Scale", Step = 0.01f, Min = 0.05f, Max = 1f)]
-		public float TitleScale { get; set; } = 0.31f;
-		[DebugEditable(DisplayName = "Label Scale", Step = 0.01f, Min = 0.05f, Max = 1f)]
-		public float LabelScale { get; set; } = 0.11f;
-		[DebugEditable(DisplayName = "Choice Scale", Step = 0.01f, Min = 0.05f, Max = 1f)]
-		public float ChoiceScale { get; set; } = 0.13f;
-		[DebugEditable(DisplayName = "Proceed Scale", Step = 0.01f, Min = 0.05f, Max = 1f)]
-		public float ProceedScale { get; set; } = 0.22f;
-		[DebugEditable(DisplayName = "Red Rule Width", Step = 2, Min = 20, Max = 200)]
-		public int RedRuleWidth { get; set; } = 80;
-		[DebugEditable(DisplayName = "Red Rule Height", Step = 1, Min = 1, Max = 12)]
-		public int RedRuleHeight { get; set; } = 3;
-		[DebugEditable(DisplayName = "Title Gap", Step = 2, Min = 0, Max = 80)]
-		public int TitleGap { get; set; } = 28;
-		[DebugEditable(DisplayName = "Block Gap", Step = 2, Min = 0, Max = 80)]
-		public int BlockGap { get; set; } = 28;
-		[DebugEditable(DisplayName = "Label Gap", Step = 2, Min = 0, Max = 60)]
-		public int LabelGap { get; set; } = 16;
-		[DebugEditable(DisplayName = "Choice Gap", Step = 2, Min = 0, Max = 80)]
-		public int ChoiceGap { get; set; } = 12;
-		[DebugEditable(DisplayName = "Difficulty Choice Gap", Step = 2, Min = 0, Max = 80)]
-		public int DifficultyChoiceGap { get; set; } = 16;
-		[DebugEditable(DisplayName = "Weapon Button Size", Step = 2, Min = 80, Max = 400)]
-		public int WeaponButtonSize { get; set; } = 200;
-		[DebugEditable(DisplayName = "Weapon Art Padding", Step = 2, Min = 0, Max = 60)]
-		public int WeaponArtPadding { get; set; } = 12;
-		[DebugEditable(DisplayName = "Weapon Label Height", Step = 2, Min = 12, Max = 80)]
-		public int WeaponLabelHeight { get; set; } = 28;
-		[DebugEditable(DisplayName = "Weapon Label Scale", Step = 0.01f, Min = 0.05f, Max = 1f)]
-		public float WeaponLabelScale { get; set; } = 0.10f;
-		[DebugEditable(DisplayName = "Difficulty Row Width", Step = 2, Min = 200, Max = 900)]
-		public int DifficultyRowWidth { get; set; } = 520;
-		[DebugEditable(DisplayName = "Difficulty Label Offset Y", Step = 2, Min = 200, Max = 560)]
-		public int DifficultyLabelOffsetY { get; set; } = 404;
-		[DebugEditable(DisplayName = "Difficulty Row Offset Y", Step = 2, Min = 220, Max = 600)]
-		public int DifficultyRowOffsetY { get; set; } = 437;
-		[DebugEditable(DisplayName = "Difficulty Button Height", Step = 2, Min = 30, Max = 120)]
-		public int DifficultyButtonHeight { get; set; } = 52;
-		[DebugEditable(DisplayName = "Proceed Button Width", Step = 2, Min = 80, Max = 500)]
-		public int ProceedButtonWidth { get; set; } = 220;
-		[DebugEditable(DisplayName = "Proceed Button Height", Step = 2, Min = 30, Max = 160)]
-		public int ProceedButtonHeight { get; set; } = 64;
-		[DebugEditable(DisplayName = "Close Button Size", Step = 2, Min = 24, Max = 96)]
-		public int CloseButtonSize { get; set; } = 44;
-		[DebugEditable(DisplayName = "Close Button Inset", Step = 1, Min = 4, Max = 80)]
-		public int CloseButtonInset { get; set; } = 18;
+		private readonly record struct Layout(
+			Rectangle Masthead,
+			Rectangle Weapons,
+			Rectangle TrackZone,
+			Rectangle Footer,
+			Rectangle TrackLabel,
+			Rectangle TrackFrame,
+			Rectangle Depart,
+			Rectangle Summary,
+			Rectangle Close);
 
-		private struct WayStationLayout
-		{
-			public Rectangle Panel;
-			public Rectangle Body;
-			public Rectangle Footer;
-			public Rectangle Rule;
-			public Rectangle CloseButton;
-			public Rectangle SwordButton;
-			public Rectangle DaggerButton;
-			public Rectangle HammerButton;
-			public Rectangle EasyButton;
-			public Rectangle NormalButton;
-			public Rectangle HardButton;
-			public Rectangle DepartButton;
-			public Vector2 TitlePosition;
-			public Vector2 WeaponLabelPosition;
-			public Vector2 DifficultyLabelPosition;
-		}
-
-		public WayStationClimbSettingsModalSystem(
-			World world,
-			SpriteBatch spriteBatch,
-			ImageAssetService imageAssets)
-			: base(world.EntityManager)
+		public WayStationClimbSettingsModalSystem(World world) : base(world.EntityManager)
 		{
 			_world = world;
-			_spriteBatch = spriteBatch;
-			_pixel = imageAssets.GetPixel(Color.White);
-			_swordArt = imageAssets.GetRequiredTexture(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("sword"));
-			_daggerArt = imageAssets.GetRequiredTexture(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("dagger"));
-			_hammerArt = imageAssets.GetRequiredTexture(CrusaderPortraitAssets.ResolveWeaponCardArtAsset("hammer"));
 			EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
-			EventManager.Subscribe<OpenWayStationClimbSettingsModalEvent>(OnOpenClimbSettingsModal);
-		}
-
-		private void OnLoadScene(LoadSceneEvent e)
-		{
-			if (e.Scene != SceneId.WayStation) return;
-			_departInProgress = false;
-			CloseModal(immediate: true);
-		}
-
-		private void OnOpenClimbSettingsModal(OpenWayStationClimbSettingsModalEvent e)
-		{
-			if (!IsWayStationActive()) return;
-			var meta = SaveCache.GetWayStationMeta();
-			if (!ClimbUnlockProgressionRules.ShouldShowSettingsModal(meta))
-			{
-				if (_departInProgress) return;
-				WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
-				WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
-				_departInProgress = true;
-				WayStationRunSetupService.Depart(_world);
-				return;
-			}
-
-			NormalizeSelection(meta);
-			OpenModal();
+			EventManager.Subscribe<OpenWayStationClimbSettingsModalEvent>(OnOpenModal);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -170,47 +69,35 @@ namespace Crusaders30XX.ECS.Systems
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
 			var scene = entity.GetComponent<SceneState>();
-			if (scene == null || scene.Current != SceneId.WayStation)
+			if (scene?.Current is not (SceneId.WayStation or SceneId.Snapshot))
 			{
-				CloseModal(immediate: true);
-				SetButtonsInteractable(false);
+				CloseImmediate();
 				return;
 			}
 
-			EnsureModalRoot();
-
-			var animation = GetModalAnimation();
-			bool modalInteractive = animation?.Phase == ModalAnimationPhase.Visible;
-			bool modalOpen = animation != null && (animation.RequestedVisible || animation.Phase != ModalAnimationPhase.Hidden);
+			EnsureEntities();
+			var state = GetModalState();
 			var meta = SaveCache.GetWayStationMeta();
 			NormalizeSelection(meta);
-			var layout = ComputeLayout(Game1.VirtualWidth, Game1.VirtualHeight, meta);
-			var render = ModalAnimationRenderState.From(animation, layout.Panel);
+			Reconcile(meta, ComputeLayout());
+			SyncInteraction(state);
+			if (state?.InteractionEnabled != true) return;
 
-			SyncModalPanel(render.Transform(layout.Panel), modalOpen);
-			SyncButton(WayStationSceneConstants.CloseButtonName, render.Transform(layout.CloseButton), modalInteractive);
-			SyncChoiceButton(WayStationSceneConstants.SwordButtonName, layout.SwordButton, render, modalInteractive);
-			SyncChoiceButton(WayStationSceneConstants.DaggerButtonName, layout.DaggerButton, render, modalInteractive);
-			SyncChoiceButton(WayStationSceneConstants.HammerButtonName, layout.HammerButton, render, modalInteractive);
-			SyncChoiceButton(WayStationSceneConstants.EasyButtonName, layout.EasyButton, render, modalInteractive);
-			SyncChoiceButton(WayStationSceneConstants.NormalButtonName, layout.NormalButton, render, modalInteractive);
-			SyncChoiceButton(WayStationSceneConstants.HardButtonName, layout.HardButton, render, modalInteractive);
-			SyncButton(WayStationSceneConstants.DepartButtonName, render.Transform(layout.DepartButton), modalInteractive);
-
-			if (!modalInteractive) return;
-
-			if (WasClicked(WayStationSceneConstants.ModalRootName) || WasClicked(WayStationSceneConstants.CloseButtonName))
+			if (WasClicked(WayStationSceneConstants.CloseButtonName))
 			{
-				CloseModal();
+				RequestClose();
 				return;
 			}
 
-			if (WasClicked(WayStationSceneConstants.SwordButtonName)) SelectWeapon(meta, StartingWeapon.Sword);
-			if (WasClicked(WayStationSceneConstants.DaggerButtonName)) SelectWeapon(meta, StartingWeapon.Dagger);
-			if (WasClicked(WayStationSceneConstants.HammerButtonName)) SelectWeapon(meta, StartingWeapon.Hammer);
-			if (WasClicked(WayStationSceneConstants.EasyButtonName)) SelectDifficulty(meta, RunDifficulty.Easy);
-			if (WasClicked(WayStationSceneConstants.NormalButtonName)) SelectDifficulty(meta, RunDifficulty.Normal);
-			if (WasClicked(WayStationSceneConstants.HardButtonName)) SelectDifficulty(meta, RunDifficulty.Hard);
+			foreach (var weapon in Weapons)
+			{
+				if (WasClicked(WeaponEntityName(weapon))) SelectWeapon(meta, weapon);
+			}
+
+			for (int level = 1; level <= PenanceRules.MaxLevel; level++)
+			{
+				if (WasClicked(NodeEntityName(level))) SelectLevel(meta, level);
+			}
 
 			if (!_departInProgress && WasClicked(WayStationSceneConstants.DepartButtonName))
 			{
@@ -220,487 +107,419 @@ namespace Crusaders30XX.ECS.Systems
 			}
 		}
 
-		public void Draw()
+		private void OnLoadScene(LoadSceneEvent evt)
 		{
-			var scene = EntityManager.GetEntitiesWithComponent<SceneState>()
-				.FirstOrDefault()
-				?.GetComponent<SceneState>();
-			if (scene == null || (scene.Current != SceneId.WayStation && scene.Current != SceneId.Snapshot)) return;
-
-			var layout = ComputeLayout(Game1.VirtualWidth, Game1.VirtualHeight, SaveCache.GetWayStationMeta());
-			var animation = GetModalAnimation();
-			if (animation == null) return;
-			var render = ModalAnimationRenderState.From(animation, layout.Panel);
-			if (!render.ShouldDraw) return;
-
-			ModalOverlayChrome.DrawDim(_spriteBatch, _pixel, Game1.VirtualWidth, Game1.VirtualHeight, (int)(178 * render.DimAlphaMultiplier));
-			DrawPanel(layout, render);
-			DrawText(layout, render);
-			DrawButtons(layout, render);
+			if (evt.Scene != SceneId.WayStation) return;
+			_departInProgress = false;
+			CloseImmediate();
 		}
 
-		private WayStationLayout ComputeLayout(int vw, int vh, WayStationMetaSave meta)
+		private void OnOpenModal(OpenWayStationClimbSettingsModalEvent evt)
 		{
-			var panel = new Rectangle((vw - PanelWidth) / 2, (vh - PanelHeight) / 2, PanelWidth, PanelHeight);
-			var footer = new Rectangle(panel.X, panel.Bottom - FooterHeight, panel.Width, FooterHeight);
-			var body = new Rectangle(panel.X, panel.Y, panel.Width, panel.Height - FooterHeight);
-
-			float cursorY = body.Y + BodyPaddingTop;
-			var titleSize = Measure(_titleFont, "Begin the climb", TitleScale);
-			var titlePos = new Vector2(panel.Center.X - titleSize.X / 2f, cursorY);
-			cursorY += titleSize.Y + TitleGap;
-
-			var rule = new Rectangle(panel.Center.X - RedRuleWidth / 2, (int)System.Math.Round(cursorY), RedRuleWidth, RedRuleHeight);
-			cursorY += RedRuleHeight + BlockGap;
-
-			var weaponLabelSize = Measure(_bodyFont, "STARTING WEAPON", LabelScale);
-			var weaponLabelPos = new Vector2(panel.Center.X - weaponLabelSize.X / 2f, cursorY);
-			cursorY += weaponLabelSize.Y + LabelGap;
-
-			var unlockedWeapons = ClimbUnlockProgressionRules.GetUnlockedWeapons(meta);
-			int weaponRowWidth = WeaponButtonSize * unlockedWeapons.Count + ChoiceGap * System.Math.Max(0, unlockedWeapons.Count - 1);
-			int weaponX = panel.Center.X - weaponRowWidth / 2;
-			int weaponY = (int)System.Math.Round(cursorY);
-			var sword = Rectangle.Empty;
-			var dagger = Rectangle.Empty;
-			var hammer = Rectangle.Empty;
-			for (int i = 0; i < unlockedWeapons.Count; i++)
+			if (!IsWayStationActive()) return;
+			var meta = SaveCache.GetWayStationMeta();
+			var setup = WayStationRunSetupService.GetRunSetup(EntityManager);
+			if (!ClimbUnlockProgressionRules.ShouldShowSettingsModal(meta))
 			{
-				var rect = new Rectangle(weaponX + i * (WeaponButtonSize + ChoiceGap), weaponY, WeaponButtonSize, WeaponButtonSize);
-				switch (unlockedWeapons[i])
-				{
-					case StartingWeapon.Sword: sword = rect; break;
-					case StartingWeapon.Dagger: dagger = rect; break;
-					case StartingWeapon.Hammer: hammer = rect; break;
-				}
+				if (_departInProgress || setup == null) return;
+				setup.SelectedWeapon = StartingWeapon.Sword;
+				setup.SelectedPenanceLevel = 0;
+				_departInProgress = true;
+				WayStationRunSetupService.Depart(_world);
+				return;
 			}
 
-			var difficultyLabelSize = Measure(_bodyFont, "DIFFICULTY", LabelScale);
-			var difficultyLabelPos = new Vector2(panel.Center.X - difficultyLabelSize.X / 2f, panel.Y + DifficultyLabelOffsetY);
-
-			int difficultyButtonWidth = (DifficultyRowWidth - DifficultyChoiceGap * 2) / 3;
-			var unlockedDifficulties = ClimbUnlockProgressionRules.GetUnlockedDifficulties(meta, WayStationRunSetupSingleton.SelectedWeapon);
-			int difficultyWidth = difficultyButtonWidth * unlockedDifficulties.Count
-				+ DifficultyChoiceGap * System.Math.Max(0, unlockedDifficulties.Count - 1);
-			int difficultyX = panel.Center.X - difficultyWidth / 2;
-			int difficultyY = panel.Y + DifficultyRowOffsetY;
-			var easy = Rectangle.Empty;
-			var normal = Rectangle.Empty;
-			var hard = Rectangle.Empty;
-			for (int i = 0; i < unlockedDifficulties.Count; i++)
-			{
-				var rect = new Rectangle(difficultyX + i * (difficultyButtonWidth + DifficultyChoiceGap), difficultyY, difficultyButtonWidth, DifficultyButtonHeight);
-				switch (unlockedDifficulties[i])
-				{
-					case RunDifficulty.Easy: easy = rect; break;
-					case RunDifficulty.Normal: normal = rect; break;
-					case RunDifficulty.Hard: hard = rect; break;
-				}
-			}
-
-			var depart = new Rectangle(
-				panel.Center.X - ProceedButtonWidth / 2,
-				footer.Y + FooterPadding,
-				ProceedButtonWidth,
-				ProceedButtonHeight);
-			var close = new Rectangle(
-				panel.Right - CloseButtonInset - CloseButtonSize,
-				panel.Y + CloseButtonInset,
-				CloseButtonSize,
-				CloseButtonSize);
-
-			return new WayStationLayout
-			{
-				Panel = panel,
-				Body = body,
-				Footer = footer,
-				Rule = rule,
-				CloseButton = close,
-				SwordButton = sword,
-				DaggerButton = dagger,
-				HammerButton = hammer,
-				EasyButton = easy,
-				NormalButton = normal,
-				HardButton = hard,
-				DepartButton = depart,
-				TitlePosition = titlePos,
-				WeaponLabelPosition = weaponLabelPos,
-				DifficultyLabelPosition = difficultyLabelPos
-			};
-		}
-
-		private void DrawPanel(WayStationLayout layout, ModalAnimationRenderState render)
-		{
-			var panel = render.Transform(layout.Panel);
-			var footer = render.Transform(layout.Footer);
-			var rule = render.Transform(layout.Rule);
-			var shadow = new Rectangle(
-				panel.X,
-				panel.Y + (int)System.Math.Round(ShadowOffsetY * render.ShellScale),
-				panel.Width,
-				System.Math.Max(1, panel.Height - (int)System.Math.Round(ShadowOffsetY * render.ShellScale)));
-			_spriteBatch.Draw(_pixel, shadow, render.ApplyShadow(Color.Black * MathHelper.Clamp(ShadowAlpha, 0f, 1f)));
-			_spriteBatch.Draw(_pixel, panel, render.ApplyShell(PanelFill));
-			_spriteBatch.Draw(_pixel, footer, render.ApplyShell(FooterFill));
-			DrawHorizontalLine(footer.X, footer.Y, footer.Width, render.ApplyShell(FooterBorder), 1);
-			DrawBorder(panel, render.ApplyShell(PanelBorder), BorderThickness);
-			DrawBorder(new Rectangle(panel.X + 1, panel.Y + 1, panel.Width - 2, panel.Height - 2), render.ApplyShell(InsetHighlight), 1);
-			DrawGradientRule(rule, render);
-		}
-
-		private void DrawText(WayStationLayout layout, ModalAnimationRenderState render)
-		{
-			DrawStringWithShadow(_titleFont, "Begin the climb", render.Transform(layout.TitlePosition), render.ApplyShell(Color.White), render.TransformScale(TitleScale));
-			_spriteBatch.DrawString(_bodyFont, "STARTING WEAPON", render.Transform(layout.WeaponLabelPosition), render.ApplyShell(MutedText), 0f, Vector2.Zero, render.TransformScale(LabelScale), SpriteEffects.None, 0f);
-			_spriteBatch.DrawString(_bodyFont, "DIFFICULTY", render.Transform(layout.DifficultyLabelPosition), render.ApplyShell(MutedText), 0f, Vector2.Zero, render.TransformScale(LabelScale), SpriteEffects.None, 0f);
-		}
-
-		private void DrawButtons(WayStationLayout layout, ModalAnimationRenderState render)
-		{
-			DrawCloseButton(render.Transform(layout.CloseButton), IsHovered(WayStationSceneConstants.CloseButtonName), render);
-			if (!layout.SwordButton.IsEmpty) DrawWeaponChoiceButton(render.Transform(layout.SwordButton), _swordArt, "Sword", IsSelected(StartingWeapon.Sword), IsHovered(WayStationSceneConstants.SwordButtonName), render);
-			if (!layout.DaggerButton.IsEmpty) DrawWeaponChoiceButton(render.Transform(layout.DaggerButton), _daggerArt, "Dagger", IsSelected(StartingWeapon.Dagger), IsHovered(WayStationSceneConstants.DaggerButtonName), render);
-			if (!layout.HammerButton.IsEmpty) DrawWeaponChoiceButton(render.Transform(layout.HammerButton), _hammerArt, "Hammer", IsSelected(StartingWeapon.Hammer), IsHovered(WayStationSceneConstants.HammerButtonName), render);
-			if (!layout.EasyButton.IsEmpty) DrawChoiceButton(render.Transform(layout.EasyButton), "Easy", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Easy), IsHovered(WayStationSceneConstants.EasyButtonName), render);
-			if (!layout.NormalButton.IsEmpty) DrawChoiceButton(render.Transform(layout.NormalButton), "Normal", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Normal), IsHovered(WayStationSceneConstants.NormalButtonName), render);
-			if (!layout.HardButton.IsEmpty) DrawChoiceButton(render.Transform(layout.HardButton), "Hard", render.TransformScale(ChoiceScale), IsSelected(RunDifficulty.Hard), IsHovered(WayStationSceneConstants.HardButtonName), render);
-			DrawProceedButton(render.Transform(layout.DepartButton), IsHovered(WayStationSceneConstants.DepartButtonName), render);
-		}
-
-		private void DrawCloseButton(Rectangle rect, bool hovered, ModalAnimationRenderState render)
-		{
-			var fill = hovered ? SelectedFill : ChoiceFill;
-			var border = hovered ? SelectedBorder : Color.White;
-			_spriteBatch.Draw(_pixel, rect, render.ApplyShell(fill));
-			DrawBorder(rect, render.ApplyShell(border), 2);
-			DrawCenteredString(_titleFont, "X", rect, render.ApplyShell(Color.White), render.TransformScale(0.2f));
-		}
-
-		private void DrawChoiceButton(Rectangle rect, string label, float scale, bool selected, bool hovered, ModalAnimationRenderState render)
-		{
-			if (selected)
-			{
-				_spriteBatch.Draw(_pixel, new Rectangle(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8), render.ApplyShell(SelectedGlow));
-			}
-
-			var fill = selected ? SelectedFill : ChoiceFill;
-			var border = selected ? SelectedBorder : (hovered ? Color.White : Color.White * 0.5f);
-			var text = selected || hovered ? Color.White : BodyText;
-			_spriteBatch.Draw(_pixel, rect, render.ApplyShell(fill));
-			DrawBorder(rect, render.ApplyShell(border), 2);
-			DrawCenteredString(_bodyFont, label, rect, render.ApplyShell(text), scale);
-		}
-
-		private void DrawWeaponChoiceButton(Rectangle rect, Texture2D art, string label, bool selected, bool hovered, ModalAnimationRenderState render)
-		{
-			if (selected)
-			{
-				_spriteBatch.Draw(_pixel, new Rectangle(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8), render.ApplyShell(SelectedGlow));
-			}
-
-			var fill = selected ? SelectedFill : ChoiceFill;
-			var border = selected ? SelectedBorder : (hovered ? Color.White : Color.White * 0.5f);
-			var text = selected || hovered ? Color.White : BodyText;
-			var artTint = selected || hovered ? Color.White : BodyText;
-
-			_spriteBatch.Draw(_pixel, rect, render.ApplyShell(fill));
-			DrawBorder(rect, render.ApplyShell(border), 2);
-
-			int padding = System.Math.Max(0, (int)System.Math.Round(WeaponArtPadding * render.ShellScale));
-			int labelHeight = System.Math.Max(12, (int)System.Math.Round(WeaponLabelHeight * render.ShellScale));
-			var artBounds = new Rectangle(
-				rect.X + padding,
-				rect.Y + padding,
-				System.Math.Max(1, rect.Width - padding * 2),
-				System.Math.Max(1, rect.Height - padding * 2 - labelHeight));
-			DrawTextureFitted(artBounds, art, render.ApplyShell(artTint));
-
-			var labelRect = new Rectangle(rect.X, rect.Bottom - labelHeight, rect.Width, labelHeight);
-			DrawCenteredString(_bodyFont, label, labelRect, render.ApplyShell(text), render.TransformScale(WeaponLabelScale));
-		}
-
-		private void DrawProceedButton(Rectangle rect, bool hovered, ModalAnimationRenderState render)
-		{
-			var fill = hovered ? SelectedFill : ChoiceFill;
-			var border = hovered ? SelectedBorder : Color.White;
-			if (hovered)
-			{
-				_spriteBatch.Draw(_pixel, new Rectangle(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8), render.ApplyShell(SelectedGlow));
-			}
-
-			_spriteBatch.Draw(_pixel, rect, render.ApplyShell(fill));
-			DrawBorder(rect, render.ApplyShell(border), 2);
-			DrawCenteredString(_titleFont, "Depart", rect, render.ApplyShell(Color.White), render.TransformScale(ProceedScale));
-		}
-
-		private void DrawTextureFitted(Rectangle bounds, Texture2D texture, Color tint)
-		{
-			if (bounds.Width <= 0 || bounds.Height <= 0 || texture == null) return;
-			float scale = System.Math.Min(bounds.Width / (float)texture.Width, bounds.Height / (float)texture.Height);
-			int drawW = System.Math.Max(1, (int)System.Math.Round(texture.Width * scale));
-			int drawH = System.Math.Max(1, (int)System.Math.Round(texture.Height * scale));
-			var dst = new Rectangle(bounds.X + (bounds.Width - drawW) / 2, bounds.Y + (bounds.Height - drawH) / 2, drawW, drawH);
-			_spriteBatch.Draw(texture, dst, tint);
-		}
-
-		private void DrawGradientRule(Rectangle rect, ModalAnimationRenderState render)
-		{
-			if (rect.Width <= 0 || rect.Height <= 0) return;
-			for (int i = 0; i < rect.Width; i++)
-			{
-				float t = rect.Width <= 1 ? 1f : i / (float)(rect.Width - 1);
-				float alpha = t <= 0.5f ? t * 2f : (1f - t) * 2f;
-				_spriteBatch.Draw(_pixel, new Rectangle(rect.X + i, rect.Y, 1, rect.Height), render.ApplyShell(SelectedBorder * alpha));
-			}
-		}
-
-		private void DrawStringWithShadow(SpriteFont font, string text, Vector2 pos, Color color, float scale)
-		{
-			_spriteBatch.DrawString(font, text, pos + new Vector2(0, 2), Color.Black * (0.8f * color.A / 255f), 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-			_spriteBatch.DrawString(font, text, pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-		}
-
-		private void DrawCenteredString(SpriteFont font, string text, Rectangle rect, Color color, float scale)
-		{
-			var size = Measure(font, text, scale);
-			var pos = new Vector2(rect.Center.X - size.X / 2f, rect.Center.Y - size.Y / 2f);
-			_spriteBatch.DrawString(font, text, pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-		}
-
-		private static Vector2 Measure(SpriteFont font, string text, float scale)
-		{
-			return font.MeasureString(text ?? string.Empty) * scale;
-		}
-
-		private void DrawBorder(Rectangle rect, Color color, int thickness)
-		{
-			thickness = System.Math.Max(1, thickness);
-			_spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color);
-			_spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color);
-			_spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color);
-			_spriteBatch.Draw(_pixel, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color);
-		}
-
-		private void DrawHorizontalLine(int x, int y, int width, Color color, int thickness)
-		{
-			_spriteBatch.Draw(_pixel, new Rectangle(x, y, width, System.Math.Max(1, thickness)), color);
-		}
-
-		private void EnsureModalRoot()
-		{
-			var root = EntityManager.GetEntity(WayStationSceneConstants.ModalRootName);
-			if (root == null)
-			{
-				root = EntityManager.CreateEntity(WayStationSceneConstants.ModalRootName);
-				EntityManager.AddComponent(root, new Transform { Position = Vector2.Zero, ZOrder = 10000 });
-				EntityManager.AddComponent(root, new UIElement
-				{
-					Bounds = Rectangle.Empty,
-					IsInteractable = false,
-					IsHidden = true,
-					LayerType = UILayerType.Overlay,
-					TooltipType = TooltipType.None,
-					ShowHoverHighlight = false
-				});
-				EntityManager.AddComponent(root, new ModalAnimation { InputContextId = WayStationSceneConstants.ModalContextId });
-				EntityManager.AddComponent(root, new WayStationClimbModalRoot());
-				InputContextService.EnsureContext(EntityManager, root, WayStationSceneConstants.ModalContextId, 100, false);
-			}
-
-			InputContextService.EnsureContext(
-				EntityManager,
-				root,
-				WayStationSceneConstants.ModalContextId,
-				100,
-				root.GetComponent<ModalAnimation>()?.Phase != ModalAnimationPhase.Hidden);
-		}
-
-		private void SyncModalPanel(Rectangle bounds, bool visible)
-		{
-			var panel = EntityManager.GetEntity(WayStationSceneConstants.ModalPanelName);
-			if (panel == null)
-			{
-				panel = EntityManager.CreateEntity(WayStationSceneConstants.ModalPanelName);
-				EntityManager.AddComponent(panel, new Transform());
-				EntityManager.AddComponent(panel, new UIElement { TooltipType = TooltipType.None, ShowHoverHighlight = false });
-				EntityManager.AddComponent(panel, new WayStationClimbModalPanel());
-				InputContextService.EnsureMember(EntityManager, panel, WayStationSceneConstants.ModalContextId);
-			}
-
-			var transform = panel.GetComponent<Transform>();
-			transform.Position = new Vector2(bounds.X, bounds.Y);
-			transform.ZOrder = 10001;
-			var ui = panel.GetComponent<UIElement>();
-			ui.Bounds = bounds;
-			ui.IsInteractable = visible;
-			ui.IsHidden = !visible;
-			ui.LayerType = UILayerType.Overlay;
-			InputContextService.EnsureMember(EntityManager, panel, WayStationSceneConstants.ModalContextId);
-		}
-
-		private void SyncButton(string name, Rectangle bounds, bool interactable)
-		{
-			var entity = EntityManager.GetEntity(name);
-			if (entity == null)
-			{
-				entity = EntityManager.CreateEntity(name);
-				EntityManager.AddComponent(entity, new Transform());
-				EntityManager.AddComponent(entity, new UIElement { TooltipType = TooltipType.None });
-				AddModalMarker(entity, name);
-			}
-
-			var transform = entity.GetComponent<Transform>();
-			transform.Position = new Vector2(bounds.X, bounds.Y);
-			transform.ZOrder = 10002;
-
-			var ui = entity.GetComponent<UIElement>();
-			ui.Bounds = bounds;
-			ui.IsInteractable = interactable;
-			ui.IsHidden = !interactable;
-			ui.LayerType = UILayerType.Overlay;
-			ui.TooltipType = TooltipType.None;
-			InputContextService.EnsureMember(EntityManager, entity, WayStationSceneConstants.ModalContextId);
-		}
-
-		private void SyncChoiceButton(
-			string name,
-			Rectangle bounds,
-			ModalAnimationRenderState render,
-			bool modalInteractive)
-		{
-			bool unlocked = !bounds.IsEmpty;
-			SyncButton(name, unlocked ? render.Transform(bounds) : Rectangle.Empty, modalInteractive && unlocked);
-		}
-
-		private void AddModalMarker(Entity entity, string name)
-		{
-			if (name == WayStationSceneConstants.CloseButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalCloseButton());
-			else if (name == WayStationSceneConstants.DepartButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalDepartButton());
-			else if (name == WayStationSceneConstants.SwordButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalWeaponChoice { Weapon = StartingWeapon.Sword });
-			else if (name == WayStationSceneConstants.DaggerButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalWeaponChoice { Weapon = StartingWeapon.Dagger });
-			else if (name == WayStationSceneConstants.HammerButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalWeaponChoice { Weapon = StartingWeapon.Hammer });
-			else if (name == WayStationSceneConstants.EasyButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalDifficultyChoice { Difficulty = RunDifficulty.Easy });
-			else if (name == WayStationSceneConstants.NormalButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalDifficultyChoice { Difficulty = RunDifficulty.Normal });
-			else if (name == WayStationSceneConstants.HardButtonName) EntityManager.AddComponent(entity, new WayStationClimbModalDifficultyChoice { Difficulty = RunDifficulty.Hard });
-		}
-
-		private void OpenModal()
-		{
-			EnsureModalRoot();
-			var animation = GetModalAnimation();
-			if (animation == null) return;
-			animation.RequestedVisible = true;
+			EnsureEntities();
+			NormalizeSelection(meta);
+			setup.SelectedPenanceLevel = ClimbUnlockProgressionRules.GetHighestUnlockedPenance(
+				meta,
+				setup.SelectedWeapon);
+			Reconcile(meta, ComputeLayout());
+			GetModalState().RequestedVisible = true;
 			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.ClimbMenuEnter, Volume = 0.5f });
 		}
 
-		private void CloseModal(bool immediate = false)
+		private void SelectWeapon(WayStationMetaSave meta, StartingWeapon weapon)
 		{
-			var animation = GetModalAnimation();
-			if (animation == null) return;
-			animation.RequestedVisible = false;
-			if (!immediate) return;
-			animation.Phase = ModalAnimationPhase.Hidden;
-			animation.ElapsedSeconds = 0f;
+			var setup = WayStationRunSetupService.GetRunSetup(EntityManager);
+			if (setup == null || setup.SelectedWeapon == weapon || !ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, weapon)) return;
+			int oldLevel = setup.SelectedPenanceLevel;
+			setup.SelectedWeapon = weapon;
+			setup.SelectedPenanceLevel = ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, weapon);
+			Reconcile(meta, ComputeLayout());
+			ClearChangedTooltips();
+			EventManager.Publish(new WayStationPenanceSelectionChangedEvent
+			{
+				OldLevel = oldLevel,
+				NewLevel = setup.SelectedPenanceLevel,
+				WeaponChanged = true,
+			});
+		}
+
+		private void SelectLevel(WayStationMetaSave meta, int requestedLevel)
+		{
+			var setup = WayStationRunSetupService.GetRunSetup(EntityManager);
+			if (setup == null || !ClimbUnlockProgressionRules.IsPenanceUnlocked(meta, setup.SelectedWeapon, requestedLevel)) return;
+			int oldLevel = setup.SelectedPenanceLevel;
+			int newLevel = requestedLevel == oldLevel ? Math.Max(0, oldLevel - 1) : requestedLevel;
+			if (newLevel == oldLevel) return;
+			setup.SelectedPenanceLevel = newLevel;
+			Reconcile(meta, ComputeLayout());
+			ClearChangedTooltips();
+			EventManager.Publish(new WayStationPenanceSelectionChangedEvent
+			{
+				OldLevel = oldLevel,
+				NewLevel = newLevel,
+				WeaponChanged = false,
+			});
+		}
+
+		private void NormalizeSelection(WayStationMetaSave meta)
+		{
+			var setup = WayStationRunSetupService.GetRunSetup(EntityManager);
+			if (setup == null) return;
+			if (!ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, setup.SelectedWeapon))
+			{
+				setup.SelectedWeapon = StartingWeapon.Sword;
+			}
+			int highest = ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, setup.SelectedWeapon);
+			setup.SelectedPenanceLevel = Math.Clamp(setup.SelectedPenanceLevel, 0, highest);
+		}
+
+		private void EnsureEntities()
+		{
+			var root = EnsureEntity(WayStationSceneConstants.ModalRootName);
+			EnsureComponent(root, new WayStationClimbModalRoot());
+			EnsureComponent(root, new WayStationPenanceModalState());
+			EnsureComponent(root, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Root });
+			// The root owns the active input context but is intentionally not a hit target.
+			// A fullscreen UIElement here would win equal-Z hit tests and swallow every
+			// child hover/click, making any click look like a backdrop dismissal.
+			if (root.GetComponent<UIElement>() != null) EntityManager.RemoveComponent<UIElement>(root);
+			InputContextService.EnsureContext(EntityManager, root, WayStationSceneConstants.ModalContextId, 100, false);
+
+			var masthead = EnsureEntity(WayStationSceneConstants.MastheadName);
+			EnsureComponent(masthead, new WayStationPenanceMastheadPresentation());
+			EnsureComponent(masthead, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Masthead });
+			var rule = EnsureEntity(WayStationSceneConstants.MastheadRuleName);
+			EnsureComponent(rule, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Rule });
+
+			for (int index = 0; index < Weapons.Length; index++)
+			{
+				var weapon = Weapons[index];
+				var weaponEntity = EnsureEntity(WeaponEntityName(weapon));
+				EnsureComponent(weaponEntity, new WayStationClimbModalWeaponChoice { Weapon = weapon });
+				EnsureComponent(weaponEntity, new WayStationPenanceWeaponPresentation { Weapon = weapon });
+				EnsureComponent(weaponEntity, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Weapon, Index = index });
+				EnsureUi(weaponEntity);
+			}
+
+			var track = EnsureEntity(WayStationSceneConstants.TrackName);
+			EnsureComponent(track, new WayStationPenanceTrackPresentation());
+			EnsureComponent(track, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Track });
+			EnsureComponent(EnsureEntity(WayStationSceneConstants.TrackLabelName), new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.TrackLabel });
+			EnsureComponent(EnsureEntity(WayStationSceneConstants.TrackFillName), new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Fill });
+
+			for (int level = 1; level <= PenanceRules.MaxLevel; level++)
+			{
+				var node = EnsureEntity(NodeEntityName(level));
+				EnsureComponent(node, new WayStationPenanceNodePresentation { Level = level, Type = PenanceRules.Order[level - 1] });
+				EnsureComponent(node, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Node, Index = level - 1 });
+				EnsureUi(node);
+			}
+
+			for (int index = 0; index < TallyOrder.Length; index++)
+			{
+				var tally = EnsureEntity(TallyEntityName(TallyOrder[index]));
+				EnsureComponent(tally, new WayStationPenanceTallyPresentation { Type = TallyOrder[index] });
+				EnsureComponent(tally, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Tally, Index = index });
+				EnsureUi(tally);
+			}
+
+			var footer = EnsureEntity(WayStationSceneConstants.FooterName);
+			EnsureComponent(footer, new WayStationPenanceFooterPresentation());
+			EnsureComponent(footer, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Footer });
+			var depart = EnsureEntity(WayStationSceneConstants.DepartButtonName);
+			EnsureComponent(depart, new WayStationClimbModalDepartButton());
+			EnsureUi(depart);
+			var close = EnsureEntity(WayStationSceneConstants.CloseButtonName);
+			EnsureComponent(close, new WayStationClimbModalCloseButton());
+			EnsureComponent(close, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Close });
+			EnsureUi(close);
+		}
+
+		private void Reconcile(WayStationMetaSave meta, Layout layout)
+		{
+			var setup = WayStationRunSetupService.GetRunSetup(EntityManager);
+			if (setup == null) return;
+			var calculation = PenanceRules.Calculate(setup.SelectedPenanceLevel);
+
+			EntityManager.GetEntity(WayStationSceneConstants.MastheadName)
+				.GetComponent<WayStationPenanceMastheadPresentation>().Bounds = layout.Masthead;
+
+			var unlockedWeapons = Weapons.Where(weapon => ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, weapon)).ToArray();
+			int rowWidth = unlockedWeapons.Length * WeaponWidth + Math.Max(0, unlockedWeapons.Length - 1) * WeaponGap;
+			int weaponX = layout.Weapons.Center.X - rowWidth / 2;
+			for (int index = 0; index < Weapons.Length; index++)
+			{
+				var weapon = Weapons[index];
+				var entity = EntityManager.GetEntity(WeaponEntityName(weapon));
+				var presentation = entity.GetComponent<WayStationPenanceWeaponPresentation>();
+				presentation.IsUnlocked = ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, weapon);
+				presentation.HighestUnlockedLevel = ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, weapon);
+				presentation.IsSelected = setup.SelectedWeapon == weapon;
+				int unlockedIndex = Array.IndexOf(unlockedWeapons, weapon);
+				var bounds = presentation.IsUnlocked
+					? new Rectangle(weaponX + unlockedIndex * (WeaponWidth + WeaponGap), layout.Weapons.Center.Y - WeaponHeight / 2, WeaponWidth, WeaponHeight)
+					: Rectangle.Empty;
+				SyncUi(entity, bounds, presentation.IsUnlocked, string.Empty, TooltipType.None);
+			}
+
+			var track = EntityManager.GetEntity(WayStationSceneConstants.TrackName).GetComponent<WayStationPenanceTrackPresentation>();
+			track.LabelBounds = layout.TrackLabel;
+			track.FrameBounds = layout.TrackFrame;
+			track.FillWidth = setup.SelectedPenanceLevel <= 0 ? 0f : (setup.SelectedPenanceLevel - 1) * (NodeSize + NodeGap);
+			int nodeY = layout.TrackFrame.Center.Y - NodeSize / 2;
+			for (int level = 1; level <= PenanceRules.MaxLevel; level++)
+			{
+				var entity = EntityManager.GetEntity(NodeEntityName(level));
+				var node = entity.GetComponent<WayStationPenanceNodePresentation>();
+				node.IsUnlocked = level <= ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, setup.SelectedWeapon);
+				node.IsActive = level <= setup.SelectedPenanceLevel;
+				node.IsCurrent = level == setup.SelectedPenanceLevel && setup.SelectedPenanceLevel > 0;
+				var bounds = new Rectangle(layout.TrackFrame.X + TrackPaddingX + (level - 1) * (NodeSize + NodeGap), nodeY, NodeSize, NodeSize);
+				SyncUi(entity, bounds, node.IsUnlocked, BuildNodeTooltip(node, setup.SelectedWeapon), TooltipType.Text);
+			}
+
+			var activeTallies = new List<(Entity Entity, WayStationPenanceTallyPresentation Tally, WayStationPenanceMotion Motion, int FullWidth)>();
+			for (int index = 0; index < TallyOrder.Length; index++)
+			{
+				var type = TallyOrder[index];
+				var entity = EntityManager.GetEntity(TallyEntityName(type));
+				var tally = entity.GetComponent<WayStationPenanceTallyPresentation>();
+				var motion = entity.GetComponent<WayStationPenanceMotion>();
+				tally.CurrentCount = calculation.GetStackCount(type);
+				tally.IsActive = tally.CurrentCount > 0;
+				int width = TallyWidth(type);
+				if (tally.IsActive || tally.DisplayedCount > 0 || motion.WidthProgress > 0.001f)
+					activeTallies.Add((entity, tally, motion, width));
+			}
+
+			int totalWidth = activeTallies.Sum(item => (int)MathF.Round(item.FullWidth * MathHelper.Clamp(item.Motion.WidthProgress, 0f, 1f)))
+				+ Math.Max(0, activeTallies.Count - 1) * 10;
+			int tallyX = layout.TrackZone.Center.X - totalWidth / 2;
+			int tallyY = layout.TrackFrame.Bottom + TrackZoneGap;
+			foreach (var item in activeTallies)
+			{
+				int width = Math.Max(0, (int)MathF.Round(item.FullWidth * MathHelper.Clamp(item.Motion.WidthProgress, 0f, 1f)));
+				item.Tally.Bounds = new Rectangle(tallyX, tallyY, width, 34);
+				SyncUi(item.Entity, item.Tally.Bounds, item.Tally.IsActive, BuildTallyTooltip(item.Tally), TooltipType.Text);
+				tallyX += width + 10;
+			}
+
+			var footer = EntityManager.GetEntity(WayStationSceneConstants.FooterName).GetComponent<WayStationPenanceFooterPresentation>();
+			footer.DepartBounds = layout.Depart;
+			footer.SummaryBounds = layout.Summary;
+			footer.CloseBounds = layout.Close;
+			string weaponName = setup.SelectedWeapon.ToString();
+			footer.Summary = setup.SelectedPenanceLevel == 0
+				? $"DEPART WITH THE {weaponName.ToUpperInvariant()}, UNBURDENED"
+				: $"DEPART WITH THE {weaponName.ToUpperInvariant()} UNDER PENANCE {ToRoman(setup.SelectedPenanceLevel)}";
+			SyncUi(EntityManager.GetEntity(WayStationSceneConstants.DepartButtonName), layout.Depart, true, string.Empty, TooltipType.None);
+			SyncUi(EntityManager.GetEntity(WayStationSceneConstants.CloseButtonName), layout.Close, true, string.Empty, TooltipType.None);
+		}
+
+		private Layout ComputeLayout()
+		{
+			int innerHeight = Game1.VirtualHeight - OuterPaddingTop - OuterPaddingBottom;
+			var masthead = new Rectangle(OuterPaddingX, OuterPaddingTop, Game1.VirtualWidth - OuterPaddingX * 2, MastheadHeight);
+			var weapons = new Rectangle(OuterPaddingX, masthead.Bottom, masthead.Width, WeaponsRowHeight);
+			var footer = new Rectangle(OuterPaddingX, Game1.VirtualHeight - OuterPaddingBottom - FooterHeight, masthead.Width, FooterHeight);
+			var trackZone = new Rectangle(OuterPaddingX, weapons.Bottom, masthead.Width, Math.Max(1, innerHeight - MastheadHeight - WeaponsRowHeight - FooterHeight));
+			int frameWidth = PenanceRules.MaxLevel * NodeSize + (PenanceRules.MaxLevel - 1) * NodeGap + TrackPaddingX * 2;
+			int frameHeight = NodeSize + TrackPaddingY * 2;
+			int contentHeight = 16 + TrackZoneGap + frameHeight + TrackZoneGap + 34;
+			int startY = trackZone.Center.Y - contentHeight / 2;
+			var label = new Rectangle(trackZone.Center.X - 210, startY, 420, 16);
+			var frame = new Rectangle(trackZone.Center.X - frameWidth / 2, label.Bottom + TrackZoneGap, frameWidth, frameHeight);
+			var depart = new Rectangle(footer.Center.X - 130, footer.Y + 5, 260, 64);
+			var summary = new Rectangle(footer.X, depart.Bottom + 10, footer.Width, 18);
+			var close = new Rectangle(Game1.VirtualWidth - 30 - 46, 26, 46, 46);
+			return new Layout(masthead, weapons, trackZone, footer, label, frame, depart, summary, close);
+		}
+
+		private void SyncInteraction(WayStationPenanceModalState state)
+		{
+			bool draw = state?.Phase != WayStationPenanceModalPhase.Hidden;
+			bool interactive = state?.InteractionEnabled == true;
 			var root = EntityManager.GetEntity(WayStationSceneConstants.ModalRootName);
-			var context = root?.GetComponent<InputContext>();
-			if (context != null) context.IsActive = false;
-			var rootUi = root?.GetComponent<UIElement>();
-			if (rootUi != null)
+			InputContextService.EnsureContext(EntityManager, root, WayStationSceneConstants.ModalContextId, 100, draw);
+			foreach (var entity in InteractiveEntities())
 			{
-				rootUi.Bounds = Rectangle.Empty;
-				rootUi.IsInteractable = false;
-				rootUi.IsHidden = true;
-				rootUi.IsHovered = false;
-				rootUi.IsClicked = false;
-			}
-		}
-
-		private ModalAnimation GetModalAnimation()
-		{
-			return EntityManager.GetEntity(WayStationSceneConstants.ModalRootName)?.GetComponent<ModalAnimation>();
-		}
-
-		private void SetButtonsInteractable(bool interactable)
-		{
-			foreach (var name in ButtonNames())
-			{
-				var ui = EntityManager.GetEntity(name)?.GetComponent<UIElement>();
+				var ui = entity.GetComponent<UIElement>();
 				if (ui == null) continue;
-				ui.IsInteractable = interactable;
-				ui.IsHidden = !interactable;
+				ui.IsInteractable = interactive && !ui.Bounds.IsEmpty;
+				ui.IsHidden = !draw || ui.Bounds.IsEmpty;
 			}
 		}
 
-		private static IEnumerable<string> ButtonNames()
+		private IEnumerable<Entity> InteractiveEntities()
 		{
-			yield return WayStationSceneConstants.ModalPanelName;
-			yield return WayStationSceneConstants.CloseButtonName;
-			yield return WayStationSceneConstants.SwordButtonName;
-			yield return WayStationSceneConstants.DaggerButtonName;
-			yield return WayStationSceneConstants.HammerButtonName;
-			yield return WayStationSceneConstants.EasyButtonName;
-			yield return WayStationSceneConstants.NormalButtonName;
-			yield return WayStationSceneConstants.HardButtonName;
-			yield return WayStationSceneConstants.DepartButtonName;
+			foreach (var weapon in Weapons) yield return EntityManager.GetEntity(WeaponEntityName(weapon));
+			for (int level = 1; level <= PenanceRules.MaxLevel; level++) yield return EntityManager.GetEntity(NodeEntityName(level));
+			foreach (var type in TallyOrder) yield return EntityManager.GetEntity(TallyEntityName(type));
+			yield return EntityManager.GetEntity(WayStationSceneConstants.DepartButtonName);
+			yield return EntityManager.GetEntity(WayStationSceneConstants.CloseButtonName);
 		}
 
-		private bool WasClicked(string name)
+		private Entity EnsureEntity(string name)
 		{
-			return EntityManager.GetEntity(name)?.GetComponent<UIElement>()?.IsClicked == true;
+			var entity = EntityManager.GetEntity(name) ?? EntityManager.CreateEntity(name);
+			EnsureComponent(entity, new Transform { ZOrder = 10000 });
+			return entity;
 		}
 
-		private bool IsHovered(string name)
+		private void EnsureUi(Entity entity)
 		{
-			return EntityManager.GetEntity(name)?.GetComponent<UIElement>()?.IsHovered == true;
+			EnsureComponent(entity, new UIElement
+			{
+				Bounds = Rectangle.Empty,
+				IsInteractable = false,
+				IsHidden = true,
+				LayerType = UILayerType.Overlay,
+				ShowHoverHighlight = false,
+			});
+			InputContextService.EnsureMember(EntityManager, entity, WayStationSceneConstants.ModalContextId);
 		}
+
+		private void EnsureComponent<T>(Entity entity, T component) where T : class, IComponent
+		{
+			if (entity.GetComponent<T>() == null) EntityManager.AddComponent(entity, component);
+		}
+
+		private static void SyncUi(Entity entity, Rectangle bounds, bool enabled, string tooltip, TooltipType tooltipType)
+		{
+			if (entity == null) return;
+			var transform = entity.GetComponent<Transform>();
+			if (transform != null) transform.Position = bounds.Location.ToVector2();
+			var ui = entity.GetComponent<UIElement>();
+			if (ui == null) return;
+			ui.Bounds = bounds;
+			ui.IsInteractable = enabled && !bounds.IsEmpty;
+			ui.IsHidden = bounds.IsEmpty;
+			ui.LayerType = UILayerType.Overlay;
+			ui.Tooltip = tooltip ?? string.Empty;
+			ui.TooltipType = tooltipType;
+			ui.TooltipPosition = TooltipPosition.Above;
+			ui.TooltipOffsetPx = 14;
+			ui.ShowHoverHighlight = false;
+		}
+
+		private void RequestClose()
+		{
+			var state = GetModalState();
+			if (state != null) state.RequestedVisible = false;
+			ClearChangedTooltips();
+		}
+
+		private void CloseImmediate()
+		{
+			var state = GetModalState();
+			if (state == null) return;
+			state.RequestedVisible = false;
+			state.Phase = WayStationPenanceModalPhase.Hidden;
+			state.ElapsedSeconds = 0f;
+			state.InteractionEnabled = false;
+			SyncInteraction(state);
+		}
+
+		private void ClearChangedTooltips()
+		{
+			foreach (var entity in InteractiveEntities())
+			{
+				var ui = entity?.GetComponent<UIElement>();
+				if (ui == null) continue;
+				ui.IsHovered = false;
+				ui.IsClicked = false;
+			}
+		}
+
+		private WayStationPenanceModalState GetModalState()
+		{
+			return EntityManager.GetEntity(WayStationSceneConstants.ModalRootName)?.GetComponent<WayStationPenanceModalState>();
+		}
+
+		private bool WasClicked(string name) => EntityManager.GetEntity(name)?.GetComponent<UIElement>()?.IsClicked == true;
 
 		private bool IsWayStationActive()
 		{
-			return EntityManager.GetEntitiesWithComponent<SceneState>()
-				.FirstOrDefault()
-				?.GetComponent<SceneState>()
-				?.Current == SceneId.WayStation;
+			return EntityManager.GetEntitiesWithComponent<SceneState>().FirstOrDefault()?.GetComponent<SceneState>()?.Current == SceneId.WayStation;
 		}
 
-		private static bool IsSelected(StartingWeapon weapon)
+		private static string WeaponEntityName(StartingWeapon weapon) => weapon switch
 		{
-			return WayStationRunSetupSingleton.SelectedWeapon == weapon;
-		}
+			StartingWeapon.Dagger => WayStationSceneConstants.DaggerButtonName,
+			StartingWeapon.Hammer => WayStationSceneConstants.HammerButtonName,
+			_ => WayStationSceneConstants.SwordButtonName,
+		};
 
-		private static bool IsSelected(RunDifficulty difficulty)
-		{
-			return WayStationRunSetupSingleton.SelectedDifficulty == difficulty;
-		}
+		private static string NodeEntityName(int level) => $"{WayStationSceneConstants.NodePrefix}{level}";
+		private static string TallyEntityName(PenanceType type) => $"{WayStationSceneConstants.TallyPrefix}{type}";
 
-		private static void SelectWeapon(WayStationMetaSave meta, StartingWeapon weapon)
+		private static int TallyWidth(PenanceType type) => type switch
 		{
-			if (!ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, weapon)) return;
-			WayStationRunSetupSingleton.SelectedWeapon = weapon;
-			if (!ClimbUnlockProgressionRules.IsDifficultyUnlocked(meta, weapon, WayStationRunSetupSingleton.SelectedDifficulty))
+			PenanceType.Fasting => 112,
+			PenanceType.Mortification => 150,
+			PenanceType.Abstinence => 132,
+			PenanceType.PenitentialPilgrimage => 224,
+			PenanceType.Reparation => 138,
+			_ => 120,
+		};
+
+		private static string BuildNodeTooltip(WayStationPenanceNodePresentation node, StartingWeapon weapon)
+		{
+			if (!node.IsUnlocked)
 			{
-				WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
+				return $"Penance {ToRoman(node.Level)} - Locked\nConquer Penance {ToRoman(node.Level - 1)} with the {weapon} to unlock.";
 			}
+			return $"Penance {ToRoman(node.Level)} - {DisplayName(node.Type)}\n{Description(node.Type)}";
 		}
 
-		private static void SelectDifficulty(WayStationMetaSave meta, RunDifficulty difficulty)
+		private static string BuildTallyTooltip(WayStationPenanceTallyPresentation tally)
 		{
-			if (!ClimbUnlockProgressionRules.IsDifficultyUnlocked(meta, WayStationRunSetupSingleton.SelectedWeapon, difficulty)) return;
-			WayStationRunSetupSingleton.SelectedDifficulty = difficulty;
+			return $"{DisplayName(tally.Type)} x{tally.CurrentCount}\n{Description(tally.Type)} (applied {tally.CurrentCount} times)";
 		}
 
-		private static void NormalizeSelection(WayStationMetaSave meta)
+		public static string DisplayName(PenanceType type) => type switch
 		{
-			if (!ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, WayStationRunSetupSingleton.SelectedWeapon))
+			PenanceType.PenitentialPilgrimage => "Penitential Pilgrimage",
+			_ => type.ToString(),
+		};
+
+		public static string Description(PenanceType type) => type switch
+		{
+			PenanceType.Fasting => "The Crusader begins the climb with 1 less max HP.",
+			PenanceType.Mortification => "Enemies have 5% more HP.",
+			PenanceType.Abstinence => "The climb begins with 1 fewer starting resource.",
+			PenanceType.PenitentialPilgrimage => "The shop takes 1 additional climb to reset its wares.",
+			PenanceType.Reparation => "1 starter card is replaced with a random card bearing a random negative modification.",
+			_ => string.Empty,
+		};
+
+		public static string ToRoman(int value)
+		{
+			if (value <= 0) return "0";
+			var numerals = new (int Value, string Text)[] { (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I") };
+			string result = string.Empty;
+			foreach (var numeral in numerals)
 			{
-				WayStationRunSetupSingleton.SelectedWeapon = StartingWeapon.Sword;
+				while (value >= numeral.Value)
+				{
+					result += numeral.Text;
+					value -= numeral.Value;
+				}
 			}
-			if (!ClimbUnlockProgressionRules.IsDifficultyUnlocked(
-				meta,
-				WayStationRunSetupSingleton.SelectedWeapon,
-				WayStationRunSetupSingleton.SelectedDifficulty))
-			{
-				WayStationRunSetupSingleton.SelectedDifficulty = RunDifficulty.Easy;
-			}
+			return result;
 		}
 	}
 }

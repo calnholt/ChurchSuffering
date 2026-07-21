@@ -34,12 +34,12 @@ dotnet run -- battle-render-profile profile-gpu
 dotnet run -- unlock
 dotnet run --launch-profile unlock
 
-# Unlock every starting weapon and difficulty in the current save
+# Unlock all three starting weapons through Penance 24 in the current save
 dotnet run -- unlock-run-setup
 dotnet run --launch-profile unlock-run-setup
 
 # Repeated isolated balance fight; tutorials and persistence are disabled
-dotnet run -- test-fight hammer skeleton hard
+dotnet run -- test-fight hammer skeleton 24
 
 # Publish for distribution
 dotnet publish -c Release
@@ -89,17 +89,17 @@ Use the smallest check set that covers the subsystem you changed. When in doubt,
 | Change type | Checks |
 |-------------|--------|
 | Any code change | `dotnet build` |
-| Game logic, services, rules, event flow, data model | `dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj` |
+| Game logic, services, rules, event flow, data model | `dotnet test tests/ChurchSuffering.Tests/ChurchSuffering.Tests.csproj` |
 | UI, display, rendering, layout | Relevant snapshot `--verify` commands from `docs/display-snapshots.md` |
 | Player HUD display/layout | `./scripts/verify-player-hud-snapshots.sh` |
-| Battle setup, cards, enemies, combat flow, balance-sensitive changes | `dotnet run -- test-fight hammer skeleton hard` |
+| Battle setup, cards, enemies, combat flow, balance-sensitive changes | `dotnet run -- test-fight hammer skeleton 24` |
 | Content, SFX, music, shaders, `Content.mgcb` | `dotnet build /p:SkipMonoGameContentPipeline=false` |
 
 For a broad local safety pass before handing off substantial work:
 
 ```bash
 dotnet build
-dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj
+dotnet test tests/ChurchSuffering.Tests/ChurchSuffering.Tests.csproj
 ```
 
 ## Snapshot and visual checks

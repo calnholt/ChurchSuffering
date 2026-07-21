@@ -1,4 +1,4 @@
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
     public enum BattleLocation
     {

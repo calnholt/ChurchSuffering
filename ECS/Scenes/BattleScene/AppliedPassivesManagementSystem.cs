@@ -1,17 +1,17 @@
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Data.Ids;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
 using Microsoft.Xna.Framework;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.Diagnostics;
 using System;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Objects.Cards;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Services;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// Processes start-of-turn applied passives for player and enemy.

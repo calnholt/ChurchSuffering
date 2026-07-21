@@ -1,10 +1,10 @@
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using Crusaders30XX.ECS.Components;
-using static Crusaders30XX.ECS.Systems.MustBeBlockedSystem;
+using ChurchSuffering.ECS.Components;
+using static ChurchSuffering.ECS.Systems.MustBeBlockedSystem;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
     /// <summary>
     /// Event published when a card should be rendered
@@ -431,6 +431,16 @@ namespace Crusaders30XX.ECS.Events
     {
         public string EquipmentId { get; set; }
         public int Delta { get; set; } = 1;
+    }
+
+    /// <summary>
+    /// Emitted after equipment remaining uses change so the loadout save can stay in sync.
+    /// </summary>
+    public class EquipmentRemainingUsesChanged
+    {
+        public string EquipmentId { get; set; }
+        public EquipmentSlot Slot { get; set; }
+        public int RemainingUses { get; set; }
     }
 
     /// <summary>

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering
+namespace ChurchSuffering.ECS.Rendering
 {
     /// <summary>
     /// Simple alpha overlay that draws semi-transparent black rectangles with rectangular cutouts

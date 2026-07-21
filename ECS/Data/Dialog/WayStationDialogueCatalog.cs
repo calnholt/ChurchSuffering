@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Data.Dialog
+namespace ChurchSuffering.ECS.Data.Dialog
 {
 	public static class WayStationDialogueCatalog
 	{

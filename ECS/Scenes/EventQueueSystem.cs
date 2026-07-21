@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Event Queue")]
 	public class EventQueueSystem : Core.System
@@ -64,15 +64,15 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				DebugEnqueueBusPublishRule = false;
 				// Publish a DebugCommandEvent via the queue when it starts
-				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<Crusaders30XX.ECS.Events.DebugCommandEvent>(
-					"Rule.PublishBus", new Crusaders30XX.ECS.Events.DebugCommandEvent { Command = "EventQueue.Published" }
+				EventQueue.EnqueueRule(new EventQueueBridge.QueuedPublish<ChurchSuffering.ECS.Events.DebugCommandEvent>(
+					"Rule.PublishBus", new ChurchSuffering.ECS.Events.DebugCommandEvent { Command = "EventQueue.Published" }
 				));
 			}
 			if (DebugEnqueueWaitBusTrigger)
 			{
 				DebugEnqueueWaitBusTrigger = false;
 				// Wait in the trigger queue until that bus event fires
-				EventQueue.EnqueueTrigger(new EventQueueBridge.WaitForEvent<Crusaders30XX.ECS.Events.DebugCommandEvent>(
+				EventQueue.EnqueueTrigger(new EventQueueBridge.WaitForEvent<ChurchSuffering.ECS.Events.DebugCommandEvent>(
 					"Trigger.WaitBus", payload: null
 				));
 			}

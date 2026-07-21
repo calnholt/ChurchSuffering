@@ -1,9 +1,9 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Factories;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Factories;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class RunPlayerService
 	{
@@ -18,7 +18,7 @@ namespace Crusaders30XX.ECS.Services
 			}
 
 			var player = EntityFactory.CreatePlayer(world);
-			WayStationRunSetupService.ApplySelectedPlayerHp(player);
+			WayStationRunSetupService.ApplyPersistedPlayerHp(player);
 			RunScopedStateService.HydrateRunLongPassivesOntoPlayer(player);
 			return player;
 		}

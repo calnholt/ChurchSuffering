@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Objects.Events;
+using ChurchSuffering.ECS.Objects.Events;
 
-namespace Crusaders30XX.ECS.Factories
+namespace ChurchSuffering.ECS.Factories
 {
 	public static class EventFactory
 	{

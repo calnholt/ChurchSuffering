@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Climb Columns")]
 	public class ClimbColumnDisplaySystem : Core.System
@@ -823,7 +823,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (slot == null || slot.Duration <= 0) return 0;
 			int expiresAt = slot.GeneratedAtTime + slot.Duration;
-			return Math.Clamp(expiresAt - ClimbRuleService.ClampTime(time), 0, slot.Duration);
+			return Math.Clamp(expiresAt - Math.Max(0, time), 0, slot.Duration);
 		}
 
 		private static Vector2 ClampMagnitude(Vector2 value, float maxLength)

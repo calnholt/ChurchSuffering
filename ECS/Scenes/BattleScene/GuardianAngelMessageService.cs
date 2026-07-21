@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Data.Ids;
+using ChurchSuffering.ECS.Data.Ids;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     internal enum GuardianAmbientMessageType
     {

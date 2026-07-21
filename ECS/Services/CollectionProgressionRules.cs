@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Factories;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Factories;
 
-namespace Crusaders30XX.ECS.Services;
+namespace ChurchSuffering.ECS.Services;
 
 public static class CollectionProgressionRules
 {
@@ -64,13 +64,18 @@ public static class CollectionProgressionRules
 		return GetCumulativeCost(state.Level) + state.PointsRequired;
 	}
 
-	public static int CalculateClimbPoints(int climbTime, bool completedFinalBoss, bool abandoned)
+	public static int CalculateClimbPoints(
+		int climbTime,
+		bool completedFinalBoss,
+		bool abandoned,
+		int shopRefreshInterval = FirstShopRefreshTime)
 	{
 		if (abandoned) return 0;
+		shopRefreshInterval = Math.Max(1, shopRefreshInterval);
 		int points = 0;
-		if (climbTime >= FirstShopRefreshTime) points += 1;
-		if (climbTime >= SecondShopRefreshTime) points += 3;
-		if (climbTime >= ThirdShopRefreshTime) points += 5;
+		if (climbTime >= shopRefreshInterval) points += 1;
+		if (climbTime >= shopRefreshInterval * 2) points += 3;
+		if (climbTime >= shopRefreshInterval * 3) points += 5;
 		if (completedFinalBoss) points += 3;
 		return points;
 	}

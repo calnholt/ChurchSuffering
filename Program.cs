@@ -1,8 +1,8 @@
 ﻿using System;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.Diagnostics.Snapshots;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.Diagnostics.Snapshots;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Services;
 
 ShaderRuntimeOptions.ConfigureFromArgs(args);
 GpuProfilingRuntimeOptions.ConfigureFromArgs(args);
@@ -45,7 +45,7 @@ try
         {
             WeaponId = "hammer",
             EnemyId = "skeleton",
-            Difficulty = Crusaders30XX.ECS.Singletons.RunDifficulty.Hard,
+			PenanceLevel = 24,
         };
         TutorialLaunchOptions.ForceSkip();
         Console.WriteLine("[Launch] Battle render profile: fixed skeleton battle, 1920x1080, 180 warm-up + 300 measured frames");
@@ -74,7 +74,7 @@ try
         testFightOptions = parsedTestFight;
         TutorialLaunchOptions.ForceSkip();
         Console.WriteLine(
-            $"[Launch] Test fight: {testFightOptions.WeaponId} vs {testFightOptions.EnemyId} ({testFightOptions.Difficulty})");
+			$"[Launch] Test fight: {testFightOptions.WeaponId} vs {testFightOptions.EnemyId} (Penance {testFightOptions.PenanceLevel})");
     }
     else if (DisplaySnapshotLaunchOptions.TryParse(appArgs, out var parsed))
     {
@@ -112,7 +112,7 @@ if (UnlockLaunchOptions.UnlockAllRunSetupOptions)
     Console.WriteLine("[Launch] Run setup unlocked (weapons, difficulties)");
 }
 
-using var game = new Crusaders30XX.Game1(
+using var game = new ChurchSuffering.Game1(
     snapshotOptions,
     testFightOptions,
     cardListProfileOptions,

@@ -1,13 +1,13 @@
 using System.Linq;
 using System.Text.Json.Nodes;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
 using System.Collections.Generic;
 using System;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     public class PhaseChangeEventSystem : Core.System
     {

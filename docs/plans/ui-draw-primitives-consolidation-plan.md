@@ -3,7 +3,7 @@
 ## Document Status
 
 - **Status:** Draft design, ready for implementation review.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #5 — independent, wide-but-mechanical; can start any time. Land incrementally per-primitive, snapshot-gated.
 - **Required final verification after implementation:** `dotnet build` from the repository root.

@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Objects.Cards;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class ClimbShopService
 	{
@@ -19,12 +20,24 @@ namespace Crusaders30XX.ECS.Services
 
 		public static bool TryPurchaseSlot(EntityManager entityManager, int slotIndex)
 		{
+			return TryPurchaseSlot(entityManager, slotIndex, Random.Shared);
+		}
+
+		internal static bool TryPurchaseSlot(EntityManager entityManager, int slotIndex, Random boonRandom)
+		{
 			var climb = SaveCache.GetClimbState();
 			if (!TryGetActiveShopSlot(climb, slotIndex, out var slot)) return false;
 
 			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
 			if (loadout == null) return false;
 			EnsureLoadoutLists(loadout);
+			BoonPurchaseResult boonResult = null;
+			if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+			{
+				if (!ClimbRuleService.CanAfford(climb.resources, slot.cost)) return false;
+				boonResult = RollBoon(loadout, boonRandom);
+				if (boonResult == null) return false;
+			}
 			if (!ClimbRuleService.TrySpend(climb.resources, slot.cost)) return false;
 			int timeCost = slot.timeCost;
 
@@ -54,12 +67,30 @@ namespace Crusaders30XX.ECS.Services
 				SaveCache.SaveClimbState(climb);
 				return true;
 			}
+			else if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+			{
+				applied = TryApplyBoon(loadout, boonResult);
+			}
 
 			if (!applied) return false;
 			slot.isSold = true;
 			// Start purchase exit motion after success but before save/refresh so the UI
 			// still shows the bought offer; failed applies never publish this event.
 			EventManager.Publish(new ClimbShopSlotSelectedEvent { SlotIndex = slotIndex });
+			if (boonResult != null)
+			{
+				EventManager.Publish(new ClimbCardBoonAnimationRequested
+				{
+					DeckEntryId = boonResult.EntryId,
+					CardKey = boonResult.CardKey,
+					RestrictionNames = new List<string>(boonResult.RestrictionNames),
+					BeforeBoons = CloneBoons(boonResult.BeforeBoons),
+					AfterBoons = CloneBoons(boonResult.AfterBoons),
+					BeforeSecondaryColor = boonResult.BeforeSecondaryColor,
+					AfterSecondaryColor = boonResult.AfterSecondaryColor,
+					DelayClimbTurnoverUntilComplete = true,
+				});
+			}
 			var loadoutForAdvance = saveLoadout
 				? loadout
 				: SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
@@ -70,6 +101,10 @@ namespace Crusaders30XX.ECS.Services
 				timeCost);
 			if (saveLoadout) SaveCache.SaveLoadout(loadout);
 			SaveCache.SaveClimbState(climb);
+			if (boonResult != null && entityManager != null)
+			{
+				RunDeckService.EnsureRunDeck(entityManager);
+			}
 			if (ClimbRuleService.HasPendingFinalEncounter(climb))
 			{
 				ClimbEncounterService.TryQueuePendingFinalEncounter(entityManager);
@@ -253,12 +288,103 @@ namespace Crusaders30XX.ECS.Services
 				if (entry == null || RunDeckService.IsUpgradedCardKey(entry.cardKey)) return false;
 				return !string.IsNullOrWhiteSpace(RunDeckService.BuildUpgradedCardKey(entry.cardKey));
 			}
+			if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+			{
+				return (loadout?.cards ?? new List<LoadoutCardEntry>())
+					.Any(entry => CardBoonRules.CreateEffectiveCard(entry) != null);
+			}
 			return false;
+		}
+
+		internal sealed class BoonPurchaseResult
+		{
+			public string Type { get; init; } = string.Empty;
+			public string EntryId { get; init; } = string.Empty;
+			public string CardKey { get; init; } = string.Empty;
+			public List<string> RestrictionNames { get; init; } = new();
+			public List<CardBoonSave> BeforeBoons { get; init; } = new();
+			public List<CardBoonSave> AfterBoons { get; set; } = new();
+			public string BeforeSecondaryColor { get; init; } = string.Empty;
+			public string AfterSecondaryColor { get; set; } = string.Empty;
+		}
+
+		internal static BoonPurchaseResult RollBoon(LoadoutDefinition loadout, Random rng)
+		{
+			rng ??= Random.Shared;
+			var queue = CardBoonKinds.All.ToList();
+			for (int i = queue.Count - 1; i > 0; i--)
+			{
+				int swapIndex = rng.Next(i + 1);
+				(queue[i], queue[swapIndex]) = (queue[swapIndex], queue[i]);
+			}
+
+			foreach (string type in queue)
+			{
+				var eligible = (loadout?.cards ?? new List<LoadoutCardEntry>())
+					.Where(entry => CardBoonRules.IsEligible(type, entry))
+					.ToList();
+				if (eligible.Count == 0) continue;
+
+				var entry = eligible[rng.Next(eligible.Count)];
+				var result = new BoonPurchaseResult
+				{
+					Type = type,
+					EntryId = entry.entryId,
+					CardKey = entry.cardKey,
+					RestrictionNames = new List<string>(entry.restrictions ?? new List<string>()),
+					BeforeBoons = CloneBoons(entry.boons),
+					BeforeSecondaryColor = entry.secondaryColor ?? string.Empty,
+					AfterSecondaryColor = entry.secondaryColor ?? string.Empty,
+				};
+				if (string.Equals(type, CardBoonKinds.Versatile, StringComparison.OrdinalIgnoreCase)
+					&& RunDeckService.TryParseCardKey(entry.cardKey, out _, out var printedColor, out _))
+				{
+					result.AfterSecondaryColor = CardBoonRules.RollSecondaryColor(printedColor, rng).ToString();
+				}
+				return result;
+			}
+
+			return null;
+		}
+
+		private static bool TryApplyBoon(LoadoutDefinition loadout, BoonPurchaseResult result)
+		{
+			if (result == null || string.IsNullOrWhiteSpace(result.EntryId) || string.IsNullOrWhiteSpace(result.Type)) return false;
+			var entry = (loadout?.cards ?? new List<LoadoutCardEntry>())
+				.FirstOrDefault(candidate => string.Equals(candidate?.entryId, result.EntryId, StringComparison.Ordinal));
+			if (entry == null || !CardBoonRules.IsEligible(result.Type, entry)) return false;
+
+			entry.boons ??= new List<CardBoonSave>();
+			var existing = entry.boons.FirstOrDefault(boon => boon != null
+				&& string.Equals(boon.type, result.Type, StringComparison.OrdinalIgnoreCase));
+			if (existing == null)
+			{
+				entry.boons.Add(new CardBoonSave { type = result.Type, amount = 1 });
+			}
+			else
+			{
+				existing.amount = Math.Max(0, existing.amount) + 1;
+			}
+
+			if (string.Equals(result.Type, CardBoonKinds.Versatile, StringComparison.OrdinalIgnoreCase))
+			{
+				entry.secondaryColor = result.AfterSecondaryColor;
+			}
+			result.AfterBoons = CloneBoons(entry.boons);
+			return true;
+		}
+
+		private static List<CardBoonSave> CloneBoons(IEnumerable<CardBoonSave> boons)
+		{
+			return CardBoonApplicator.Normalize(boons)
+				.Select(boon => new CardBoonSave { type = boon.type, amount = boon.amount })
+				.ToList();
 		}
 
 		private static void EnsureLoadoutLists(LoadoutDefinition loadout)
 		{
 			loadout.cards ??= new List<LoadoutCardEntry>();
+			foreach (var entry in loadout.cards.Where(entry => entry != null)) entry.boons ??= new List<CardBoonSave>();
 			loadout.medalIds ??= new List<string>();
 			loadout.headId ??= string.Empty;
 			loadout.chestId ??= string.Empty;

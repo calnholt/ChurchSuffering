@@ -1,13 +1,19 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Data.Save;
 using System.Collections.Generic;
 using System;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
 	public class StartBattleRequested { }
 	public class OpenWayStationClimbSettingsModalEvent { }
+	public class WayStationPenanceSelectionChangedEvent
+	{
+		public int OldLevel { get; set; }
+		public int NewLevel { get; set; }
+		public bool WeaponChanged { get; set; }
+	}
 	public class OpenWayStationSaintsMedalsModalEvent { }
 
 	public class WayStationDialoguePoiSelectedEvent
@@ -103,6 +109,7 @@ namespace Crusaders30XX.ECS.Events
 	public class ClimbEndedEvent
 	{
 		public int TimeReached { get; set; }
+		public int ShopRefreshInterval { get; set; } = PenanceRules.BaseShopRefreshInterval;
 		public bool Abandoned { get; set; }
 		public bool CompletedFinalBoss { get; set; }
 	}
@@ -116,7 +123,7 @@ namespace Crusaders30XX.ECS.Events
 	public class ClimbCompletedEvent
 	{
 		public string StartingWeaponId { get; set; } = "sword";
-		public RunDifficulty Difficulty { get; set; } = RunDifficulty.Easy;
+		public int PenanceLevel { get; set; }
 	}
 
 	public class ShowNarrativeEventOverlay

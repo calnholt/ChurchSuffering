@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Objects.Cards;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	public enum ForSaleItemType
 	{

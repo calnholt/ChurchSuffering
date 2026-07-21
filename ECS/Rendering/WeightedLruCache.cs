@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 internal sealed class WeightedLruCache<TKey, TValue> : IDisposable where TKey : notnull
 {

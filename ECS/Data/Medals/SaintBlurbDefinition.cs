@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Data.Medals
+namespace ChurchSuffering.ECS.Data.Medals
 {
 	public class SaintBlurbDefinition
 	{

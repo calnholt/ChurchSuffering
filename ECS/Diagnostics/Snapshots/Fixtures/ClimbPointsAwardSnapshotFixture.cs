@@ -1,9 +1,9 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Systems;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures;
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures;
 
 public sealed class ClimbPointsAwardSnapshotFixture : IDisplaySnapshotFixture
 {

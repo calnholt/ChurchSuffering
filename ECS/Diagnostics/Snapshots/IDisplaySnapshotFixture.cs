@@ -1,4 +1,4 @@
-namespace Crusaders30XX.Diagnostics.Snapshots
+namespace ChurchSuffering.Diagnostics.Snapshots
 {
     public interface IDisplaySnapshotFixture
     {

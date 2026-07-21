@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Crusaders30XX.ECS.Utils.RichText
+namespace ChurchSuffering.ECS.Utils.RichText
 {
     public static class RichTextParser
     {

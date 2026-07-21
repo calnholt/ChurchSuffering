@@ -1,4 +1,4 @@
-namespace Crusaders30XX.ECS.Data.Achievements
+namespace ChurchSuffering.ECS.Data.Achievements
 {
     /// <summary>
     /// State machine for achievement visibility and completion status.

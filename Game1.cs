@@ -1,26 +1,26 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 // duplicate removed
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Events;
 using System;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.Diagnostics.Snapshots;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.Diagnostics.Snapshots;
+using ChurchSuffering.ECS.Components;
 using System.Linq;
-using Crusaders30XX.ECS.Systems;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Data.Achievements;
 using System.IO;
-using Crusaders30XX.ECS.Input;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Ids;
+using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Ids;
 using System.Collections.Generic;
 
-namespace Crusaders30XX;
+namespace ChurchSuffering;
 
 public class Game1 : Game
 {
@@ -50,6 +50,14 @@ public class Game1 : Game
     private WayStationPoiDisplaySystem _wayStationPoiDisplaySystem;
     private WayStationDialogueSystem _wayStationDialogueSystem;
     private WayStationClimbSettingsModalSystem _wayStationClimbSettingsModalSystem;
+    private WayStationPenanceBackdropDisplaySystem _wayStationPenanceBackdropDisplaySystem;
+    private WayStationPenanceMotionSystem _wayStationPenanceMotionSystem;
+    private WayStationPenanceMastheadDisplaySystem _wayStationPenanceMastheadDisplaySystem;
+    private WayStationPenanceWeaponDisplaySystem _wayStationPenanceWeaponDisplaySystem;
+    private WayStationPenanceTrackDisplaySystem _wayStationPenanceTrackDisplaySystem;
+    private WayStationPenanceNodeDisplaySystem _wayStationPenanceNodeDisplaySystem;
+    private WayStationPenanceTallyDisplaySystem _wayStationPenanceTallyDisplaySystem;
+    private WayStationPenanceFooterDisplaySystem _wayStationPenanceFooterDisplaySystem;
     private WayStationSaintsMedalsModalSystem _wayStationSaintsMedalsModalSystem;
 	private ClimbPointsAwardDisplaySystem _climbPointsAwardDisplaySystem;
     private BattleSceneSystem _battleSceneSystem;
@@ -216,7 +224,15 @@ public class Game1 : Game
         _incenseDisplaySystem = new IncenseDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content);
         _wayStationPoiDisplaySystem = new WayStationPoiDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationDialogueSystem = new WayStationDialogueSystem(_world.EntityManager, _spriteBatch, _imageAssets);
-        _wayStationClimbSettingsModalSystem = new WayStationClimbSettingsModalSystem(_world, _spriteBatch, _imageAssets);
+        _wayStationClimbSettingsModalSystem = new WayStationClimbSettingsModalSystem(_world);
+        _wayStationPenanceBackdropDisplaySystem = new WayStationPenanceBackdropDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, Content, _imageAssets);
+        _wayStationPenanceMotionSystem = new WayStationPenanceMotionSystem(_world.EntityManager);
+        _wayStationPenanceMastheadDisplaySystem = new WayStationPenanceMastheadDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
+        _wayStationPenanceWeaponDisplaySystem = new WayStationPenanceWeaponDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
+        _wayStationPenanceTrackDisplaySystem = new WayStationPenanceTrackDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
+        _wayStationPenanceNodeDisplaySystem = new WayStationPenanceNodeDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
+        _wayStationPenanceTallyDisplaySystem = new WayStationPenanceTallyDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
+        _wayStationPenanceFooterDisplaySystem = new WayStationPenanceFooterDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationSaintsMedalsModalSystem = new WayStationSaintsMedalsModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
@@ -289,6 +305,14 @@ public class Game1 : Game
         _world.AddSystem(_wayStationPoiDisplaySystem);
         _world.AddSystem(_wayStationDialogueSystem);
         _world.AddSystem(_wayStationClimbSettingsModalSystem);
+        _world.AddSystem(_wayStationPenanceBackdropDisplaySystem);
+        _world.AddSystem(_wayStationPenanceMotionSystem);
+        _world.AddSystem(_wayStationPenanceMastheadDisplaySystem);
+        _world.AddSystem(_wayStationPenanceWeaponDisplaySystem);
+        _world.AddSystem(_wayStationPenanceTrackDisplaySystem);
+        _world.AddSystem(_wayStationPenanceNodeDisplaySystem);
+        _world.AddSystem(_wayStationPenanceTallyDisplaySystem);
+        _world.AddSystem(_wayStationPenanceFooterDisplaySystem);
         _world.AddSystem(_wayStationSaintsMedalsModalSystem);
 		_world.AddSystem(_climbPointsAwardDisplaySystem);
         _world.AddSystem(_battleSceneSystem);
@@ -625,11 +649,20 @@ public class Game1 : Game
             }
             case SceneId.WayStation:
             {
-                FrameProfiler.Measure("WayStationBackgroundDisplaySystem.Draw", _wayStationBackgroundDisplaySystem.Draw);
-                FrameProfiler.Measure("IncenseDisplaySystem.Draw", _incenseDisplaySystem.Draw);
-                FrameProfiler.Measure("WayStationPoiDisplaySystem.Draw", _wayStationPoiDisplaySystem.Draw);
-                FrameProfiler.Measure("WayStationDialogueSystem.Draw", _wayStationDialogueSystem.Draw);
-                FrameProfiler.Measure("WayStationClimbSettingsModalSystem.Draw", _wayStationClimbSettingsModalSystem.Draw);
+				FrameProfiler.Measure("WayStationPenanceBackdropDisplaySystem.Draw", () =>
+					_wayStationPenanceBackdropDisplaySystem.DrawUnderlay(() =>
+					{
+						FrameProfiler.Measure("WayStationBackgroundDisplaySystem.Draw", _wayStationBackgroundDisplaySystem.Draw);
+						FrameProfiler.Measure("IncenseDisplaySystem.Draw", _incenseDisplaySystem.Draw);
+						FrameProfiler.Measure("WayStationPoiDisplaySystem.Draw", _wayStationPoiDisplaySystem.Draw);
+						FrameProfiler.Measure("WayStationDialogueSystem.Draw", _wayStationDialogueSystem.Draw);
+					}));
+                FrameProfiler.Measure("WayStationPenanceMastheadDisplaySystem.Draw", _wayStationPenanceMastheadDisplaySystem.Draw);
+                FrameProfiler.Measure("WayStationPenanceWeaponDisplaySystem.Draw", _wayStationPenanceWeaponDisplaySystem.Draw);
+                FrameProfiler.Measure("WayStationPenanceTrackDisplaySystem.Draw", _wayStationPenanceTrackDisplaySystem.Draw);
+                FrameProfiler.Measure("WayStationPenanceNodeDisplaySystem.Draw", _wayStationPenanceNodeDisplaySystem.Draw);
+                FrameProfiler.Measure("WayStationPenanceTallyDisplaySystem.Draw", _wayStationPenanceTallyDisplaySystem.Draw);
+                FrameProfiler.Measure("WayStationPenanceFooterDisplaySystem.Draw", _wayStationPenanceFooterDisplaySystem.Draw);
                 FrameProfiler.Measure("WayStationSaintsMedalsModalSystem.Draw", _wayStationSaintsMedalsModalSystem.Draw);
                 break;
             }

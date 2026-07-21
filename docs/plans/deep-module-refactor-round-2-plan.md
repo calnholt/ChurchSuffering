@@ -3,7 +3,7 @@
 ## Document Status
 
 - **Status:** Draft index for Round 2 deep-module refactors.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Round 1 status:** RFCs #1–#4 shipped; RFC #5 (`ui-draw-primitives-consolidation-plan.md`) still open.
 
 ---
@@ -54,7 +54,7 @@
 
 ## Verification (per RFC)
 
-The repo builds with `dotnet build` and tests run with `dotnet test tests/Crusaders30XX.Tests` (xUnit, serial). Each RFC's own **Verification** section lists its boundary tests, the shallow tests it deletes, and the in-app scenario to drive end-to-end.
+The repo builds with `dotnet build` and tests run with `dotnet test tests/ChurchSuffering.Tests` (xUnit, serial). Each RFC's own **Verification** section lists its boundary tests, the shallow tests it deletes, and the in-app scenario to drive end-to-end.
 
 ---
 

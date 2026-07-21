@@ -1,14 +1,14 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	internal enum HourglassIconStyle
 	{
@@ -455,6 +455,8 @@ namespace Crusaders30XX.ECS.Systems
 				return ResolveCardName(slot.cardKey, fallback: "Upgrade");
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Replacement, StringComparison.OrdinalIgnoreCase))
 				return ResolveCardName(slot.cardKey, fallback: "New Card");
+			if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+				return "Mystery Boon";
 			return "Empty";
 		}
 
@@ -474,6 +476,7 @@ namespace Crusaders30XX.ECS.Systems
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase)) return "Gear";
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Upgrade, StringComparison.OrdinalIgnoreCase)) return "Upgrade";
 			if (string.Equals(slot.kind, ClimbShopSlotKinds.Replacement, StringComparison.OrdinalIgnoreCase)) return "Replace";
+			if (string.Equals(slot.kind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase)) return "Boon";
 			return string.Empty;
 		}
 

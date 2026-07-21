@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Cards;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Utils;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Utils;
+using ChurchSuffering.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     [DebugTab("Card Display")]
     public class CardDisplaySystem : Core.System, IDebugInspectableChildren

@@ -1,8 +1,8 @@
 using System;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Scenes.BattleScene
+namespace ChurchSuffering.ECS.Scenes.BattleScene
 {
 	internal readonly record struct DialogBodyLayoutKey(
 		string Text,

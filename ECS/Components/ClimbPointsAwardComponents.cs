@@ -1,7 +1,7 @@
 using System;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Components;
+namespace ChurchSuffering.ECS.Components;
 
 public enum ClimbPointsAwardOverlayPhase
 {
@@ -26,6 +26,7 @@ public sealed class ClimbPointsAwardOverlayState : IComponent
 	public ClimbPointsAwardOverlayPhase Phase { get; set; } = ClimbPointsAwardOverlayPhase.Hidden;
 	public bool IsAuthoritative { get; set; }
 	public int TimeReached { get; set; }
+	public int ShopRefreshInterval { get; set; } = 8;
 	public bool Abandoned { get; set; }
 	public bool CompletedFinalBoss { get; set; }
 	public int PointsAwarded { get; set; }

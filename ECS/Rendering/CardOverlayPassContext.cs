@@ -1,11 +1,11 @@
 using System;
 using System.Text.Json.Nodes;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 internal sealed class CardOverlayPassContext
 {

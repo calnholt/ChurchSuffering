@@ -1,6 +1,6 @@
 ---
 name: monogame-shader-display
-description: Convert GLSL or ShaderToy-style shaders into MonoGame `.fx` effects and integrate them into Crusaders30XX through an overlay wrapper and display system. Use when adding a procedural scene background, full-screen shader pass, post-process effect, or other shader-backed `*DisplaySystem`, including requests to convert files under `Content/Shaders`, create an overlay, register an effect in `Content.mgcb`, or insert a shader into a scene draw pipeline.
+description: Convert GLSL or ShaderToy-style shaders into MonoGame `.fx` effects and integrate them into ChurchSuffering through an overlay wrapper and display system. Use when adding a procedural scene background, full-screen shader pass, post-process effect, or other shader-backed `*DisplaySystem`, including requests to convert files under `Content/Shaders`, create an overlay, register an effect in `Content.mgcb`, or insert a shader into a scene draw pipeline.
 ---
 
 # MonoGame Shader Display
@@ -118,7 +118,7 @@ Run from the repository root:
 
 ```bash
 dotnet build
-dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj --no-restore
+dotnet test tests/ChurchSuffering.Tests/ChurchSuffering.Tests.csproj --no-restore
 ```
 
 The build must compile the `.fx` file through MGFXC and compile C#. Fix all new errors before handoff; report unrelated pre-existing warnings separately.

@@ -1,16 +1,16 @@
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Rendering;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Rendering;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Utils;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Utils;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Draws simple black-background, white-text tooltips for hovered UI elements that have a Tooltip component.
@@ -113,6 +113,7 @@ namespace Crusaders30XX.ECS.Systems
 						x.E.GetComponent<PledgePreview>() != null ||
 						x.E.GetComponent<Sealed>() != null ||
 						x.E.GetComponent<Recoil>() != null
+						|| x.E.GetComponent<CardBoonComponent>() != null
 					))
 				.OrderByDescending(x => x.T?.ZOrder ?? 0)
 				.ToList();

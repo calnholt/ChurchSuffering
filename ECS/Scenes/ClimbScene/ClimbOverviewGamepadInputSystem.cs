@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Input;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	public sealed class ClimbOverviewGamepadInputSystem : Core.System
 	{

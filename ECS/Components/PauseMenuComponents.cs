@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	public enum PauseMenuPhase
 	{

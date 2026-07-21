@@ -2,18 +2,18 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using System.Collections.Generic;
 using System;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Data.Ids;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Ids;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     [DebugTab("Guardian Angel")]
     public class GuardianAngelDisplaySystem : Core.System

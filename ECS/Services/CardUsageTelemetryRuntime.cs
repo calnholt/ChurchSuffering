@@ -1,8 +1,8 @@
 using System.IO;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Telemetry;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Telemetry;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class CardUsageTelemetryRuntime
 	{

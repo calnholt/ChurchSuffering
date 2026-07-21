@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems;
+namespace ChurchSuffering.ECS.Systems;
 
 internal static class ClimbV2Draw
 {
@@ -256,24 +256,26 @@ public sealed class DistanceClimbedTimelineDisplaySystem : Core.System
 		if (rect.IsEmpty) return;
 		var climb = SaveCache.GetClimbState();
 		var preview = EntityManager.GetEntity(ClimbV2LayoutSystem.RootName)?.GetComponent<ClimbPreviewState>();
-		int used = ClimbRuleService.ClampTime(climb?.time ?? 0);
+		int maxTime = ClimbRuleService.GetMaxTime(climb);
+		int used = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
 		int projected = preview?.IsActive == true ? preview.ProjectedUsedTime : used;
 		ClimbV2Draw.Text(_batch, _body, "DISTANCE CLIMBED", new Vector2(rect.X, rect.Y + 1), 0.085f, Color.White * 0.92f);
-		string value = $"{projected} / {ClimbRuleService.MaxTime}";
+		string value = $"{projected} / {maxTime}";
 		Vector2 valueSize = _title.MeasureString(value) * 0.13f;
 		ClimbV2Draw.Text(_batch, _title, value, new Vector2(rect.Right - valueSize.X, rect.Y - 2), 0.13f, ClimbV2Draw.Paper);
 		int startX = rect.X + 10;
 		int endX = rect.Right - 45;
-		float step = (endX - startX) / (float)(ClimbRuleService.MaxTime - 1);
+		float step = (endX - startX) / (float)(maxTime - 1);
 		int y = rect.Y + 41;
-		for (int i = 1; i <= ClimbRuleService.MaxTime; i++)
+		int shopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb);
+		for (int i = 1; i <= maxTime; i++)
 		{
 			int x = startX + (int)MathF.Round((i - 1) * step);
 			bool active = i <= used;
 			bool projectedStep = i > used && i <= projected;
 			bool projectedLine = i >= used && i < projected;
-			bool refresh = i % ClimbRuleService.ShopRefreshInterval == 0 && i < ClimbRuleService.MaxTime;
-			if (i < ClimbRuleService.MaxTime)
+			bool refresh = i % shopRefreshInterval == 0 && i < maxTime;
+			if (i < maxTime)
 			{
 				Color line = i < used ? ClimbV2Draw.Paper : projectedLine ? ClimbV2Draw.Red : Color.White * 0.22f;
 				var lineRect = new Rectangle(x + (refresh ? 9 : 5), y - 1, Math.Max(1, (int)step - (refresh ? 9 : 5)), 2);
@@ -414,12 +416,21 @@ public sealed class ShopItemDisplaySystem : Core.System
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 7, 2, 2, 7, 10, 12, 0.42f, alpha);
 		ClimbV2Draw.SoftRoundedShadow(_batch, _assets, rect, 7, 2, 2, 7, 3, 5, 0.28f, alpha);
 		_batch.Draw(_assets.GetRoundedRectPerCorner(rect.Width, rect.Height, 7, 2, 2, 7), rect, new Color(16, 17, 18) * (0.92f * alpha));
-		Color artColor = string.Equals(item.ItemKind, ClimbShopSlotKinds.Medal, StringComparison.OrdinalIgnoreCase) ? new Color(7, 8, 9)
-			: string.Equals(item.ItemKind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase) ? ClimbV2Draw.Paper : ClimbV2Draw.RedDark;
+		Color artColor = string.Equals(item.ItemKind, ClimbShopSlotKinds.Medal, StringComparison.OrdinalIgnoreCase) ? ClimbV2Draw.Paper
+			: string.Equals(item.ItemKind, ClimbShopSlotKinds.Equipment, StringComparison.OrdinalIgnoreCase) ? new Color(7, 8, 9) : ClimbV2Draw.RedDark;
 		var art = new Rectangle(rect.X, rect.Y, 78, rect.Height); _batch.Draw(_assets.GetRoundedRectPerCorner(art.Width, art.Height, 7, 0, 0, 7), art, artColor * alpha);
 		var texture = _assets.TryGetTexture(item.ItemAsset); if (texture != null)
 		{
 			var target = new Rectangle(art.X + 7, art.Y + 10, 64, 84); var contained = EquipmentArtService.GetContainedBounds(texture, target); _batch.Draw(texture, contained, Color.White * alpha);
+		}
+		else if (string.Equals(item.ItemKind, ClimbShopSlotKinds.Boon, StringComparison.OrdinalIgnoreCase))
+		{
+			const string glyph = "?";
+			const float glyphScale = 0.42f;
+			var size = _title.MeasureString(glyph) * glyphScale;
+			ClimbV2Draw.Text(_batch, _title, glyph,
+				new Vector2(art.Center.X - size.X * 0.5f, art.Center.Y - size.Y * 0.5f),
+				glyphScale, Color.White * alpha);
 		}
 		ClimbV2Draw.Text(_batch, _body, slot.Label.ToUpperInvariant(), new Vector2(rect.X + 86, rect.Y + 12), 0.064f, new Color(255, 135, 151) * alpha);
 		ClimbV2Draw.Text(_batch, _title, slot.Title, new Vector2(rect.X + 86, rect.Y + 31), 0.105f, Color.White * alpha);

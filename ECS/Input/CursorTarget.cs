@@ -1,6 +1,6 @@
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Input
+namespace ChurchSuffering.ECS.Input
 {
     public enum CursorTargetKind
     {

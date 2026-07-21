@@ -2,7 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
-namespace Crusaders30XX.ECS.Input
+namespace ChurchSuffering.ECS.Input
 {
     public sealed class MonoGamePlayerInputAdapter : IPlayerInputSource
     {

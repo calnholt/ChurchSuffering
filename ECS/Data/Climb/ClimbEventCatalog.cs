@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Save;
 
-namespace Crusaders30XX.ECS.Data.Climb
+namespace ChurchSuffering.ECS.Data.Climb
 {
 	public sealed class ClimbEventDefinition
 	{

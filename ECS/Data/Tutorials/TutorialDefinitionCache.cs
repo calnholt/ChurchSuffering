@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Crusaders30XX.ECS.Data.Tutorials
+namespace ChurchSuffering.ECS.Data.Tutorials
 {
     public static class TutorialDefinitionCache
     {

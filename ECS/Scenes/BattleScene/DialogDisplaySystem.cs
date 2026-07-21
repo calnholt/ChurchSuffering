@@ -1,22 +1,22 @@
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Data.Dialog;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Dialog;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Utils;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Scenes.BattleScene;
-using Crusaders30XX.ECS.Utils.RichText;
-using Crusaders30XX.ECS.Rendering;
+using ChurchSuffering.ECS.Utils;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Scenes.BattleScene;
+using ChurchSuffering.ECS.Utils.RichText;
+using ChurchSuffering.ECS.Rendering;
 using System;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Input;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     [DebugTab("Dialog Overlay")]
     public class DialogDisplaySystem : Core.System

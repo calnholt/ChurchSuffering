@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Utils;
-using Crusaders30XX.ECS.Utils.RichText;
+using ChurchSuffering.ECS.Utils;
+using ChurchSuffering.ECS.Utils.RichText;
 
-namespace Crusaders30XX.ECS.Scenes.BattleScene
+namespace ChurchSuffering.ECS.Scenes.BattleScene
 {
     public sealed class DialogTextEffectSettings
     {

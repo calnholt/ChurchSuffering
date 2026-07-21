@@ -1,10 +1,10 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Factories;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Factories;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class RunDeckCompositionService
 	{

@@ -1,8 +1,8 @@
 using System;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.Diagnostics;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 /// <summary>
 /// Brackets a scene-owned SpriteBatch pass and restores the scene's immediate UI state.

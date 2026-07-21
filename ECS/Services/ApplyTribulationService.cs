@@ -1,11 +1,11 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Locations;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Locations;
+using ChurchSuffering.ECS.Events;
 using System;
 using System.Linq;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	/// <summary>
 	/// Service that applies tribulation effects to the player based on quest ID.

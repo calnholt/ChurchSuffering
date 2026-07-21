@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	public class EquipmentManagerSystem : Core.System
 	{
@@ -15,6 +16,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			EventManager.Subscribe<EquipmentActivateEvent>(OnEquipmentActivate);
 			EventManager.Subscribe<EnemyKilledEvent>(OnEnemyKilled);
+			EventManager.Subscribe<EquipmentRemainingUsesChanged>(OnRemainingUsesChanged);
 		}
 
 		protected override IEnumerable<Entity> GetRelevantEntities()
@@ -60,6 +62,14 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				entity.GetComponent<EquippedEquipment>()?.Equipment?.RefreshForBattle();
 			}
+		}
+
+		private void OnRemainingUsesChanged(EquipmentRemainingUsesChanged evt)
+		{
+			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+			if (loadout == null) return;
+			if (!RunEquipmentService.SetSlotRemainingUses(loadout, evt.Slot, evt.RemainingUses)) return;
+			SaveCache.SaveLoadout(loadout);
 		}
 
 	}

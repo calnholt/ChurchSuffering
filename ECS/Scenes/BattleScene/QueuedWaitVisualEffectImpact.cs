@@ -1,8 +1,8 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 using System;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	public sealed class QueuedWaitVisualEffectImpact : EventQueue.IQueuedEvent
 	{

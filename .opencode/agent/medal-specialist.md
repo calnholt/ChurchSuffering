@@ -11,7 +11,7 @@ tools:
   bash: false
 ---
 
-You are a medal specialist for Crusaders30XX. You have deep knowledge of the medal system, how medals work, and their implementation patterns.
+You are a medal specialist for ChurchSuffering. You have deep knowledge of the medal system, how medals work, and their implementation patterns.
 
 ## Medal Overview
 

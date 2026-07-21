@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Climb Header")]
 	public class ClimbHeaderDisplaySystem : Core.System
@@ -196,9 +196,11 @@ namespace Crusaders30XX.ECS.Systems
 
 		private void DrawTimeline(Rectangle rect, ClimbSaveState climb, ClimbPreviewState preview)
 		{
+			int shopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb);
+			int maxTime = ClimbRuleService.GetMaxTime(climb);
 			if (rect.Width <= 0 || rect.Height <= 0) return;
 
-			int used = ClimbRuleService.ClampTime(climb?.time ?? 0);
+			int used = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
 			int projected = preview?.IsActive == true ? preview.ProjectedUsedTime : used;
 			int delta = Math.Max(0, projected - used);
 
@@ -208,8 +210,8 @@ namespace Crusaders30XX.ECS.Systems
 			int rowX = rect.X + TimelinePaddingX;
 			int hourglassY = rect.Y + TimelinePaddingY;
 			int rowW = rect.Width - TimelinePaddingX * 2;
-			int gapTotal = TimelineSlotGap * (ClimbRuleService.MaxTime - 1);
-			int slotW = Math.Max(TimelineMinSlotWidth, (rowW - gapTotal) / ClimbRuleService.MaxTime);
+			int gapTotal = TimelineSlotGap * (maxTime - 1);
+			int slotW = Math.Max(TimelineMinSlotWidth, (rowW - gapTotal) / maxTime);
 			var glow = new HourglassGlowTuning
 			{
 				RedGlowAlpha = HourglassRedGlowAlpha,
@@ -217,7 +219,7 @@ namespace Crusaders30XX.ECS.Systems
 				GlowRadius = HourglassGlowRadius,
 			};
 
-			for (int i = 0; i < ClimbRuleService.MaxTime; i++)
+			for (int i = 0; i < maxTime; i++)
 			{
 				int slotX = rowX + i * (slotW + TimelineSlotGap);
 
@@ -245,7 +247,7 @@ namespace Crusaders30XX.ECS.Systems
 					alpha,
 					glow);
 
-				bool shopMarker = (i + 1) % ClimbRuleService.ShopRefreshInterval == 0 && i + 1 < ClimbRuleService.MaxTime;
+				bool shopMarker = (i + 1) % shopRefreshInterval == 0 && i + 1 < maxTime;
 				if (!shopMarker) continue;
 
 				int refreshAt = i + 1;

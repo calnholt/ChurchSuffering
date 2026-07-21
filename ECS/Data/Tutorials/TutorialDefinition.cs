@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Data.Tutorials
+namespace ChurchSuffering.ECS.Data.Tutorials
 {
     public class TutorialDefinition
     {

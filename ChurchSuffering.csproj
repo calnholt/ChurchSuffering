@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <TieredCompilation>false</TieredCompilation>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RuntimeIdentifiers>win-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Icon.ico" />
+    <None Remove="Icon.bmp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Icon.ico">
+      <LogicalName>Icon.ico</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Icon.bmp">
+      <LogicalName>Icon.bmp</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Library.OpenAL" Version="1.24.3.2" />
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.1.*" />
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.1.*" />
+    <PackageReference Include="MonoGame.Extended" Version="4.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChurchSuffering.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <MonoGameContentReference Include="Content\Content.mgcb" />
+  </ItemGroup>
+
+  <!-- Remove old cached files -->
+  <ItemGroup>
+    <None Remove="Content\bin\**" />
+    <None Remove="Content\obj\**" />
+    <Content Remove="Content\bin\**" />
+    <Content Remove="Content\obj\**" />
+  </ItemGroup>
+
+  <!-- Include your content assets -->
+  <ItemGroup>
+    <Content Include="Content\Data\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\SFX\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\bin\DesktopGL\Content\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Force publish to always copy latest XNBs -->
+  <Target Name="CopyMonoGameContentToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_ContentFiles Include="$(ProjectDir)Content\bin\DesktopGL\Content\**\*.*" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(_ContentFiles)"
+      DestinationFolder="$(PublishDir)Content\%(RecursiveDir)"
+      SkipUnchangedFiles="false" />
+  </Target>
+</Project>

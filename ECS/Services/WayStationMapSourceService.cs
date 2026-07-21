@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class WayStationMapSourceService
 	{

@@ -1,9 +1,9 @@
 using System.IO;
 using System.Text.Json;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Data.Loadouts;
 
-namespace Crusaders30XX.ECS.Data.Save
+namespace ChurchSuffering.ECS.Data.Save
 {
 	public static class SaveRepository
 	{

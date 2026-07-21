@@ -2,7 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering
+namespace ChurchSuffering.ECS.Rendering
 {
     public readonly struct CardRenderClipScope : IDisposable
     {

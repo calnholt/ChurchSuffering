@@ -1,4 +1,4 @@
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 {
 	public enum AchievementSnapshotVariant
 	{

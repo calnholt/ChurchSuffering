@@ -1,6 +1,6 @@
 using System;
 
-namespace Crusaders30XX.Diagnostics
+namespace ChurchSuffering.Diagnostics
 {
 	public static class TestFightRuntime
 	{

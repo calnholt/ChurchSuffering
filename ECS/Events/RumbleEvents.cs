@@ -1,6 +1,6 @@
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.ECS.Input;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
 	public sealed class RumbleRequested
 	{

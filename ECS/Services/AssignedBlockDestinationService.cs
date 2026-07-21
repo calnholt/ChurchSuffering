@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Services;
+namespace ChurchSuffering.ECS.Services;
 
 /// <summary>
 /// Read-only destination rules for spent card blockers.

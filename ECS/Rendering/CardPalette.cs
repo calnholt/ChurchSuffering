@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Rendering
+namespace ChurchSuffering.ECS.Rendering
 {
 	public static class CardPalette
 	{

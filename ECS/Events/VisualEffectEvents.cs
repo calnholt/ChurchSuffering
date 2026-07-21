@@ -1,10 +1,10 @@
 using System;
-using Crusaders30XX.ECS.Data.VisualEffects;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Data.VisualEffects;
+using ChurchSuffering.ECS.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
 	public class BeginDefeatPresentationEvent
 	{

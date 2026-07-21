@@ -1,12 +1,12 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Systems;
-using Crusaders30XX.ECS.Services;
-using static Crusaders30XX.ECS.Components.CardData;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Services;
+using static ChurchSuffering.ECS.Components.CardData;
 
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
     public class Reap : CardBase
     {

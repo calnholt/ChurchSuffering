@@ -1,24 +1,24 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Rendering;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Rendering;
  
 using System;
-using Crusaders30XX.ECS.Scenes.BattleScene;
-using Crusaders30XX.ECS.Data.Locations;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Tutorials;
+using ChurchSuffering.ECS.Scenes.BattleScene;
+using ChurchSuffering.ECS.Data.Locations;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Tutorials;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Battle Scene System")]
 	public class BattleSceneSystem : Core.System

@@ -6,7 +6,7 @@ Root guidance for coding agents in this repository. Keep this file slim and use 
 
 ## Project snapshot
 
-Crusaders30XX is a .NET 8.0 MonoGame DesktopGL deckbuilder built around an ECS architecture. `Game1.cs` initializes the world, registers systems, and runs the loop. Content assets are built through `Content/Content.mgcb`.
+Church Suffering is a .NET 8.0 MonoGame DesktopGL deckbuilder built around an ECS architecture. `Game1.cs` initializes the world, registers systems, and runs the loop. Content assets are built through `Content/Content.mgcb`.
 
 ## Read the relevant docs before editing
 
@@ -31,6 +31,8 @@ When you finish implementing an attached or approved plan, always run `dotnet bu
 ## Snapshot fixture changes
 
 `docs/display-snapshots.md` is the canonical snapshot reference. When adding or changing a snapshot fixture, update that doc, accept intentional baselines into `tests/VisualBaselines/`, verify with `--verify`, and add/update a script under `scripts/` when a fixture has multiple variants. When verifying snapshots, fix and re-run at most two passes to catch obvious rendering, scale, or display issues — do not loop beyond that.
+
+Do not run baseline generations if not instructed to do so.
 
 ## Universal project rules
 

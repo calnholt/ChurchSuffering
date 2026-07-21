@@ -1,8 +1,8 @@
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
     /// <summary>
     /// The main ECS world that manages entities and systems.

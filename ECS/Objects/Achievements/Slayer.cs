@@ -1,9 +1,9 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Achievements
+namespace ChurchSuffering.ECS.Objects.Achievements
 {
     /// <summary>
     /// Kill 10 enemies (any type).

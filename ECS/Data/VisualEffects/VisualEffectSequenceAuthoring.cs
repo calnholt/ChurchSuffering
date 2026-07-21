@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Cards;
-using Crusaders30XX.ECS.Objects.EnemyAttacks;
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Objects.EnemyAttacks;
+using ChurchSuffering.ECS.Input;
 
-namespace Crusaders30XX.ECS.Data.VisualEffects;
+namespace ChurchSuffering.ECS.Data.VisualEffects;
 
 /// <summary>
 /// Compiles explicit per-definition visual direction into runtime sequences.

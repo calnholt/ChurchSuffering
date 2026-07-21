@@ -1,4 +1,4 @@
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
     /// <summary>
     /// Base interface for all components in the ECS system.

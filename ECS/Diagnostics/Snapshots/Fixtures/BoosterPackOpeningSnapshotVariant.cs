@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures;
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures;
 
 public sealed class BoosterPackOpeningSnapshotVariant
 {

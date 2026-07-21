@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Objects.Cards;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class RunDeckService
 	{
@@ -39,6 +39,7 @@ namespace Crusaders30XX.ECS.Services
 				if (existingByEntryId.TryGetValue(entry.entryId, out var existing)
 					&& string.Equals(existing.GetComponent<RunDeckCard>()?.CardKey, entry.cardKey, StringComparison.OrdinalIgnoreCase))
 				{
+					CardBoonApplicator.Synchronize(entityManager, existing, entry.boons);
 					SynchronizeDualColor(entityManager, existing, entry);
 					continue;
 				}
@@ -101,6 +102,7 @@ namespace Crusaders30XX.ECS.Services
 				var created = CreateRunDeckCard(entityManager, entry);
 				if (created != null)
 				{
+					RunScopedStateService.ApplyRestrictionsFromEntry(entityManager, created, entry);
 					deck.Cards.Add(created);
 				}
 			}
@@ -254,6 +256,7 @@ namespace Crusaders30XX.ECS.Services
 					cardData.Card.IsStarter = true;
 				}
 			}
+			CardBoonApplicator.Synchronize(entityManager, entity, entry.boons);
 			SynchronizeDualColor(entityManager, entity, entry);
 			return entity;
 		}

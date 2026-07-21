@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Numerics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Enemies;
 
-namespace Crusaders30XX.ECS.Data.Locations
+namespace ChurchSuffering.ECS.Data.Locations
 {
 	public class LocationDefinition
 	{

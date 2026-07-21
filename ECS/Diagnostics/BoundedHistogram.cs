@@ -1,6 +1,6 @@
 using System;
 
-namespace Crusaders30XX.Diagnostics
+namespace ChurchSuffering.Diagnostics
 {
     /// <summary>
     /// Fixed-size timing distribution used by the session profiler. Percentiles are

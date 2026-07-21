@@ -1,10 +1,10 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 {
 	public sealed class NarrativeEventModalSnapshotFixture : IDisplaySnapshotFixture
 	{

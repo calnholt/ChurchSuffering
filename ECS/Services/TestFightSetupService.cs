@@ -1,23 +1,22 @@
 using System;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Data.Save;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class TestFightSetupService
 	{
 		public static void PrepareWorld(World world)
 		{
 			if (world == null || !TestFightRuntime.IsActive) return;
-
-			ApplyRunDifficulty(TestFightRuntime.Options.Difficulty);
 
 			var deckEntity = world.EntityManager.GetEntity("Deck");
 			if (deckEntity == null)
@@ -37,7 +36,7 @@ namespace Crusaders30XX.ECS.Services
 			var hp = player.GetComponent<HP>();
 			if (hp != null)
 			{
-				hp.Max = WayStationRunSetupSingleton.PlayerMaxHp;
+				hp.Max = PenanceRules.Calculate(TestFightRuntime.Options.PenanceLevel).PlayerMaximumHp;
 				hp.UnscarredMax = hp.Max;
 				hp.Current = hp.Max;
 			}
@@ -80,6 +79,7 @@ namespace Crusaders30XX.ECS.Services
 				TestFightRuntime.Options.WeaponId,
 				seed,
 				"test_fight");
+			ApplyReparation(loadout, seed);
 			RunDeckService.ReplaceDeckFromLoadout(entityManager, loadout);
 		}
 
@@ -141,7 +141,7 @@ namespace Crusaders30XX.ECS.Services
 			var hp = player.GetComponent<HP>();
 			if (hp != null)
 			{
-				hp.Max = WayStationRunSetupSingleton.PlayerMaxHp;
+				hp.Max = PenanceRules.Calculate(TestFightRuntime.Options.PenanceLevel).PlayerMaximumHp;
 				hp.UnscarredMax = hp.Max;
 				hp.Current = hp.Max;
 			}
@@ -149,21 +149,24 @@ namespace Crusaders30XX.ECS.Services
 
 		private static LoadoutDefinition BuildLoadout()
 		{
-			return StartingDeckGeneratorService.BuildStartingLoadout(
+			var loadout = StartingDeckGeneratorService.BuildStartingLoadout(
 				TestFightRuntime.Options.WeaponId,
 				seed: 0,
 				loadoutId: "test_fight");
+			ApplyReparation(loadout, 0);
+			return loadout;
 		}
 
-		private static void ApplyRunDifficulty(RunDifficulty difficulty)
+		private static void ApplyReparation(LoadoutDefinition loadout, int seed)
 		{
-			WayStationRunSetupSingleton.SelectedDifficulty = difficulty;
-			WayStationRunSetupSingleton.SelectedWeapon = TestFightRuntime.Options.WeaponId switch
-			{
-				"dagger" => StartingWeapon.Dagger,
-				"hammer" => StartingWeapon.Hammer,
-				_ => StartingWeapon.Sword,
-			};
+			var calculation = PenanceRules.Calculate(TestFightRuntime.Options.PenanceLevel);
+			ReparationService.Apply(
+				loadout,
+				TestFightRuntime.Options.WeaponId,
+				seed,
+				calculation.Level,
+				SaveCache.GetCollection(),
+				calculation.ReparationStacks);
 		}
 	}
 }

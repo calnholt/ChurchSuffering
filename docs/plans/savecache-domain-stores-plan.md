@@ -5,7 +5,7 @@
 ## Document Status
 
 - **Status:** Draft design, ready for implementation review.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #02 — local-substitutable; effort/risk large / medium.
 - **Required final verification after implementation:** `dotnet build` from the repository root.
@@ -57,7 +57,7 @@ Most methods are one-line field reads. But buried among them are `TryResolveClim
 
 ### 4. Disk-coupled, serial-test tax
 
-`EnsureLoaded` (:366) and `Persist` (:352) do real disk I/O through `SaveRepository.Load`/`Save` against `%LocalApplicationData%/Crusaders30XX/save_file.json` (`ResolvePrimarySaveFilePath`:1111). Static, no injection, no seam.
+`EnsureLoaded` (:366) and `Persist` (:352) do real disk I/O through `SaveRepository.Load`/`Save` against `%LocalApplicationData%/ChurchSuffering/save_file.json` (`ResolvePrimarySaveFilePath`:1111). Static, no injection, no seam.
 - There is **no in-memory fake**. Every save-touching test drives real files. `DeleteSaveFilesIfPresent` (:607) is called **88 times across 26 test files** to scrub global state between tests. Canonical shape: `RunLifecycleTests.cs:12-13` (`DeleteSaveFilesIfPresent()` then `StartNewRun()`); the `PrepareRun` helper in `ClimbEventSystemTests.cs:397-424` does `DeleteSaveFilesIfPresent -> StartNewRun -> SaveLoadout -> SaveClimbState` just to stand up a fixture.
 - Because state is a process-global on disk, tests are order-dependent and non-parallelizable. `TestAssembly.cs:3` pins `[assembly: CollectionBehavior(DisableTestParallelization = true)]`. (The static event bus — candidate #6 in the combined RFC doc — is the *other* reason; this RFC removes one of the two blockers.) Dependency category: **local-substitutable** (a JSON file on local disk) — but implemented as a hardwired static with real disk and no seam, so it tests like a non-substitutable global.
 
@@ -66,7 +66,7 @@ Most methods are one-line field reads. But buried among them are `TryResolveClim
 Two layers. A shared **seam** (`ISaveBackend` = disk; `ISaveStore` = single-cached-`SaveFile` + lock + transactional mutate over the backend), then small **domain stores** on top. No caller sees more than its own domain.
 
 ```csharp
-namespace Crusaders30XX.ECS.Data.Save {
+namespace ChurchSuffering.ECS.Data.Save {
 //---Seam---------------------------------------------------------------///Rawsubstitutablepersistence.Prod =
 JSONfile; tests = in-memory.public interface ISaveBackend { SaveFile Load(); //fullfile, ora default SaveFile if
 absent bool Save(SaveFilesave); //returns false on I/Ofailure(drivesrollback) } /// Shared root: ownsthe one cached
@@ -186,13 +186,13 @@ Local-substitutable, in-process. The variability being isolated is "where the by
 - `ECS/Data/Climb/ClimbEventMutationResult.cs` (resolver return type), `ECS/Services/ClimbRuleService.cs ` (pure rules the climb slice keeps).
 - `ECS/Systems/CollectionProgressionSystem.cs` (5x read-modify-write to delete), `ECS/Services/ClimbShopService.cs`, `ECS/Scenes/WayStationScene/WayStationDialogueSystem.cs`, `ECS/Systems/ClimbEventSystem.cs` (transaction consumer).
 - Precedent to mirror: `ECS/Input/IPlayerInputSource.cs` + `ECS/Input/MonoGamePlayerInputAdapter.cs` + `Game1.cs:239-245`; `ECS/Scenes/BattleScene/GraphicsAttackPresentationGate.cs` + `BattleSceneSystem.cs:799`.
-- Tests: `tests/Crusaders30XX.Tests/TestAssembly.cs:3` (parallelization pin), `RunLifecycleTests.cs`, `ClimbEventSystemTests.cs` (`PrepareRun` :397), + the 26 files with 88 `DeleteSaveFilesIfPresent` calls.
+- Tests: `tests/ChurchSuffering.Tests/TestAssembly.cs:3` (parallelization pin), `RunLifecycleTests.cs`, `ClimbEventSystemTests.cs` (`PrepareRun` :397), + the 26 files with 88 `DeleteSaveFilesIfPresent` calls.
 - Coordinate: `docs/plans/climb-hazard-character-events-refactor-plan.md` (climb transaction owner — §10.2, §10.6, §12–13).
 
 ## Verification
 
 - `dotnet build` from repo root — clean (per `AGENTS.md`).
-- `dotnet test tests/Crusaders30XX.Tests` — full suite green (still serial until candidate #6).
+- `dotnet test tests/ChurchSuffering.Tests` — full suite green (still serial until candidate #6).
 - New per-domain store tests pass against `InMemorySaveBackend` with no `DeleteSaveFilesIfPresent`/disk: collection point/pack invariant, waystation dialogue-threshold state machine, `SaveStore.Mutate` rollback on `FailNextSave`.
 - In-app (`dotnet run -- new`): start a new run, unlock a collection item, complete a WayStation visit, resolve a climb hazard/character event — confirm each persists correctly across a save/reload cycle (`SaveCache.Reload` / `ISaveStore.Reload`), matching pre-refactor behavior byte-for-byte in the JSON file.
 

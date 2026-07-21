@@ -1,15 +1,15 @@
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.ECS.Singletons;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Displays a game-over overlay on run failure or abandon: centered text, fade to black,
@@ -129,9 +129,11 @@ namespace Crusaders30XX.ECS.Systems
 					var arrivalKind = _pendingRunEndCause == RunEndCause.Abandon
 						? WayStationArrivalKind.ReturnedFromAbandonedClimb
 						: WayStationArrivalKind.ReturnedFromFailedClimb;
+					var climb = SaveCache.GetClimbState();
 					EventManager.Publish(new ClimbEndedEvent
 					{
-						TimeReached = SaveCache.GetClimbState()?.time ?? 0,
+						TimeReached = climb?.time ?? 0,
+						ShopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb),
 						Abandoned = _pendingRunEndCause == RunEndCause.Abandon,
 						CompletedFinalBoss = false,
 					});

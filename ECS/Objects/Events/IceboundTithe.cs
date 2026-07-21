@@ -1,8 +1,8 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Objects.Events
+namespace ChurchSuffering.ECS.Objects.Events
 {
 	public class IceboundTithe : EventBase
 	{

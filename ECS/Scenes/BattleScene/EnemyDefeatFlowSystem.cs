@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Tutorials;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Tutorials;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.RunSetup;
+using ChurchSuffering.Diagnostics;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	public class EnemyDefeatFlowSystem : Core.System
 	{
@@ -187,15 +187,16 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				var climb = SaveCache.GetClimbState();
 				EventManager.Publish(new ClimbEndedEvent
-				{
-					TimeReached = climb?.time ?? ClimbRuleService.MaxTime,
-					CompletedFinalBoss = true,
+					{
+						TimeReached = climb?.time ?? ClimbRuleService.GetMaxTime(climb),
+						ShopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb),
+						CompletedFinalBoss = true,
 					Abandoned = false,
 				});
 				EventManager.Publish(new ClimbCompletedEvent
 				{
 					StartingWeaponId = climb?.startingWeaponId ?? "sword",
-					Difficulty = climb?.difficulty ?? RunDifficulty.Easy,
+					PenanceLevel = PenanceRules.ClampLevel(climb?.penanceLevel ?? 0),
 				});
 				SaveCache.RecordWayStationClimbCompletion();
 				WayStationArrivalContextService.Set(EntityManager, WayStationArrivalKind.ReturnedFromCompletedClimb);

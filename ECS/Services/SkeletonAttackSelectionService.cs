@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Utils;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Utils;
 
-namespace Crusaders30XX.ECS.Services;
+namespace ChurchSuffering.ECS.Services;
 
 /// <summary>
 /// Shared multi-jab attack selection for melee skeletons.

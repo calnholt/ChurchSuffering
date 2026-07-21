@@ -1,6 +1,6 @@
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	/// <summary>
 	/// Shared timing and layout tunables for card restriction mutation cutscenes.

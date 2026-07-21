@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Objects.Cards;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class CardRestrictionMutationDisplayFactory
 	{
@@ -60,7 +62,8 @@ namespace Crusaders30XX.ECS.Services
 			EntityManager entityManager,
 			string cardKey,
 			IReadOnlyList<string> restrictionNames = null,
-			CardData.CardColor? secondaryColor = null)
+			CardData.CardColor? secondaryColor = null,
+			IReadOnlyList<CardBoonSave> boons = null)
 		{
 			if (!RunDeckService.TryParseCardKey(cardKey, out var cardId, out var color, out var isUpgraded)) return null;
 			var entity = EntityFactory.CreateCardFromDefinition(
@@ -88,6 +91,7 @@ namespace Crusaders30XX.ECS.Services
 			}
 
 			ApplyRestrictions(entityManager, entity, restrictionNames);
+			CardBoonApplicator.Synchronize(entityManager, entity, boons);
 			return entity;
 		}
 

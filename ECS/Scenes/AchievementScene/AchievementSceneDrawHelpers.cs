@@ -1,10 +1,10 @@
 using System;
 using System.Text;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	internal static class AchievementSceneDrawHelpers
 	{

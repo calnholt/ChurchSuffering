@@ -1,15 +1,15 @@
 using System;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// System for highlighting cards when hovered over

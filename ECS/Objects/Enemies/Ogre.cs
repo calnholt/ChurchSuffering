@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Enemies;
 
-namespace Crusaders30XX.ECS.Objects.EnemyAttacks
+namespace ChurchSuffering.ECS.Objects.EnemyAttacks
 {
   public class Ogre : EnemyBase
   {

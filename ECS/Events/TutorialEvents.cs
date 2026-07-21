@@ -1,6 +1,6 @@
-using Crusaders30XX.ECS.Data.Tutorials;
+using ChurchSuffering.ECS.Data.Tutorials;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
     /// <summary>
     /// Published when a tutorial starts being displayed.

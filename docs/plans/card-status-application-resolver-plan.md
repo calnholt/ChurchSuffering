@@ -5,7 +5,7 @@
 ## Document Status
 
 - **Status:** Draft design, ready for implementation review.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #01 — in-process; effort/risk medium / medium.
 - **Required final verification after implementation:** `dotnet build` from the repository root.
@@ -73,7 +73,7 @@ A pure static `CardStatusSelector` in `ECS/Services/` (graphics-free, no `Entity
 **Shape chosen: pure static selector over a value snapshot** (rejected: (a) a selector that also *applies* — re-couples to `EntityManager` mutation + the `CursedManagementSystem`/`HexManagementSystem` static callbacks, keeping the read-only-service violation and losing headless testability; (b) a per-status strategy-object registry — more ceremony than the ~six divergence knobs justify, and it fragments the one thing we want central: the eligibility rule).
 
 ```csharp
-namespace Crusaders30XX.ECS.Services { //Per-cardfactsprojectedbythe caller.No EntityManager, no components —
+namespace ChurchSuffering.ECS.Services { //Per-cardfactsprojectedbythe caller.No EntityManager, no components —
 puredata.//BlockValue is precomputed because BlockValueService is internal to ECS.Systems and EM-bound
 //(BlockValueService.cs:24-28); the resolver mustnot reach for it.public readonly record struct CardFacts( Entity
 Card, string CardId, bool IsWeapon, bool IsToken, bool HasPledge, int BlockValue, CardStatusFlags Statuses);
@@ -139,7 +139,7 @@ In-process. `CardStatusSelector` is a pure static class beside the other graphic
 - **Determinism**: identical snapshot + identical `Rng` ⇒ identical `Selected` (the property `new Random()` in Shackle/Intimidate cannot satisfy today).
 - **Remove selection**: `ExcludeIfAny`-inverse "must-have-status" path for `RemoveCardApplications` (pledged cards remain removable — locks the `IsNonWeaponCard` asymmetry at `CardApplicationManagementSystem.cs:84`). **Delete / replace (old pipeline-driven tests):** the selection assertions currently smuggled through the full event+animation pipeline move to the selector boundary. Concretely: `CardApplicationManagementSystemTests.Application_skips_ineligible_and_already_applied_cards` (`:290-324`) and `Target_applies_only_to_cards_in_selected_zones` (`:17-60`) → selector specs; the Cursed/Hex mutual-exclusion + Curse/Hex-id exclusion assertions in `CursedManagementSystemTests` / `HexManagementSystemTests` → selector specs; the selection portions of `PoisonedCardManagementSystemTests.cs:16-34`, `ShackleManagementSystemTests` (the `Assert.Equal(2, CountShackled(...))` count/gate assertions, `:23-52`), and `IntimidateManagementSystemTests` → selector specs with injected RNG. **Keep as thin integration guards (must pass unchanged):** one test per system proving the system still publishes `CardRestrictionMutationAnimationRequested` / adds the component for a trivial selection through `BattleMutationTestSupport` — `CardApplicationManagementSystemTests.Application_type_adds_the_corresponding_component` (`:62-90`), `Sealed_application_adds_requested_stacks_and_can_reapply` (`:92-122`), and `Generic_system_ignores_cursed_events_without_throwing` (`:326-366`) stays until the shared type-dispatch registry replaces the per-file guards. Persistence/hydration tests (`CardApplicationManagementSystemTests.cs:124-257`) are unaffected — they exercise apply, not selection.
 
-**Test env:** none beyond the current xUnit setup (`tests/Crusaders30XX.Tests`). No `GraphicsDevice`/`SpriteBatch`, no `BattleMutationTestSupport` for the selector suite — that is the payoff. Serial execution (`[assembly: CollectionBehavior(DisableTestParallelization = true)]`) is irrelevant to `CardStatusSelectorTests` because it touches no static bus.
+**Test env:** none beyond the current xUnit setup (`tests/ChurchSuffering.Tests`). No `GraphicsDevice`/`SpriteBatch`, no `BattleMutationTestSupport` for the selector suite — that is the payoff. Serial execution (`[assembly: CollectionBehavior(DisableTestParallelization = true)]`) is irrelevant to `CardStatusSelectorTests` because it touches no static bus.
 
 ## Implementation Recommendations
 
@@ -166,12 +166,12 @@ In-process. `CardStatusSelector` is a pure static class beside the other graphic
 - `ECS/Scenes/BattleScene/PoisonedCardManagementSystem.cs` (`:57-66`), `ShackleManagementSystem.cs` (`:49-62`), `IntimidateManagementSystem.cs` (`:70-88`), `RecoilManagementSystem.cs` (`:41-47`), `MarkedForSpecificDiscardSystem.cs` (`:42-46`), `MustBeBlockedSystem.cs` (`:113-178`)
 - `ECS/Scenes/BattleScene/BattleCardMutationDisplaySystem.cs` (`OnSwap:155`, fallback `:139`)
 - `ECS/Events/CardEvents.cs` (`ApplyCardApplicationEvent:667`, `CardRestrictionMutationAnimationRequested:677`, `RemoveCardApplication:684`, `RemoveCardApplications:690`, `CardApplicationType:697`, `CardApplicationTarget:719`)
-- Tests: `tests/Crusaders30XX.Tests/CardApplicationManagementSystemTests.cs`, `CursedManagementSystemTests.cs`, `HexManagementSystemTests.cs`, `PoisonedCardManagementSystemTests.cs`, `ShackleManagementSystemTests.cs`, `IntimidateManagementSystemTests.cs`, `RecoilManagementSystemTests.cs `, `BattleMutationTestSupport.cs`
+- Tests: `tests/ChurchSuffering.Tests/CardApplicationManagementSystemTests.cs`, `CursedManagementSystemTests.cs`, `HexManagementSystemTests.cs`, `PoisonedCardManagementSystemTests.cs`, `ShackleManagementSystemTests.cs`, `IntimidateManagementSystemTests.cs`, `RecoilManagementSystemTests.cs `, `BattleMutationTestSupport.cs`
 
 ## Verification
 
 - `dotnet build` from the repo root is clean (per `AGENTS.md:29`).
-- `dotnet test tests/Crusaders30XX.Tests` is green (xUnit, serial).
+- `dotnet test tests/ChurchSuffering.Tests` is green (xUnit, serial).
 - New `CardStatusSelectorTests` pass, including: the target→pile matrix, each eligibility rule, Sealed re-stacking, the three count modes + `MinCandidates` rejection, `PoisonedLast` ordering, and determinism under a fixed `Rng`.
 - The retained per-system integration guards (component added / animation event published for a trivial selection) still pass through `BattleMutationTestSupport`.
 - In-app (`dotnet run`, or `dotnet run --new` for a fresh save): trigger Frozen, Cursed, Poison, and Shackle applications during a block phase and confirm selection behavior is identical for the exact-idiom statuses (Frozen/Cursed) and matches the deliberately reconciled rules for the hand-only statuses (Poison picks one eligible block-bearing card; Shackle links exactly two non-intimidated cards, doing nothing with <2 candidates).

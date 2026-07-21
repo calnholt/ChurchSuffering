@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering
+namespace ChurchSuffering.ECS.Rendering
 {
 	internal sealed class HotKeyGlyphRenderer : IDisposable
 	{

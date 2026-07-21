@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Plays a climb-map card upgrade cutscene: enter from left, jiggle pulse swap, hold, exit right.
@@ -22,6 +24,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			Upgrade,
 			Mutation,
+			Boon,
 		}
 
 		private class CardAnimRequest
@@ -35,6 +38,11 @@ namespace Crusaders30XX.ECS.Systems
 			public List<string> CurrentRestrictionNames = new List<string>();
 			public bool TransitionToBattleOnComplete;
 			public bool ReleasesClimbTurnover;
+			public List<string> RestrictionNames = new List<string>();
+			public List<CardBoonSave> BeforeBoons = new List<CardBoonSave>();
+			public List<CardBoonSave> AfterBoons = new List<CardBoonSave>();
+			public string BeforeSecondaryColor = string.Empty;
+			public string AfterSecondaryColor = string.Empty;
 		}
 
 		private class ActiveClimbAnimation
@@ -67,6 +75,7 @@ namespace Crusaders30XX.ECS.Systems
 			_spriteBatch = spriteBatch;
 			EventManager.Subscribe<ClimbCardUpgradeAnimationRequested>(OnAnimationRequested);
 			EventManager.Subscribe<ClimbCardMutationAnimationRequested>(OnMutationAnimationRequested);
+			EventManager.Subscribe<ClimbCardBoonAnimationRequested>(OnBoonAnimationRequested);
 			EventManager.Subscribe<DeleteCachesEvent>(_ => ClearAll());
 		}
 
@@ -142,6 +151,31 @@ namespace Crusaders30XX.ECS.Systems
 			if (_active == null) TryStartNext();
 		}
 
+		private void OnBoonAnimationRequested(ClimbCardBoonAnimationRequested evt)
+		{
+			if (!IsClimbScene()) return;
+			if (evt == null
+				|| string.IsNullOrWhiteSpace(evt.DeckEntryId)
+				|| string.IsNullOrWhiteSpace(evt.CardKey))
+			{
+				return;
+			}
+
+			_queue.Enqueue(new CardAnimRequest
+			{
+				Mode = ClimbCardAnimMode.Boon,
+				DeckEntryId = evt.DeckEntryId,
+				MutationCardKey = evt.CardKey,
+				RestrictionNames = evt.RestrictionNames ?? new List<string>(),
+				BeforeBoons = evt.BeforeBoons ?? new List<CardBoonSave>(),
+				AfterBoons = evt.AfterBoons ?? new List<CardBoonSave>(),
+				BeforeSecondaryColor = evt.BeforeSecondaryColor ?? string.Empty,
+				AfterSecondaryColor = evt.AfterSecondaryColor ?? string.Empty,
+				ReleasesClimbTurnover = evt.DelayClimbTurnoverUntilComplete,
+			});
+			if (_active == null) TryStartNext();
+		}
+
 		private void TryStartNext()
 		{
 			if (_active != null || _queue.Count == 0) return;
@@ -152,17 +186,36 @@ namespace Crusaders30XX.ECS.Systems
 			CardData.CardColor? secondaryColor = ResolveSecondaryColor(request.DeckEntryId);
 			if (request.Mode == ClimbCardAnimMode.Mutation)
 			{
+				var boons = ResolveBoons(request.DeckEntryId);
 				(baseCard, finalCard) = CardRestrictionMutationDisplayFactory.CreateDisplayPairFromKeys(
 					EntityManager,
 					request.MutationCardKey,
 					request.CurrentRestrictionNames,
 					request.RestrictionName,
 					secondaryColor);
+				CardBoonApplicator.Synchronize(EntityManager, baseCard, boons);
+				CardBoonApplicator.Synchronize(EntityManager, finalCard, boons);
+			}
+			else if (request.Mode == ClimbCardAnimMode.Boon)
+			{
+				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(
+					EntityManager,
+					request.MutationCardKey,
+					request.RestrictionNames,
+					ParseSecondaryColor(request.BeforeSecondaryColor),
+					request.BeforeBoons);
+				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(
+					EntityManager,
+					request.MutationCardKey,
+					request.RestrictionNames,
+					ParseSecondaryColor(request.AfterSecondaryColor),
+					request.AfterBoons);
 			}
 			else
 			{
-				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey, secondaryColor: secondaryColor);
-				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey, secondaryColor: secondaryColor);
+				var boons = ResolveBoons(request.DeckEntryId);
+				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey, secondaryColor: secondaryColor, boons: boons);
+				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey, secondaryColor: secondaryColor, boons: boons);
 			}
 
 			if (baseCard == null || finalCard == null)
@@ -181,7 +234,7 @@ namespace Crusaders30XX.ECS.Systems
 			{
 				BaseCard = baseCard,
 				FinalCard = finalCard,
-				PlayUpgradeSfx = request.Mode == ClimbCardAnimMode.Upgrade,
+				PlayUpgradeSfx = request.Mode is ClimbCardAnimMode.Upgrade or ClimbCardAnimMode.Boon,
 				SfxRestrictionName = request.RestrictionName,
 				OnSwap = () => PersistMutationIfNeeded(request),
 			};
@@ -210,6 +263,21 @@ namespace Crusaders30XX.ECS.Systems
 				&& CardColorQualificationService.IsPlayableColor(color)
 				? color
 				: null;
+		}
+
+		private static CardData.CardColor? ParseSecondaryColor(string value)
+		{
+			return Enum.TryParse(value, true, out CardData.CardColor color)
+				&& CardColorQualificationService.IsPlayableColor(color)
+				? color
+				: null;
+		}
+
+		private static List<CardBoonSave> ResolveBoons(string entryId)
+		{
+			if (string.IsNullOrWhiteSpace(entryId)) return new List<CardBoonSave>();
+			return SaveCache.GetRunDeckEntry(RunDeckService.PrimaryLoadoutId, entryId)?.boons
+				?? new List<CardBoonSave>();
 		}
 
 		private void CompleteActiveAnimation()

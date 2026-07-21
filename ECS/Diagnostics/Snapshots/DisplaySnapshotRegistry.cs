@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.Diagnostics.Snapshots.Fixtures;
+using ChurchSuffering.Diagnostics.Snapshots.Fixtures;
 
-namespace Crusaders30XX.Diagnostics.Snapshots
+namespace ChurchSuffering.Diagnostics.Snapshots
 {
     public static class DisplaySnapshotRegistry
     {

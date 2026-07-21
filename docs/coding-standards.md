@@ -5,7 +5,7 @@ Use this for implementation work. Prefer matching nearby code over inventing a n
 ## General standards
 
 - Plans list only required work. Do not add optional, nice-to-have, or "if time permits" items.
-- Use imports, not fully-qualified names. Avoid `Crusaders30XX.ECS.Data.Cards` when a `using` will do.
+- Use imports, not fully-qualified names. Avoid `ChurchSuffering.ECS.Data.Cards` when a `using` will do.
 - Prioritize readability over cleverness.
 - Keep code DRY. When presented with multiple approaches, prefer the hard comprehensive fix over an easy local patch.
 - Performance matters. Cache when logical, and clear caches with `DeleteCachesEvent`.
