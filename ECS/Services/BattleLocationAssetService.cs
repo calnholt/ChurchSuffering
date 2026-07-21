@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class BattleLocationAssetService
 	{

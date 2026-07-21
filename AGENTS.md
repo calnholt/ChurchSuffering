@@ -6,7 +6,7 @@ Root guidance for coding agents in this repository. Keep this file slim and use 
 
 ## Project snapshot
 
-Crusaders30XX is a .NET 8.0 MonoGame DesktopGL deckbuilder built around an ECS architecture. `Game1.cs` initializes the world, registers systems, and runs the loop. Content assets are built through `Content/Content.mgcb`.
+Church Suffering is a .NET 8.0 MonoGame DesktopGL deckbuilder built around an ECS architecture. `Game1.cs` initializes the world, registers systems, and runs the loop. Content assets are built through `Content/Content.mgcb`.
 
 ## Read the relevant docs before editing
 

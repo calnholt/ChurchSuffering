@@ -1,7 +1,7 @@
 using System;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.ECS.Data.VisualEffects
+namespace ChurchSuffering.ECS.Data.VisualEffects
 {
 	internal readonly struct VisualEffectVariation
 	{

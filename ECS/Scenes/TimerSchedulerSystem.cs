@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Ticks the global TimerScheduler each frame.

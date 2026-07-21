@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace Crusaders30XX.ECS.Data.RunSetup
+namespace ChurchSuffering.ECS.Data.RunSetup
 {
 	public enum StartingWeapon
 	{

@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     [DebugTab("Can Play Highlight")]
     public class CanPlayHighlightSettingsSystem : Core.System

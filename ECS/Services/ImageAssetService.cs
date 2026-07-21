@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Crusaders30XX.ECS.Rendering;
+using ChurchSuffering.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public sealed class ImageAssetService : IDisposable
 	{

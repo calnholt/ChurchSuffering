@@ -1,15 +1,15 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Dialog;
-using Crusaders30XX.ECS.Data.Locations;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Dialog;
+using ChurchSuffering.ECS.Data.Locations;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Data.RunSetup;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using System;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	public enum SceneId
 	{
@@ -220,7 +220,7 @@ namespace Crusaders30XX.ECS.Components
 
 	public class EntityListOverlay : IComponent
 	{
-		public Crusaders30XX.ECS.Core.Entity Owner { get; set; }
+		public ChurchSuffering.ECS.Core.Entity Owner { get; set; }
 		public bool IsOpen { get; set; } = false;
 		public int PanelX { get; set; } = 40;
 		public int PanelY { get; set; } = 40;

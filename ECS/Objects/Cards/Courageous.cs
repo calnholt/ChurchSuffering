@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
     public class Courageous : CardBase
     {

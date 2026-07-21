@@ -1,20 +1,20 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Singletons;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// Collects frame timing and draws a small overlay with FPS and a rolling graph.
     /// </summary>
-    [Crusaders30XX.Diagnostics.DebugTab("Profiler")]
+    [ChurchSuffering.Diagnostics.DebugTab("Profiler")]
     public class ProfilerSystem : Core.System
     {
         private readonly GraphicsDevice _graphicsDevice;
@@ -33,38 +33,38 @@ namespace Crusaders30XX.ECS.Systems
 
         // Overlay layout (full-screen overlay with margin)
         private int _overlayMargin = 16;
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Overlay Margin", Step = 1, Min = 0, Max = 200)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Overlay Margin", Step = 1, Min = 0, Max = 200)]
         public int OverlayMargin { get => _overlayMargin; set => _overlayMargin = Math.Max(0, value); }
 
         // Graph style
         private int _headerBaseHeight = 48; // minimum header height
         private int _headerPadding = 8;     // padding inside header
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Header Base Height", Step = 1, Min = 0, Max = 200)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Header Base Height", Step = 1, Min = 0, Max = 200)]
         public int HeaderBaseHeight { get => _headerBaseHeight; set => _headerBaseHeight = Math.Max(0, value); }
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Header Padding", Step = 1, Min = 0, Max = 64)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Header Padding", Step = 1, Min = 0, Max = 64)]
         public int HeaderPadding { get => _headerPadding; set => _headerPadding = Math.Max(0, value); }
         private const int AxisLabelWidth = 44; // space for Y-axis labels
         // Frame time (ms) on Y axis; lower is better. 33.3ms = 30 FPS.
         private const float GraphMaxFrameMs = 33.33f;
         private byte _graphBackgroundAlpha = 0;   // more transparent white fill
         private byte _graphGridLineAlpha = 12;    // more transparent grid lines
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Graph Background Alpha", Step = 1, Min = 0, Max = 255)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Graph Background Alpha", Step = 1, Min = 0, Max = 255)]
         public byte GraphBackgroundAlpha { get => _graphBackgroundAlpha; set => _graphBackgroundAlpha = value; }
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Graph GridLine Alpha", Step = 1, Min = 0, Max = 255)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Graph GridLine Alpha", Step = 1, Min = 0, Max = 255)]
         public byte GraphGridLineAlpha { get => _graphGridLineAlpha; set => _graphGridLineAlpha = value; }
         private int _sidePanelWidth = 520;        // width reserved for top-list panel on the right (adjust for big fonts)
         private int _sidePanelPadding = 12;       // inner padding for side panel text
         private int _betweenPanelsGap = 24;       // space between graph and side panel
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Side Panel Width", Step = 10, Min = 160, Max = 1200)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Side Panel Width", Step = 10, Min = 160, Max = 1200)]
         public int SidePanelWidth { get => _sidePanelWidth; set => _sidePanelWidth = Math.Max(160, value); }
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Side Panel Padding", Step = 1, Min = 4, Max = 128)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Side Panel Padding", Step = 1, Min = 4, Max = 128)]
         public int SidePanelPadding { get => _sidePanelPadding; set => _sidePanelPadding = Math.Max(4, value); }
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Between Panels Gap", Step = 1, Min = 0, Max = 256)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Between Panels Gap", Step = 1, Min = 0, Max = 256)]
         public int BetweenPanelsGap { get => _betweenPanelsGap; set => _betweenPanelsGap = Math.Max(0, value); }
 
         private Texture2D _whiteTex;
         private float _whiteAlphaMultiplier = 1f;
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "White Alpha Multiplier", Step = 0.05f, Min = 0f, Max = 1f)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "White Alpha Multiplier", Step = 0.05f, Min = 0f, Max = 1f)]
         public float WhiteAlphaMultiplier { get => _whiteAlphaMultiplier; set => _whiteAlphaMultiplier = MathHelper.Clamp(value, 0f, 1f); }
         
         // Minimal caching to reduce per-frame allocations/measurements
@@ -79,7 +79,7 @@ namespace Crusaders30XX.ECS.Systems
 
         // Table text (top draw list) scaling
         private float _tableTextScale = .125f;
-        [Crusaders30XX.Diagnostics.DebugEditable(DisplayName = "Table Text Scale", Step = 0.05f, Min = 0.5f, Max = 3f)]
+        [ChurchSuffering.Diagnostics.DebugEditable(DisplayName = "Table Text Scale", Step = 0.05f, Min = 0.5f, Max = 3f)]
         public float TableTextScale { get => _tableTextScale; set => _tableTextScale = MathHelper.Clamp(value, 0.1f, 3f); }
 
         public ProfilerSystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)

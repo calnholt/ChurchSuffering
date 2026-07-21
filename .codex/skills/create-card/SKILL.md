@@ -1,6 +1,6 @@
 ---
 name: create-card
-description: Create or update Crusaders30XX CardBase cards, including typed IDs, factory registration, combat behavior, upgrades, stat providers, VFX choreography, Guardian dialogue, and verification. Use when the user asks to add or implement a card, supplies card text/stats/upgrades, or mentions card registration.
+description: Create or update ChurchSuffering CardBase cards, including typed IDs, factory registration, combat behavior, upgrades, stat providers, VFX choreography, Guardian dialogue, and verification. Use when the user asks to add or implement a card, supplies card text/stats/upgrades, or mentions card registration.
 ---
 
 # Create Card

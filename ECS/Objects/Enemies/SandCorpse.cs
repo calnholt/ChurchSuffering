@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Utils;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Utils;
 
-namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
+namespace ChurchSuffering.ECS.Objects.EnemyAttacks;
 
 public class SandCorpse : EnemyBase
 {

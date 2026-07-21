@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Crusaders30XX.ECS.Utils
+namespace ChurchSuffering.ECS.Utils
 {
 	public static class ArrayUtils
 	{

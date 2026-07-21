@@ -1,13 +1,13 @@
 using System;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using CardIds = Crusaders30XX.ECS.Data.Ids.CardId;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
     public class PouchOfKunai : CardBase
     {

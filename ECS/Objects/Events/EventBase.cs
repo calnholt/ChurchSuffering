@@ -1,6 +1,6 @@
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Objects.Events
+namespace ChurchSuffering.ECS.Objects.Events
 {
     /// <summary>
     /// Abstract base for quest narrative events with 1-3 player choices.

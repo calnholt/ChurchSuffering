@@ -1,10 +1,10 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 /// <summary>
 /// Calculates the full logical bounds touched by a card, including status shader overflow.

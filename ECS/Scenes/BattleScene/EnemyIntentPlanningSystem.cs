@@ -1,17 +1,17 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 using System.IO;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Data.Tutorials;
-using Crusaders30XX.ECS.Data.Ids;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Tutorials;
+using ChurchSuffering.ECS.Data.Ids;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// On StartEnemyTurn, selects attacks from EnemyArsenal and queues them into AttackIntent.

@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Data.Climb;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Objects.Cards;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Data.Climb;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Data.RunSetup;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class ClimbRuleService
 	{

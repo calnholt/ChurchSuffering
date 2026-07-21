@@ -1,13 +1,13 @@
 using System;
 using System.IO;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics.Snapshots
+namespace ChurchSuffering.Diagnostics.Snapshots
 {
     public sealed class DisplaySnapshotHost
     {

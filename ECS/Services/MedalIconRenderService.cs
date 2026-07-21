@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Utils;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
     public static class MedalIconRenderService
     {

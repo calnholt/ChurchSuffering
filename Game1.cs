@@ -1,26 +1,26 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 // duplicate removed
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Events;
 using System;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.Diagnostics.Snapshots;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.Diagnostics.Snapshots;
+using ChurchSuffering.ECS.Components;
 using System.Linq;
-using Crusaders30XX.ECS.Systems;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Data.Achievements;
 using System.IO;
-using Crusaders30XX.ECS.Input;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Ids;
+using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Ids;
 using System.Collections.Generic;
 
-namespace Crusaders30XX;
+namespace ChurchSuffering;
 
 public class Game1 : Game
 {

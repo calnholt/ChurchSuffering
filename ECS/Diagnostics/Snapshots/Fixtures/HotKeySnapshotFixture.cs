@@ -1,13 +1,13 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Input;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 {
 	public sealed class HotKeySnapshotFixture : IDisplaySnapshotFixture
 	{

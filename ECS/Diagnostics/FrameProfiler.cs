@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.Diagnostics
+namespace ChurchSuffering.Diagnostics
 {
     public static class FrameProfiler
     {
@@ -385,7 +385,7 @@ namespace Crusaders30XX.Diagnostics
             lock (Sync)
             {
                 var sb = new StringBuilder(16384);
-                sb.AppendLine("Crusaders30XX Performance Report");
+                sb.AppendLine("Church Suffering Performance Report");
                 sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 sb.AppendLine("CPU values use wall-clock Stopwatch timestamps. GPU values are delayed, asynchronous command timings and exclude swap/vsync.");
                 sb.AppendLine("P95 is the upper edge of a bounded deterministic histogram bucket.");

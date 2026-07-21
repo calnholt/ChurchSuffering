@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Data.VisualEffects
+namespace ChurchSuffering.ECS.Data.VisualEffects
 {
 	public readonly record struct VisualEffectColors(
 		Color Primary,

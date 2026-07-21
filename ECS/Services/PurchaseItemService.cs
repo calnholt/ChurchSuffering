@@ -2,13 +2,13 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Locations;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Locations;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class PurchaseItemService
 	{

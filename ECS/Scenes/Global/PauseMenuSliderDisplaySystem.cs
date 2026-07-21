@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Input;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Pause Sliders")]
 	public class PauseMenuSliderDisplaySystem : Core.System

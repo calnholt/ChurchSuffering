@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Loadouts;
 
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
 	public static class CardBoonApplicator
 	{

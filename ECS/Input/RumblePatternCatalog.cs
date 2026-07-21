@@ -1,4 +1,4 @@
-namespace Crusaders30XX.ECS.Input
+namespace ChurchSuffering.ECS.Input
 {
 	public enum RumbleProfile
 	{

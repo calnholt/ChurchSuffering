@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.RunSetup;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	public sealed class RunSetup : IComponent
 	{

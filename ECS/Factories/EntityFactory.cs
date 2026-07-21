@@ -1,24 +1,24 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Loadouts;
 using System;
-using Crusaders30XX.ECS.Systems;
-using Crusaders30XX.ECS.Data.Locations;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Data.RunSetup;
-using Crusaders30XX.ECS.Objects.Cards;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Data.Tutorials;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Locations;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Data.Tutorials;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Factories
+namespace ChurchSuffering.ECS.Factories
 {
     /// <summary>
     /// Factory for creating common game entities

@@ -1,20 +1,20 @@
 using System;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// System that listens to DebugCommandEvent and triggers corresponding actions
     /// </summary>
-    [Crusaders30XX.Diagnostics.DebugTab("Commands")]
+    [ChurchSuffering.Diagnostics.DebugTab("Commands")]
     public class DebugCommandSystem : Core.System
     {
         public DebugCommandSystem(EntityManager entityManager) : base(entityManager)

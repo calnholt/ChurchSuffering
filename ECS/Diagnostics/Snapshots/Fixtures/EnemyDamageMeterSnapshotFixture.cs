@@ -1,11 +1,11 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 {
 	public sealed class EnemyDamageMeterSnapshotFixture : IDisplaySnapshotFixture
 	{

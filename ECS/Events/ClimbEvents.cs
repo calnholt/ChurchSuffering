@@ -1,9 +1,9 @@
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Loadouts;
 using System;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
 	public class ClimbShopSlotSelectedEvent
 	{

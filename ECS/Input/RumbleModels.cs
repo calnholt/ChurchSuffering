@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Input
+namespace ChurchSuffering.ECS.Input
 {
 	public readonly record struct RumbleMotorState(
 		float LowFrequency,

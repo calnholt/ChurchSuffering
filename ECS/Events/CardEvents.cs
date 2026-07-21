@@ -1,10 +1,10 @@
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using Crusaders30XX.ECS.Components;
-using static Crusaders30XX.ECS.Systems.MustBeBlockedSystem;
+using ChurchSuffering.ECS.Components;
+using static ChurchSuffering.ECS.Systems.MustBeBlockedSystem;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
     /// <summary>
     /// Event published when a card should be rendered

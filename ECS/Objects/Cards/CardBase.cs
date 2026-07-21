@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.VisualEffects;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.VisualEffects;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Systems;
 
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
     public enum CardType
     {

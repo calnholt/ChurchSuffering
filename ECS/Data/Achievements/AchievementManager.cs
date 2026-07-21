@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Achievements;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Achievements;
 
-namespace Crusaders30XX.ECS.Data.Achievements
+namespace ChurchSuffering.ECS.Data.Achievements
 {
     /// <summary>
     /// Static manager for all achievements.

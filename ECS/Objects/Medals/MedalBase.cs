@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.VisualEffects;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.VisualEffects;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Medals
+namespace ChurchSuffering.ECS.Objects.Medals
 {
     public abstract class MedalBase : IDisposable
     {

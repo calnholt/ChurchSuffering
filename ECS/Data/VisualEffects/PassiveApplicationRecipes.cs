@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.ECS.Data.VisualEffects
+namespace ChurchSuffering.ECS.Data.VisualEffects
 {
 	public enum PassiveApplicationMotif
 	{

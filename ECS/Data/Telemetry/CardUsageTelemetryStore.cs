@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 
-namespace Crusaders30XX.ECS.Data.Telemetry
+namespace ChurchSuffering.ECS.Data.Telemetry
 {
 	public sealed class CardUsageTelemetryStore
 	{

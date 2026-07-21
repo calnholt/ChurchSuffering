@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
 
-namespace Crusaders30XX.ECS.Objects.Enemies;
+namespace ChurchSuffering.ECS.Objects.Enemies;
 
 public enum ClimbEncounterPool
 {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Crusaders30XX.ECS.Data.Ids;
+namespace ChurchSuffering.ECS.Data.Ids;
 
 public enum CardId
 {

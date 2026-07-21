@@ -1,8 +1,8 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Achievements
+namespace ChurchSuffering.ECS.Objects.Achievements
 {
     /// <summary>
     /// Have frostbite damage trigger twice during the quest and still complete quest.

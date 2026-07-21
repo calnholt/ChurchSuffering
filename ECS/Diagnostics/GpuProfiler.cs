@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics
+namespace ChurchSuffering.Diagnostics
 {
     public readonly struct RenderWorkload
     {

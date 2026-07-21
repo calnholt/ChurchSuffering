@@ -1,9 +1,9 @@
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
     public enum SystemUpdatePhase
     {

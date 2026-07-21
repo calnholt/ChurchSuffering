@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// Manages pledging during the Action phase (Arsenal zone mechanic).

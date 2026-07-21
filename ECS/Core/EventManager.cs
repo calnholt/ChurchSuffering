@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
     /// <summary>
     /// Manages event-driven communication between systems

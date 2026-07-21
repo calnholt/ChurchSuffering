@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Objects.Medals;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Objects.Medals;
 
-namespace Crusaders30XX.ECS.Factories
+namespace ChurchSuffering.ECS.Factories
 {
     public static class MedalFactory
     {

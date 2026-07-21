@@ -1,21 +1,21 @@
 using System;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Events;
 using System.Diagnostics;
 using System.Text;
 using System.Reflection;
-using Crusaders30XX.ECS.Utils;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Input;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Utils;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// System to render a simple toggleable debug menu and its buttons

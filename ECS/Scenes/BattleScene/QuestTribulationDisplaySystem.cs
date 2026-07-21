@@ -1,15 +1,15 @@
 using System;
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Displays the chalice icon to the right of the CourageDisplay when tribulations are active.

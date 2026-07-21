@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Events;
+namespace ChurchSuffering.ECS.Events;
 
 public class ShockwaveEvent
 {

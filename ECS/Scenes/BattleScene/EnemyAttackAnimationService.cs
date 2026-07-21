@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	internal readonly record struct EnemyAttackEntranceSample(
 		float PanelScaleX,
@@ -170,7 +170,7 @@ namespace Crusaders30XX.ECS.Systems
 			bool isFirstTitle = true;
 			foreach (var (text, lineScale) in lines)
 			{
-				var parts = Crusaders30XX.ECS.Utils.TextUtils.WrapText(font, text, lineScale, contentLimit);
+				var parts = ChurchSuffering.ECS.Utils.TextUtils.WrapText(font, text, lineScale, contentLimit);
 				foreach (var p in parts)
 				{
 					var sz = font.MeasureString(p);

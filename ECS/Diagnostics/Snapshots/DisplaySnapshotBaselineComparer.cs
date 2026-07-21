@@ -3,7 +3,7 @@ using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics.Snapshots
+namespace ChurchSuffering.Diagnostics.Snapshots
 {
     public sealed class DisplaySnapshotPaths
     {
@@ -64,7 +64,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             if (root == null)
             {
                 throw new DirectoryNotFoundException(
-                    "Could not locate the repository root containing Crusaders30XX.csproj");
+                    "Could not locate the repository root containing ChurchSuffering.csproj");
             }
 
             return root;
@@ -244,7 +244,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots
             var directory = new DirectoryInfo(Path.GetFullPath(startPath));
             while (directory != null)
             {
-                if (File.Exists(Path.Combine(directory.FullName, "Crusaders30XX.csproj")))
+                if (File.Exists(Path.Combine(directory.FullName, "ChurchSuffering.csproj")))
                 {
                     return directory.FullName;
                 }

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Objects.Enemies;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	/// <summary>
 	/// Maps enemy ids to MonoGame content asset names for battle portraits.

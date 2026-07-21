@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Objects.Temperance;
+using ChurchSuffering.ECS.Objects.Temperance;
 
-namespace Crusaders30XX.ECS.Factories
+namespace ChurchSuffering.ECS.Factories
 {
     public static class TemperanceFactory
     {

@@ -1,11 +1,11 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Objects.Temperance
+namespace ChurchSuffering.ECS.Objects.Temperance
 {
     public class FlingFling : TemperanceBase
     {

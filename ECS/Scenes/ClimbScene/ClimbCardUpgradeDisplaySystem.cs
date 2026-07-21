@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Objects.Cards;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Plays a climb-map card upgrade cutscene: enter from left, jiggle pulse swap, hold, exit right.

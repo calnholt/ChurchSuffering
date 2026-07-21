@@ -1,9 +1,9 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Objects.Achievements
+namespace ChurchSuffering.ECS.Objects.Achievements
 {
     /// <summary>
     /// Have 5 cursed cards in your deck.

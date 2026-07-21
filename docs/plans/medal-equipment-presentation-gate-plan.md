@@ -5,7 +5,7 @@
 ## Document Status
 
 - **Status:** Draft design, ready for implementation review.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #06 — local-substitutable; effort/risk small / low.
 - **Required final verification after implementation:** `dotnet build` from the repository root.
@@ -17,7 +17,7 @@ Extend the shipped `IAttackPresentationGate` pattern to medal and equipment acti
 
 ## Context
 
-**Why:** an `improve-codebase-architecture` deep-module exploration (2026-07-15) looking for small interfaces hiding large implementations. The enemy-attack path already solved exactly this problem — "gameplay resolution welded to visual-effect timing behind the static bus" — by extracting `EnemyAttackResolver` + the `IAttackPresentationGate` port (`ECS/Scenes/BattleScene/EnemyAttackResolver.cs:11-70`), with a production `GraphicsAttackPresentationGate` (`GraphicsAttackPresentationGate.cs:18`) and a test `ImmediateAttackPresentationGate ` (`tests/Crusaders30XX.Tests/ImmediateAttackPresentationGate.cs:10`). Two sibling flows — medal activation and equipment activation — have the identical welding and got **no** such seam.
+**Why:** an `improve-codebase-architecture` deep-module exploration (2026-07-15) looking for small interfaces hiding large implementations. The enemy-attack path already solved exactly this problem — "gameplay resolution welded to visual-effect timing behind the static bus" — by extracting `EnemyAttackResolver` + the `IAttackPresentationGate` port (`ECS/Scenes/BattleScene/EnemyAttackResolver.cs:11-70`), with a production `GraphicsAttackPresentationGate` (`GraphicsAttackPresentationGate.cs:18`) and a test `ImmediateAttackPresentationGate ` (`tests/ChurchSuffering.Tests/ImmediateAttackPresentationGate.cs:10`). Two sibling flows — medal activation and equipment activation — have the identical welding and got **no** such seam.
 
 **What prompted it:** medal/equipment "activate with visual" is implemented as monolithic queued events (`QueuedActivateMedalWithVisual.cs`, `QueuedActivateEquipmentWithVisual.cs`) that inline both sides of the static `EventManager` bus — they *do the gameplay* and then *publish + subscribe-and-wait for the visual* in one `StartResolving`. There is no way to activate a recipe-bearing medal/equipment in a test without standing up the full visual pipeline.
 
@@ -37,7 +37,7 @@ Extend the shipped `IAttackPresentationGate` pattern to medal and equipment acti
 One port, one method. The port hides "play a visual request and block until it finishes"; the caller keeps the gameplay and the (headless-safe, source-specific) request construction.
 
 ```csharp
-namespace Crusaders30XX.ECS.Systems {public interface IActivationPresentationGate {
+namespace ChurchSuffering.ECS.Systems {public interface IActivationPresentationGate {
 //Prod:[QueuedStartVisualEffect(request), QueuedWaitVisualEffectComplete(request.RequestId)] //Test:empty—gameplay
 already applied bythe gameplay-onlystep; nothing towaiton.IReadOnlyList BuildPresentationSteps(VisualEffectRequested
 request); } //Gameplay-onlyqueuedstep:theoldQueuedActivateMedalWithVisual minus
@@ -73,7 +73,7 @@ var request = VisualEffectRequestFactory.ForMedal(EntityManager, e.MedalEntity, 
 
 Local-substitutable in-process presentation subsystem — the exact category the attack gate already proves substitutable. No new assembly/package/network boundary.
 - **Production `GraphicsActivationPresentationGate`** (new file beside `GraphicsAttackPresentationGate.cs` in `ECS/Scenes/BattleScene/`): builds `QueuedStartVisualEffect` (`QueuedStartVisualEffect.cs:25` publishes the request) + `QueuedWaitVisualEffectComplete ` (`QueuedWaitVisualEffectComplete.cs:27,32-37` subscribes and GUID-matches `VisualEffectCompleted`). Byte-for-byte the same wiring the current `QueuedActivate*WithVisual` does inline — only the ownership moves.
-- **Test `ImmediateActivationPresentationGate`** (new file beside `tests/Crusaders30XX.Tests/ImmediateAttackPresentationGate.cs`): returns no presentation steps. Because `medal.Activate()` / `equipment.OnActivate()` now live in a standalone `QueuedActivate*` step and `EventManager.Publish` is synchronous, one `PumpEventQueue()` (`EnemyAttackFlowTests.cs:195-201`) applies the gameplay with **no** coordinator and **no** `VisualEffectCompleted` needed. This is simpler than the attack immediate double, which must publish `EnemyAttackImpactNow` to drive downstream damage (`ImmediateAttackPresentationGate.cs:38-40`); here the gameplay is fully upstream of the gate.
+- **Test `ImmediateActivationPresentationGate`** (new file beside `tests/ChurchSuffering.Tests/ImmediateAttackPresentationGate.cs`): returns no presentation steps. Because `medal.Activate()` / `equipment.OnActivate()` now live in a standalone `QueuedActivate*` step and `EventManager.Publish` is synchronous, one `PumpEventQueue()` (`EnemyAttackFlowTests.cs:195-201`) applies the gameplay with **no** coordinator and **no** `VisualEffectCompleted` needed. This is simpler than the attack immediate double, which must publish `EnemyAttackImpactNow` to drive downstream damage (`ImmediateAttackPresentationGate.cs:38-40`); here the gameplay is fully upstream of the gate.
 - **Construction/injection point:** `BattleSceneSystem` — the same file/method that already builds the attack resolver + `new GraphicsAttackPresentationGate()` (`BattleSceneSystem.cs:799-801`) and constructs the two managers (`_equipmentManagerSystem`/`_medalManagerSystem` at `:845-846`). Build one `GraphicsActivationPresentationGate` and pass it to both manager ctors. A gate is a plain injected port, not a `System`, so this respects the AGENTS.md rule against passing a `System` as a ctor param.
 
 ## Testing Strategy
@@ -100,7 +100,7 @@ New `MedalActivationTests` / `EquipmentActivationTests` (bare `EntityManager`, `
 - `ECS/Scenes/BattleScene/QueuedActivateEquipmentWithVisual.cs` (`:29-72` — same split)
 - `ECS/Scenes/BattleScene/MedalManagerSystem.cs` (`:44` enqueue site; inject gate)
 - `ECS/Scenes/BattleScene/EquipmentManagerSystem.cs` (`:49` enqueue site; inject gate)
-- `ECS/Scenes/BattleScene/EnemyAttackResolver.cs` + `GraphicsAttackPresentationGate.cs` + `tests/Crusaders30XX.Tests/ImmediateAttackPresentationGate.cs` (the template to copy)
+- `ECS/Scenes/BattleScene/EnemyAttackResolver.cs` + `GraphicsAttackPresentationGate.cs` + `tests/ChurchSuffering.Tests/ImmediateAttackPresentationGate.cs` (the template to copy)
 - `ECS/Scenes/BattleScene/QueuedStartVisualEffect.cs`, `QueuedWaitVisualEffectComplete.cs` (reused primitives)
 - `ECS/Services/VisualEffectRequestFactory.cs` (`ForMedal:88`, `ForEquipment:75`)
 - `ECS/Scenes/BattleScene/BattleSceneSystem.cs` (`:799-801` gate precedent, `:845-846` manager construction/injection)
@@ -108,7 +108,7 @@ New `MedalActivationTests` / `EquipmentActivationTests` (bare `EntityManager`, `
 ## Verification
 
 - `dotnet build` from repo root clean.
-- `dotnet test tests/Crusaders30XX.Tests` green; existing recipe==null equipment tests (`AbilityEquipmentTests`, `EquipmentDisplaySystemTests`) pass unchanged.
+- `dotnet test tests/ChurchSuffering.Tests` green; existing recipe==null equipment tests (`AbilityEquipmentTests`, `EquipmentDisplaySystemTests`) pass unchanged.
 - New `MedalActivationTests`/`EquipmentActivationTests` drive the **real** managers through `ImmediateActivationPresentationGate`, `PumpEventQueue()`, and assert the gameplay effect applied synchronously — with no `ModularEffectCoordinatorSystem` and no `VisualEffectCompleted` plumbing (proving activation is now separable from presentation).
 - In-app (`dotnet run`): activate a recipe-bearing medal and a recipe-bearing equipment during a battle — confirm the visual effect still plays and the gameplay effect still lands (i.e. the production gate is behavior-equivalent to the deleted inline path).
 

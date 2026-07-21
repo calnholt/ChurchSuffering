@@ -1,4 +1,4 @@
-# Crusaders30XX
+# Church Suffering
 
 A .NET 8.0 MonoGame DesktopGL deckbuilder built around an Entity Component System (ECS). Runs start at the WayStation, climb under Penance pressure, and fight in block-then-act combat.
 
@@ -30,7 +30,7 @@ On macOS/Linux, ordinary builds use pre-built content; rebuilding shaders/audio 
 dotnet build
 dotnet run
 dotnet run -- new   # wipe saves and start fresh
-dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj
+dotnet test tests/ChurchSuffering.Tests/ChurchSuffering.Tests.csproj
 ```
 
 Handy developer flags (details in [`docs/build-run.md`](docs/build-run.md)): `unlock`, `skip-tutorials`, `test-fight`, `no-shaders`.
@@ -38,7 +38,7 @@ Handy developer flags (details in [`docs/build-run.md`](docs/build-run.md)): `un
 ## Repository layout
 
 ```
-Crusaders30XX/
+ChurchSuffering/
 ├── ECS/           # Components, systems, scenes, objects, services, events, data
 ├── Content/       # Assets and Content.mgcb
 ├── Game1.cs       # World init, system registration, game loop

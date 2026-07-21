@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
-namespace Crusaders30XX.ECS.Data.Medals
+namespace ChurchSuffering.ECS.Data.Medals
 {
 	public static class SaintBlurbDefinitionCache
 	{

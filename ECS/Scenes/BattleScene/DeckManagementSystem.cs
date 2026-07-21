@@ -1,16 +1,16 @@
 using System;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.Diagnostics;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// System for managing deck operations like shuffling, drawing, and discarding

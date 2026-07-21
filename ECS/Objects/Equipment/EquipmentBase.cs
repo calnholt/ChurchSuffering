@@ -1,10 +1,10 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.VisualEffects;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.VisualEffects;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Equipment
+namespace ChurchSuffering.ECS.Objects.Equipment
 {
   public abstract class EquipmentBase : IDisposable
   {

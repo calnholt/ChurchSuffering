@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Data.Loadouts
+namespace ChurchSuffering.ECS.Data.Loadouts
 {
 	public class LoadoutCardEntry
 	{

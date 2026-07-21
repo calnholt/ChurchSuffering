@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Utils
+namespace ChurchSuffering.ECS.Utils
 {
 	public static class TextUtils
 	{

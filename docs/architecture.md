@@ -1,6 +1,6 @@
 # Architecture Notes for Agents
 
-Crusaders30XX is a deckbuilder card game built with an Entity Component System (ECS) architecture.
+Church Suffering is a deckbuilder card game built with an Entity Component System (ECS) architecture.
 
 ## Core ECS (`ECS/Core/`)
 

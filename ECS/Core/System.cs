@@ -1,7 +1,7 @@
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
     /// <summary>
     /// Base class for all systems in the ECS architecture.

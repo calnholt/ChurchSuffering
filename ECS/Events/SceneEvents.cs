@@ -1,10 +1,10 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.RunSetup;
-using Crusaders30XX.ECS.Data.Save;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Data.Save;
 using System.Collections.Generic;
 using System;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
 	public class StartBattleRequested { }
 	public class OpenWayStationClimbSettingsModalEvent { }

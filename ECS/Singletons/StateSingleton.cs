@@ -1,6 +1,6 @@
 using System;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	public static class StateSingleton
 	{

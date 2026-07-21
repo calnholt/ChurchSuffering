@@ -1,8 +1,8 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Medals
+namespace ChurchSuffering.ECS.Objects.Medals
 {
     public class StLouieIX : MedalBase
     {

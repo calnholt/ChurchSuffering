@@ -5,7 +5,7 @@
 ## Document Status
 
 - **Status:** Draft design, ready for implementation review.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #03 — in-process; effort/risk medium / medium.
 - **Required final verification after implementation:** `dotnet build` from the repository root.
@@ -93,7 +93,7 @@ And production glue replaces the scattered `EventManager.Publish(new ShowTransit
 ## Dependency Strategy
 
 **In-process.** The wipe is presentation; scene-state mutation, entity destruction, and run teardown are pure gameplay — the split is the entire point, and it is drawn exactly where RFC #1 drew it.
-- **Precedent — `IAttackPresentationGate` (shipped).** `EnemyAttackResolver` is a plain (non-`System`) class holding `IAttackPresentationGate` (`EnemyAttackResolver.cs:31-40`), constructed in `BattleSceneSystem.cs:799-801` with the production `GraphicsAttackPresentationGate` and injected into `EnemyAttackDisplaySystem` (`:802-807`). Its test double `ImmediateAttackPresentationGate ` (`tests/Crusaders30XX.Tests/ImmediateAttackPresentationGate.cs:10-43`) resolves every presentation step synchronously so the resolver runs headless. `SceneNavigator`/`ISceneTransitionGate` copies this shape one-for-one.
+- **Precedent — `IAttackPresentationGate` (shipped).** `EnemyAttackResolver` is a plain (non-`System`) class holding `IAttackPresentationGate` (`EnemyAttackResolver.cs:31-40`), constructed in `BattleSceneSystem.cs:799-801` with the production `GraphicsAttackPresentationGate` and injected into `EnemyAttackDisplaySystem` (`:802-807`). Its test double `ImmediateAttackPresentationGate ` (`tests/ChurchSuffering.Tests/ImmediateAttackPresentationGate.cs:10-43`) resolves every presentation step synchronously so the resolver runs headless. `SceneNavigator`/`ISceneTransitionGate` copies this shape one-for-one.
 - **Production gate = the existing display system.** `TransitionDisplaySystem` implements `ISceneTransitionGate`: it keeps its animation state machine (`Update`, `:70-135`), `Draw` (`:137-209`), all `[DebugEditable]` tuning, the `StateSingleton.IsActive` transition flag (`:318-321`, `ECS/Singletons/StateSingleton.cs:7`), and the prep-readiness poll (`IsPreparationReady`, `:309-316`). It loses `LoadTargetScene`/`DeleteEntities ` (those move into `SceneNavigator.Swap`). On reaching "covered AND ready" it invokes the injected `onCovered`; on wipe-out end it publishes `TransitionCompleteEvent` (`:130`). Because `SceneNavigator` is **not** a `System`, holding the display system behind the `ISceneTransitionGate` interface does not violate "never pass another `System` as a constructor parameter to a system" (`docs/coding-standards.md:37`) — same as the resolver/gate relationship today.
 - **Test gate = `ImmediateSceneTransitionGate`.** Invokes `onCovered` synchronously and returns; no animation, no readiness wait, no `GraphicsDevice`. One `EventManager.Publish` chain reproduces the full production causal sequence in a single call — exactly how `ImmediateAttackPresentationGate ` works.
 - **Construction/wiring (`Game1`).** Today `_sceneLoadingCoordinatorSystem ` is built at `Game1.cs:218` and `_transitionDisplaySystem` at `Game1.cs:221`. After: build the display system (the gate) first, then `var navigator = new SceneNavigator(_world.EntityManager, _transitionDisplaySystem);`, then subscribe the relocated `NavigateToSceneEvent` once and forward to `navigator.NavigateTo`. `SceneLoadingCoordinatorSystem` is unchanged — it still listens for `SceneTransitionRequested`/`SceneActivated` and owns `ScenePreparationState`.
@@ -133,14 +133,14 @@ The payoff: the swap becomes testable **without a `GraphicsDevice`**. Today it i
 - `ECS/Events/SceneEvents.cs` — the 7 lifecycle events (`:18/:23/:30/:36/:42/:48/:55`); new home for `NavigateToSceneEvent`.
 - `ECS/Components/Scenes.cs` — `SceneId` (`:14-23`), `SceneState` (`:25-29`), `OwnedByScene` (`:176-180`), `DontDestroyOnLoad` (`:185-189`), `ScenePreparationState` (`:39-50`).
 - `ECS/Services/RunLifecycleService.cs` — `EndCurrentRun` (`:12-30`).
-- `ECS/Scenes/BattleScene/EnemyAttackResolver.cs` — `IAttackPresentationGate` precedent (`:16-70`); `GraphicsAttackPresentationGate.cs` + `tests/Crusaders30XX.Tests/ImmediateAttackPresentationGate.cs` are the templates for the two gate implementations.
+- `ECS/Scenes/BattleScene/EnemyAttackResolver.cs` — `IAttackPresentationGate` precedent (`:16-70`); `GraphicsAttackPresentationGate.cs` + `tests/ChurchSuffering.Tests/ImmediateAttackPresentationGate.cs` are the templates for the two gate implementations.
 - `Game1.cs` — construction/wiring (`:218`, `:221`, `:300`, `:666`); publisher `:371`.
-- New: `ECS/Scenes/Global/SceneNavigator.cs`, `tests/Crusaders30XX.Tests/ImmediateSceneTransitionGate.cs`, `tests/Crusaders30XX.Tests/SceneNavigatorTests.cs`.
+- New: `ECS/Scenes/Global/SceneNavigator.cs`, `tests/ChurchSuffering.Tests/ImmediateSceneTransitionGate.cs`, `tests/ChurchSuffering.Tests/SceneNavigatorTests.cs`.
 
 ## Verification
 
 - `dotnet build` from the repo root is clean (per `AGENTS.md:29`).
-- `dotnet test tests/Crusaders30XX.Tests` is green (xUnit, serial); existing caller tests updated from `ShowTransition` to `NavigateToSceneEvent` pass unchanged in behavior.
+- `dotnet test tests/ChurchSuffering.Tests` is green (xUnit, serial); existing caller tests updated from `ShowTransition` to `NavigateToSceneEvent` pass unchanged in behavior.
 - New `SceneNavigatorTests` drive the **real** `NavigateTo` through `ImmediateSceneTransitionGate` and pass: destroys prev `OwnedByScene`, preserves `DontDestroyOnLoad`, reload no-op, `SceneState.Current` == target, ends run iff `EndRunOnLoad`, lifecycle events fire in order with `Current` already flipped by `LoadSceneEvent`.
 - In-app (`dotnet run`): walk Battle -> WayStation -> Climb -> Achievement and back. Confirm each transition destroys exactly the departed scene's entities, preserves `DontDestroyOnLoad` entities (scene state, card geometry settings — `Game1.cs:356/360`), ends the run only on the run-ending transitions (`WayStation` with `EndRunOnLoad`, e.g. `GuidedTutorialService.cs:201`, `EnemyDefeatFlowSystem.cs:205`), the wipe/hold/`SkipWipe`/`SkipHold` visuals are unchanged, and no entities leak across scenes (spot-check `EntityManager` counts before/after a full loop).
 

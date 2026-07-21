@@ -65,10 +65,10 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore NuGet packages
-        run: dotnet restore Crusaders30XX.csproj
+        run: dotnet restore ChurchSuffering.csproj
 
       - name: Build MonoGame content (native MGFXC)
-        run: dotnet build Crusaders30XX.csproj -c Release --no-restore
+        run: dotnet build ChurchSuffering.csproj -c Release --no-restore
 
       - name: Upload content artifact
         uses: actions/upload-artifact@v4
@@ -102,7 +102,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore NuGet packages
-        run: dotnet restore Crusaders30XX.csproj
+        run: dotnet restore ChurchSuffering.csproj
 
       - name: Download prebuilt MonoGame content
         uses: actions/download-artifact@v4
@@ -111,7 +111,7 @@ jobs:
           path: Content/bin/DesktopGL
 
       - name: Publish self-contained Windows build
-        run: dotnet publish Crusaders30XX.csproj -c Release -r win-x64 --self-contained true -o ./artifacts/windows -p:SkipMonoGameContentPipeline=true
+        run: dotnet publish ChurchSuffering.csproj -c Release -r win-x64 --self-contained true -o ./artifacts/windows -p:SkipMonoGameContentPipeline=true
 
       - name: Setup butler
         uses: remarkablegames/setup-butler@v2
@@ -181,7 +181,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore NuGet packages
-        run: dotnet restore Crusaders30XX.csproj
+        run: dotnet restore ChurchSuffering.csproj
 
       - name: Download prebuilt MonoGame content
         uses: actions/download-artifact@v4
@@ -191,15 +191,15 @@ jobs:
 
       - name: Publish Apple Silicon build
         run: |
-          dotnet publish Crusaders30XX.csproj -c Release -r osx-arm64 --self-contained true -o ./artifacts/mac-apple-silicon -p:SkipMonoGameContentPipeline=true
-          chmod +x ./artifacts/mac-apple-silicon/Crusaders30XX
-          (cd ./artifacts/mac-apple-silicon && zip -r ../Crusaders30XX-mac-apple-silicon.zip .)
+          dotnet publish ChurchSuffering.csproj -c Release -r osx-arm64 --self-contained true -o ./artifacts/mac-apple-silicon -p:SkipMonoGameContentPipeline=true
+          chmod +x ./artifacts/mac-apple-silicon/ChurchSuffering
+          (cd ./artifacts/mac-apple-silicon && zip -r ../ChurchSuffering-mac-apple-silicon.zip .)
 
       - name: Publish Intel Mac build
         run: |
-          dotnet publish Crusaders30XX.csproj -c Release -r osx-x64 --self-contained true -o ./artifacts/mac-intel -p:SkipMonoGameContentPipeline=true
-          chmod +x ./artifacts/mac-intel/Crusaders30XX
-          (cd ./artifacts/mac-intel && zip -r ../Crusaders30XX-mac-intel.zip .)
+          dotnet publish ChurchSuffering.csproj -c Release -r osx-x64 --self-contained true -o ./artifacts/mac-intel -p:SkipMonoGameContentPipeline=true
+          chmod +x ./artifacts/mac-intel/ChurchSuffering
+          (cd ./artifacts/mac-intel && zip -r ../ChurchSuffering-mac-intel.zip .)
 
       - name: Setup butler
         uses: remarkablegames/setup-butler@v2

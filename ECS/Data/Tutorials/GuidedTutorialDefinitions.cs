@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.ECS.Data.Tutorials
+namespace ChurchSuffering.ECS.Data.Tutorials
 {
 	public sealed record TutorialCardDefinition(string CardId, CardData.CardColor Color, bool IsColorless = false);
 

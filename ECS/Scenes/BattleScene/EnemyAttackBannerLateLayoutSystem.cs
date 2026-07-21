@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Resolves enemy attack banner UI bounds after the global parallax late update.

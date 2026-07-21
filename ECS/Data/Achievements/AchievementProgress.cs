@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Data.Achievements
+namespace ChurchSuffering.ECS.Data.Achievements
 {
     /// <summary>
     /// Serializable progress data for a single achievement.

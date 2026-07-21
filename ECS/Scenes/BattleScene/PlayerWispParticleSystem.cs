@@ -1,12 +1,12 @@
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// Draws glowing red wisps around the player portrait area.

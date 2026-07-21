@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Core
+namespace ChurchSuffering.ECS.Core
 {
 	/// <summary>
 	/// Simple global scheduler that runs actions after a delay in seconds.

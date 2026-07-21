@@ -1,6 +1,6 @@
 using System;
 
-namespace Crusaders30XX.ECS.Utils.RichText
+namespace ChurchSuffering.ECS.Utils.RichText
 {
     public enum TextEffectType
     {

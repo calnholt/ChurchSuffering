@@ -5,7 +5,7 @@
 ## Document Status
 
 - **Status:** Draft design, ready for implementation review.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #05 — in-process; effort/risk medium-large / medium.
 - **Required final verification after implementation:** `dotnet build` from the repository root.
@@ -39,7 +39,7 @@ Replace phase-keyed passive dispatch and five hardcoded scope `HashSet`s with a 
 - `AnathemaManagementSystem` (`:28-50`) — `OnPledgeAdded` → read Anathema on enemy → one `ModifyHpRequestEvent`.
 - `VigorManagementSystem` (`:25-47`) — `OnCardPlayed` → `VigorService.GetWaivedPipCount` → one `ApplyPassiveEvent{Vigor,-consumed}`.
 - `BleedManagementSystem` (`:44-78`) — `OnConfirmBlocksRequested` → per-qualifying-color HP loss + Bleed decrement; the pure `GetQualifyingSameColorCount(progress)` static (`:34-42`) is separately unit-tested. *Corrections to the exploration notes (verified by reading):*
-- The pure math lives at **`ECS/Scenes/BattleScene/AppliedPassivesService.cs`** (namespace `Crusaders30XX.ECS.Systems`), **not** `ECS/Services/`.
+- The pure math lives at **`ECS/Scenes/BattleScene/AppliedPassivesService.cs`** (namespace `ChurchSuffering.ECS.Systems`), **not** `ECS/Services/`.
 - **`RecoilManagementSystem` is not a pure shell** — 5 subscriptions (`ApplyRecoilEvent`/`CardBlockedEvent`/`AttackResolved`/`BeginDefeatPresentationEvent`/`EnemyPhaseResetEvent`, `:23-27`) managing a per-card `Recoil` component lifecycle with random selection. Borderline; **do not** fold wholesale.
 - **`PlunderManagementSystem` is not a shell** — a 404-line stateful animation/deck system (pending-card state, `EventQueueBridge` snatch/discard animations, HP-gauge tracking, `Plundered`/`PlunderSnatchFlight` component lifecycles). **Exclude** from this refactor entirely; its only shell-like touch is the `AppliedPassiveType.Plunder` presence-check at `PlunderManagementSystem.cs:53 `. Net: "what scope does passive X have, when does it tick, and what does it do" is one fact split across a switch branch, one of five far-away sets, and (sometimes) a dedicated system. Passive math is deep and tested; passive **sequencing/classification** is the shallow part.
 
@@ -48,7 +48,7 @@ Replace phase-keyed passive dispatch and five hardcoded scope `HashSet`s with a 
 A per-passive `PassiveDefinition` record plus a `PassiveRegistry` static table. The god-file's phase branches become **iterate the registry filtered by trigger, run each effect**; the five HashSets become **projections over `Scope`**. The effect delegate is executed *by* the management system (a `System`), so publishing/enqueueing events from it stays compliant with "services are read-only, systems write" (`docs/coding-standards.md:14`, `AGENTS.md:41`).
 
 ```csharp
-namespace Crusaders30XX.ECS.Systems { //Replacesthe5hardcoded HashSets.Exactly one scopeper passive.public enum
+namespace ChurchSuffering.ECS.Systems { //Replacesthe5hardcoded HashSets.Exactly one scopeper passive.public enum
 PassiveScope { Turn, //GetTurnPassives—removedwholesale at ownerturn end TurnDecrement,
 //GetTurnPassivesToDecrement—lose1 + PassiveTriggeredat turnend Battle, //GetBattlePassives—persistswithina battle
 /bossphaseRunLong, //GetRunLongPassives—persistsacross battles (RunScopedStatesync) Quest,
@@ -77,7 +77,7 @@ WithTrigger(PassiveTriggert); //pre-sortedbyOrder public static IReadOnlySet Wit
 Accessors that kill the two idioms (added to the existing `GetComponentHelper` + one extension class, no new namespaces):
 
 ```csharp
-namespace Crusaders30XX.ECS.Services {public static partial class GetComponentHelper { public static Entity
+namespace ChurchSuffering.ECS.Services {public static partial class GetComponentHelper { public static Entity
 GetPlayer(EntityManagerem) => em.GetEntitiesWithComponent().FirstOrDefault(); //killsthe88xidiom public static Entity
 GetEnemy(EntityManagerem) => em.GetEntitiesWithComponent().FirstOrDefault(); } public static class PassiveAccessor {
 //0whenthecomponentorkey is absent — collapses "TryGetValue + stacks<=0" (42x). public static int Passive(this Entity
@@ -124,7 +124,7 @@ PassiveScope.RunLong) RunScopedStateService.SyncRunLongPassivesFromPlayer(e.Targ
 
 ## Testing Strategy
 
-The current passive tests (all confirmed present in `tests/Crusaders30XX.Tests/`) publish a trigger event and assert component deltas: `FearSlowPassiveTests` (publishes `ChangeBattlePhaseEvent{PlayerEnd}` → Slow -1; `EnemyKilledEvent` → Fear -1), `ScarHandlingTests`, `CarpeDiemTests`, `BleedManagementSystemTests` (pure `GetQualifyingSameColorCount`), `SubZeroTests`, `FrostbiteReplacementEffectTests`, `AppliedPassivesServiceGalvanizeTests`, `AppliedPassivesServicePreviewTests`, `RecoilManagementSystemTests`, `VigorManagementSystemTests`. Pattern: bare `EntityManager`, `new AppliedPassivesManagementSystem(em)` (+ the relevant shell system), publish, assert `AppliedPassives.Passives`, reset with `EventManager.Clear()` in ctor/`Dispose`. **Add data-level boundary tests (`PassiveRegistryTests`, no ECS, no systems):**
+The current passive tests (all confirmed present in `tests/ChurchSuffering.Tests/`) publish a trigger event and assert component deltas: `FearSlowPassiveTests` (publishes `ChangeBattlePhaseEvent{PlayerEnd}` → Slow -1; `EnemyKilledEvent` → Fear -1), `ScarHandlingTests`, `CarpeDiemTests`, `BleedManagementSystemTests` (pure `GetQualifyingSameColorCount`), `SubZeroTests`, `FrostbiteReplacementEffectTests`, `AppliedPassivesServiceGalvanizeTests`, `AppliedPassivesServicePreviewTests`, `RecoilManagementSystemTests`, `VigorManagementSystemTests`. Pattern: bare `EntityManager`, `new AppliedPassivesManagementSystem(em)` (+ the relevant shell system), publish, assert `AppliedPassives.Passives`, reset with `EventManager.Clear()` in ctor/`Dispose`. **Add data-level boundary tests (`PassiveRegistryTests`, no ECS, no systems):**
 - **Scope projection equivalence:** `PassiveRegistry.WithScope(PassiveScope.Turn)` equals the frozen old `GetTurnPassives()` set (and the same for the other four) — locks behavior preservation before deleting the HashSets. Assert the union of all scopes covers all 41 enum values (catches the current `Shield`/`Intellect`/`Frozen` gap) and that scopes are disjoint (catches the `Slow`/`Poison` overlap decision).
 - **Trigger membership + order as data:** `WithTrigger(StartOfPreBlock)` is exactly `[Stun, Aggression, Power]`; `WithTrigger(StartOfTurn)` places `Inferno` before `Burn` (guards the composite-ordering invariant that is implicit in method position today); `WithTrigger(EndOfTurn)` is `[CarpeDiem]`.
 - **Every non-`Unscoped` passive has a defined `Scope`; every effect-bearing trigger has a non-null `Effect`.** **Keep unchanged (the math — this RFC does not touch it):** `AppliedPassivesServiceGalvanizeTests`, `AppliedPassivesServicePreviewTests`, `FrostbiteReplacementEffectTests` (the replacement body is reused as Frostbite's effect), `BleedManagementSystem.GetQualifyingSameColorCount` unit tests (the pure helper moves to a service/stays static but keeps its signature). **Collapse the shell-system tests into trigger tests:** `VigorManagementSystemTests` and `AnathemaManagementSystem`/`Bleed` behavior become assertions on the `OnCardPlayed`/`OnPledge`/`OnConfirmBlocks` registry entries driven through `AppliedPassivesManagementSystem` (publish `CardPlayedEvent`/`PledgeAddedEvent`/`ConfirmBlocksRequested`, assert deltas). Delete the standalone shell-system fixtures for the folded systems; **retain** `RecoilManagementSystemTests` (Recoil is not folded). **Env:** none beyond current xUnit; `[assembly: CollectionBehavior(DisableTestParallelization=true)]` still required (static `EventManager`/`EventQueue`, unchanged by this RFC).
@@ -154,12 +154,12 @@ The current passive tests (all confirmed present in `tests/Crusaders30XX.Tests/`
 - `ECS/Services/GetComponentHelper.cs` (host for `GetPlayer`/`GetEnemy`), `ECS/Services/RunScopedStateService.cs` (run-long sync consumer).
 - Shell systems to fold: `AnathemaManagementSystem.cs`, `VigorManagementSystem.cs`, `BleedManagementSystem.cs` (+ `VigorService.cs`). Exclude: `RecoilManagementSystem.cs`, `PlunderManagementSystem.cs`.
 - `ECS/Scenes/BattleScene/EnemyPhaseFlowSystem.cs` (`ContinueFlow:213-221` — next-phase helper for the Stun extraction).
-- Tests: `tests/Crusaders30XX.Tests/{FearSlowPassiveTests,ScarHandlingTests, CarpeDiemTests,BleedManagementSystemTests,SubZeroTests,FrostbiteReplacementEffectTests,AppliedP assivesServiceGalvanizeTests,AppliedPassivesServicePreviewTests,RecoilManagementSystemTests,VigorManagementSystemTests}.cs`.
+- Tests: `tests/ChurchSuffering.Tests/{FearSlowPassiveTests,ScarHandlingTests, CarpeDiemTests,BleedManagementSystemTests,SubZeroTests,FrostbiteReplacementEffectTests,AppliedP assivesServiceGalvanizeTests,AppliedPassivesServicePreviewTests,RecoilManagementSystemTests,VigorManagementSystemTests}.cs`.
 
 ## Verification
 
 - `dotnet build` from repo root is clean (per `AGENTS.md:29`).
-- `dotnet test tests/Crusaders30XX.Tests` green: the existing passive tests pass **unchanged** through steps 1-4 (behavior-preserving), then the shell-system fixtures for folded systems are deleted and replaced by `PassiveRegistryTests` scope/trigger data tests + the folded trigger tests. The math tests (`AppliedPassivesService*`, `FrostbiteReplacementEffect`, `Bleed` helper) pass throughout.
+- `dotnet test tests/ChurchSuffering.Tests` green: the existing passive tests pass **unchanged** through steps 1-4 (behavior-preserving), then the shell-system fixtures for folded systems are deleted and replaced by `PassiveRegistryTests` scope/trigger data tests + the folded trigger tests. The math tests (`AppliedPassivesService*`, `FrostbiteReplacementEffect`, `Bleed` helper) pass throughout.
 - Grep-guard: `Passives\.TryGetValue\(AppliedPassiveType\.` and `GetEntitiesWithComponent\(\)\.FirstOrDefault\(\)` return zero outside the new accessors (currently 42 and 88 hits).
 - In-app (`dotnet run -- new`): apply **Burn**, **Stun**, **Frostbite**, **Bleed**, and **Vigor** and confirm identical tick/expiry timing across a full turn cycle — Burn ticks at owner `StartOfTurn`; a Stun that consumes the last planned attack still advances `EnemyEnd → PlayerStart → Action` (now via phase-flow); Frostbite fires at its 3-stack threshold; Bleed drains on same-color block confirm; Vigor is consumed on a discard-cost non-weapon play — and that turn-scoped passives (Aggression/Sharpen/Might/Galvani ze/CarpeDiem) clear at turn end while battle/run-long/quest passives persist exactly as before. - --
 

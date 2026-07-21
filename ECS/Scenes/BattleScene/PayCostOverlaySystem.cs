@@ -1,18 +1,18 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Objects.Cards;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Objects.Cards;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// Renders and manages the overlay used to pay color costs by discarding cards.

@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Objects.EnemyAttacks;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Objects.EnemyAttacks;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	/// <summary>
 	/// Enemy arsenal of attack IDs that can be planned/executed.

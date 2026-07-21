@@ -3,17 +3,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT_DIR/Crusaders30XX.csproj"
+PROJECT="$ROOT_DIR/ChurchSuffering.csproj"
 CONTENT_FILE="$ROOT_DIR/Content/Content.mgcb"
 CONTENT_OUTPUT="$ROOT_DIR/Content/bin/DesktopGL/Content"
 CONTENT_INTERMEDIATE="$ROOT_DIR/Content/obj/DesktopGL/net8.0/Content"
 MGCB_VERSION="3.8.4.1"
 MGCB_DLL="$HOME/.nuget/packages/dotnet-mgcb/$MGCB_VERSION/tools/net8.0/any/mgcb.dll"
-MGCB_DOTNET_DIR="$HOME/.dotnet-crusaders30xx"
+MGCB_DOTNET_DIR="$HOME/.dotnet-churchsuffering"
 VERSION_FILE="$ROOT_DIR/VERSION"
 ITCH_USER="calnholt"
 ITCH_GAME="church-suffering"
-ARTIFACTS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/crusaders30xx-publish.XXXXXX")"
+ARTIFACTS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/churchsuffering-publish.XXXXXX")"
 
 if [[ ! -f "$VERSION_FILE" ]]; then
   echo "VERSION file not found: $VERSION_FILE" >&2
@@ -64,7 +64,7 @@ VERSION="$MAJOR.$MINOR.$PATCH"
 printf '%s\n' "$VERSION" > "$VERSION_FILE"
 echo "Bumped VERSION to $VERSION"
 
-echo "Publishing Crusaders30XX version $VERSION"
+echo "Publishing Church Suffering version $VERSION"
 echo "Temporary build directory: $ARTIFACTS_DIR"
 
 cd "$ROOT_DIR"
@@ -120,9 +120,9 @@ publish_build() {
 
 publish_build win-x64 "$ARTIFACTS_DIR/windows"
 publish_build osx-arm64 "$ARTIFACTS_DIR/mac-apple-silicon"
-chmod +x "$ARTIFACTS_DIR/mac-apple-silicon/Crusaders30XX"
+chmod +x "$ARTIFACTS_DIR/mac-apple-silicon/ChurchSuffering"
 publish_build osx-x64 "$ARTIFACTS_DIR/mac-intel"
-chmod +x "$ARTIFACTS_DIR/mac-intel/Crusaders30XX"
+chmod +x "$ARTIFACTS_DIR/mac-intel/ChurchSuffering"
 
 push_build() {
   local directory="$1"

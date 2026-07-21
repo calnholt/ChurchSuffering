@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Achievements
+namespace ChurchSuffering.ECS.Objects.Achievements
 {
 	/// <summary>Tracks completed climbs, optionally filtered by starting weapon and minimum Penance.</summary>
 	public sealed class ClimbCompletionAchievement : AchievementBase

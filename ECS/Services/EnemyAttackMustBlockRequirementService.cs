@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Objects.EnemyAttacks;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Objects.EnemyAttacks;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class EnemyAttackMustBlockRequirementService
 	{

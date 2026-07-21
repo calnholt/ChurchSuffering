@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.RunSetup;
 
-namespace Crusaders30XX.ECS.Data.Save
+namespace ChurchSuffering.ECS.Data.Save
 {
 	public class SaveFile
 	{

@@ -89,7 +89,7 @@ Use the smallest check set that covers the subsystem you changed. When in doubt,
 | Change type | Checks |
 |-------------|--------|
 | Any code change | `dotnet build` |
-| Game logic, services, rules, event flow, data model | `dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj` |
+| Game logic, services, rules, event flow, data model | `dotnet test tests/ChurchSuffering.Tests/ChurchSuffering.Tests.csproj` |
 | UI, display, rendering, layout | Relevant snapshot `--verify` commands from `docs/display-snapshots.md` |
 | Player HUD display/layout | `./scripts/verify-player-hud-snapshots.sh` |
 | Battle setup, cards, enemies, combat flow, balance-sensitive changes | `dotnet run -- test-fight hammer skeleton 24` |
@@ -99,7 +99,7 @@ For a broad local safety pass before handing off substantial work:
 
 ```bash
 dotnet build
-dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj
+dotnet test tests/ChurchSuffering.Tests/ChurchSuffering.Tests.csproj
 ```
 
 ## Snapshot and visual checks

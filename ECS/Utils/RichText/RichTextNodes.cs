@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Crusaders30XX.ECS.Utils.RichText
+namespace ChurchSuffering.ECS.Utils.RichText
 {
     public interface IRichTextNode { }
 

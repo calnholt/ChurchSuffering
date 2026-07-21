@@ -1,24 +1,24 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Data.Medals;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Input;
-using Crusaders30XX.ECS.Objects.Medals;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Utils;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Data.Medals;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Objects.Medals;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("WayStation Saints Medals")]
 	public class WayStationSaintsMedalsModalSystem : Core.System

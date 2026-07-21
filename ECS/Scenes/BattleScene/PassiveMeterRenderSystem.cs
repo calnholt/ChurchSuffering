@@ -1,10 +1,10 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.Diagnostics;
+using ChurchSuffering.Diagnostics;
 
-namespace Crusaders30XX.ECS.Scenes.BattleScene
+namespace ChurchSuffering.ECS.Scenes.BattleScene
 {
 	[DebugTab("Passive Meter")]
 	public class PassiveMeterRenderSystem : Core.System

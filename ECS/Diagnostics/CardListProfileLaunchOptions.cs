@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Crusaders30XX.Diagnostics
+namespace ChurchSuffering.Diagnostics
 {
     public sealed class CardListProfileLaunchOptions
     {

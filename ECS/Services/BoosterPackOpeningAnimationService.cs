@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Services;
+namespace ChurchSuffering.ECS.Services;
 
 public readonly record struct BoosterPackOpeningTiming(
 	float SummonDuration,

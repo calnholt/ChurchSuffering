@@ -1,15 +1,15 @@
 using System;
 using System.Text.Json.Nodes;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Services;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 [DebugTab("Poison Card Display")]
 internal sealed class PoisonCardOverlayPass : ICardOverlayPass, ICardOverlaySnapshotTimeControl

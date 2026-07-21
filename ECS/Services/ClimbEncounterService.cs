@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Enemies;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class ClimbEncounterService
 	{

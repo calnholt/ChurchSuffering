@@ -1,4 +1,4 @@
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
     public class ColorlessBlock : CardBase
     {

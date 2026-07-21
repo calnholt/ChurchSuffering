@@ -1,6 +1,6 @@
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	/// <summary>
 	/// Marks an entity as one stable run-persistent loadout entry.

@@ -3,7 +3,7 @@
 ## Document status
 
 - **Status:** Approved design, ready for implementation.
-- **Repository:** `Crusaders30XX`.
+- **Repository:** `ChurchSuffering`.
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, 1920x1080 virtual canvas.
 - **Authoritative visual reference:** `mockups/waystation-climb-penance-v1.html`.
 - **Save compatibility:** None required. Development and verification assume a fresh save created with `dotnet run -- new`.
@@ -589,7 +589,7 @@ Run from the repository root:
 
 ```bash
 dotnet build
-dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj
+dotnet test tests/ChurchSuffering.Tests/ChurchSuffering.Tests.csproj
 dotnet build /p:SkipMonoGameContentPipeline=false
 dotnet run -- test-fight hammer skeleton 24
 ```

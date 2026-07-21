@@ -7,7 +7,7 @@
 ## Document Status
 
 - **Status:** Superseded by Waystation Penance V2.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #08 — in-process; effort/risk small / low.
 - **Required final verification after implementation:** `dotnet build` from the repository root.
@@ -46,7 +46,7 @@ string WeaponId => /*sword|dagger| hammer */; //:38-44
 
 > Keep systems self-contained. Encode state on components that the owning system writes, not public static snapshots that other code must query. And the adjacent services rule (`:14`) is already broken by `TestFightSetupService.ApplyRunDi fficulty` (`:160-166`), which *writes* singleton state from a service:
 
-> Services are read-only helpers/calculators. They must not mutate ECS components, publish/enqueue events, or change singleton state. Route game-state writes through systems via events. **Order-coupled shared-global tests.** `WayStationRunSetupTests` mutates the static in one path and depends on `finally` blocks to reset it (`:72`, `:97`, `:119`, `:127`) so the next `[Theory]` case isn't poisoned. The same static is shared with `WayStationSnapshotFixture` (`:103-128`) and `TestFightSetupService` (`:160`). This shared global is one of the reasons the suite is pinned serial (`tests/Crusaders30XX.Tests/TestAssembly.cs:3` — `DisableTestParallelization = true`): a parallel run would let two cases race on `SelectedDifficulty`.
+> Services are read-only helpers/calculators. They must not mutate ECS components, publish/enqueue events, or change singleton state. Route game-state writes through systems via events. **Order-coupled shared-global tests.** `WayStationRunSetupTests` mutates the static in one path and depends on `finally` blocks to reset it (`:72`, `:97`, `:119`, `:127`) so the next `[Theory]` case isn't poisoned. The same static is shared with `WayStationSnapshotFixture` (`:103-128`) and `TestFightSetupService` (`:160`). This shared global is one of the reasons the suite is pinned serial (`tests/ChurchSuffering.Tests/TestAssembly.cs:3` — `DisableTestParallelization = true`): a parallel run would let two cases race on `SelectedDifficulty`.
 
 ## Proposed Interface
 
@@ -145,12 +145,12 @@ In-process; no new boundary, no event, no assembly. The `RunSetup` component is 
 - `ECS/Factories/EntityFactory.cs` (enemy scaling `:430`, `:517-526`)
 - `ECS/Services/TestFightSetupService.cs` (`:40`, `:144`, `:160-166`)
 - `ECS/Diagnostics/Snapshots/Fixtures/WayStationSnapshotFixture.cs` (`:103-128`)
-- `tests/Crusaders30XX.Tests/WayStationRunSetupTests.cs`
+- `tests/ChurchSuffering.Tests/WayStationRunSetupTests.cs`
 - `docs/coding-standards.md` (`:13`, `:14`)
 
 ## Verification
 
 - `dotnet build` from repo root — clean.
-- `dotnet test tests/Crusaders30XX.Tests` — green; `WayStationRunSetupTests` pass with the component set on each test's `World` and **no** static mutation or `finally` reset (grep-guard: zero references to `WayStationRunSetupSingleton` in `ECS/` and `tests/`).
+- `dotnet test tests/ChurchSuffering.Tests` — green; `WayStationRunSetupTests` pass with the component set on each test's `World` and **no** static mutation or `finally` reset (grep-guard: zero references to `WayStationRunSetupSingleton` in `ECS/` and `tests/`).
 - `WayStationSnapshotFixture` baselines unchanged (`--verify`).
 - In-app (`dotnet run`): open the WayStation, pick a weapon + difficulty in the climb-settings modal, depart, and confirm the resulting battle has the correct player `HP.Max` (Easy 25 / Normal 22 / Hard 20) and correctly scaled enemy HP (Easy 0.8 / Normal 0.9 / Hard 1.0). Then a test-fight run (`TestFightSetupService`) applies the same HP/modifier through the component.

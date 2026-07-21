@@ -1,15 +1,15 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Rendering;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Rendering;
+using ChurchSuffering.ECS.Singletons;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Legacy renderer retained only for the plundered-card damage gauge.
@@ -116,7 +116,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		protected override System.Collections.Generic.IEnumerable<Entity> GetRelevantEntities()
 		{
-			return EntityManager.GetEntitiesWithComponent<Crusaders30XX.ECS.Components.HP>()
+			return EntityManager.GetEntitiesWithComponent<ChurchSuffering.ECS.Components.HP>()
 				.Where(ShouldRenderLegacyPlunderHp);
 		}
 
@@ -127,7 +127,7 @@ namespace Crusaders30XX.ECS.Systems
 
 		protected override void UpdateEntity(Entity entity, GameTime gameTime)
 		{
-			var hp = entity.GetComponent<Crusaders30XX.ECS.Components.HP>();
+			var hp = entity.GetComponent<ChurchSuffering.ECS.Components.HP>();
 			if (hp == null) return;
 			float targetPct = hp.Max > 0 ? MathHelper.Clamp(hp.Current / (float)hp.Max, 0f, 1f) : 0f;
 			if (!_animByEntityId.TryGetValue(entity.Id, out var state))
@@ -179,7 +179,7 @@ namespace Crusaders30XX.ECS.Systems
 
 			foreach (var hpEntity in entities)
 			{
-				var hp = hpEntity.GetComponent<Crusaders30XX.ECS.Components.HP>();
+				var hp = hpEntity.GetComponent<ChurchSuffering.ECS.Components.HP>();
 				var parentTransform = hpEntity.GetComponent<Transform>();
 				if (hp == null || parentTransform == null) continue;
 
@@ -280,7 +280,7 @@ namespace Crusaders30XX.ECS.Systems
 			}
 
 			// Incoming damage overlay on player's HP bar: flash a segment representing potential HP loss
-			var isPlayer = hpEntity.GetComponent<Crusaders30XX.ECS.Components.Player>() != null;
+			var isPlayer = hpEntity.GetComponent<ChurchSuffering.ECS.Components.Player>() != null;
 			if (isPlayer && IncomingDamageFlashEnabled && hp.Max > 0)
 			{
 				int totalIncoming = 0;

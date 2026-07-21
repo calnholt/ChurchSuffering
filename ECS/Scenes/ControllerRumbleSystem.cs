@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Input;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     [DebugTab("Controller Rumble")]
     public class ControllerRumbleSystem : Core.System

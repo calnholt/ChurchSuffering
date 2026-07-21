@@ -2,21 +2,21 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Data.Achievements;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Objects.Equipment;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Data.Tutorials;
-using Crusaders30XX.ECS.Data.Climb;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Data.Achievements;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Objects.Equipment;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Tutorials;
+using ChurchSuffering.ECS.Data.Climb;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Data.RunSetup;
 
-namespace Crusaders30XX.ECS.Data.Save
+namespace ChurchSuffering.ECS.Data.Save
 {
 	public static class SaveCache
 	{
@@ -1116,7 +1116,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				var appData = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
 				if (string.IsNullOrEmpty(appData)) return string.Empty;
-				var saveDir = Path.Combine(appData, "Crusaders30XX");
+				var saveDir = Path.Combine(appData, "ChurchSuffering");
 				if (ensureSaveDirectory && !Directory.Exists(saveDir)) Directory.CreateDirectory(saveDir);
 				return Path.Combine(saveDir, "save_file.json");
 			}
@@ -1134,7 +1134,7 @@ namespace Crusaders30XX.ECS.Data.Save
 		{
 			try
 			{
-				string root = FindProjectRootContaining("Crusaders30XX.csproj");
+				string root = FindProjectRootContaining("ChurchSuffering.csproj");
 				if (string.IsNullOrEmpty(root)) return string.Empty;
 				return Path.Combine(root, "ECS", "Data", "save_file.json");
 			}

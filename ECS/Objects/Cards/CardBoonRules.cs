@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Loadouts;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.Loadouts;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
 	public static class CardBoonRules
 	{

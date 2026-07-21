@@ -1,6 +1,6 @@
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.ECS.Objects.Equipment
+namespace ChurchSuffering.ECS.Objects.Equipment
 {
     public class ScarletTreads : EquipmentBase
     {

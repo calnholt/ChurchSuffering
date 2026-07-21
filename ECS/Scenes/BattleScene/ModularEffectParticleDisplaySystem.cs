@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.VisualEffects;
-using Crusaders30XX.ECS.Rendering;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.VisualEffects;
+using ChurchSuffering.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Modular FX Particles")]
 	public sealed class ModularEffectParticleDisplaySystem : Core.System

@@ -5,16 +5,16 @@
     "version": "0.2.0",
     "configurations": [
       {
-        "name": "C#: Crusaders30XX Debug",
+        "name": "C#: ChurchSuffering Debug",
         "type": "dotnet",
         "request": "launch",
-        "projectPath": "${workspaceFolder}/Crusaders30XX.csproj"
+        "projectPath": "${workspaceFolder}/ChurchSuffering.csproj"
       },
       {
-        "name": "C#: Crusaders30XX (no-shaders)",
+        "name": "C#: ChurchSuffering (no-shaders)",
         "type": "dotnet",
         "request": "launch",
-        "projectPath": "${workspaceFolder}/Crusaders30XX.csproj",
+        "projectPath": "${workspaceFolder}/ChurchSuffering.csproj",
         "commandLineArgs": "no-shaders"
       }
     ],

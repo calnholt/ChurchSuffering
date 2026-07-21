@@ -1,8 +1,8 @@
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering
+namespace ChurchSuffering.ECS.Rendering
 {
     /// <summary>
     /// Factory for generating button textures (rounded rect background + centered text).

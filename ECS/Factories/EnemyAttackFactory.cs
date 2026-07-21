@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Objects.EnemyAttacks;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Objects.EnemyAttacks;
 
-namespace Crusaders30XX.ECS.Factories
+namespace ChurchSuffering.ECS.Factories
 {
     public static class EnemyAttackFactory
     {

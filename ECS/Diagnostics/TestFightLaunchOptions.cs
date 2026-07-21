@@ -1,8 +1,8 @@
 using System;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Data.RunSetup;
 
-namespace Crusaders30XX.Diagnostics
+namespace ChurchSuffering.Diagnostics
 {
 	public sealed class TestFightLaunchOptions
 	{

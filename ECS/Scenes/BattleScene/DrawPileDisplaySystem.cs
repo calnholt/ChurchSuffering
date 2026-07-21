@@ -1,15 +1,15 @@
 using System;
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Crusaders30XX.ECS.Singletons;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Singletons;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
     /// <summary>
     /// Renders the draw pile asset at bottom-right with the current draw pile count.

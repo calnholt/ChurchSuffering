@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Dialog;
-using Crusaders30XX.ECS.Data.Save;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.Dialog;
+using ChurchSuffering.ECS.Data.Save;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class WayStationDialoguePlanner
 	{

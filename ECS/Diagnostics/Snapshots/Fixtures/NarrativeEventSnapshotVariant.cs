@@ -1,7 +1,7 @@
 using System;
-using Crusaders30XX.ECS.Factories;
+using ChurchSuffering.ECS.Factories;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 {
 	public sealed class NarrativeEventSnapshotVariant
 	{

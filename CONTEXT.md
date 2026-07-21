@@ -1,4 +1,4 @@
-# Crusaders30XX — domain glossary
+# Church Suffering — domain glossary
 
 Terms only. No implementation details.
 

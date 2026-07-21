@@ -124,7 +124,7 @@ Extend `ResolvePortraitAssetName` in [`ECS/Scenes/BattleScene/DialogDisplaySyste
 "mara" => "waystation/mara",
 ```
 
-Add portrait mapping tests in [`tests/Crusaders30XX.Tests/DialogRepositoryTests.cs`](tests/Crusaders30XX.Tests/DialogRepositoryTests.cs).
+Add portrait mapping tests in [`tests/ChurchSuffering.Tests/DialogRepositoryTests.cs`](tests/ChurchSuffering.Tests/DialogRepositoryTests.cs).
 
 ## 4. Save persistence (bump version 15 → 16)
 
@@ -278,7 +278,7 @@ NPC and Keeper POIs can coexist on a visit once eligible.
 
 ## 9. Tests
 
-Add [`tests/Crusaders30XX.Tests/WayStationDialogueTests.cs`](tests/Crusaders30XX.Tests/WayStationDialogueTests.cs):
+Add [`tests/ChurchSuffering.Tests/WayStationDialogueTests.cs`](tests/ChurchSuffering.Tests/WayStationDialogueTests.cs):
 
 - Segment ordering and exhaustion (progress 3 → Elias has no next segment)
 - `PickRandomNpcCharacterId` only returns characters with remaining dialogue

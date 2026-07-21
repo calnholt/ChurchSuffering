@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 /// <summary>
 /// Reuses temporary full-screen color targets across synchronous render passes.

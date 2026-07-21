@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Objects.Equipment;
+using ChurchSuffering.ECS.Objects.Equipment;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	public static class EquipmentService
 	{

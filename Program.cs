@@ -1,8 +1,8 @@
 ﻿using System;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.Diagnostics.Snapshots;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.Diagnostics.Snapshots;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Services;
 
 ShaderRuntimeOptions.ConfigureFromArgs(args);
 GpuProfilingRuntimeOptions.ConfigureFromArgs(args);
@@ -112,7 +112,7 @@ if (UnlockLaunchOptions.UnlockAllRunSetupOptions)
     Console.WriteLine("[Launch] Run setup unlocked (weapons, difficulties)");
 }
 
-using var game = new Crusaders30XX.Game1(
+using var game = new ChurchSuffering.Game1(
     snapshotOptions,
     testFightOptions,
     cardListProfileOptions,

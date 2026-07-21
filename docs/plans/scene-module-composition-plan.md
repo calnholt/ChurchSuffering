@@ -3,7 +3,7 @@
 ## Document Status
 
 - **Status:** Draft design, ready for implementation review.
-- **Repository:** `Crusaders30XX`
+- **Repository:** `ChurchSuffering`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #07 — in-process; effort/risk medium-large / medium.
 - **Required final verification after implementation:** `dotnet build` from the repository root.
@@ -15,7 +15,7 @@ One `SceneModule` owns compose/activate/deactivate/cleanup and declares update-p
 
 ## Context
 
-**Why:** An `improve-codebase-architecture` deep-module exploration (Ousterhout lens; 2026-07-15) found the scene layer to be three shallow copies of one non-trivial pattern, plus a split-brain ordering hazard that has no compile-time or test-time guard. Crusaders30XX has three "scene systems" that each independently reimplement compose / activate / deactivate / cleanup, and every display system is enrolled in **two** hand-maintained ordered lists — one for update, one for draw — that are unrelated and free to drift.
+**Why:** An `improve-codebase-architecture` deep-module exploration (Ousterhout lens; 2026-07-15) found the scene layer to be three shallow copies of one non-trivial pattern, plus a split-brain ordering hazard that has no compile-time or test-time guard. ChurchSuffering has three "scene systems" that each independently reimplement compose / activate / deactivate / cleanup, and every display system is enrolled in **two** hand-maintained ordered lists — one for update, one for draw — that are unrelated and free to drift.
 
 **What prompted it:** the same exploration that produced `docs/plans/deep-module-refactor-round-2-plan.md` (RFC #1–#5). This RFC is a sibling in the `docs/plans/` series and is independently orchestrable.
 
@@ -46,14 +46,14 @@ The same skeleton is reimplemented three times, and the three copies have alread
 
 ### 5. Untested Scene enter/exit (systems registered exactly once, correctly toggled active, entities cleaned)
 
-is **untested**. The only scene-adjacent tests are `BattleClimbPackageTests` (`tests/Crusaders30XX.Tests/BattleClimbPackageTests.cs`), which exercise the `internal static` helpers extracted out of `BattleSceneSystem` — `IsFirstQueuedClimbEncounter` (`BattleSceneSystem.cs:622`, test `:33`), `ApplyPendingClimbBattlePackage ` (`:633`, test `:34/48/64/83`), `ResolveBattleLocationForLoad` (`:627`, test `:97/106-107`) — and nothing about composition, toggling, or cleanup. Confirmed.
+is **untested**. The only scene-adjacent tests are `BattleClimbPackageTests` (`tests/ChurchSuffering.Tests/BattleClimbPackageTests.cs`), which exercise the `internal static` helpers extracted out of `BattleSceneSystem` — `IsFirstQueuedClimbEncounter` (`BattleSceneSystem.cs:622`, test `:33`), `ApplyPendingClimbBattlePackage ` (`:633`, test `:34/48/64/83`), `ResolveBattleLocationForLoad` (`:627`, test `:97/106-107`) — and nothing about composition, toggling, or cleanup. Confirmed.
 
 ## Proposed Interface
 
 A `SceneModule` base class owns the lifecycle once; a y; `SceneSystemEntry` list is the **single source of truth** that declares update-phase membership and draw position together. The heterogeneous draw signatures are captured as an `Action` per entry (there is no polymorphic `Draw` to lean on), so no existing system needs its method shape changed.
 
 ```csharp
-namespace Crusaders30XX.ECS.Scenes { //MirrorsSystemManagerphases+ thelate bucket (SystemManager.cs:8-14, :52-58).
+namespace ChurchSuffering.ECS.Scenes { //MirrorsSystemManagerphases+ thelate bucket (SystemManager.cs:8-14, :52-58).
 public enum RenderPhase { Input, Interaction, Gameplay, Presentation, Late } //ONEentry=one system.Its update-phase
 membership ANDitsdraw position //(listorder) livehere, together, in one place.Killing the split-brain.public sealed
 class SceneSystemEntry { public Core.System System { get; init; } //createdbythemodule; never injected as a sibling
@@ -133,13 +133,13 @@ The whole point is boundary tests, and they run **without a GraphicsDevice**, ma
 - `ECS/Core/SystemManager.cs` (phases `:8-14`; `AddSystem` `:40-46`; `AddLateSystem` `:52-58`; `SetAllSystemsActive` `:135-145`) and `ECS/Core/System.cs` (no base `Draw`, `:23-32`)
 - `Game1.cs` (`DrawScene` `:573-670`; scene-module construction `:215-217`, registration `:282-284`)
 - `ECS/Components/Scenes.cs` (`OwnedByScene` `:176-180`, `SceneId` `:14-23`)
-- `tests/Crusaders30XX.Tests/BattleClimbPackageTests.cs` (existing coverage boundary)
+- `tests/ChurchSuffering.Tests/BattleClimbPackageTests.cs` (existing coverage boundary)
 - New: `ECS/Scenes/SceneModule.cs`, `ECS/Scenes/SceneSystemEntry.cs `, `ECS/Scenes/SceneModuleRegistry.cs`
 
 ## Verification
 
 - `dotnet build` from the repo root is clean.
-- `dotnet test tests/Crusaders30XX.Tests` is green, including the new boundary tests (Manifest ordering, register-exactly-once + idempotent, toggle-active isolation, `OwnedByScene` cleanup) and the existing `BattleClimbPackageTests`.
+- `dotnet test tests/ChurchSuffering.Tests` is green, including the new boundary tests (Manifest ordering, register-exactly-once + idempotent, toggle-active isolation, `OwnedByScene` cleanup) and the existing `BattleClimbPackageTests`.
 - All display-snapshot fixtures in `ECS/Diagnostics/Snapshots/Fixtures/` produce **unchanged** baselines after migration (`--verify`); no baseline PNGs edited — draw parity is proved against the new module path.
 - In-app (`dotnet run`): each ported scene (Achievement, Climb, Battle) renders identically to pre-migration; entering and exiting each scene registers its systems exactly once and leaks no entities (verify via the entity-list overlay that `OwnedByScene` entities for the departed scene are gone).
 

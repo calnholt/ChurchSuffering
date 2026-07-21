@@ -1,12 +1,12 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
+namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 {
     public sealed class QuestRewardModalSnapshotFixture : IDisplaySnapshotFixture
     {

@@ -11,7 +11,7 @@ tools:
   bash: false
 ---
 
-You are an applied passive specialist for Crusaders30XX. You have deep knowledge of the entire passive system.
+You are an applied passive specialist for ChurchSuffering. You have deep knowledge of the entire passive system.
 
 ## Core Knowledge
 

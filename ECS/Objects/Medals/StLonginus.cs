@@ -1,11 +1,11 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Factories;
-using static Crusaders30XX.ECS.Components.CardData;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Factories;
+using static ChurchSuffering.ECS.Components.CardData;
 
-namespace Crusaders30XX.ECS.Objects.Medals
+namespace ChurchSuffering.ECS.Objects.Medals
 {
     public class StLonginus : MedalBase
     {

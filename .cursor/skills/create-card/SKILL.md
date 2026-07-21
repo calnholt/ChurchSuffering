@@ -1,11 +1,11 @@
 ---
 name: create-card
-description: Create new Crusaders30XX cards (CardBase classes in ECS/Objects/Cards). Use when the user asks to create, add, or implement a new card, describes card text/stats/upgrades, or references card factory registration.
+description: Create new ChurchSuffering cards (CardBase classes in ECS/Objects/Cards). Use when the user asks to create, add, or implement a new card, describes card text/stats/upgrades, or references card factory registration.
 ---
 
 # Create Card
 
-Add a new card to Crusaders30XX: one `CardBase` subclass + factory registration + `dotnet build`.
+Add a new card to ChurchSuffering: one `CardBase` subclass + factory registration + `dotnet build`.
 
 **Read first:** [ECS/Objects/Cards/CLAUDE.md](../../../ECS/Objects/Cards/CLAUDE.md)
 
@@ -78,10 +78,10 @@ var paymentCards = cacheEntity?.GetComponent<LastPaymentCache>()?.PaymentCards;
 ## Minimal attack template
 
 ```csharp
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Cards
+namespace ChurchSuffering.ECS.Objects.Cards
 {
     public class MyCard : CardBase
     {

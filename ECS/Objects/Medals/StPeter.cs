@@ -1,11 +1,11 @@
 using System;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using static Crusaders30XX.ECS.Components.CardData;
-using Crusaders30XX.ECS.Services;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using static ChurchSuffering.ECS.Components.CardData;
+using ChurchSuffering.ECS.Services;
 
-namespace Crusaders30XX.ECS.Objects.Medals
+namespace ChurchSuffering.ECS.Objects.Medals
 {
     public class StPeter : MedalBase
     {

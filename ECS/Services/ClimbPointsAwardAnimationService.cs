@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Input;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Input;
 
-namespace Crusaders30XX.ECS.Services;
+namespace ChurchSuffering.ECS.Services;
 
 public enum ClimbPointsAwardRumbleMilestoneKind
 {

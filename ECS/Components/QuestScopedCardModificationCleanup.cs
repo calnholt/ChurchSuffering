@@ -1,9 +1,9 @@
 using System;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Systems;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Systems;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
     /// <summary>
     /// Removes quest-scoped ModifiedDamage/ModifiedBlock when the quest node completes.

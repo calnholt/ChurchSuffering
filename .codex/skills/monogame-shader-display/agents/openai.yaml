@@ -1,4 +1,4 @@
 interface:
   display_name: "MonoGame Shader Display"
   short_description: "Build shader-backed MonoGame display systems"
-  default_prompt: "Use $monogame-shader-display to convert this shader and integrate it as a Crusaders30XX display system."
+  default_prompt: "Use $monogame-shader-display to convert this shader and integrate it as a ChurchSuffering display system."

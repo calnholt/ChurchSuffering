@@ -1,8 +1,8 @@
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.RunSetup;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.RunSetup;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	public enum WayStationPenanceModalPhase { Hidden, Entering, Visible, Exiting }
 	public enum WayStationPenanceMotionRole { Root, Masthead, Rule, Close, Weapon, TrackLabel, Track, Node, Fill, Tally, Footer }

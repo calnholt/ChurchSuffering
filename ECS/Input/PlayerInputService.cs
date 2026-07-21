@@ -1,8 +1,8 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Input
+namespace ChurchSuffering.ECS.Input
 {
     public static class PlayerInputService
     {

@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Ids;
-using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Data.Tutorials;
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
+using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Objects.Enemies;
+using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Tutorials;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.ECS.Objects.EnemyAttacks;
+namespace ChurchSuffering.ECS.Objects.EnemyAttacks;
 
 public class Horde : EnemyBase
 {

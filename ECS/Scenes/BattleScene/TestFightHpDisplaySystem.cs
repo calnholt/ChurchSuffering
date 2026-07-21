@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Singletons;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	[DebugTab("Test Fight HP Display")]
 	public class TestFightHpDisplaySystem : Core.System

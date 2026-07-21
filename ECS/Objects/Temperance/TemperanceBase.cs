@@ -1,9 +1,9 @@
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 
-namespace Crusaders30XX.ECS.Objects.Temperance
+namespace ChurchSuffering.ECS.Objects.Temperance
 {
     public abstract class TemperanceBase
     {

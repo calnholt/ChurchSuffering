@@ -1,9 +1,9 @@
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Objects.Cards;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 internal readonly record struct CardBaseRenderModel(
     string CardId,

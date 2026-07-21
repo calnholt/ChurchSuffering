@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Data.Save;
+using ChurchSuffering.ECS.Data.Save;
 
-namespace Crusaders30XX.ECS.Data.Loadouts
+namespace ChurchSuffering.ECS.Data.Loadouts
 {
 	public static class LoadoutDefinitionCache
 	{

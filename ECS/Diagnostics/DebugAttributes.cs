@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Crusaders30XX.Diagnostics
+namespace ChurchSuffering.Diagnostics
 {
     internal interface IDebugInspectableChildren
     {

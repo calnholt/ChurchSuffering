@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.Diagnostics;
+using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	/// <summary>
 	/// Renders a subtle moving haze of round sand clouds across the screen

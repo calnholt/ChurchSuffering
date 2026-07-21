@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace Crusaders30XX.ECS.Data.Locations
+namespace ChurchSuffering.ECS.Data.Locations
 {
 	public static class LocationDefinitionCache
 	{

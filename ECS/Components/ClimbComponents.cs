@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
-using Crusaders30XX.ECS.Data.Save;
-using Crusaders30XX.ECS.Events;
+using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
+using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	public enum ClimbSlotKind
 	{

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Crusaders30XX is a deckbuilder card game where players battle enemies using a hand of cards for both blocking attacks and taking offensive actions.
+Church Suffering is a deckbuilder card game where players battle enemies using a hand of cards for both blocking attacks and taking offensive actions.
 
 ## Turn Structure
 

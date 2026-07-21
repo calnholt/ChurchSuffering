@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Systems;
+namespace ChurchSuffering.ECS.Systems;
 
 public sealed class ClimbV2MotionSystem : Core.System
 {

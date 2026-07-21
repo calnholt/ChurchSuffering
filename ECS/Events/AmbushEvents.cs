@@ -1,6 +1,6 @@
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
 	/// <summary>
 	/// Fired when an ambush attack's timer expires, just before auto-confirming the enemy attack.

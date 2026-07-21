@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Components;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Components;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Events
+namespace ChurchSuffering.ECS.Events
 {
 	public class BlockAssignmentAdded
 	{

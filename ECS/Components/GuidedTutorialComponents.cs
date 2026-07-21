@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Crusaders30XX.ECS.Core;
+using ChurchSuffering.ECS.Core;
 
-namespace Crusaders30XX.ECS.Components
+namespace ChurchSuffering.ECS.Components
 {
 	public enum TutorialAction
 	{

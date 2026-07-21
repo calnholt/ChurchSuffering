@@ -1,4 +1,4 @@
-namespace Crusaders30XX.ECS.Systems
+namespace ChurchSuffering.ECS.Systems
 {
 	internal static class WayStationSceneConstants
 	{

@@ -1,7 +1,7 @@
-using Crusaders30XX.ECS.Components;
+using ChurchSuffering.ECS.Components;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Services
+namespace ChurchSuffering.ECS.Services
 {
 	/// <summary>
 	/// Pure layout math for portrait pixel bursts — matches SpriteBatch center-origin draw

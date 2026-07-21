@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 
-namespace Crusaders30XX.ECS.Rendering;
+namespace ChurchSuffering.ECS.Rendering;
 
 /// <summary>
 /// Maps the fixed 1920x1080 logical canvas to the current physical render target
