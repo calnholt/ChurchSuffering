@@ -256,24 +256,26 @@ public sealed class DistanceClimbedTimelineDisplaySystem : Core.System
 		if (rect.IsEmpty) return;
 		var climb = SaveCache.GetClimbState();
 		var preview = EntityManager.GetEntity(ClimbV2LayoutSystem.RootName)?.GetComponent<ClimbPreviewState>();
-		int used = ClimbRuleService.ClampTime(climb?.time ?? 0);
+		int maxTime = ClimbRuleService.GetMaxTime(climb);
+		int used = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
 		int projected = preview?.IsActive == true ? preview.ProjectedUsedTime : used;
 		ClimbV2Draw.Text(_batch, _body, "DISTANCE CLIMBED", new Vector2(rect.X, rect.Y + 1), 0.085f, Color.White * 0.92f);
-		string value = $"{projected} / {ClimbRuleService.MaxTime}";
+		string value = $"{projected} / {maxTime}";
 		Vector2 valueSize = _title.MeasureString(value) * 0.13f;
 		ClimbV2Draw.Text(_batch, _title, value, new Vector2(rect.Right - valueSize.X, rect.Y - 2), 0.13f, ClimbV2Draw.Paper);
 		int startX = rect.X + 10;
 		int endX = rect.Right - 45;
-		float step = (endX - startX) / (float)(ClimbRuleService.MaxTime - 1);
+		float step = (endX - startX) / (float)(maxTime - 1);
 		int y = rect.Y + 41;
-		for (int i = 1; i <= ClimbRuleService.MaxTime; i++)
+		int shopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb);
+		for (int i = 1; i <= maxTime; i++)
 		{
 			int x = startX + (int)MathF.Round((i - 1) * step);
 			bool active = i <= used;
 			bool projectedStep = i > used && i <= projected;
 			bool projectedLine = i >= used && i < projected;
-			bool refresh = i % ClimbRuleService.ShopRefreshInterval == 0 && i < ClimbRuleService.MaxTime;
-			if (i < ClimbRuleService.MaxTime)
+			bool refresh = i % shopRefreshInterval == 0 && i < maxTime;
+			if (i < maxTime)
 			{
 				Color line = i < used ? ClimbV2Draw.Paper : projectedLine ? ClimbV2Draw.Red : Color.White * 0.22f;
 				var lineRect = new Rectangle(x + (refresh ? 9 : 5), y - 1, Math.Max(1, (int)step - (refresh ? 9 : 5)), 2);

@@ -10,7 +10,6 @@ using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Achievements;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -22,9 +21,9 @@ public sealed class AchievementTests
 	{
 		var achievements = ClimbAchievementCatalog.CreateAll().ToList();
 
-		Assert.Equal(10, achievements.Count);
-		Assert.Equal(10, achievements.Select(achievement => achievement.Id).Distinct().Count());
-		Assert.Equal(10, achievements.Select(achievement => (achievement.Row, achievement.Column)).Distinct().Count());
+		Assert.Equal(17, achievements.Count);
+		Assert.Equal(17, achievements.Select(achievement => achievement.Id).Distinct().Count());
+		Assert.Equal(17, achievements.Select(achievement => (achievement.Row, achievement.Column)).Distinct().Count());
 		Assert.All(achievements, achievement => Assert.Equal(5, achievement.Points));
 
 		var firstAscent = Assert.Single(achievements, achievement => achievement.Id == "first_ascent");
@@ -37,45 +36,29 @@ public sealed class AchievementTests
 	}
 
 	[Theory]
-	[InlineData("sword", RunDifficulty.Normal, "tempered_steel")]
-	[InlineData("sword", RunDifficulty.Hard, "by_the_sword")]
-	[InlineData("dagger", RunDifficulty.Easy, "quick_work")]
-	[InlineData("dagger", RunDifficulty.Normal, "knifes_edge")]
-	[InlineData("dagger", RunDifficulty.Hard, "silent_execution")]
-	[InlineData("hammer", RunDifficulty.Easy, "first_strike")]
-	[InlineData("hammer", RunDifficulty.Normal, "judgment_falls")]
-	[InlineData("hammer", RunDifficulty.Hard, "unbreakable_force")]
-	public void Weapon_climb_achievements_require_an_exact_weapon_and_difficulty(
+	[InlineData("sword", 12, "sword_penance_12")]
+	[InlineData("dagger", 18, "dagger_penance_18")]
+	[InlineData("hammer", 24, "hammer_penance_24")]
+	public void Weapon_penance_achievements_require_matching_weapon_and_at_least_threshold(
 		string weaponId,
-		RunDifficulty difficulty,
+		int penanceLevel,
 		string expectedAchievementId)
 	{
 		EventManager.Clear();
 		try
 		{
-			var trackedIds = new HashSet<string>
-			{
-				"tempered_steel",
-				"by_the_sword",
-				"quick_work",
-				"knifes_edge",
-				"silent_execution",
-				"first_strike",
-				"judgment_falls",
-				"unbreakable_force",
-			};
 			var progressById = InitializeClimbAchievements();
 
 			EventManager.Publish(new ClimbCompletedEvent
 			{
 				StartingWeaponId = weaponId,
-				Difficulty = difficulty,
+				PenanceLevel = penanceLevel,
 			});
 
 			Assert.True(progressById[expectedAchievementId].IsCompleted);
-			Assert.All(
-				progressById.Where(pair => trackedIds.Contains(pair.Key) && pair.Key != expectedAchievementId),
-				pair => Assert.False(pair.Value.IsCompleted));
+			Assert.DoesNotContain(
+				progressById.Where(pair => pair.Key.Contains("_penance_")),
+				pair => !pair.Key.StartsWith(weaponId) && pair.Value.IsCompleted);
 		}
 		finally
 		{
@@ -84,7 +67,7 @@ public sealed class AchievementTests
 	}
 
 	[Fact]
-	public void Sword_easy_has_no_weapon_specific_climb_achievement()
+	public void Penance_milestone_does_not_complete_below_threshold()
 	{
 		EventManager.Clear();
 		try
@@ -94,13 +77,12 @@ public sealed class AchievementTests
 			EventManager.Publish(new ClimbCompletedEvent
 			{
 				StartingWeaponId = "sword",
-				Difficulty = RunDifficulty.Easy,
+				PenanceLevel = 5,
 			});
 
 			Assert.True(progressById["first_ascent"].IsCompleted);
-			Assert.DoesNotContain(
-				progressById.Where(pair => pair.Key != "first_ascent"),
-				pair => pair.Value.IsCompleted);
+			Assert.True(progressById["sword_penance_0"].IsCompleted);
+			Assert.False(progressById["sword_penance_6"].IsCompleted);
 		}
 		finally
 		{
@@ -118,7 +100,7 @@ public sealed class AchievementTests
 			var completed = new ClimbCompletedEvent
 			{
 				StartingWeaponId = "sword",
-				Difficulty = RunDifficulty.Easy,
+				PenanceLevel = 0,
 			};
 
 			for (int i = 0; i < 4; i++) EventManager.Publish(completed);

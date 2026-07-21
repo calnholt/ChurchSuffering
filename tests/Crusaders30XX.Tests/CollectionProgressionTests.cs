@@ -126,6 +126,39 @@ public sealed class CollectionProgressionTests : IDisposable
 	}
 
 	[Theory]
+	[InlineData(8, false, 0)]
+	[InlineData(9, false, 1)]
+	[InlineData(18, false, 4)]
+	[InlineData(27, false, 9)]
+	[InlineData(36, true, 12)]
+	public void Pilgrimage_climb_points_follow_nine_pip_shop_refreshes(int time, bool completed, int expected)
+	{
+		Assert.Equal(expected, CollectionProgressionRules.CalculateClimbPoints(
+			time,
+			completed,
+			abandoned: false,
+			shopRefreshInterval: 9));
+	}
+
+	[Fact]
+	public void Collection_system_persists_pilgrimage_refresh_interval_with_award()
+	{
+		_ = new CollectionProgressionSystem(new EntityManager());
+
+		EventManager.Publish(new ClimbEndedEvent
+		{
+			TimeReached = 8,
+			ShopRefreshInterval = 9,
+			CompletedFinalBoss = false,
+			Abandoned = false,
+		});
+
+		var collection = SaveCache.GetCollection();
+		Assert.Equal(0, collection.pendingClimbPoints);
+		Assert.Equal(9, collection.pendingClimbPointAward.shopRefreshInterval);
+	}
+
+	[Theory]
 	[InlineData(0, false, false, 0)]
 	[InlineData(12, false, false, 1)]
 	[InlineData(20, false, false, 4)]

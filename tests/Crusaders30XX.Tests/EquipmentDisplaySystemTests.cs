@@ -4,6 +4,8 @@ using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Ids;
+using Crusaders30XX.ECS.Data.Loadouts;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
@@ -329,32 +331,62 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 	}
 
 	[Fact]
-	public void Equipment_tracks_one_shared_use_and_refreshes_for_the_next_battle()
+	public void Equipment_tracks_persistent_uses_and_clears_per_battle_lock_on_refresh()
+	{
+		var equipment = EquipmentFactory.Create("pierced_heart_plate");
+
+		Assert.Equal(3, equipment.MaxUses);
+		Assert.Equal(3, equipment.RemainingUses);
+
+		equipment.MarkUsed();
+
+		Assert.True(equipment.IsUsed);
+		Assert.Equal(2, equipment.RemainingUses);
+		Assert.False(equipment.IsAvailable);
+
+		equipment.RefreshForBattle();
+
+		Assert.False(equipment.IsUsed);
+		Assert.Equal(2, equipment.RemainingUses);
+		Assert.True(equipment.IsAvailable);
+	}
+
+	[Fact]
+	public void Equipment_stays_unavailable_after_all_uses_are_spent()
 	{
 		var equipment = EquipmentFactory.Create("pierced_heart_plate");
 
 		equipment.MarkUsed();
+		equipment.RefreshForBattle();
+		equipment.MarkUsed();
+		equipment.RefreshForBattle();
+		equipment.MarkUsed();
 
+		Assert.Equal(0, equipment.RemainingUses);
 		Assert.True(equipment.IsUsed);
 		Assert.False(equipment.IsAvailable);
 
 		equipment.RefreshForBattle();
 
 		Assert.False(equipment.IsUsed);
-		Assert.True(equipment.IsAvailable);
+		Assert.Equal(0, equipment.RemainingUses);
+		Assert.False(equipment.IsAvailable);
 	}
 
 	[Fact]
-	public void Enemy_defeat_refreshes_all_equipment_for_the_next_battle()
+	public void Enemy_defeat_clears_per_battle_lock_without_restoring_uses()
 	{
 		var entityManager = BuildBattle(out var player, SubPhase.Action);
 		var equipment = AddEquipment(entityManager, player, "pierced_heart_plate");
-		equipment.GetComponent<EquippedEquipment>().Equipment.MarkUsed();
+		var model = equipment.GetComponent<EquippedEquipment>().Equipment;
+		model.MarkUsed();
 		_ = new EquipmentManagerSystem(entityManager);
 
 		EventManager.Publish(new EnemyKilledEvent());
 
-		Assert.False(equipment.GetComponent<EquippedEquipment>().Equipment.IsUsed);
+		Assert.False(model.IsUsed);
+		Assert.Equal(2, model.RemainingUses);
+		Assert.True(model.IsAvailable);
 	}
 
 	[Fact]
@@ -366,7 +398,9 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 
 		QueuedDiscardAssignedBlocksEvent.ResolveImmediately(entityManager, discardSpentBlocks: true);
 
-		Assert.True(equipment.GetComponent<EquippedEquipment>().Equipment.IsUsed);
+		var model = equipment.GetComponent<EquippedEquipment>().Equipment;
+		Assert.True(model.IsUsed);
+		Assert.Equal(2, model.RemainingUses);
 	}
 
 	[Fact]
@@ -378,7 +412,9 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 
 		EventManager.Publish(new EquipmentActivateEvent { EquipmentEntity = equipment });
 
-		Assert.True(equipment.GetComponent<EquippedEquipment>().Equipment.IsUsed);
+		var model = equipment.GetComponent<EquippedEquipment>().Equipment;
+		Assert.True(model.IsUsed);
+		Assert.Equal(2, model.RemainingUses);
 	}
 
 	[Fact]
@@ -386,6 +422,7 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 	{
 		var entityManager = BuildBattle(out var player, SubPhase.Block);
 		var equipment = AddEquipment(entityManager, player, "bulwark_plate");
+		equipment.GetComponent<EquippedEquipment>().Equipment.Block = 0;
 		var enemy = entityManager.CreateEntity("Enemy");
 		entityManager.AddComponent(enemy, new AttackIntent
 		{
@@ -484,6 +521,67 @@ public sealed class EquipmentDisplaySystemTests : IDisposable
 		Assert.Null(entityManager.GetEntity(EquipmentDisplaySystem.TooltipEntityName));
 		Assert.Empty(entityManager.GetEntitiesWithComponent<EquipmentDisplayRoot>());
 		Assert.Equal(2, entityManager.GetEntitiesWithComponent<EquipmentTooltipState>().Count());
+	}
+
+	[Fact]
+	public void MarkUsed_persists_remaining_uses_to_the_loadout()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+		RunEquipmentService.ApplyEquipmentToLoadout(loadout, "pierced_heart_plate");
+		SaveCache.SaveLoadout(loadout);
+
+		var entityManager = BuildBattle(out var player, SubPhase.Action);
+		var equipment = AddEquipment(entityManager, player, "pierced_heart_plate");
+		_ = new EquipmentManagerSystem(entityManager);
+
+		equipment.GetComponent<EquippedEquipment>().Equipment.MarkUsed();
+
+		var saved = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+		Assert.Equal(2, saved.chestRemainingUses);
+	}
+
+	[Fact]
+	public void CreatePlayer_restores_remaining_uses_from_the_loadout()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+		loadout.chestId = "pierced_heart_plate";
+		loadout.chestRemainingUses = 1;
+		SaveCache.SaveLoadout(loadout);
+
+		var world = new World();
+		EntityFactory.CreatePlayer(world);
+
+		var equipment = world.EntityManager.GetEntitiesWithComponent<EquippedEquipment>()
+			.Select(entity => entity.GetComponent<EquippedEquipment>().Equipment)
+			.Single(item => item.Slot == EquipmentSlot.Chest);
+
+		Assert.Equal(1, equipment.RemainingUses);
+		Assert.True(equipment.IsAvailable);
+	}
+
+	[Fact]
+	public void EquipOnPlayer_restores_remaining_uses_from_the_loadout()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.StartNewRun();
+		var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
+		loadout.headId = "helm_of_seeing";
+		loadout.headRemainingUses = 0;
+		SaveCache.SaveLoadout(loadout);
+
+		var entityManager = new EntityManager();
+		var player = entityManager.CreateEntity("Player");
+		entityManager.AddComponent(player, new Player());
+
+		var equipmentEntity = RunEquipmentService.EquipOnPlayer(entityManager, "helm_of_seeing");
+		var equipment = equipmentEntity.GetComponent<EquippedEquipment>().Equipment;
+
+		Assert.Equal(0, equipment.RemainingUses);
+		Assert.False(equipment.IsAvailable);
 	}
 
 	private static void CreateNamedTooltip(EntityManager entityManager, string name)

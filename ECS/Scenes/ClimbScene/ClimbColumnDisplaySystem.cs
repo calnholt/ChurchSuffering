@@ -823,7 +823,7 @@ namespace Crusaders30XX.ECS.Systems
 		{
 			if (slot == null || slot.Duration <= 0) return 0;
 			int expiresAt = slot.GeneratedAtTime + slot.Duration;
-			return Math.Clamp(expiresAt - ClimbRuleService.ClampTime(time), 0, slot.Duration);
+			return Math.Clamp(expiresAt - Math.Max(0, time), 0, slot.Duration);
 		}
 
 		private static Vector2 ClampMagnitude(Vector2 value, float maxLength)

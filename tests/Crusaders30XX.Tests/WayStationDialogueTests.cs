@@ -239,7 +239,7 @@ public sealed class WayStationDialogueTests : IDisposable
 	{
 		for (int i = 1; i <= 3; i++)
 		{
-			StartAttemptAtClimbTime(ClimbRuleService.MaxTime / 2 - 1);
+			StartAttemptAtClimbTime(ClimbRuleService.BaseMaxTime / 2 - 1);
 			SaveCache.RecordWayStationClimbReturn(WayStationArrivalKind.ReturnedFromFailedClimb);
 			var meta = SaveCache.GetWayStationMeta();
 			Assert.Equal(i, meta.deferredNpcDialogueCounter);
@@ -250,11 +250,11 @@ public sealed class WayStationDialogueTests : IDisposable
 	[Fact]
 	public void Failed_return_at_half_time_triggers_npc_dialogue_and_queued_offer_resets_counter()
 	{
-		StartAttemptAtClimbTime(ClimbRuleService.MaxTime / 2 - 1);
+		StartAttemptAtClimbTime(ClimbRuleService.BaseMaxTime / 2 - 1);
 		SaveCache.RecordWayStationClimbReturn(WayStationArrivalKind.ReturnedFromFailedClimb);
 		Assert.Equal(1, SaveCache.GetWayStationMeta().deferredNpcDialogueCounter);
 
-		StartAttemptAtClimbTime(ClimbRuleService.MaxTime / 2);
+		StartAttemptAtClimbTime(ClimbRuleService.BaseMaxTime / 2);
 		SaveCache.RecordWayStationClimbReturn(WayStationArrivalKind.ReturnedFromFailedClimb);
 		var triggered = SaveCache.GetWayStationMeta();
 		Assert.True(triggered.pendingNpcDialogueOffer);
@@ -281,10 +281,10 @@ public sealed class WayStationDialogueTests : IDisposable
 	[Fact]
 	public void Abandoned_climb_does_not_increment_or_trigger_npc_dialogue_counter()
 	{
-		StartAttemptAtClimbTime(ClimbRuleService.MaxTime / 2 - 1);
+		StartAttemptAtClimbTime(ClimbRuleService.BaseMaxTime / 2 - 1);
 		SaveCache.RecordWayStationClimbReturn(WayStationArrivalKind.ReturnedFromFailedClimb);
 
-		StartAttemptAtClimbTime(ClimbRuleService.MaxTime);
+		StartAttemptAtClimbTime(ClimbRuleService.BaseMaxTime);
 		SaveCache.RecordWayStationClimbReturn(WayStationArrivalKind.ReturnedFromAbandonedClimb);
 
 		var meta = SaveCache.GetWayStationMeta();

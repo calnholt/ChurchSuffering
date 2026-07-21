@@ -66,13 +66,20 @@ public sealed class ClimbV2MotionSystem : Core.System
 		}
 		if (motion.Phase == ClimbV2MotionPhase.AwaitingPurchaseReconciliation) return;
 
-		float duration = entity.GetComponent<ClimbEncounterPresentation>() != null ? 0.72f : 0.62f;
+		bool isEncounter = entity.GetComponent<ClimbEncounterPresentation>() != null;
+		float duration = isEncounter ? 0.72f : 0.62f;
 		float progress = MathHelper.Clamp(localSeconds / duration, 0f, 1f);
-		float eased = EaseOutCubic(progress);
-		motion.Offset = Vector2.Lerp(EntranceOffset(entity), Vector2.Zero, eased);
-		motion.Opacity = eased;
-		motion.Brightness = MathHelper.Lerp(entity.GetComponent<ClimbEncounterPresentation>() != null ? 0.58f : 0.68f, 1f, eased);
-		motion.Blur = MathHelper.Lerp(entity.GetComponent<ClimbEncounterPresentation>() != null ? 5f : 3f, 0f, eased);
+		float movementProgress = EaseOutCubic(progress);
+		float materialProgress = EaseInOutSine(progress);
+		motion.Offset = Vector2.Lerp(EntranceOffset(entity), Vector2.Zero, movementProgress);
+		motion.Opacity = movementProgress;
+		motion.Brightness = MathHelper.Lerp(isEncounter ? 0.58f : 0.68f, 1f, materialProgress);
+		motion.Blur = MathHelper.Lerp(isEncounter ? 5f : 3f, 0f, materialProgress);
+		if (motion.Grayscale > 0f || motion.Sepia > 0f)
+		{
+			motion.Grayscale = 1f - materialProgress;
+			motion.Sepia = 1f - materialProgress;
+		}
 		if (progress >= 1f)
 		{
 			motion.Phase = ClimbV2MotionPhase.Settled;
@@ -175,5 +182,11 @@ public sealed class ClimbV2MotionSystem : Core.System
 		value = MathHelper.Clamp(value, 0f, 1f);
 		float inverse = 1f - value;
 		return 1f - inverse * inverse * inverse;
+	}
+
+	private static float EaseInOutSine(float value)
+	{
+		value = MathHelper.Clamp(value, 0f, 1f);
+		return -(MathF.Cos(MathF.PI * value) - 1f) / 2f;
 	}
 }

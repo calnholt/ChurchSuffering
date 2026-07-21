@@ -1,7 +1,6 @@
-using System.Linq;
+using Crusaders30XX.ECS.Data.RunSetup;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -9,84 +8,71 @@ namespace Crusaders30XX.Tests;
 public class ClimbUnlockProgressionRulesTests
 {
 	[Fact]
-	public void Unlocks_follow_completed_climb_progression()
+	public void Progression_advances_current_level_and_unlocks_weapons_in_order()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
 		var meta = SaveCache.GetWayStationMeta();
+		Assert.Equal(0, ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, StartingWeapon.Sword));
+		Assert.False(ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, StartingWeapon.Dagger));
+		Assert.False(ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, StartingWeapon.Hammer));
 
-		Assert.False(ClimbUnlockProgressionRules.ShouldShowSettingsModal(meta));
-		AssertUnlocked(meta, StartingWeapon.Sword, RunDifficulty.Easy);
-		AssertLocked(meta, StartingWeapon.Dagger, RunDifficulty.Easy);
-		AssertLocked(meta, StartingWeapon.Hammer, RunDifficulty.Easy);
-
-		Complete(StartingWeapon.Sword, RunDifficulty.Easy);
+		Complete(StartingWeapon.Sword, 0);
 		meta = SaveCache.GetWayStationMeta();
-		Assert.True(ClimbUnlockProgressionRules.ShouldShowSettingsModal(meta));
-		AssertUnlocked(meta, StartingWeapon.Dagger, RunDifficulty.Easy);
-		AssertUnlocked(meta, StartingWeapon.Sword, RunDifficulty.Normal);
-		AssertLocked(meta, StartingWeapon.Sword, RunDifficulty.Hard);
-		AssertLocked(meta, StartingWeapon.Dagger, RunDifficulty.Normal);
+		Assert.Equal(1, ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, StartingWeapon.Sword));
+		Assert.True(ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, StartingWeapon.Dagger));
+		Assert.Equal(0, ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, StartingWeapon.Dagger));
 
-		Complete(StartingWeapon.Sword, RunDifficulty.Normal);
-		AssertUnlocked(SaveCache.GetWayStationMeta(), StartingWeapon.Sword, RunDifficulty.Hard);
-
-		Complete(StartingWeapon.Dagger, RunDifficulty.Easy);
+		Complete(StartingWeapon.Dagger, 0);
 		meta = SaveCache.GetWayStationMeta();
-		AssertUnlocked(meta, StartingWeapon.Hammer, RunDifficulty.Easy);
-		AssertUnlocked(meta, StartingWeapon.Dagger, RunDifficulty.Normal);
-		AssertLocked(meta, StartingWeapon.Dagger, RunDifficulty.Hard);
-		AssertLocked(meta, StartingWeapon.Hammer, RunDifficulty.Normal);
-
-		Complete(StartingWeapon.Dagger, RunDifficulty.Normal);
-		AssertUnlocked(SaveCache.GetWayStationMeta(), StartingWeapon.Dagger, RunDifficulty.Hard);
-
-		Complete(StartingWeapon.Hammer, RunDifficulty.Easy);
-		AssertUnlocked(SaveCache.GetWayStationMeta(), StartingWeapon.Hammer, RunDifficulty.Normal);
-		AssertLocked(SaveCache.GetWayStationMeta(), StartingWeapon.Hammer, RunDifficulty.Hard);
-
-		Complete(StartingWeapon.Hammer, RunDifficulty.Normal);
-		AssertUnlocked(SaveCache.GetWayStationMeta(), StartingWeapon.Hammer, RunDifficulty.Hard);
+		Assert.Equal(1, ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, StartingWeapon.Dagger));
+		Assert.True(ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, StartingWeapon.Hammer));
 	}
 
 	[Fact]
-	public void Completed_configurations_are_unique_and_survive_run_lifecycle_and_reload()
+	public void Replaying_lower_penance_does_not_advance_highest()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
-		Complete(StartingWeapon.Dagger, RunDifficulty.Easy);
-		Complete(StartingWeapon.Dagger, RunDifficulty.Easy);
+		Complete(StartingWeapon.Sword, 0);
+		Complete(StartingWeapon.Sword, 0);
 
-		Assert.Single(SaveCache.GetWayStationMeta().completedClimbs);
+		Assert.Equal(1, ClimbUnlockProgressionRules.GetHighestUnlockedPenance(
+			SaveCache.GetWayStationMeta(), StartingWeapon.Sword));
+	}
 
+	[Fact]
+	public void Penance_progression_caps_at_twenty_four()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.UnlockAllRunSetupOptions();
+		Complete(StartingWeapon.Hammer, 24);
+
+		Assert.Equal(24, ClimbUnlockProgressionRules.GetHighestUnlockedPenance(
+			SaveCache.GetWayStationMeta(), StartingWeapon.Hammer));
+	}
+
+	[Fact]
+	public void Meta_dictionary_and_active_penance_survive_reload()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+		Complete(StartingWeapon.Sword, 0);
 		SaveCache.StartWayStationClimbAttempt();
-		SaveCache.MarkRunInactive();
+		SaveCache.ConfigurePrimaryRunSetup("dagger", StartingDeckGeneratorService.GetDefaultTemperanceId(StartingWeapon.Dagger), 0);
+
 		SaveCache.Reload();
 
-		var meta = SaveCache.GetWayStationMeta();
-		Assert.Single(meta.completedClimbs);
-		Assert.Equal("dagger", meta.completedClimbs.Single().startingWeaponId);
-		Assert.Equal(RunDifficulty.Easy, meta.completedClimbs.Single().difficulty);
-		AssertUnlocked(meta, StartingWeapon.Hammer, RunDifficulty.Easy);
+		Assert.Equal(1, SaveCache.GetWayStationMeta().highestPenanceByWeapon["sword"]);
+		Assert.Equal(0, SaveCache.GetWayStationMeta().highestPenanceByWeapon["dagger"]);
+		Assert.Equal("dagger", SaveCache.GetClimbState().startingWeaponId);
+		Assert.Equal(0, SaveCache.GetClimbState().penanceLevel);
 	}
 
-	private static void Complete(StartingWeapon weapon, RunDifficulty difficulty)
+	private static void Complete(StartingWeapon weapon, int penanceLevel)
 	{
 		SaveCache.StartWayStationClimbAttempt();
-		string weaponId = weapon.ToString().ToLowerInvariant();
 		SaveCache.ConfigurePrimaryRunSetup(
-			weaponId,
+			PenanceRules.GetWeaponId(weapon),
 			StartingDeckGeneratorService.GetDefaultTemperanceId(weapon),
-			difficulty);
+			penanceLevel);
 		SaveCache.RecordWayStationClimbCompletion();
-	}
-
-	private static void AssertUnlocked(WayStationMetaSave meta, StartingWeapon weapon, RunDifficulty difficulty)
-	{
-		Assert.True(ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, weapon));
-		Assert.True(ClimbUnlockProgressionRules.IsDifficultyUnlocked(meta, weapon, difficulty));
-	}
-
-	private static void AssertLocked(WayStationMetaSave meta, StartingWeapon weapon, RunDifficulty difficulty)
-	{
-		Assert.False(ClimbUnlockProgressionRules.IsDifficultyUnlocked(meta, weapon, difficulty));
 	}
 }

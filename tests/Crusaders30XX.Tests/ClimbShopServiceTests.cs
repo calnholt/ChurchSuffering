@@ -4,6 +4,7 @@ using System.Linq;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Loadouts;
+using Crusaders30XX.ECS.Data.RunSetup;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Services;
@@ -89,7 +90,7 @@ public class ClimbShopServiceTests : IDisposable
 		PrepareRun(new List<string> { "smite|White" });
 		var original = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards[0];
 		var state = BaseState();
-		state.time = ClimbRuleService.ShopRefreshInterval - 1;
+		state.time = PenanceRules.BaseShopRefreshInterval - 1;
 		state.shopSlots[0] = ShopSlot(
 			ClimbShopSlotKinds.Upgrade,
 			cardKey: "smite|White|Upgraded",
@@ -102,7 +103,7 @@ public class ClimbShopServiceTests : IDisposable
 		var after = SaveCache.GetClimbState();
 		var upgraded = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId).cards[0];
 		Assert.Equal("smite|White|Upgraded", upgraded.cardKey);
-		Assert.Equal(ClimbRuleService.ShopRefreshInterval, after.time);
+		Assert.Equal(PenanceRules.BaseShopRefreshInterval, after.time);
 		Assert.DoesNotContain(
 			after.shopSlots,
 			slot => slot != null
@@ -233,7 +234,7 @@ public class ClimbShopServiceTests : IDisposable
 		EventManager.Clear();
 		PrepareRun(new List<string> { "smite|White" });
 		var state = BaseState();
-		state.time = ClimbRuleService.MaxTime - 1;
+		state.time = ClimbRuleService.BaseMaxTime - 1;
 		state.shopSlots[0] = ShopSlot(ClimbShopSlotKinds.Medal, itemId: "st_luke");
 		SaveCache.SaveClimbState(state);
 		var world = new World();
@@ -245,7 +246,7 @@ public class ClimbShopServiceTests : IDisposable
 		var climb = SaveCache.GetClimbState();
 		var queued = world.EntityManager.GetEntitiesWithComponent<QueuedEvents>().Single().GetComponent<QueuedEvents>();
 		var pending = world.EntityManager.GetEntitiesWithComponent<QueuedEvents>().Single().GetComponent<PendingQuestDialog>();
-		Assert.Equal(ClimbRuleService.MaxTime, climb.time);
+		Assert.Equal(ClimbRuleService.BaseMaxTime, climb.time);
 		Assert.Equal("final", queued.ClimbEncounterSlotId);
 		Assert.Equal("fallen_shepherd", queued.Events.Single().EventId);
 		Assert.NotNull(pending);
@@ -347,6 +348,22 @@ public class ClimbShopServiceTests : IDisposable
 
 		Assert.True(ClimbShopService.ClearInvalidOffers(state, loadout));
 		Assert.Equal(ClimbShopSlotKinds.Empty, state.shopSlots[0].kind);
+	}
+
+	[Fact]
+	public void Pilgrimage_climb_state_round_trip_preserves_extended_total_time()
+	{
+		PrepareRun(new List<string> { "smite|White" });
+		var state = BaseState();
+		state.penanceLevel = 10;
+		state.time = 36;
+
+		SaveCache.SaveClimbState(state);
+
+		var saved = SaveCache.GetClimbState();
+		Assert.Equal(36, ClimbRuleService.GetMaxTime(saved));
+		Assert.Equal(36, saved.time);
+		Assert.True(ClimbRuleService.HasPendingFinalEncounter(saved));
 	}
 
 	private static void PrepareRun(List<string> cards)

@@ -1,5 +1,4 @@
 using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Singletons;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -14,7 +13,7 @@ public class TestFightRuntimeTests
 		{
 			WeaponId = "hammer",
 			EnemyId = "skeleton",
-			Difficulty = RunDifficulty.Hard,
+			PenanceLevel = 24,
 		});
 		TestFightRuntime.SetDeckSeedProviderForTests(() => ++nextSeed);
 

@@ -4,7 +4,6 @@ using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.EnemyAttacks;
-using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Systems;
 using Xunit;
 
@@ -119,7 +118,7 @@ public class TestFightFlowSystemTests
 		{
 			WeaponId = "hammer",
 			EnemyId = "skeleton",
-			Difficulty = RunDifficulty.Hard,
+			PenanceLevel = 24,
 		};
 	}
 }

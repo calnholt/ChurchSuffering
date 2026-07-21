@@ -29,7 +29,7 @@ Crusaders30XX is a deckbuilder card game where players battle enemies using a ha
   - Cards that cost an action point while AP remains
   - **Any number of Free Action cards** in any order
   - Equipment abilities marked **Free Action**, without spending AP
-- Equipment activation marks the item used for the rest of the battle and still requires any resources listed by the ability
+- Equipment activation marks the item used for the rest of the battle (consuming one of its three quest uses) and still requires any resources listed by the ability
 - Card effects may grant additional AP
 - Some cards have **discard costs** requiring the player to discard cards of a specific or any color
 - The player may pledge one eligible card from hand when **Pledge available**:
@@ -59,22 +59,31 @@ Crusaders30XX is a deckbuilder card game where players battle enemies using a ha
 - **Defeat:** Player HP reaches 0
 - **No reshuffle:** Your deck does not reshuffle when it empties
 
-## Climb Unlock Progression
+## Climb Penance Progression
 
-- New profiles begin with Sword on Easy; Start Climb launches this configuration directly until Dagger is unlocked.
-- The first completed climb unlocks Dagger on Easy and Sword on Normal.
-- Completing Sword on Normal unlocks Sword on Hard.
-- Completing Dagger on Easy unlocks Hammer on Easy and Dagger on Normal.
-- Completing Dagger on Normal unlocks Dagger on Hard.
-- Completing Hammer on Easy unlocks Hammer on Normal; completing Hammer on Normal unlocks Hammer on Hard.
-- Once Dagger is unlocked, Start Climb opens the settings modal and only shows unlocked choices.
+- Penance is selected independently for Sword, Dagger, and Hammer on a scale from 0 through 24.
+- New profiles begin with Sword at Penance 0. Until Dagger is unlocked, Start Climb departs immediately with Sword/Penance 0.
+- Completing a climb at a weapon's highest unlocked Penance unlocks its next level, capped at 24. Replaying a lower level does not advance it.
+- Completing a Sword climb unlocks Dagger at Penance 0; completing a Dagger climb unlocks Hammer at Penance 0.
+- Once Dagger is unlocked, Start Climb opens the Penance modal. Locked levels remain visible but cannot be selected.
+
+Each level adds one effect from a fixed order; effects accumulate through the selected level:
+
+- **Fasting:** -1 maximum HP per stack, from a base of 25.
+- **Reparation:** replaces one distinct starter-deck entry per stack with an eligible unlocked non-Starter card carrying Thorned, Scorched, Cursed, Frozen, or Brittle.
+- **Abstinence:** removes the initial Black, then White, then Red resource across its three stacks.
+- **Mortification:** adds 5% enemy maximum HP per stack to the base 70% multiplier.
+- **Penitential Pilgrimage:** increases the shop refresh interval from 8 by one per stack while preserving four shop cycles per climb. The total climb is therefore 32 pips with no stacks, 36 with one stack, and 40 with two stacks. Enemy climb-time HP scaling retains its separate eight-time cadence.
 
 ## Quest Structure
 
 - A **quest** consists of one or more battles
 - **HP fully recovers** after each battle within a quest
-- Each equipment item can be used once per battle, shared between blocking and activating its ability
-- Equipment refreshes when the battle ends
+- Each equipment item has **three uses** across the quest; uses are shared between blocking and activating its ability
+- Equipment can be used **at most once per battle** while charges remain
+- Uses are **not** restored when a battle ends; clearing the per-battle lock (next battle or enemy kill) only makes remaining charges available again
+- Remaining uses are persisted on the run loadout and restored when equipment is created from the save
+- Exhausted equipment (zero uses left) stays unavailable for the rest of the quest
 - This design makes each encounter a true fight for survival rather than an exercise in HP preservation
 
 ## Equipment

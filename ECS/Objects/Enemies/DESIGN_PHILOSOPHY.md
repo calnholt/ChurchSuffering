@@ -147,7 +147,7 @@ The player has **20 HP**. All enemy stats should be understood relative to this.
 | Tough | 95-120 | Sorcerer (120), Glacial Guardian (110) | Extended battles, scaling threats |
 | Boss-tier | 120+ | Shadow (150) | Marathon fights, attrition-based |
 
-Enemy max HP uses authored `HP` as the base. At spawn: `MaxHealth = HP`, then difficulty via `EnemyHealthModifier` (Easy 0.7 / Normal 0.85 / Hard 1.0), then climb time adds `+10%` of post-difficulty HP per shop-refresh interval (every 8 climb time). Attacks/passives may still scale by difficulty where coded.
+Enemy max HP uses authored `HP` as the base. At spawn, Mortification applies `0.70 + 0.05 * stacks` (0 through 6 stacks), then climb time adds `+10%` of post-Penance HP per fixed eight climb time. Penitential Pilgrimage lengthens shop refresh intervals but does not change this enemy-scaling cadence. Attacks and passives may still use their own authored scaling where coded.
 
 ### Attack Damage Ranges
 

@@ -10,17 +10,18 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Data.RunSetup;
 
 namespace Crusaders30XX.ECS.Services
 {
 	public static class ClimbRuleService
 	{
-		public const int MaxTime = 32;
+		public const int ShopCyclesPerClimb = 4;
+		public const int BaseMaxTime = PenanceRules.BaseShopRefreshInterval * ShopCyclesPerClimb;
 		public const int ShopSlotCount = 5;
 		public const int EncounterSlotCount = 3;
 		public const int EventSlotCount = 5;
-		public const int ShopRefreshInterval = 8;
+		public const int EnemyHealthScalingInterval = PenanceRules.BaseShopRefreshInterval;
 		public const int EncounterMinDuration = 2;
 		public const int EncounterMaxDuration = 5;
 		private const int EncounterMinDistinctEnemies = 2;
@@ -56,14 +57,20 @@ namespace Crusaders30XX.ECS.Services
 		public static ClimbSaveState CreateInitialState(
 			int seed,
 			LoadoutDefinition loadout = null,
-			RunDifficulty difficulty = RunDifficulty.Easy)
+			int penanceLevel = 0)
 		{
+			var penance = PenanceRules.Calculate(penanceLevel);
 			var state = new ClimbSaveState
 			{
 				startingWeaponId = string.IsNullOrWhiteSpace(loadout?.weaponId) ? "sword" : loadout.weaponId,
-				difficulty = difficulty,
+				penanceLevel = penance.Level,
 				time = 0,
-				resources = new ClimbResourceSave { red = 1, white = 1, black = 1 },
+				resources = new ClimbResourceSave
+				{
+					red = penance.InitialResources.Red,
+					white = penance.InitialResources.White,
+					black = penance.InitialResources.Black,
+				},
 				shopSlots = new List<ClimbShopSlotSave>(),
 				encounterSlots = new List<ClimbEncounterSlotSave>(),
 				eventSlots = new List<ClimbEventSlotSave>(),
@@ -79,30 +86,55 @@ namespace Crusaders30XX.ECS.Services
 			return state;
 		}
 
-		public static int ClampTime(int time) => Math.Clamp(time, 0, MaxTime);
+		public static int GetMaxTime(int penanceLevel)
+		{
+			return PenanceRules.Calculate(penanceLevel).ShopRefreshInterval * ShopCyclesPerClimb;
+		}
+
+		public static int GetMaxTime(ClimbSaveState state) => GetMaxTime(state?.penanceLevel ?? 0);
+
+		public static int ClampTime(int time) => Math.Clamp(time, 0, BaseMaxTime);
+
+		public static int ClampTime(ClimbSaveState state, int time) => Math.Clamp(time, 0, GetMaxTime(state));
 
 		public static int ApplyTime(ClimbSaveState state, int delta)
 		{
 			if (state == null) return 0;
-			int before = ClampTime(state.time);
-			int after = ClampTime(before + Math.Max(0, delta));
+			int before = ClampTime(state, state.time);
+			int after = ClampTime(state, before + Math.Max(0, delta));
 			state.time = after;
 			return after - before;
 		}
 
-		public static bool ShouldRefreshShopAtTime(int previousTime, int newTime)
+		public static int GetShopRefreshInterval(ClimbSaveState state)
 		{
-			previousTime = ClampTime(previousTime);
-			newTime = ClampTime(newTime);
+			return PenanceRules.Calculate(state?.penanceLevel ?? 0).ShopRefreshInterval;
+		}
+
+		public static bool ShouldRefreshShopAtTime(
+			int previousTime,
+			int newTime,
+			int refreshInterval = PenanceRules.BaseShopRefreshInterval,
+			int maxTime = BaseMaxTime)
+		{
+			maxTime = Math.Max(1, maxTime);
+			previousTime = Math.Clamp(previousTime, 0, maxTime);
+			newTime = Math.Clamp(newTime, 0, maxTime);
 			if (newTime <= previousTime) return false;
-			int nextBoundary = ((previousTime / ShopRefreshInterval) + 1) * ShopRefreshInterval;
-			return nextBoundary < MaxTime && newTime >= nextBoundary;
+			refreshInterval = Math.Max(1, refreshInterval);
+			int nextBoundary = ((previousTime / refreshInterval) + 1) * refreshInterval;
+			return nextBoundary < maxTime && newTime >= nextBoundary;
+		}
+
+		public static bool ShouldRefreshShopAtTime(ClimbSaveState state, int previousTime, int newTime)
+		{
+			return ShouldRefreshShopAtTime(previousTime, newTime, GetShopRefreshInterval(state), GetMaxTime(state));
 		}
 
 		public static bool HasPendingFinalEncounter(ClimbSaveState state)
 		{
 			if (state?.pendingEncounterReward?.pendingFinalEncounter == true) return true;
-			return ClampTime(state?.time ?? 0) >= MaxTime;
+			return ClampTime(state, state?.time ?? 0) >= GetMaxTime(state);
 		}
 
 		public static bool IsEventVisible(ClimbEventSlotSave slot, int time)
@@ -111,8 +143,8 @@ namespace Crusaders30XX.ECS.Services
 				&& slot.status == ClimbEventStatus.Active
 				&& !string.IsNullOrWhiteSpace(slot.definitionId)
 				&& slot.activatedAtTime >= 0
-				&& ClampTime(time) >= slot.activatedAtTime
-				&& ClampTime(time) < slot.activatedAtTime + Math.Max(0, slot.duration);
+				&& Math.Max(0, time) >= slot.activatedAtTime
+				&& Math.Max(0, time) < slot.activatedAtTime + Math.Max(0, slot.duration);
 		}
 
 		public static bool IsEventExpired(ClimbEventSlotSave slot, int time)
@@ -120,23 +152,23 @@ namespace Crusaders30XX.ECS.Services
 			return slot != null
 				&& slot.status == ClimbEventStatus.Active
 				&& slot.activatedAtTime >= 0
-				&& ClampTime(time) >= slot.activatedAtTime + Math.Max(0, slot.duration);
+				&& Math.Max(0, time) >= slot.activatedAtTime + Math.Max(0, slot.duration);
 		}
 
 		public static bool IsEncounterExpired(ClimbEncounterSlotSave slot, int time)
 		{
 			if (slot == null || slot.isCompleted || slot.isFinal || string.IsNullOrWhiteSpace(slot.enemyId)) return false;
 			if (slot.duration <= 0) return true;
-			return ClampTime(time) >= ClampTime(slot.generatedAtTime + slot.duration);
+			return Math.Max(0, time) >= Math.Max(0, slot.generatedAtTime + slot.duration);
 		}
 
 		public static bool UpdateEventLifecycle(ClimbSaveState state)
 		{
 			if (state?.eventSlots == null) return false;
 			bool changed = false;
-			int currentTime = ClampTime(state.time);
+			int currentTime = ClampTime(state, state.time);
 
-			if (currentTime >= MaxTime)
+			if (currentTime >= GetMaxTime(state))
 			{
 				foreach (var slot in state.eventSlots)
 				{
@@ -240,7 +272,7 @@ namespace Crusaders30XX.ECS.Services
 			if (state == null) return false;
 			state.encounterSlots ??= new List<ClimbEncounterSlotSave>();
 
-			if (ClampTime(state.time) >= MaxTime) return false;
+			if (ClampTime(state, state.time) >= GetMaxTime(state)) return false;
 
 			var rng = CreateRng(seed, state.time, 23 + state.encounterSlots.Count);
 			bool changed = false;
@@ -304,7 +336,7 @@ namespace Crusaders30XX.ECS.Services
 			if (state == null) return 0;
 			int previousTime = state.time;
 			int applied = ApplyTime(state, timeCost);
-			if (ShouldRefreshShopAtTime(previousTime, state.time))
+			if (ShouldRefreshShopAtTime(state, previousTime, state.time))
 			{
 				RefreshShopSlots(state, seed, loadout);
 			}
@@ -317,9 +349,10 @@ namespace Crusaders30XX.ECS.Services
 			return applied;
 		}
 
-		public static ClimbEncounterPool ResolveClimbEncounterPool(int climbTime)
+		public static ClimbEncounterPool ResolveClimbEncounterPool(int climbTime, int maxTime = BaseMaxTime)
 		{
-			return ClampTime(climbTime) < MaxTime / 2
+			maxTime = Math.Max(1, maxTime);
+			return Math.Clamp(climbTime, 0, maxTime) < maxTime / 2
 				? ClimbEncounterPool.Early
 				: ClimbEncounterPool.Late;
 		}
@@ -340,18 +373,18 @@ namespace Crusaders30XX.ECS.Services
 				.ToList();
 		}
 
-		public static IReadOnlyList<string> GetClimbEncounterEnemyPoolForTime(int climbTime)
+		public static IReadOnlyList<string> GetClimbEncounterEnemyPoolForTime(int climbTime, int maxTime = BaseMaxTime)
 		{
-			return GetClimbEncounterEnemyPool(ResolveClimbEncounterPool(climbTime));
+			return GetClimbEncounterEnemyPool(ResolveClimbEncounterPool(climbTime, maxTime));
 		}
 
 		public static void RefreshEventSlots(ClimbSaveState state, int seed)
 		{
 			if (state == null) return;
-			state.eventSlots = GenerateEventSchedule(seed).ToList();
+			state.eventSlots = GenerateEventSchedule(seed, GetMaxTime(state)).ToList();
 		}
 
-		public static IReadOnlyList<ClimbEventSlotSave> GenerateEventSchedule(int seed)
+		public static IReadOnlyList<ClimbEventSlotSave> GenerateEventSchedule(int seed, int maxTime = BaseMaxTime)
 		{
 			var rng = CreateClimbEventRng(seed);
 			var rolled = new List<ClimbEventSlotSave>(EventSlotCount);
@@ -401,7 +434,7 @@ namespace Crusaders30XX.ECS.Services
 
 			for (int i = 0; i < rolled.Count; i++)
 			{
-				var band = GetEventAppearanceBand(i);
+				var band = GetEventAppearanceBand(i, maxTime);
 				rolled[i].id = $"climb_event_{i}";
 				rolled[i].scheduledAppearanceTime = rng.Next(band.Start, band.End + 1);
 				rolled[i].activatedAtTime = -1;
@@ -410,15 +443,16 @@ namespace Crusaders30XX.ECS.Services
 			return rolled;
 		}
 
-		public static (int Start, int End) GetEventAppearanceBand(int eventPosition)
+		public static (int Start, int End) GetEventAppearanceBand(int eventPosition, int maxTime = BaseMaxTime)
 		{
 			if (eventPosition < 0 || eventPosition >= EventSlotCount)
 			{
 				throw new ArgumentOutOfRangeException(nameof(eventPosition));
 			}
 
-			int start = (eventPosition * MaxTime / EventSlotCount) + 1;
-			int end = (eventPosition + 1) * MaxTime / EventSlotCount;
+			maxTime = Math.Max(EventSlotCount, maxTime);
+			int start = (eventPosition * maxTime / EventSlotCount) + 1;
+			int end = (eventPosition + 1) * maxTime / EventSlotCount;
 			return (start, end);
 		}
 
@@ -817,7 +851,7 @@ namespace Crusaders30XX.ECS.Services
 			EncounterRollConstraints constraints = default)
 		{
 			int timeCost = rng.Next(1, 4);
-			string enemyId = RollClimbEncounterEnemyId(rng, constraints.ExcludedEnemyIds, state?.time ?? 0);
+			string enemyId = RollClimbEncounterEnemyId(rng, constraints.ExcludedEnemyIds, state?.time ?? 0, GetMaxTime(state));
 			var excludedLocations = new List<BattleLocation>();
 			if (constraints.ExcludedLocations != null)
 			{
@@ -838,7 +872,7 @@ namespace Crusaders30XX.ECS.Services
 			{
 				id = slotId ?? string.Empty,
 				enemyId = enemyId,
-				generatedAtTime = ClampTime(state?.time ?? 0),
+				generatedAtTime = ClampTime(state, state?.time ?? 0),
 				duration = rng.Next(EncounterMinDuration, EncounterMaxDuration + 1),
 				timeCost = timeCost,
 				battleLocation = BattleLocationAssetService.RollClimbEncounterLocation(rng, excludedLocations),
@@ -908,11 +942,11 @@ namespace Crusaders30XX.ECS.Services
 			return cost;
 		}
 
-		private static string RollClimbEncounterEnemyId(Random rng, IEnumerable<string> excludedEnemyIds, int climbTime)
+		private static string RollClimbEncounterEnemyId(Random rng, IEnumerable<string> excludedEnemyIds, int climbTime, int maxTime)
 		{
 			rng ??= Random.Shared;
-			var pool = GetClimbEncounterEnemyPoolForTime(climbTime).ToList();
-			if (pool.Count == 0) return ResolveClimbEncounterPool(climbTime) == ClimbEncounterPool.Early
+			var pool = GetClimbEncounterEnemyPoolForTime(climbTime, maxTime).ToList();
+			if (pool.Count == 0) return ResolveClimbEncounterPool(climbTime, maxTime) == ClimbEncounterPool.Early
 				? "skeleton"
 				: "spider";
 
@@ -979,7 +1013,7 @@ namespace Crusaders30XX.ECS.Services
 			var target = SelectDeterministicEntry(
 				eligible,
 				seed,
-				$"{slotId}|{ClimbRuleService.ClampTime(state?.time ?? 0)}|{slot.battleLocation}|{restrictionName}");
+				$"{slotId}|{ClimbRuleService.ClampTime(state, state?.time ?? 0)}|{slot.battleLocation}|{restrictionName}");
 			if (target == null) return;
 
 			slot.cardMutationDeckEntryId = target.entryId ?? string.Empty;

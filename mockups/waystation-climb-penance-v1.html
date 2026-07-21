@@ -21,8 +21,41 @@
     - Background: Content/waystation.png, dimmed. All chrome is
       primitive-friendly (rects, lines, diamonds, circles, text, simple SVG
       glyphs that can become small textures).
-    - Variant B "Stations of the Ascent": fullscreen overlay; weapon cards on
-      top, horizontal diamond station track, tally chips below.
+
+    Animation spec (all timings tunable; ease-rise = cubic-bezier(.16,1,.3,1),
+    ease-slam = cubic-bezier(.2,1.35,.4,1)):
+
+    OVERLAY OPEN (~1.2s total choreography):
+      0ms    scene dim fades in (500ms) and background settles from scale 1.02 -> 1.04 (800ms).
+      60ms   title settles: scale 1.35 + blur -> rest (550ms, ease-slam).
+      260ms  masthead rule unfurls scaleX 0 -> 1 (500ms, ease-rise).
+      160ms+ weapon cards rise from +46px, staggered 90ms apart (600ms each, ease-rise).
+      420ms  track label fades up.
+      480ms  track frame unfurls horizontally scaleX .12 -> 1 (550ms, ease-rise).
+      560ms+ stations pop in scale .2 -> 1, cascading left-to-right 18ms apart (400ms each).
+      650ms  fill bar sweeps from 0 to the current level (500ms, ease-rise).
+      760ms  level line fades up; 820ms+ tally chips pop in, 70ms apart.
+      940ms  footer (Depart) rises; 950ms close X fades in.
+
+    OVERLAY CLOSE (~460ms):
+      Masthead exits upward w/ blur (300ms); weapon cards drop +36px staggered
+      45ms; track zone and footer drop and fade; scene dim releases.
+
+    WEAPON SELECT:
+      New card flashes: box-shadow burst decaying to the selected glow (500ms)
+      while the art does a small scale pop (1 -> 1.08 -> 1, 450ms ease-slam).
+      Stations re-evaluate lock state with a left-to-right 10ms/station ripple;
+      level clamps; chips/level line/footer text swap.
+
+    PENANCE LEVEL CHANGE:
+      Raising: stations ignite in sequence 45ms apart from the old level to the
+      new one; each does a diamond pop (scale 1 -> 1.42 -> 1, 500ms ease-slam)
+      as its fill/border/glow transition in. The fill bar sweeps alongside.
+      Lowering: stations extinguish back 28ms apart with a small dip
+      (scale 1 -> .8 -> 1, 320ms).
+      Tally chips: new type pops in from below (450ms ease-slam); removed type
+      shrinks away (300ms); changed counts bump the number (scale 1.55 flash).
+      Level title and footer line do a quick upward text swap (340ms).
   */
   @font-face {
     font-family: "New Rocker";
@@ -52,6 +85,7 @@
     --game-w: 1920px;
     --game-h: 1080px;
     --ease-rise: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-slam: cubic-bezier(0.2, 1.35, 0.4, 1);
   }
 
   * { box-sizing: border-box; }
@@ -65,6 +99,10 @@
 
   /* ---------- page chrome (not shipped) ---------- */
   .page-header {
+    display: grid;
+    grid-template-columns: minmax(360px, 1fr) auto;
+    gap: 28px;
+    align-items: center;
     padding: 24px 36px 22px;
     background: #0b0c0d;
     border-bottom: 1px solid #2a2c2e;
@@ -82,6 +120,24 @@
     font-size: 14px;
     line-height: 1.45;
   }
+  .motion-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .motion-chip {
+    min-width: 130px;
+    padding: 9px 12px;
+    border: 1px solid #393c3e;
+    background: #151719;
+    color: #aaa;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .motion-chip:hover { border-color: #777; color: #fff; }
   .page-main { padding: 28px 36px 54px; }
   .viewport-scaler {
     position: relative;
@@ -108,16 +164,24 @@
     position: absolute;
     inset: 0;
     background: url("../Content/waystation.png") center / cover no-repeat;
-    filter: saturate(.62) contrast(1.05);
+    filter: saturate(.9) contrast(1.02);
     transform: scale(1.02);
+    transition: transform .8s var(--ease-rise), filter .5s ease;
+  }
+  .viewport.overlay-open .bg-scene {
+    filter: saturate(.62) contrast(1.05);
+    transform: scale(1.04);
   }
   .scene-dim {
     position: absolute;
     inset: 0;
+    opacity: 0;
     background:
       radial-gradient(ellipse at 50% 42%, transparent 0 24%, rgba(0, 0, 0, .5) 74%, rgba(0, 0, 0, .9) 100%),
       linear-gradient(180deg, rgba(0, 0, 0, .78) 0, rgba(0, 0, 0, .42) 18%, rgba(0, 0, 0, .46) 80%, rgba(0, 0, 0, .86) 100%);
+    transition: opacity .5s ease;
   }
+  .viewport.overlay-open .scene-dim { opacity: 1; }
   .grain {
     position: absolute;
     inset: 0;
@@ -131,6 +195,9 @@
     position: absolute;
     inset: 0;
   }
+  .variant-root.is-hidden { display: none; }
+  .variant-root.is-entering,
+  .variant-root.is-closing { pointer-events: none; }
 
   /* ---------- shared overlay chrome ---------- */
   .masthead {
@@ -224,15 +291,35 @@
     text-transform: uppercase;
   }
   .footer-sub b { color: var(--bone); }
+  .footer-sub.swap { animation: text-swap .34s var(--ease-rise); }
 
   /* ---------- shared penance tally ---------- */
   .tally-empty {
     padding: 14px 4px;
+    margin: 0 5px;
     color: var(--bone-dim);
     font-size: 13px;
     font-style: italic;
     letter-spacing: .4px;
     text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 520px;
+    opacity: 1;
+    transition:
+      max-width 0.42s var(--ease-rise),
+      opacity 0.34s ease,
+      padding 0.42s var(--ease-rise),
+      margin 0.42s var(--ease-rise);
+  }
+  .tally-empty.is-off {
+    max-width: 0;
+    opacity: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0;
+    margin-right: 0;
+    pointer-events: none;
   }
 
   /* ---------- tooltip (matches TooltipTextDisplaySystem) ---------- */
@@ -255,7 +342,7 @@
   .tooltip .tip-muted { color: #b9b4ab; }
 
   /* =============================================================
-     VARIANT B — "Stations of the Ascent" (fullscreen, horizontal)
+     "Stations of the Ascent" (fullscreen, horizontal)
      ============================================================= */
   .b-layout {
     position: absolute;
@@ -292,6 +379,11 @@
     position: absolute;
     inset: 0;
     background: radial-gradient(ellipse at 50% 100%, rgba(196, 30, 58, .3), transparent 66%);
+  }
+  .b-weapon.just-selected { animation: weapon-flash .5s var(--ease-rise); }
+  @keyframes weapon-flash {
+    0% { box-shadow: 0 0 0 3px rgba(196, 30, 58, .85), 0 0 70px rgba(196, 30, 58, .6); }
+    100% { box-shadow: 0 0 0 1px rgba(196, 30, 58, .4), 0 0 36px rgba(196, 30, 58, .3); }
   }
   .b-weapon img {
     position: relative;
@@ -365,12 +457,40 @@
     top: 50%;
     height: 1px;
     background: rgba(255, 255, 255, .24);
+    z-index: 0;
+  }
+  /* Red fill sweeping from station 1's center to the chosen station's center. */
+  .b-track-fill {
+    position: absolute;
+    left: 49px;
+    top: 50%;
+    height: 3px;
+    width: 0;
+    translate: 0 -50%;
+    background: linear-gradient(90deg, rgba(124, 18, 38, .9), var(--blood));
+    box-shadow: 0 0 14px rgba(196, 30, 58, .65);
+    pointer-events: none;
+    z-index: 1;
+    transition: width .5s var(--ease-rise);
   }
   .station-wrap {
     position: relative;
+    z-index: 2;
     width: 30px;
     height: 30px;
     flex: none;
+  }
+  .station-wrap.ignite { animation: ignite-pop .5s var(--ease-slam) both; }
+  .station-wrap.extinguish { animation: extinguish-dip .32s ease both; }
+  @keyframes ignite-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.42); }
+    100% { transform: scale(1); }
+  }
+  @keyframes extinguish-dip {
+    0% { transform: scale(1); }
+    45% { transform: scale(.8); }
+    100% { transform: scale(1); }
   }
   .station {
     position: relative;
@@ -382,7 +502,7 @@
     background: #121214;
     rotate: 45deg;
     cursor: pointer;
-    transition: background .14s ease, border-color .14s ease, box-shadow .14s ease, scale .14s ease;
+    transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, scale .14s ease;
   }
   .station:hover { border-color: #fff; scale: 1.2; }
   .station.is-active {
@@ -409,6 +529,7 @@
     color: rgba(255, 255, 255, .88);
     font: 13px/1 "Grenze", serif;
     pointer-events: none;
+    transition: color .2s ease;
   }
   .station.is-locked .st-num { color: rgba(255, 255, 255, .26); }
   .station-wrap .st-tick {
@@ -431,50 +552,65 @@
     gap: 14px;
     min-height: 0;
   }
-  .b-level-line {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-  }
-  .b-level-line .lvl-name {
-    color: #fff;
-    font: 30px/1 "New Rocker", serif;
-    letter-spacing: 2px;
-  }
-  .b-level-line .lvl-count {
-    color: #fff;
-    font-size: 12px;
-    letter-spacing: 1.6px;
-    text-transform: uppercase;
+  @keyframes text-swap {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
   }
   .b-tally {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px;
+    align-items: center;
+    gap: 0;
     max-width: 1300px;
   }
   .b-chip {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 16px 8px 10px;
+    align-items: baseline;
+    gap: 6px;
+    padding: 8px 14px;
+    margin: 0 5px;
     border: 1px solid rgba(196, 30, 58, .45);
     border-radius: 999px;
     background: rgba(30, 5, 10, .78);
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 280px;
+    opacity: 1;
+    transform: scale(1);
+    transition:
+      max-width 0.42s var(--ease-rise),
+      opacity 0.34s ease,
+      transform 0.42s var(--ease-rise),
+      padding 0.42s var(--ease-rise),
+      margin 0.42s var(--ease-rise),
+      border-width 0.42s ease,
+      gap 0.42s var(--ease-rise);
   }
-  .b-chip .glyph {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 1px solid rgba(196, 30, 58, .5);
-    color: #e8b9c1;
+  .b-chip.is-off {
+    max-width: 0;
+    opacity: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0;
+    margin-right: 0;
+    border-width: 0;
+    gap: 0;
+    transform: scale(0.92);
+    pointer-events: none;
   }
-  .b-chip .glyph svg { width: 17px; height: 17px; }
-  .b-chip .t-name { color: var(--bone); font-size: 13px; font-weight: 700; letter-spacing: .6px; }
-  .b-chip .t-count { color: #fff; font: 19px/1 "Grenze", serif; }
+  @keyframes chip-in {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .b-chip .t-name { color: var(--bone); font-size: 13px; font-weight: 700; letter-spacing: .6px; line-height: 1; }
+  .b-chip .t-count { display: inline-block; color: #fff; font: 15px/1 "Grenze", serif; }
+  .b-chip .t-count.bump { animation: count-bump .4s var(--ease-slam); }
+  @keyframes count-bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.55); color: #ff8ba0; text-shadow: 0 0 14px rgba(196, 30, 58, .9); }
+    100% { transform: scale(1); }
+  }
   .b-footer {
     display: flex;
     flex-direction: column;
@@ -483,7 +619,77 @@
     gap: 10px;
   }
 
+  /* =============================================================
+     Overlay open choreography (classes applied to #root-b)
+     ============================================================= */
+  .variant-root.is-entering .masthead h2 { animation: title-settle .55s var(--ease-slam) 60ms both; }
+  .variant-root.is-entering .masthead-rule { animation: rule-open .5s var(--ease-rise) 260ms both; }
+  .variant-root.is-entering .close-x { animation: fade-in .3s ease 950ms both; }
+  .variant-root.is-entering .b-weapon {
+    animation: rise-in .6s var(--ease-rise) both;
+    animation-delay: calc(160ms + var(--i) * 90ms);
+  }
+  .variant-root.is-entering .b-track-label { animation: fade-up .45s ease 420ms both; }
+  .variant-root.is-entering .b-track { animation: track-unfurl .55s var(--ease-rise) 480ms both; }
+  .variant-root.is-entering .station-wrap {
+    animation: station-arrive .4s var(--ease-rise) both;
+    animation-delay: calc(560ms + var(--i) * 18ms);
+  }
+  .variant-root.is-entering .b-chip:not(.is-off) {
+    animation: chip-in .45s var(--ease-slam) both;
+    animation-delay: calc(820ms + var(--ci) * 70ms);
+  }
+  .variant-root.is-entering .tally-empty:not(.is-off) { animation: fade-up .4s ease 820ms both; }
+  .variant-root.is-entering .b-footer { animation: rise-in .5s var(--ease-rise) 940ms both; }
+
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(46px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes title-settle {
+    from { opacity: 0; transform: scale(1.35); filter: blur(8px); }
+    to { opacity: 1; transform: none; filter: none; }
+  }
+  @keyframes rule-open {
+    from { opacity: 0; transform: scaleX(0); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes track-unfurl {
+    from { opacity: 0; transform: scaleX(.12); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes station-arrive {
+    from { opacity: 0; transform: scale(.2) translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* =============================================================
+     Overlay close choreography
+     ============================================================= */
+  .variant-root.is-closing .masthead { animation: exit-up .3s ease-in both; }
+  .variant-root.is-closing .close-x { animation: exit-fade .22s ease-in both; }
+  .variant-root.is-closing .b-weapon {
+    animation: exit-down .32s ease-in both;
+    animation-delay: calc(var(--i) * 45ms);
+  }
+  .variant-root.is-closing .b-track-zone { animation: exit-down .3s ease-in 80ms both; }
+  .variant-root.is-closing .b-footer { animation: exit-down .26s ease-in 40ms both; }
+
+  @keyframes exit-up {
+    to { opacity: 0; transform: translateY(-30px); filter: blur(4px); }
+  }
+  @keyframes exit-down {
+    to { opacity: 0; transform: translateY(36px); filter: blur(3px); }
+  }
+  @keyframes exit-fade { to { opacity: 0; } }
+
   @media (max-width: 850px) {
+    .page-header { grid-template-columns: 1fr; }
     .page-main { padding: 18px 12px 36px; }
   }
 </style>
@@ -492,7 +698,11 @@
 <header class="page-header">
   <div>
     <h1 class="page-title">Way Station — Begin the Climb</h1>
-    <p class="page-description">Fullscreen overlay. Weapon cards preside over a horizontal track of 24 diamond stations. Lit stations are the burdens you will carry; hollow ones await, crossed ones are locked. The chip row totals the active penances.</p>
+    <p class="page-description">Fullscreen overlay with full motion: staggered entrance/exit, weapon-select flash, cascading station ignite/extinguish with a sweeping fill bar, penance chips that pop in/out and bump their counts, and text swaps on the level line. Lit stations are the burdens you will carry; hollow ones await, crossed ones are locked.</p>
+  </div>
+  <div class="motion-controls">
+    <button class="motion-chip" id="replay-open" type="button">Replay entrance</button>
+    <button class="motion-chip" id="play-close" type="button">Close &amp; reopen</button>
   </div>
 </header>
 
@@ -503,8 +713,8 @@
       <div class="scene-dim"></div>
       <div class="grain"></div>
 
-      <!-- Variant B: Stations of the Ascent -->
-      <section class="variant-root" id="root-b" aria-label="Stations of the Ascent">
+      <!-- Stations of the Ascent -->
+      <section class="variant-root is-hidden" id="root-b" aria-label="Stations of the Ascent">
         <button class="close-x" type="button" aria-label="Close">X</button>
         <div class="b-layout">
           <header class="masthead">
@@ -516,12 +726,11 @@
             <div class="b-track-label">The Stations of Penance</div>
             <div class="b-track" id="b-track"></div>
             <div class="b-tally-zone">
-              <div class="b-level-line" id="b-level"></div>
               <div class="b-tally" id="b-tally"></div>
             </div>
           </div>
           <footer class="b-footer">
-            <button class="depart-btn" type="button">Depart</button>
+            <button class="depart-btn" id="depart-btn" type="button">Depart</button>
             <p class="footer-sub" id="b-footer-sub"></p>
           </footer>
         </div>
@@ -540,28 +749,23 @@
   const PENANCE_TYPES = {
     fasting: {
       name: "Fasting",
-      desc: "The Crusader begins the climb with 1 less max HP.",
-      glyph: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.4-7 10-7 10Z"/><path d="M8.5 11h7"/></svg>`
+      desc: "The Crusader begins the climb with 1 less max HP."
     },
     mortification: {
       name: "Mortification",
-      desc: "Enemies have 5% more HP.",
-      glyph: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7c0 3 1.6 4.6 3 5.6V19h8v-3.4c1.4-1 3-2.6 3-5.6a7 7 0 0 0-7-7Z"/><circle cx="9" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="1" fill="currentColor" stroke="none"/><path d="M10.5 19v-2M13.5 19v-2"/></svg>`
+      desc: "Enemies have 5% more HP."
     },
     abstinence: {
       name: "Abstinence",
-      desc: "Begin each battle with 1 fewer starting resource.",
-      glyph: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12c0 5-2.6 7.5-6 7.5S6 9 6 4Z"/><path d="M12 11.5V19M8.5 19h7"/><path d="M4.5 2.5l15 17"/></svg>`
+      desc: "Begin each battle with 1 fewer starting resource."
     },
     pilgrimage: {
       name: "Penitential Pilgrimage",
-      desc: "The shop takes 1 additional climb to reset its wares.",
-      glyph: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3c-2 1.4-2.6 3.4-1.6 5"/><path d="M14 8 8 21"/><circle cx="15.5" cy="4.5" r="1.9"/><path d="M17.5 21c.4-1.6-.2-2.6-1.4-2.9"/></svg>`
+      desc: "The shop takes 1 additional climb to reset its wares."
     },
     reparation: {
       name: "Reparation",
-      desc: "1 starter card is replaced with a random card bearing a random negative modification.",
-      glyph: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3.5" width="12" height="17" rx="1.6"/><path d="M13.4 3.5 10.6 10l3.2 1.4-3 6.2"/></svg>`
+      desc: "1 starter card is replaced with a random card bearing a random negative modification."
     }
   };
 
@@ -582,6 +786,9 @@
     { id: "dagger", name: "Dagger", art: "../Content/CardArt/dagger.png", highest: 10 },
     { id: "hammer", name: "Hammer", art: "../Content/CardArt/hammer.png", highest: 12 }
   ];
+
+  /* Track geometry: station width 30 + gap 17 = 47px pitch; first center at 49px. */
+  const STATION_PITCH = 47;
 
   /* ---------------- state ---------------- */
   const state = {
@@ -614,10 +821,6 @@
     return counts;
   }
 
-  function levelTitle(level) {
-    return level === 0 ? "Unburdened" : `Penance ${toRoman(level)}`;
-  }
-
   function nodeTip(level) {
     const weapon = currentWeapon();
     const type = PENANCE_TYPES[PENANCE_ORDER[level - 1]];
@@ -632,10 +835,174 @@
     return `<b>${type.name} ×${count}</b>${type.desc}${count > 1 ? ` <span class="tip-muted">(applied ${count} times)</span>` : ""}`;
   }
 
+  function footerSubHtml(level) {
+    const weapon = currentWeapon();
+    return level === 0
+      ? `Depart with the <b>${weapon.name}</b>, unburdened`
+      : `Depart with the <b>${weapon.name}</b> under <b>Penance ${toRoman(level)}</b>`;
+  }
+
+  /* Restart a one-shot animation class; removes it (and calls onEnd) when done. */
+  function restartAnim(el, cls, onEnd) {
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+    const handler = e => {
+      if (e.target !== el) return;
+      el.classList.remove(cls);
+      el.removeEventListener("animationend", handler);
+      if (onEnd) onEnd();
+    };
+    el.addEventListener("animationend", handler);
+  }
+
+  /* ---------------- static DOM (built once) ---------------- */
+  const stations = []; /* { wrap, btn } per level, index = level-1 */
+
+  function buildWeapons() {
+    document.getElementById("b-weapons").innerHTML = WEAPONS.map((w, i) => `
+      <button class="b-weapon${w.id === state.weapon ? " is-selected" : ""}" type="button"
+        data-weapon="${w.id}" style="--i:${i}">
+        <img src="${w.art}" alt="">
+        <span class="w-name">${w.name}</span>
+        <span class="w-record">Best Penance <b>${w.highest === 0 ? "—" : toRoman(w.highest)}</b></span>
+      </button>`).join("");
+  }
+
+  function buildStations() {
+    const track = document.getElementById("b-track");
+    track.innerHTML = `<div class="b-track-fill" id="b-track-fill"></div>` +
+      Array.from({ length: MAX_PENANCE }, (_, i) => {
+        const lvl = i + 1;
+        const tick = lvl % 6 === 0 ? `<span class="st-tick">${toRoman(lvl)}</span>` : "";
+        return `<div class="station-wrap" style="--i:${i}">
+          <button class="station" type="button" data-level="${lvl}" aria-label="Penance ${lvl}">
+            <span class="st-num">${lvl}</span>
+          </button>${tick}
+        </div>`;
+      }).join("");
+    stations.length = 0;
+    track.querySelectorAll(".station-wrap").forEach(wrap => {
+      stations.push({ wrap, btn: wrap.querySelector(".station") });
+    });
+  }
+
+  function buildChips() {
+    document.getElementById("b-tally").innerHTML = TALLY_DISPLAY_ORDER.map((key, i) => `
+      <div class="b-chip is-off" data-key="${key}" style="--ci:${i}">
+        <span class="t-name">${PENANCE_TYPES[key].name}</span>
+        <span class="t-count">×0</span>
+      </div>`).join("") +
+      `<div class="tally-empty is-off">No penance borne — an unburdened climb.</div>`;
+  }
+
+  /* ---------------- incremental updates ---------------- */
+  function updateWeapons(selectedId) {
+    document.querySelectorAll(".b-weapon").forEach(btn => {
+      const isSel = btn.dataset.weapon === selectedId;
+      btn.classList.toggle("is-selected", isSel);
+      if (isSel) restartAnim(btn, "just-selected");
+    });
+  }
+
+  /*
+    Stations transition with a stagger:
+    - Raising the level ignites (old, new] left-to-right, 45ms apart, each with a pop.
+    - Lowering extinguishes (new, old] right-to-left, 28ms apart, each with a dip.
+    - Weapon switches ripple lock-state changes left-to-right, 10ms per station.
+  */
+  function updateStations(oldLevel, oldHighest) {
+    const level = currentLevel();
+    const highest = currentWeapon().highest;
+    stations.forEach(({ wrap, btn }, i) => {
+      const lvl = i + 1;
+      const wasActive = lvl <= oldLevel;
+      const isActive = lvl <= level;
+      const wasLocked = lvl > oldHighest;
+      const isLocked = lvl > highest;
+
+      let delay = 0;
+      if (isActive && !wasActive) delay = (lvl - oldLevel - 1) * 45;
+      else if (!isActive && wasActive) delay = (oldLevel - lvl) * 28;
+      else if (isLocked !== wasLocked) delay = i * 10;
+
+      btn.style.transitionDelay = delay > 0 ? `${delay}ms` : "";
+      if (delay > 0) setTimeout(() => { btn.style.transitionDelay = ""; }, delay + 500);
+
+      btn.classList.toggle("is-active", isActive);
+      btn.classList.toggle("is-current", lvl === level && level > 0);
+      btn.classList.toggle("is-locked", isLocked);
+      btn.dataset.tip = nodeTip(lvl);
+
+      if (isActive && !wasActive) popStation(wrap, "ignite", delay);
+      else if (!isActive && wasActive) popStation(wrap, "extinguish", delay);
+    });
+    updateFill(level);
+  }
+
+  function popStation(wrap, cls, delay) {
+    wrap.classList.remove("ignite", "extinguish");
+    void wrap.offsetWidth;
+    wrap.style.animationDelay = `${delay}ms`;
+    wrap.classList.add(cls);
+    const handler = e => {
+      if (e.target !== wrap) return;
+      wrap.classList.remove(cls);
+      wrap.style.animationDelay = "";
+      wrap.removeEventListener("animationend", handler);
+    };
+    wrap.addEventListener("animationend", handler);
+  }
+
+  function updateFill(level) {
+    const fill = document.getElementById("b-track-fill");
+    fill.style.width = level <= 0 ? "0px" : `${(level - 1) * STATION_PITCH}px`;
+  }
+
+  function updateChips(oldCounts) {
+    const counts = tallyCounts(currentLevel());
+    document.querySelectorAll("#b-tally .b-chip").forEach(chip => {
+      const key = chip.dataset.key;
+      const oldCount = oldCounts[key] || 0;
+      const newCount = counts[key] || 0;
+      const countEl = chip.querySelector(".t-count");
+      if (newCount > 0) {
+        chip.dataset.tip = typeTip(key, newCount);
+        countEl.textContent = `×${newCount}`;
+      }
+      if (oldCount === 0 && newCount > 0) {
+        chip.classList.remove("is-off");
+      } else if (oldCount > 0 && newCount === 0) {
+        chip.classList.add("is-off");
+      } else if (oldCount !== newCount && newCount > 0) {
+        restartAnim(countEl, "bump");
+      }
+    });
+
+    const empty = document.querySelector("#b-tally .tally-empty");
+    empty.classList.toggle("is-off", currentLevel() !== 0);
+  }
+
+  function updateFooterSub(animate = true) {
+    const sub = document.getElementById("b-footer-sub");
+    const html = footerSubHtml(currentLevel());
+    if (sub.innerHTML === html) return;
+    sub.innerHTML = html;
+    if (animate) restartAnim(sub, "swap");
+  }
+
+  /* ---------------- interactions ---------------- */
   function setLevel(level) {
-    const max = currentWeapon().highest;
-    state.chosen[state.weapon] = Math.max(0, Math.min(level, max));
-    render();
+    const weapon = currentWeapon();
+    const clamped = Math.max(0, Math.min(level, weapon.highest));
+    if (clamped === currentLevel()) return;
+    const oldLevel = currentLevel();
+    const oldCounts = tallyCounts(oldLevel);
+    state.chosen[state.weapon] = clamped;
+    updateStations(oldLevel, weapon.highest);
+    updateChips(oldCounts);
+    updateFooterSub();
+    hideTooltip();
   }
 
   function onNodeClick(level) {
@@ -644,73 +1011,30 @@
   }
 
   function selectWeapon(id) {
+    if (id === state.weapon) return;
+    const oldLevel = currentLevel();
+    const oldHighest = currentWeapon().highest;
+    const oldCounts = tallyCounts(oldLevel);
     state.weapon = id;
-    const weapon = currentWeapon();
-    state.chosen[id] = Math.min(state.chosen[id], weapon.highest);
-    render();
-  }
-
-  /* ---------------- shared renderers ---------------- */
-  function tallyRowsHtml(level, rowClass) {
-    const counts = tallyCounts(level);
-    const rows = TALLY_DISPLAY_ORDER.filter(key => counts[key]).map(key => `
-      <div class="${rowClass}" data-tip='${typeTip(key, counts[key]).replace(/'/g, "&#39;")}'>
-        <span class="glyph">${PENANCE_TYPES[key].glyph}</span>
-        <span class="t-name">${PENANCE_TYPES[key].name}</span>
-        <span class="t-count">×${counts[key]}</span>
-      </div>`).join("");
-    return rows || `<div class="tally-empty">No penance borne — an unburdened climb.</div>`;
-  }
-
-  function footerSubHtml(level) {
-    const weapon = currentWeapon();
-    return level === 0
-      ? `Depart with the <b>${weapon.name}</b>, unburdened`
-      : `Depart with the <b>${weapon.name}</b> under <b>Penance ${toRoman(level)}</b>`;
-  }
-
-  /* ---------------- render ---------------- */
-  function render() {
-    const level = currentLevel();
-    const weapon = currentWeapon();
-
-    document.getElementById("b-weapons").innerHTML = WEAPONS.map(w => `
-      <button class="b-weapon${w.id === state.weapon ? " is-selected" : ""}" type="button"
-        data-weapon="${w.id}">
-        <img src="${w.art}" alt="">
-        <span class="w-name">${w.name}</span>
-        <span class="w-record">Best Penance <b>${w.highest === 0 ? "—" : toRoman(w.highest)}</b></span>
-      </button>`).join("");
-
-    document.getElementById("b-track").innerHTML = Array.from({ length: MAX_PENANCE }, (_, i) => {
-      const lvl = i + 1;
-      const classes = ["station"];
-      if (lvl <= level) classes.push("is-active");
-      if (lvl === level) classes.push("is-current");
-      if (lvl > weapon.highest) classes.push("is-locked");
-      const tick = lvl % 6 === 0 ? `<span class="st-tick">${toRoman(lvl)}</span>` : "";
-      return `<div class="station-wrap">
-        <button class="${classes.join(" ")}" type="button" data-level="${lvl}"
-          data-tip='${nodeTip(lvl).replace(/'/g, "&#39;")}' aria-label="Penance ${lvl}">
-          <span class="st-num">${lvl}</span>
-        </button>${tick}
-      </div>`;
-    }).join("");
-
-    document.getElementById("b-level").innerHTML = `
-      <span class="lvl-name">${levelTitle(level)}</span>
-      <span class="lvl-count">${level} of ${MAX_PENANCE} burdens borne</span>`;
-    document.getElementById("b-tally").innerHTML = tallyRowsHtml(level, "b-chip");
-    document.getElementById("b-footer-sub").innerHTML = footerSubHtml(level);
+    state.chosen[id] = Math.min(state.chosen[id], currentWeapon().highest);
+    updateWeapons(id);
+    updateStations(oldLevel, oldHighest);
+    updateChips(oldCounts);
+    updateFooterSub();
     hideTooltip();
   }
 
   const viewport = document.getElementById("viewport");
+  const overlayRoot = document.getElementById("root-b");
+
   viewport.addEventListener("click", event => {
     const weaponBtn = event.target.closest("[data-weapon]");
     if (weaponBtn) { selectWeapon(weaponBtn.dataset.weapon); return; }
     const node = event.target.closest("[data-level]");
-    if (node) onNodeClick(Number(node.dataset.level));
+    if (node) { onNodeClick(Number(node.dataset.level)); return; }
+    if (event.target.closest(".close-x") || event.target.closest("#depart-btn")) {
+      closeOverlay(true);
+    }
   });
 
   window.addEventListener("keydown", event => {
@@ -719,7 +1043,57 @@
     if (event.key === "1") selectWeapon("sword");
     if (event.key === "2") selectWeapon("dagger");
     if (event.key === "3") selectWeapon("hammer");
+    if (event.key === "Escape") closeOverlay(true);
   });
+
+  /* ---------------- overlay open / close ---------------- */
+  const ENTER_MS = 1450;
+  const CLOSE_MS = 470;
+  let overlayBusy = false;
+
+  function openOverlay() {
+    if (overlayBusy) return;
+    overlayBusy = true;
+    overlayRoot.classList.remove("is-hidden", "is-closing");
+    viewport.classList.add("overlay-open");
+
+    /* Fill bar starts collapsed, then sweeps out as the stations arrive. */
+    const fill = document.getElementById("b-track-fill");
+    fill.style.transition = "none";
+    fill.style.width = "0px";
+    void fill.offsetWidth;
+    fill.style.transition = "";
+    setTimeout(() => updateFill(currentLevel()), 650);
+
+    void overlayRoot.offsetWidth;
+    overlayRoot.classList.add("is-entering");
+    setTimeout(() => {
+      overlayRoot.classList.remove("is-entering");
+      overlayBusy = false;
+    }, ENTER_MS);
+  }
+
+  function closeOverlay(reopen) {
+    if (overlayBusy || overlayRoot.classList.contains("is-hidden")) return;
+    overlayBusy = true;
+    hideTooltip();
+    overlayRoot.classList.add("is-closing");
+    viewport.classList.remove("overlay-open");
+    setTimeout(() => {
+      overlayRoot.classList.add("is-hidden");
+      overlayRoot.classList.remove("is-closing");
+      overlayBusy = false;
+      if (reopen) setTimeout(openOverlay, 700);
+    }, CLOSE_MS);
+  }
+
+  document.getElementById("replay-open").addEventListener("click", () => {
+    if (overlayBusy) return;
+    overlayRoot.classList.add("is-hidden");
+    viewport.classList.remove("overlay-open");
+    setTimeout(openOverlay, 120);
+  });
+  document.getElementById("play-close").addEventListener("click", () => closeOverlay(true));
 
   /* ---------------- tooltip ---------------- */
   const tooltip = document.getElementById("tooltip");
@@ -765,8 +1139,15 @@
   window.addEventListener("resize", fitViewport);
   window.addEventListener("load", fitViewport);
 
-  render();
+  /* ---------------- boot ---------------- */
+  buildWeapons();
+  buildStations();
+  buildChips();
+  updateStations(0, currentWeapon().highest); /* initial sweep to remembered level */
+  updateChips({});
+  updateFooterSub(false);
   fitViewport();
+  setTimeout(openOverlay, 250);
 </script>
 </body>
 </html>

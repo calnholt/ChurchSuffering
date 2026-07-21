@@ -523,7 +523,7 @@ namespace Crusaders30XX.Diagnostics.Snapshots.Fixtures
 					id = $"event_{index}",
 					definitionId = definitions[index],
 					kind = character ? ClimbEventKind.Character : ClimbEventKind.Hazard,
-					scheduledAppearanceTime = Math.Min(ClimbRuleService.MaxTime, time + index + 2),
+					scheduledAppearanceTime = Math.Min(ClimbRuleService.BaseMaxTime, time + index + 2),
 					activatedAtTime = -1,
 					duration = character ? 4 : 3,
 					timeCost = character ? 1 : 0,

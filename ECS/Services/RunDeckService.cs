@@ -101,6 +101,7 @@ namespace Crusaders30XX.ECS.Services
 				var created = CreateRunDeckCard(entityManager, entry);
 				if (created != null)
 				{
+					RunScopedStateService.ApplyRestrictionsFromEntry(entityManager, created, entry);
 					deck.Cards.Add(created);
 				}
 			}

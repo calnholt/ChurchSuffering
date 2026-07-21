@@ -1,6 +1,6 @@
 using System;
 using Crusaders30XX.ECS.Factories;
-using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Data.RunSetup;
 
 namespace Crusaders30XX.Diagnostics
 {
@@ -10,7 +10,7 @@ namespace Crusaders30XX.Diagnostics
 
 		public string WeaponId { get; init; } = string.Empty;
 		public string EnemyId { get; init; } = string.Empty;
-		public RunDifficulty Difficulty { get; init; } = RunDifficulty.Easy;
+		public int PenanceLevel { get; init; }
 
 		public static bool TryParse(string[] args, out TestFightLaunchOptions options)
 		{
@@ -24,7 +24,7 @@ namespace Crusaders30XX.Diagnostics
 			if (args.Length != 4)
 			{
 				throw new TestFightSetupException(
-					"Usage: dotnet run -- test-fight <sword|dagger|hammer> <enemy-id> <easy|normal|hard>");
+					"Usage: dotnet run -- test-fight <sword|dagger|hammer> <enemy-id> <penance-level 0-24>");
 			}
 
 			string weaponId = args[1].Trim().ToLowerInvariant();
@@ -40,38 +40,21 @@ namespace Crusaders30XX.Diagnostics
 				throw new TestFightSetupException($"Unknown test-fight enemy '{args[2]}'.");
 			}
 
-			if (!TryParseDifficulty(args[3], out var difficulty))
+			if (!int.TryParse(args[3], out int penanceLevel)
+				|| penanceLevel < 0
+				|| penanceLevel > PenanceRules.MaxLevel)
 			{
 				throw new TestFightSetupException(
-					$"Unknown test-fight difficulty '{args[3]}'. Expected easy, normal, or hard.");
+					$"Invalid test-fight Penance '{args[3]}'. Expected an integer from 0 through {PenanceRules.MaxLevel}.");
 			}
 
 			options = new TestFightLaunchOptions
 			{
 				WeaponId = weaponId,
 				EnemyId = enemyId,
-				Difficulty = difficulty,
+				PenanceLevel = penanceLevel,
 			};
 			return true;
-		}
-
-		private static bool TryParseDifficulty(string value, out RunDifficulty difficulty)
-		{
-			switch (value?.Trim().ToLowerInvariant())
-			{
-				case "easy":
-					difficulty = RunDifficulty.Easy;
-					return true;
-				case "normal":
-					difficulty = RunDifficulty.Normal;
-					return true;
-				case "hard":
-					difficulty = RunDifficulty.Hard;
-					return true;
-				default:
-					difficulty = RunDifficulty.Easy;
-					return false;
-			}
 		}
 	}
 

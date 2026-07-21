@@ -129,9 +129,11 @@ namespace Crusaders30XX.ECS.Systems
 					var arrivalKind = _pendingRunEndCause == RunEndCause.Abandon
 						? WayStationArrivalKind.ReturnedFromAbandonedClimb
 						: WayStationArrivalKind.ReturnedFromFailedClimb;
+					var climb = SaveCache.GetClimbState();
 					EventManager.Publish(new ClimbEndedEvent
 					{
-						TimeReached = SaveCache.GetClimbState()?.time ?? 0,
+						TimeReached = climb?.time ?? 0,
+						ShopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb),
 						Abandoned = _pendingRunEndCause == RunEndCause.Abandon,
 						CompletedFinalBoss = false,
 					});

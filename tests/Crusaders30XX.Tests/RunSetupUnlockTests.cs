@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Crusaders30XX.ECS.Data.Save;
+using Crusaders30XX.ECS.Data.RunSetup;
 using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -46,10 +46,8 @@ public sealed class RunSetupUnlockTests : IDisposable
 		foreach (var weapon in Enum.GetValues<StartingWeapon>())
 		{
 			Assert.True(ClimbUnlockProgressionRules.IsWeaponUnlocked(meta, weapon));
-			foreach (var difficulty in Enum.GetValues<RunDifficulty>())
-			{
-				Assert.True(ClimbUnlockProgressionRules.IsDifficultyUnlocked(meta, weapon, difficulty));
-			}
+			Assert.Equal(PenanceRules.MaxLevel, ClimbUnlockProgressionRules.GetHighestUnlockedPenance(meta, weapon));
+			Assert.True(ClimbUnlockProgressionRules.IsPenanceUnlocked(meta, weapon, PenanceRules.MaxLevel));
 		}
 
 		var preservedCollection = SaveCache.GetCollection();
@@ -76,12 +74,7 @@ public sealed class RunSetupUnlockTests : IDisposable
 
 		Assert.Equal(first.climbCompletions, second.climbCompletions);
 		Assert.Equal(
-			first.completedClimbs.Select(CompletionKey).OrderBy(key => key),
-			second.completedClimbs.Select(CompletionKey).OrderBy(key => key));
-	}
-
-	private static string CompletionKey(CompletedClimbSave completion)
-	{
-		return $"{completion.startingWeaponId}|{completion.difficulty}";
+			first.highestPenanceByWeapon.OrderBy(pair => pair.Key),
+			second.highestPenanceByWeapon.OrderBy(pair => pair.Key));
 	}
 }

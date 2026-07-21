@@ -141,7 +141,7 @@ public class ClimbEncounterServiceTests
 		{
 			PrepareRunWithEncounter(timeCost: 1);
 			var climb = SaveCache.GetClimbState();
-			climb.time = ClimbRuleService.MaxTime - 1;
+			climb.time = ClimbRuleService.BaseMaxTime - 1;
 			climb.encounterSlots.Single(s => s.id == "encounter_a").rewardResources = new ClimbResourceSave { red = 0, white = 1, black = 1 };
 			SaveCache.SaveClimbState(climb);
 
@@ -210,7 +210,7 @@ public class ClimbEncounterServiceTests
 	{
 		var climb = new ClimbSaveState
 		{
-			time = ClimbRuleService.MaxTime,
+			time = ClimbRuleService.BaseMaxTime,
 			encounterSlots = new List<ClimbEncounterSlotSave>
 			{
 				new() { id = "encounter_a", enemyId = "skeleton", isCompleted = true },

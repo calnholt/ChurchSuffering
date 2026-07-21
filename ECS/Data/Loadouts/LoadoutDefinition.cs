@@ -25,6 +25,14 @@ namespace Crusaders30XX.ECS.Data.Loadouts
 		public string legsId { get; set; }
 		public string armsId { get; set; }
 		public string headId { get; set; }
+		/// <summary>Remaining uses for the equipped chest piece. Null means full (MaxUses) when loading.</summary>
+		public int? chestRemainingUses { get; set; }
+		/// <summary>Remaining uses for the equipped legs piece. Null means full (MaxUses) when loading.</summary>
+		public int? legsRemainingUses { get; set; }
+		/// <summary>Remaining uses for the equipped arms piece. Null means full (MaxUses) when loading.</summary>
+		public int? armsRemainingUses { get; set; }
+		/// <summary>Remaining uses for the equipped head piece. Null means full (MaxUses) when loading.</summary>
+		public int? headRemainingUses { get; set; }
 		public List<string> medalIds { get; set; } = new();
 	}
 }

@@ -89,7 +89,7 @@ namespace Crusaders30XX.ECS.Services
 			int seed = SaveCache.GetAll()?.runMapSeed ?? 0;
 			var loadout = SaveCache.GetLoadout(RunDeckService.PrimaryLoadoutId);
 			int appliedTime = ClimbRuleService.ApplyTime(climb, slot.timeCost);
-			if (ClimbRuleService.ShouldRefreshShopAtTime(previousTime, climb.time))
+			if (ClimbRuleService.ShouldRefreshShopAtTime(climb, previousTime, climb.time))
 			{
 				ClimbRuleService.RefreshShopSlots(climb, seed, loadout);
 			}

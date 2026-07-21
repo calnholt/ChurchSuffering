@@ -4,7 +4,7 @@ using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
-using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Data.RunSetup;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using System;
@@ -111,12 +111,6 @@ namespace Crusaders30XX.ECS.Components
 	{
 		public Entity Owner { get; set; }
 		public StartingWeapon Weapon { get; set; }
-	}
-
-	public class WayStationClimbModalDifficultyChoice : IComponent
-	{
-		public Entity Owner { get; set; }
-		public RunDifficulty Difficulty { get; set; }
 	}
 
 	public class WayStationClimbModalDepartButton : IComponent

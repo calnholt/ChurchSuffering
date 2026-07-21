@@ -32,6 +32,8 @@ When you finish implementing an attached or approved plan, always run `dotnet bu
 
 `docs/display-snapshots.md` is the canonical snapshot reference. When adding or changing a snapshot fixture, update that doc, accept intentional baselines into `tests/VisualBaselines/`, verify with `--verify`, and add/update a script under `scripts/` when a fixture has multiple variants. When verifying snapshots, fix and re-run at most two passes to catch obvious rendering, scale, or display issues — do not loop beyond that.
 
+Do not run baseline generations if not instructed to do so.
+
 ## Universal project rules
 
 - Do not migrate, reconcile, or preserve backward compatibility for existing save files unless explicitly requested. Assume a fresh run with `dotnet run -- new`.

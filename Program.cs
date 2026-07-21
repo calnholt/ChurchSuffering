@@ -45,7 +45,7 @@ try
         {
             WeaponId = "hammer",
             EnemyId = "skeleton",
-            Difficulty = Crusaders30XX.ECS.Singletons.RunDifficulty.Hard,
+			PenanceLevel = 24,
         };
         TutorialLaunchOptions.ForceSkip();
         Console.WriteLine("[Launch] Battle render profile: fixed skeleton battle, 1920x1080, 180 warm-up + 300 measured frames");
@@ -74,7 +74,7 @@ try
         testFightOptions = parsedTestFight;
         TutorialLaunchOptions.ForceSkip();
         Console.WriteLine(
-            $"[Launch] Test fight: {testFightOptions.WeaponId} vs {testFightOptions.EnemyId} ({testFightOptions.Difficulty})");
+			$"[Launch] Test fight: {testFightOptions.WeaponId} vs {testFightOptions.EnemyId} (Penance {testFightOptions.PenanceLevel})");
     }
     else if (DisplaySnapshotLaunchOptions.TryParse(appArgs, out var parsed))
     {

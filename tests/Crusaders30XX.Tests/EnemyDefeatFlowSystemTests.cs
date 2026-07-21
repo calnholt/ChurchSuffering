@@ -7,7 +7,6 @@ using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Factories;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Systems;
 using System.Linq;
 using Xunit;
@@ -94,7 +93,7 @@ public class EnemyDefeatFlowSystemTests
 			SaveCache.StartNewRun();
 			var climb = SaveCache.GetClimbState();
 			climb.startingWeaponId = "hammer";
-			climb.difficulty = RunDifficulty.Hard;
+			climb.penanceLevel = 24;
 			SaveCache.SaveClimbState(climb);
 
 			var world = BuildWorld(out var phaseState, out var enemy);
@@ -127,7 +126,7 @@ public class EnemyDefeatFlowSystemTests
 			Assert.Equal(0, musicCount);
 			Assert.NotNull(climbCompleted);
 			Assert.Equal("hammer", climbCompleted.StartingWeaponId);
-			Assert.Equal(RunDifficulty.Hard, climbCompleted.Difficulty);
+			Assert.Equal(24, climbCompleted.PenanceLevel);
 			Assert.Null(transition);
 
 			CompleteVictoryAnimation();
@@ -165,7 +164,7 @@ public class EnemyDefeatFlowSystemTests
 			SaveCache.SaveLoadout(loadout);
 
 			var climb = SaveCache.GetClimbState();
-			climb.time = ClimbRuleService.MaxTime - 1;
+			climb.time = ClimbRuleService.BaseMaxTime - 1;
 			climb.encounterSlots[0].timeCost = 1;
 			SaveCache.SaveClimbState(climb);
 

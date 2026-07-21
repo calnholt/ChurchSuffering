@@ -1,5 +1,4 @@
 using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Singletons;
 using Xunit;
 
 namespace Crusaders30XX.Tests;
@@ -10,13 +9,13 @@ public class TestFightLaunchOptionsTests
 	public void TryParse_accepts_case_insensitive_valid_command()
 	{
 		bool parsed = TestFightLaunchOptions.TryParse(
-			new[] { "TEST-FIGHT", "Hammer", "Skeleton", "HARD" },
+			new[] { "TEST-FIGHT", "Hammer", "Skeleton", "24" },
 			out var options);
 
 		Assert.True(parsed);
 		Assert.Equal("hammer", options.WeaponId);
 		Assert.Equal("skeleton", options.EnemyId);
-		Assert.Equal(RunDifficulty.Hard, options.Difficulty);
+		Assert.Equal(24, options.PenanceLevel);
 	}
 
 	[Fact]
@@ -31,14 +30,16 @@ public class TestFightLaunchOptionsTests
 	}
 
 	[Theory]
-	[InlineData("axe", "skeleton", "hard")]
-	[InlineData("hammer", "unknown_enemy", "hard")]
+	[InlineData("axe", "skeleton", "24")]
+	[InlineData("hammer", "unknown_enemy", "24")]
 	[InlineData("hammer", "skeleton", "nightmare")]
-	public void TryParse_rejects_unknown_arguments(string weapon, string enemy, string difficulty)
+	[InlineData("hammer", "skeleton", "-1")]
+	[InlineData("hammer", "skeleton", "25")]
+	public void TryParse_rejects_unknown_arguments(string weapon, string enemy, string penance)
 	{
 		Assert.Throws<TestFightSetupException>(() =>
 			TestFightLaunchOptions.TryParse(
-				new[] { "test-fight", weapon, enemy, difficulty },
+				new[] { "test-fight", weapon, enemy, penance },
 				out _));
 	}
 

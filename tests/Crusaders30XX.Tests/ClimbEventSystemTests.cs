@@ -293,11 +293,11 @@ public class ClimbEventSystemTests
 		var lateHazard = Hazard("late", ClimbHazardEffectType.Fear, effectAmount: 2);
 		lateHazard.status = ClimbEventStatus.Scheduled;
 		lateHazard.activatedAtTime = -1;
-		lateHazard.scheduledAppearanceTime = ClimbRuleService.MaxTime;
+		lateHazard.scheduledAppearanceTime = ClimbRuleService.BaseMaxTime;
 		PrepareRun(
 			new List<LoadoutCardEntry> { Entry("entry_a", "smite|White") },
 			new[] { character, lateHazard },
-			time: ClimbRuleService.MaxTime - 1);
+			time: ClimbRuleService.BaseMaxTime - 1);
 		Guid requestId = Guid.NewGuid();
 		Assert.True(SaveCache.TryBeginClimbEvent(
 			"character", ClimbEventFlowPhase.CharacterDialogue, requestId.ToString("D"), out _));
@@ -307,7 +307,7 @@ public class ClimbEventSystemTests
 
 		var climb = SaveCache.GetClimbState();
 		Assert.True(result.ReachedFinalTime);
-		Assert.Equal(ClimbRuleService.MaxTime, climb.time);
+		Assert.Equal(ClimbRuleService.BaseMaxTime, climb.time);
 		Assert.Equal(ClimbEventStatus.Completed, climb.eventSlots.Single(slot => slot.id == "character").status);
 		Assert.Equal(ClimbEventStatus.Expired, climb.eventSlots.Single(slot => slot.id == "late").status);
 	}
@@ -321,7 +321,7 @@ public class ClimbEventSystemTests
 			SaveCache.DeleteSaveFilesIfPresent();
 			SaveCache.StartNewRun();
 			var climb = SaveCache.GetClimbState();
-			climb.time = ClimbRuleService.MaxTime;
+			climb.time = ClimbRuleService.BaseMaxTime;
 			climb.pendingEncounterReward = new ClimbEncounterRewardSave
 			{
 				encounterSlotId = "encounter_a",
@@ -355,7 +355,7 @@ public class ClimbEventSystemTests
 			SaveCache.DeleteSaveFilesIfPresent();
 			SaveCache.StartNewRun();
 			var climb = SaveCache.GetClimbState();
-			climb.time = ClimbRuleService.MaxTime;
+			climb.time = ClimbRuleService.BaseMaxTime;
 			climb.pendingEncounterReward = null;
 			SaveCache.SaveClimbState(climb);
 

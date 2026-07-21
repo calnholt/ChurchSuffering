@@ -227,7 +227,7 @@ public class ClimbRuleServiceTests
 		Assert.True(ClimbRuleService.IsEncounterExpired(slot, 7));
 
 		slot.isFinal = true;
-		Assert.False(ClimbRuleService.IsEncounterExpired(slot, ClimbRuleService.MaxTime));
+		Assert.False(ClimbRuleService.IsEncounterExpired(slot, ClimbRuleService.BaseMaxTime));
 	}
 
 	[Fact]
@@ -399,9 +399,32 @@ public class ClimbRuleServiceTests
 
 		int applied = ClimbRuleService.ApplyTime(state, 99);
 
-		Assert.Equal(32, ClimbRuleService.MaxTime);
-		Assert.Equal(ClimbRuleService.MaxTime, state.time);
-		Assert.Equal(ClimbRuleService.MaxTime, applied);
+		Assert.Equal(32, ClimbRuleService.BaseMaxTime);
+		Assert.Equal(ClimbRuleService.BaseMaxTime, state.time);
+		Assert.Equal(ClimbRuleService.BaseMaxTime, applied);
+		Assert.True(ClimbRuleService.HasPendingFinalEncounter(state));
+	}
+
+	[Theory]
+	[InlineData(0, 32)]
+	[InlineData(10, 36)]
+	[InlineData(12, 36)]
+	[InlineData(19, 40)]
+	[InlineData(24, 40)]
+	public void Penitential_pilgrimage_preserves_four_shop_cycles(int penanceLevel, int expectedMaxTime)
+	{
+		Assert.Equal(expectedMaxTime, ClimbRuleService.GetMaxTime(penanceLevel));
+	}
+
+	[Fact]
+	public void Pilgrimage_climb_clamps_and_triggers_final_encounter_at_dynamic_boundary()
+	{
+		var state = ClimbRuleService.CreateInitialState(123, TestLoadout(), penanceLevel: 10);
+
+		int applied = ClimbRuleService.ApplyTime(state, 99);
+
+		Assert.Equal(36, state.time);
+		Assert.Equal(36, applied);
 		Assert.True(ClimbRuleService.HasPendingFinalEncounter(state));
 	}
 
@@ -415,8 +438,27 @@ public class ClimbRuleServiceTests
 		Assert.True(ClimbRuleService.ShouldRefreshShopAtTime(15, 16));
 		Assert.True(ClimbRuleService.ShouldRefreshShopAtTime(23, 24));
 		Assert.False(ClimbRuleService.ShouldRefreshShopAtTime(24, 31));
-		Assert.False(ClimbRuleService.ShouldRefreshShopAtTime(30, ClimbRuleService.MaxTime));
+		Assert.False(ClimbRuleService.ShouldRefreshShopAtTime(30, ClimbRuleService.BaseMaxTime));
 		Assert.False(ClimbRuleService.ShouldRefreshShopAtTime(32, 40));
+	}
+
+	[Fact]
+	public void Pilgrimage_shop_refreshes_every_nine_pips_without_refreshing_at_final_time()
+	{
+		var state = new ClimbSaveState { penanceLevel = 10 };
+
+		Assert.False(ClimbRuleService.ShouldRefreshShopAtTime(state, 0, 8));
+		Assert.True(ClimbRuleService.ShouldRefreshShopAtTime(state, 8, 9));
+		Assert.True(ClimbRuleService.ShouldRefreshShopAtTime(state, 17, 18));
+		Assert.True(ClimbRuleService.ShouldRefreshShopAtTime(state, 26, 27));
+		Assert.False(ClimbRuleService.ShouldRefreshShopAtTime(state, 35, 36));
+	}
+
+	[Fact]
+	public void Pilgrimage_event_schedule_spans_the_extended_climb()
+	{
+		Assert.Equal((1, 7), ClimbRuleService.GetEventAppearanceBand(0, maxTime: 36));
+		Assert.Equal((29, 36), ClimbRuleService.GetEventAppearanceBand(4, maxTime: 36));
 	}
 
 	[Fact]
@@ -475,7 +517,7 @@ public class ClimbRuleServiceTests
 	{
 		var state = new ClimbSaveState
 		{
-			time = ClimbRuleService.MaxTime,
+			time = ClimbRuleService.BaseMaxTime,
 			eventSlots = new List<ClimbEventSlotSave>
 			{
 				new() { id = "scheduled", status = ClimbEventStatus.Scheduled, scheduledAppearanceTime = 30 },
@@ -749,6 +791,13 @@ public class ClimbRuleServiceTests
 	public void ResolveClimbEncounterPool_uses_midpoint(int climbTime, ClimbEncounterPool expected)
 	{
 		Assert.Equal(expected, ClimbRuleService.ResolveClimbEncounterPool(climbTime));
+	}
+
+	[Fact]
+	public void Pilgrimage_encounter_pool_midpoint_moves_with_extended_climb()
+	{
+		Assert.Equal(ClimbEncounterPool.Early, ClimbRuleService.ResolveClimbEncounterPool(17, maxTime: 36));
+		Assert.Equal(ClimbEncounterPool.Late, ClimbRuleService.ResolveClimbEncounterPool(18, maxTime: 36));
 	}
 
 	[Theory]

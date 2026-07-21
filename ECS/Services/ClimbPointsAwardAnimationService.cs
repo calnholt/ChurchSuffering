@@ -62,6 +62,7 @@ public readonly record struct ClimbPointsAwardTier(
 
 public readonly record struct ClimbPointsAwardScenario(
 	int TimeReached,
+	int ShopRefreshInterval,
 	bool CompletedFinalBoss,
 	bool Abandoned,
 	string Kicker,
@@ -168,10 +169,15 @@ public static class ClimbPointsAwardAnimationService
 		new("boss", 0, true, 3, "Final Judgment", "FINAL BOSS DEFEATED"),
 	];
 
-	public static ClimbPointsAwardScenario CreateScenario(int timeReached, bool completedFinalBoss, bool abandoned)
+	public static ClimbPointsAwardScenario CreateScenario(
+		int timeReached,
+		bool completedFinalBoss,
+		bool abandoned,
+		int shopRefreshInterval = CollectionProgressionRules.FirstShopRefreshTime)
 	{
 		return new ClimbPointsAwardScenario(
 			Math.Max(0, timeReached),
+			Math.Max(1, shopRefreshInterval),
 			completedFinalBoss,
 			abandoned,
 			completedFinalBoss ? "A VICTORIOUS RETURN" : "RETURNED TO THE WAYSTATION",
@@ -196,7 +202,32 @@ public static class ClimbPointsAwardAnimationService
 		if (scenario.Abandoned) return false;
 		return tier.RequiresBoss
 			? scenario.CompletedFinalBoss
-			: scenario.TimeReached >= tier.TimeThreshold;
+			: scenario.TimeReached >= GetTierTimeThreshold(tier, scenario);
+	}
+
+	public static int GetTierTimeThreshold(ClimbPointsAwardTier tier, ClimbPointsAwardScenario scenario)
+	{
+		if (tier.RequiresBoss) return 0;
+		int cycle = tier.Id switch
+		{
+			"shop1" => 1,
+			"shop2" => 2,
+			"shop3" => 3,
+			_ => Math.Max(1, tier.TimeThreshold / CollectionProgressionRules.FirstShopRefreshTime),
+		};
+		return Math.Max(1, scenario.ShopRefreshInterval) * cycle;
+	}
+
+	public static string GetTierRequirement(ClimbPointsAwardTier tier, ClimbPointsAwardScenario scenario)
+	{
+		if (tier.RequiresBoss) return tier.Requirement;
+		return tier.Id switch
+		{
+			"shop1" => $"FIRST SHOP REFRESH REACHED | TIME {GetTierTimeThreshold(tier, scenario)}+",
+			"shop2" => $"SECOND SHOP REFRESH REACHED | TIME {GetTierTimeThreshold(tier, scenario)}+",
+			"shop3" => $"THIRD SHOP REFRESH REACHED | TIME {GetTierTimeThreshold(tier, scenario)}+",
+			_ => tier.Requirement,
+		};
 	}
 
 	public static float GetTierRevealSeconds(int earnedIndex) =>

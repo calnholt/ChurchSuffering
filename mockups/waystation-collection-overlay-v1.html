@@ -1,0 +1,2459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crusaders30XX — Waystation Collection Overlay (3 Variants)</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    MonoGame notes (1920x1080 virtual; page chrome not shipped):
+    - Replaces waystation-saints-medals-modal-v1.html. Full-screen overlay on waystation.png, dim rgba(0,0,0,0.72).
+    - Three tabs now: SAINTS (medal chronicle, same functionality as v1 modal), CARDS (unlocked card
+      collection, in-game card frame, fanned like BoosterPackOpeningAnimationService slot rotations),
+      EQUIPMENT (unlocked equipment from Content/Equipment). A ghost "+" tab reserves space for future tabs.
+    - Cards: clicking a card cycles the viewed color W -> R -> K (black shows +1 BLK per game rule).
+      Locked cards render card_back.png. Fan slots: rotate (i-center)*step with an arc drop, hover
+      counter-rotates + lifts (mirrors SlotStartRotationsDegrees fanning).
+    - VARIANT 1 "Reliquary Wall": warm candlelit gold; top arch tabs; medal votive wall + altar detail;
+      card fans grouped in pew rows; equipment in four slot alcove columns.
+    - VARIANT 2 "Chronicler's Codex": vellum ledger; left spine ribbon tabs; medal roster + manuscript page;
+      card desk-fan with large inspection preview; equipment as ledger rows with wax seals.
+    - VARIANT 3 "Ossuary Vault": obsidian + ember red; bottom HUD dock tabs; offset medal reliquary grid with
+      slide-in drawer; one giant arc fan of every card that pans with the cursor; equipment on slot shelves.
+  */
+  :root {
+    --black-0: #050505;
+    --white-1: #ffffff;
+    --white-2: #f0ece6;
+    --white-3: #c8c0b8;
+    --red-dark: #8b0000;
+    --red-brick: #b43232;
+    --red-3: #c41e3a;
+    --red-glow: rgba(196, 30, 58, 0.45);
+    --gold: #d4a84a;
+    --gold-hi: #f2cf7d;
+    --gold-dim: #8a6f30;
+    --kw-color: #d4a84a;
+    --game-w: 1920px;
+    --game-h: 1080px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0908;
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+
+  .page-header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid #26221c;
+    background: #0d0c0a;
+  }
+  .page-header h1 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--white-1);
+    margin-bottom: 4px;
+  }
+  .page-header p {
+    color: var(--white-3);
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    max-width: 1020px;
+    line-height: 1.5;
+  }
+
+  .page-main { padding: 32px 40px 80px; }
+
+  .variant-header {
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 56px auto 14px;
+  }
+  .variant-header:first-child { margin-top: 0; }
+  .variant-header h2 {
+    font-family: 'New Rocker', cursive;
+    font-size: 1.35rem;
+    letter-spacing: 2px;
+    color: var(--gold-hi);
+  }
+  .variant-header p {
+    color: #8f887e;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    line-height: 1.5;
+    margin-top: 4px;
+    max-width: 980px;
+  }
+
+  .viewport-scaler {
+    width: 100%;
+    max-width: min(calc(100vw - 80px), 1320px);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: #131211;
+    border: 1px solid #29251f;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    min-height: 320px;
+  }
+  .viewport {
+    width: var(--game-w);
+    height: var(--game-h);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform-origin: top center;
+    overflow: hidden;
+  }
+
+  .bg-scene {
+    position: absolute;
+    inset: -30px;
+    background: url('../Content/waystation.png') center / cover no-repeat;
+    transform: translate(calc((var(--mx, 0.5) - 0.5) * -20px), calc((var(--my, 0.5) - 0.5) * -12px));
+    transition: transform 0.25s ease-out;
+    will-change: transform;
+  }
+  .bg-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+
+  /* =====================================================================
+     SHARED — tab machinery, panels, meter, close button
+     ===================================================================== */
+  [data-panel] { display: none; }
+  [data-panel].active { display: flex; }
+
+  .btn-close {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--white-1);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .btn-close:hover {
+    border-color: var(--red-3);
+    background: var(--red-dark);
+    box-shadow: 0 0 16px var(--red-glow);
+  }
+
+  .meter-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .meter-label {
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    white-space: nowrap;
+  }
+  .meter-track {
+    flex: 1;
+    max-width: 460px;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .meter-fill {
+    height: 100%;
+    border-radius: 5px;
+    background: linear-gradient(90deg, var(--red-dark), var(--red-brick));
+    transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .meter-count {
+    font-family: 'New Rocker', cursive;
+    font-size: 19px;
+    color: var(--white-1);
+    white-space: nowrap;
+  }
+
+  /* =====================================================================
+     SHARED — medal tiles + saint detail typography
+     ===================================================================== */
+  .medal-tile {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    transition: transform 0.18s ease;
+    position: relative;
+  }
+  .medal-tile:hover:not(.is-locked) { transform: translateY(-4px); }
+  .medal-tile.is-locked { cursor: default; opacity: 0.45; }
+
+  .medal-icon-wrap {
+    width: var(--medal-size, 88px);
+    height: var(--medal-size, 88px);
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: box-shadow 0.2s ease;
+  }
+  .medal-tile:hover:not(.is-locked) .medal-icon-wrap {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 8px 22px rgba(0, 0, 0, 0.6);
+  }
+  .medal-tile.is-selected .medal-icon-wrap {
+    box-shadow: 0 0 0 2px var(--sel-color, var(--red-3)), 0 0 22px var(--sel-glow, var(--red-glow));
+  }
+  .medal-tile.is-locked .medal-icon-wrap {
+    background: #191919;
+    border: 2px dashed rgba(255, 255, 255, 0.12);
+  }
+  .medal-icon-wrap img { width: 100%; height: 100%; object-fit: contain; }
+  .medal-locked-mark {
+    font-family: 'New Rocker', cursive;
+    font-size: 34px;
+    color: rgba(255, 255, 255, 0.28);
+  }
+  .medal-tile-label {
+    font-size: 12px;
+    line-height: 1.25;
+    color: var(--white-3);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .medal-tile.is-selected .medal-tile-label { color: var(--white-1); }
+  .medal-tile.is-locked .medal-tile-label { visibility: hidden; height: 0; }
+
+  .saint-name {
+    font-family: 'New Rocker', cursive;
+    font-size: 34px;
+    color: var(--white-1);
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+  .medal-effect-block {
+    margin-bottom: 18px;
+    padding: 15px 17px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 6px;
+  }
+  .medal-effect-text { font-size: 16.5px; line-height: 1.55; color: var(--white-2); }
+  .medal-effect-text .kw { color: var(--kw-color); font-weight: 600; }
+  .keyword-blocks { margin-top: 11px; display: flex; flex-direction: column; gap: 7px; }
+  .keyword-block {
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: #989088;
+    padding-left: 12px;
+    border-left: 2px solid rgba(212, 168, 74, 0.35);
+  }
+  .saint-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--white-3);
+    margin: 18px 0 7px;
+  }
+  .saint-years { font-size: 15px; line-height: 1.5; color: #c8c0b8; font-style: italic; }
+  .saint-bio { font-size: 16px; line-height: 1.6; color: #b4b0a8; margin-bottom: 14px; }
+  .saint-patronages { font-size: 15px; line-height: 1.5; color: #c8c0b8; }
+  .saint-prayer {
+    margin-top: 4px;
+    padding: 16px 18px;
+    border-left: 3px solid var(--red-brick);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 15px;
+    line-height: 1.55;
+    font-style: italic;
+    color: var(--white-2);
+  }
+  .detail-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 14px;
+    color: var(--white-3);
+    padding: 40px;
+  }
+  .detail-empty-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: rgba(255, 255, 255, 0.25);
+  }
+  .detail-empty p { font-size: 15px; line-height: 1.5; max-width: 320px; }
+
+  /* =====================================================================
+     SHARED — in-game card frame (approximates CardDisplaySystem look)
+     ===================================================================== */
+  .fan-slot {
+    width: calc(240px * var(--cs, 0.72));
+    height: calc(340px * var(--cs, 0.72));
+    position: relative;
+    flex-shrink: 0;
+    transform: rotate(var(--rot, 0deg)) translateY(var(--drop, 0px));
+    transform-origin: 50% 100%;
+    transition: transform 0.22s ease;
+    z-index: var(--z, 1);
+  }
+  .fan-slot:hover { z-index: 60; }
+  .fan-lift {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), filter 0.24s ease;
+  }
+  .fan-slot:hover .fan-lift {
+    transform: rotate(calc(var(--rot, 0deg) * -1)) translateY(calc(-34px - var(--drop, 0px))) scale(1.16);
+    filter: drop-shadow(0 22px 26px rgba(0, 0, 0, 0.65));
+  }
+  .fan-slot.locked .fan-lift { filter: saturate(0.4) brightness(0.8); }
+  .fan-slot.locked:hover .fan-lift {
+    transform: rotate(calc(var(--rot, 0deg) * -1)) translateY(calc(-14px - var(--drop, 0px))) scale(1.05);
+    filter: saturate(0.55) brightness(0.95);
+  }
+  .cscale {
+    width: 240px;
+    height: 340px;
+    transform: scale(var(--cs, 0.72));
+    transform-origin: top left;
+  }
+  .cscale.color-swap { animation: colorflip 0.36s ease; }
+  @keyframes colorflip {
+    0%   { transform: scale(var(--cs, 0.72)) rotateY(0deg); }
+    50%  { transform: scale(var(--cs, 0.72)) rotateY(90deg); }
+    100% { transform: scale(var(--cs, 0.72)) rotateY(0deg); }
+  }
+
+  .ccard {
+    width: 240px;
+    height: 340px;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+  }
+  .ccard .bg { position: absolute; inset: 0; border-radius: 8px; }
+  .ccard.w .bg { background: #dcd7ce; }
+  .ccard.r .bg { background: #1c0c0c; }
+  .ccard.k .bg { background: #131313; }
+
+  .ccard .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 6; }
+  .ccard.w .stripe { background: #999; }
+  .ccard.r .stripe { background: #cc2222; }
+  .ccard.k .stripe { background: #cc2222; }
+
+  .ccard .gutter { position: absolute; left: 6px; top: 0; bottom: 0; width: 55px; z-index: 1; }
+  .ccard.w .gutter { background: rgba(0, 0, 0, 0.05); }
+  .ccard.r .gutter { background: rgba(0, 0, 0, 0.22); }
+  .ccard.k .gutter { background: rgba(255, 255, 255, 0.025); }
+
+  .ccard .notch {
+    position: absolute;
+    top: 0; right: 0;
+    z-index: 7;
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 5px 10px 5px 14px;
+    border-radius: 0 8px 0 8px;
+  }
+  .ccard.w .notch { background: rgba(0, 0, 0, 0.06); color: #999; }
+  .ccard.r .notch { background: rgba(200, 30, 30, 0.15); color: #884433; }
+  .ccard.k .notch { background: rgba(255, 255, 255, 0.04); color: #555; }
+
+  .ccard .stats {
+    position: absolute;
+    left: 14px; top: 14px; bottom: 14px;
+    width: 42px;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+  }
+  .ccard .chip-slot { height: 50px; flex-shrink: 0; }
+  .ccard .chip-slot-ap { margin-top: auto; flex-shrink: 0; }
+  .ccard .chip {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .ccard .chip .v { font-family: 'New Rocker', cursive; font-size: 1.25rem; line-height: 1; }
+  .ccard .chip .l {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .ccard .chip-blk { border: 2.5px solid #777; background: rgba(80, 80, 80, 0.15); color: #bbb; }
+  .ccard .chip-blk .l { color: #888; }
+  .ccard.w .chip-blk { border-color: #999; color: #555; background: rgba(0, 0, 0, 0.08); }
+  .ccard.w .chip-blk .l { color: #777; }
+  .ccard .chip-atk { background: #cc2222; color: #fff; }
+  .ccard .chip-atk .l { color: #ffccbb; }
+  .ccard.w .chip-ap { background: #444; color: #ddd; }
+  .ccard.w .chip-ap .l { color: #aaa; }
+  .ccard.r .chip-ap { background: #330e0e; color: #dd4433; }
+  .ccard.r .chip-ap .l { color: #993322; }
+  .ccard.k .chip-ap { background: #1e1e1e; color: #dd4433; }
+  .ccard.k .chip-ap .l { color: #993322; }
+  .ccard .chip-free { border: 2px dashed; background: transparent; }
+  .ccard.w .chip-free { border-color: #aaa; color: #888; }
+  .ccard.w .chip-free .l { color: #aaa; }
+  .ccard.r .chip-free { border-color: #883322; color: #cc5544; }
+  .ccard.r .chip-free .l { color: #883322; }
+  .ccard.k .chip-free { border-color: #883322; color: #cc5544; }
+  .ccard.k .chip-free .l { color: #883322; }
+
+  .ccard .content {
+    position: relative;
+    z-index: 3;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-left: 65px;
+    padding: 14px 14px 14px 0;
+  }
+  .ccard .cost-row { display: flex; gap: 5px; margin-bottom: 4px; min-height: 13px; }
+  .ccard .pip { width: 13px; height: 13px; border-radius: 50%; }
+  .pip.pip-red { background: #b43232; }
+  .pip.pip-white { background: #e6ddcb; border: 1px solid rgba(0, 0, 0, 0.35); }
+  .pip.pip-black { background: #161616; border: 1px solid #666; }
+  .pip.pip-any { background: linear-gradient(135deg, #999 0%, #333 100%); }
+
+  .ccard .name { font-family: 'New Rocker', cursive; font-size: 1.2rem; letter-spacing: 1px; margin-bottom: 6px; }
+  .ccard.w .name { color: #1a1a1a; }
+  .ccard.r .name { color: #f0e0d8; }
+  .ccard.k .name { color: #e8e4e0; }
+  .ccard .rule { height: 2px; margin-bottom: 8px; border-radius: 1px; }
+  .ccard.w .rule { background: #c0b8aa; }
+  .ccard.r .rule { background: #442020; }
+  .ccard.k .rule { background: #333; }
+  .ccard .desc { font-size: 13.5px; line-height: 1.42; flex: 1; }
+  .ccard.w .desc { color: #444; }
+  .ccard.r .desc { color: #cc9988; }
+  .ccard.k .desc { color: #999; }
+
+  .ccard .art {
+    position: absolute;
+    bottom: -10px; right: -15px;
+    width: 170px; height: 150px;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .ccard .art img { width: 100%; height: 100%; object-fit: contain; }
+
+  .ccard .sheen {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    background: radial-gradient(300px circle at var(--gx, 50%) var(--gy, 40%), rgba(255, 255, 255, 0.16), transparent 62%);
+  }
+  .fan-slot:hover .ccard .sheen { opacity: 1; }
+
+  .ccard .cdots {
+    position: absolute;
+    right: 7px; bottom: 7px;
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ccard .cdots i {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    transform: rotate(45deg);
+    border-radius: 2px;
+    opacity: 0.45;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .ccard .cdots i[data-c="w"] { background: #e6ddcb; }
+  .ccard .cdots i[data-c="r"] { background: #b43232; }
+  .ccard .cdots i[data-c="k"] { background: #111; border: 1px solid #777; }
+  .ccard .cdots i.on { opacity: 1; transform: rotate(45deg) scale(1.45); }
+
+  .card-back {
+    width: 240px;
+    height: 340px;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #0c0c0c;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-back img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+  .card-back .undiscovered {
+    position: absolute;
+    bottom: 14px; left: 0; right: 0;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    text-shadow: 0 2px 6px #000;
+  }
+
+  .fan-row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 34px 0 10px;
+  }
+  .fan-row .fan-slot + .fan-slot { margin-left: var(--overlap, -38px); }
+
+  .cards-hint {
+    text-align: center;
+    font-size: 12.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8f887e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .cards-hint .dot { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); display: inline-block; }
+  .cards-hint .dot.w { background: #e6ddcb; }
+  .cards-hint .dot.r { background: #b43232; }
+  .cards-hint .dot.k { background: #111; border: 1px solid #777; }
+
+  /* =====================================================================
+     SHARED — equipment tile
+     ===================================================================== */
+  .eq-tile {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 14px 14px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+  }
+  .eq-tile:hover:not(.is-locked) {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55);
+  }
+  .eq-tile.is-locked { opacity: 0.4; cursor: default; }
+  .eq-icon {
+    width: 84px; height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+  }
+  .eq-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .eq-locked-mark { font-family: 'New Rocker', cursive; font-size: 34px; color: rgba(255, 255, 255, 0.3); }
+  .eq-name { font-family: 'New Rocker', cursive; font-size: 15.5px; color: var(--white-1); line-height: 1.15; }
+  .eq-sub {
+    font-size: 10.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8f887e;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .eq-gem { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .eq-gem.white { background: #e6ddcb; }
+  .eq-gem.red { background: #b43232; }
+  .eq-gem.black { background: #161616; border: 1px solid #777; }
+  .eq-text { font-size: 12.5px; line-height: 1.45; color: #b4b0a8; }
+  .eq-text .kw { color: var(--kw-color); font-weight: 600; }
+  .eq-text.flavor { font-style: italic; color: #8f887e; }
+
+  /* =====================================================================
+     VARIANT 1 — Reliquary Wall
+     ===================================================================== */
+  .v1 .overlay {
+    position: absolute;
+    inset: 40px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(1200px 500px at 50% -8%, rgba(212, 168, 74, 0.10), transparent 60%),
+      linear-gradient(180deg, rgba(20, 16, 10, 0.97), rgba(10, 8, 6, 0.97));
+    border: 2px solid rgba(212, 168, 74, 0.55);
+    outline: 1px solid rgba(212, 168, 74, 0.16);
+    outline-offset: 5px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8), 0 40px 90px rgba(0, 0, 0, 0.8);
+    --sel-color: var(--gold);
+    --sel-glow: rgba(212, 168, 74, 0.4);
+  }
+  .v1 .overlay-header {
+    flex-shrink: 0;
+    position: relative;
+    text-align: center;
+    padding: 26px 32px 0;
+  }
+  .v1 .overlay-title {
+    font-family: 'New Rocker', cursive;
+    font-size: 46px;
+    letter-spacing: 3px;
+    color: var(--gold-hi);
+    text-shadow: 0 0 26px rgba(212, 168, 74, 0.35);
+    line-height: 1;
+  }
+  .v1 .overlay-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #8a7a55;
+  }
+  .v1 .btn-close { top: 26px; right: 26px; border-color: rgba(212, 168, 74, 0.5); }
+
+  .v1 .tabs {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 14px;
+    margin-top: 20px;
+    padding: 0 32px;
+    flex-shrink: 0;
+  }
+  .v1 .tabs button {
+    font-family: 'New Rocker', cursive;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: #9a8a63;
+    background: linear-gradient(180deg, rgba(212, 168, 74, 0.06), rgba(212, 168, 74, 0.015));
+    border: 1px solid rgba(212, 168, 74, 0.3);
+    border-bottom: none;
+    border-radius: 90px 90px 0 0;
+    padding: 16px 38px 12px;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+  }
+  .v1 .tabs button:hover:not(.active):not(:disabled) {
+    color: var(--gold-hi);
+    transform: translateY(-3px);
+  }
+  .v1 .tabs button.active {
+    color: var(--gold-hi);
+    background: linear-gradient(180deg, rgba(212, 168, 74, 0.2), rgba(212, 168, 74, 0.04));
+    box-shadow: 0 -8px 26px rgba(212, 168, 74, 0.15);
+  }
+  .v1 .tabs button .tab-count {
+    display: block;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #7a6a45;
+    margin-top: 3px;
+  }
+  .v1 .tabs .tab-ghost {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 18px;
+    padding: 14px 20px 10px;
+    color: rgba(212, 168, 74, 0.25);
+    border-style: dashed;
+    cursor: default;
+  }
+
+  .v1 .overlay-body {
+    flex: 1;
+    min-height: 0;
+    border-top: 1px solid rgba(212, 168, 74, 0.35);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .v1 [data-panel="medals"].active { flex: 1; min-height: 0; }
+  .v1 .medal-wall {
+    width: 46%;
+    border-right: 1px solid rgba(212, 168, 74, 0.18);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .v1 .wall-toolbar {
+    padding: 18px 28px 10px;
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #8a7a55;
+  }
+  .v1 .medal-scroll { flex: 1; overflow-y: auto; padding: 14px 28px 28px; }
+  .v1 .medal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px 12px; }
+  .v1 .medal-tile .medal-icon-wrap { border: 1px solid rgba(212, 168, 74, 0.25); }
+  .v1 .split-detail {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 26px 36px 30px;
+    overflow-y: auto;
+  }
+
+  .v1 [data-panel="cards"].active,
+  .v1 [data-panel="equipment"].active { flex: 1; min-height: 0; flex-direction: column; }
+  .v1 .cards-scroll { flex: 1; overflow-y: auto; padding: 8px 40px 30px; }
+  .v1 .fan-group-label {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #8a7a55;
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+  }
+  .v1 .fan-group-label::before,
+  .v1 .fan-group-label::after {
+    content: '';
+    height: 1px;
+    width: 120px;
+    background: linear-gradient(90deg, transparent, rgba(212, 168, 74, 0.35));
+  }
+  .v1 .fan-group-label::after { background: linear-gradient(270deg, transparent, rgba(212, 168, 74, 0.35)); }
+  .v1 .cards-hint { padding: 12px 0 2px; }
+
+  .v1 .eq-hall {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    padding: 10px 30px 26px;
+  }
+  .v1 .eq-col { padding: 0 14px; }
+  .v1 .eq-col + .eq-col { border-left: 1px solid rgba(212, 168, 74, 0.14); }
+  .v1 .eq-col-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 0 16px;
+  }
+  .v1 .eq-col-head img { width: 40px; height: 40px; object-fit: contain; opacity: 0.85; }
+  .v1 .eq-col-head span { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: #8a7a55; }
+  .v1 .eq-col .eq-tile { margin-bottom: 12px; width: 100%; border-radius: 6px; }
+  .v1 .eq-tile:hover:not(.is-locked) { border-color: rgba(212, 168, 74, 0.5); }
+
+  .v1 .overlay-footer {
+    flex-shrink: 0;
+    padding: 14px 32px;
+    border-top: 1px solid rgba(212, 168, 74, 0.25);
+  }
+
+  /* =====================================================================
+     VARIANT 2 — Chronicler's Codex
+     ===================================================================== */
+  .v2 .overlay {
+    position: absolute;
+    inset: 44px 56px;
+    z-index: 10;
+    display: flex;
+    background: linear-gradient(180deg, #1d1811, #15110c);
+    border: 1px solid rgba(220, 200, 160, 0.35);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+      inset 0 0 120px rgba(0, 0, 0, 0.55),
+      0 40px 90px rgba(0, 0, 0, 0.8);
+    --sel-color: #b9945a;
+    --sel-glow: rgba(185, 148, 90, 0.4);
+  }
+  .v2 .spine {
+    width: 128px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, #241d13, #1a1510);
+    border-right: 1px solid rgba(220, 200, 160, 0.22);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 26px 0;
+    gap: 10px;
+  }
+  .v2 .spine-title {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: 'New Rocker', cursive;
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: #d8b878;
+    align-self: center;
+    margin-bottom: 22px;
+  }
+  .v2 .tabs { display: flex; flex-direction: column; gap: 10px; padding: 0 14px 0 18px; }
+  .v2 .tabs button {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-align: left;
+    color: #8f8064;
+    background: rgba(220, 200, 160, 0.04);
+    border: 1px solid rgba(220, 200, 160, 0.16);
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+    padding: 15px 10px 15px 16px;
+    cursor: pointer;
+    margin-right: -15px;
+    position: relative;
+    transition: color 0.2s ease, background 0.2s ease, margin-right 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .v2 .tabs button:hover:not(.active):not(:disabled) { color: #e8d5ab; margin-right: -8px; }
+  .v2 .tabs button.active {
+    color: #f4e4bc;
+    background: linear-gradient(90deg, rgba(143, 29, 34, 0.55), rgba(143, 29, 34, 0.18));
+    border-color: rgba(220, 120, 100, 0.4);
+    margin-right: -1px;
+  }
+  .v2 .tabs button .tab-count { display: block; font-size: 10px; letter-spacing: 2px; color: #7a6c50; margin-top: 2px; }
+  .v2 .tabs .tab-ghost {
+    color: rgba(220, 200, 160, 0.22);
+    border-style: dashed;
+    cursor: default;
+    text-align: center;
+    padding-left: 10px;
+  }
+  .v2 .codex-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+  .v2 .btn-close { top: 20px; right: 20px; border-color: rgba(220, 200, 160, 0.4); border-radius: 50%; }
+  .v2 .codex-header {
+    flex-shrink: 0;
+    padding: 24px 84px 16px 36px;
+    border-bottom: 1px solid rgba(220, 200, 160, 0.18);
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+  }
+  .v2 .codex-header h2 {
+    font-family: 'New Rocker', cursive;
+    font-size: 34px;
+    color: #f4e4bc;
+    letter-spacing: 1px;
+  }
+  .v2 .codex-header .folio {
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #8f8064;
+  }
+
+  .v2 [data-panel="medals"].active { flex: 1; min-height: 0; }
+  .v2 .roster {
+    width: 37%;
+    border-right: 1px solid rgba(220, 200, 160, 0.14);
+    overflow-y: auto;
+    padding: 14px 0 24px;
+  }
+  .v2 .roster-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 22px;
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    text-align: left;
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    transition: background 0.15s ease, border-color 0.15s ease, padding-left 0.2s ease;
+  }
+  .v2 .roster-row:hover:not(.is-locked) { background: rgba(220, 200, 160, 0.05); padding-left: 28px; }
+  .v2 .roster-row.is-selected {
+    background: linear-gradient(90deg, rgba(143, 29, 34, 0.28), transparent);
+    border-left-color: #8f1d22;
+  }
+  .v2 .roster-row.is-locked { opacity: 0.4; cursor: default; }
+  .v2 .roster-icon {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #000;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(220, 200, 160, 0.25);
+  }
+  .v2 .roster-icon img { width: 100%; height: 100%; object-fit: contain; }
+  .v2 .roster-icon .medal-locked-mark { font-size: 22px; }
+  .v2 .roster-name { font-family: 'New Rocker', cursive; font-size: 16px; color: #e8dcc0; line-height: 1.1; }
+  .v2 .roster-effect {
+    font-size: 11.5px;
+    color: #8f8064;
+    line-height: 1.35;
+    margin-top: 3px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .v2 .manuscript {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 30px 44px 36px;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(700px 300px at 70% 0%, rgba(220, 200, 160, 0.05), transparent 70%);
+  }
+  .v2 .manuscript .saint-name { color: #f4e4bc; }
+  .v2 .manuscript .saint-bio:first-of-type::first-letter {
+    font-family: 'New Rocker', cursive;
+    font-size: 52px;
+    float: left;
+    line-height: 0.8;
+    padding: 6px 10px 0 0;
+    color: #8f1d22;
+  }
+
+  .v2 [data-panel="cards"].active { flex: 1; min-height: 0; }
+  .v2 .desk {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    position: relative;
+  }
+  .v2 .desk-fans { overflow-y: auto; padding: 12px 26px 24px; }
+  .v2 .desk .cards-hint { padding: 14px 0 4px; flex-shrink: 0; }
+  .v2 .lectern {
+    width: 420px;
+    flex-shrink: 0;
+    border-left: 1px solid rgba(220, 200, 160, 0.14);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 26px 20px 20px;
+    gap: 16px;
+    background: radial-gradient(400px 320px at 50% 30%, rgba(220, 200, 160, 0.06), transparent 75%);
+  }
+  .v2 .lectern-label { font-size: 11px; letter-spacing: 5px; text-transform: uppercase; color: #8f8064; }
+  .v2 .preview-holder {
+    width: 288px;
+    height: 408px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .v2 .preview-holder .cscale { transform: scale(1.2); transform-origin: center; }
+  .v2 .preview-holder .ccard { cursor: pointer; }
+  .v2 .preview-meta {
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #8f8064;
+    line-height: 1.9;
+  }
+  .v2 .preview-meta b { color: #e8d5ab; font-weight: 600; }
+
+  .v2 [data-panel="equipment"].active { flex: 1; min-height: 0; flex-direction: column; }
+  .v2 .ledger { flex: 1; overflow-y: auto; padding: 10px 40px 30px; }
+  .v2 .ledger-slot-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 22px 0 8px;
+    font-size: 11px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #8f8064;
+  }
+  .v2 .ledger-slot-head img { width: 30px; height: 30px; object-fit: contain; opacity: 0.8; }
+  .v2 .ledger-slot-head::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(220, 200, 160, 0.3), transparent);
+  }
+  .v2 .ledger-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed rgba(220, 200, 160, 0.12);
+    cursor: pointer;
+    text-align: left;
+    color: var(--white-2);
+    font-family: 'Chakra Petch', sans-serif;
+    position: relative;
+    transition: background 0.15s ease;
+  }
+  .v2 .ledger-row::after {
+    content: '';
+    position: absolute;
+    left: 16px; bottom: -1px;
+    height: 2px;
+    width: 0;
+    background: #8f1d22;
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .v2 .ledger-row:hover:not(.is-locked) { background: rgba(220, 200, 160, 0.045); }
+  .v2 .ledger-row:hover:not(.is-locked)::after { width: calc(100% - 32px); }
+  .v2 .ledger-row.is-locked { opacity: 0.4; cursor: default; }
+  .v2 .ledger-icon { width: 58px; height: 58px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .v2 .ledger-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .v2 .ledger-name { font-family: 'New Rocker', cursive; font-size: 17px; color: #e8dcc0; width: 210px; flex-shrink: 0; }
+  .v2 .ledger-text { flex: 1; font-size: 13px; line-height: 1.45; color: #a89a7e; }
+  .v2 .ledger-text .kw { color: var(--kw-color); font-weight: 600; }
+  .v2 .ledger-text.flavor { font-style: italic; color: #8b7d62; }
+  .v2 .ledger-stats {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8f8064;
+  }
+
+  .v2 .codex-footer {
+    flex-shrink: 0;
+    padding: 12px 36px;
+    border-top: 1px solid rgba(220, 200, 160, 0.18);
+  }
+
+  /* =====================================================================
+     VARIANT 3 — Ossuary Vault
+     ===================================================================== */
+  .v3 .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(1400px 700px at 50% 115%, rgba(196, 30, 58, 0.13), transparent 65%),
+      linear-gradient(180deg, rgba(6, 6, 9, 0.92), rgba(8, 8, 11, 0.97));
+    --sel-color: var(--red-3);
+    --sel-glow: var(--red-glow);
+  }
+  .v3 .scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 4px);
+  }
+  .v3 .vault-header {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 26px 44px 14px;
+  }
+  .v3 .vault-title { display: flex; align-items: baseline; gap: 16px; }
+  .v3 .vault-title h2 {
+    font-family: 'New Rocker', cursive;
+    font-size: 40px;
+    color: var(--white-1);
+    letter-spacing: 2px;
+    text-shadow: 0 0 30px rgba(196, 30, 58, 0.4);
+  }
+  .v3 .vault-title span {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #77303c;
+  }
+  .v3 .btn-close { position: static; clip-path: polygon(12% 0, 100% 0, 100% 88%, 88% 100%, 0 100%, 0 12%); }
+
+  .v3 .vault-body { flex: 1; min-height: 0; position: relative; z-index: 5; display: flex; flex-direction: column; }
+
+  .v3 [data-panel="medals"].active { flex: 1; min-height: 0; }
+  .v3 .ossuary {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 24px 40px 40px 56px;
+  }
+  .v3 .ossuary-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 26px 14px;
+    max-width: 900px;
+  }
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 7),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 8),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 9),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 10),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 11),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 12) { transform: translateX(50%); }
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 7):hover:not(.is-locked),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 8):hover:not(.is-locked),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 9):hover:not(.is-locked),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 10):hover:not(.is-locked),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 11):hover:not(.is-locked),
+  .v3 .ossuary-grid .medal-tile:nth-child(12n + 12):hover:not(.is-locked) { transform: translateX(50%) translateY(-4px); }
+  .v3 .medal-tile .medal-icon-wrap {
+    border: 1px solid rgba(196, 30, 58, 0.35);
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8);
+  }
+  .v3 .medal-tile:hover:not(.is-locked) .medal-icon-wrap {
+    box-shadow: 0 0 0 1px rgba(196, 30, 58, 0.6), 0 0 24px rgba(196, 30, 58, 0.3);
+  }
+  .v3 .drawer {
+    width: 620px;
+    flex-shrink: 0;
+    background: linear-gradient(270deg, rgba(14, 12, 16, 0.98), rgba(12, 10, 13, 0.92));
+    border-left: 1px solid rgba(196, 30, 58, 0.4);
+    box-shadow: -30px 0 60px rgba(0, 0, 0, 0.55);
+    overflow-y: auto;
+    padding: 30px 38px 36px;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(24px);
+    opacity: 0.92;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
+  }
+  .v3 .drawer.slide-in { transform: translateX(0); opacity: 1; }
+
+  .v3 [data-panel="cards"].active { flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
+  .v3 .arc-stage {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .v3 .arc-hint {
+    position: absolute;
+    top: 18px; left: 0; right: 0;
+    z-index: 3;
+  }
+  .v3 .arc {
+    position: absolute;
+    left: 50%;
+    bottom: 150px;
+    width: 0;
+    height: 0;
+    transform: rotate(calc((var(--mx, 0.5) - 0.5) * -10deg));
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  .v3 .arc .fan-slot {
+    position: absolute;
+    left: calc(-120px * var(--cs, 0.8));
+    bottom: 0;
+    transform: rotate(var(--rot, 0deg));
+    /* pivot ~1100px below the card center = big showcase arc */
+    transform-origin: 50% 1240px;
+  }
+  .v3 .arc .fan-slot:hover .fan-lift {
+    transform: translateY(-56px) scale(1.22) rotate(calc(var(--rot, 0deg) * -0.55));
+    filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.7));
+  }
+  .v3 .arc .fan-slot.locked:hover .fan-lift {
+    transform: translateY(-22px) scale(1.06) rotate(calc(var(--rot, 0deg) * -0.35));
+  }
+
+  .v3 [data-panel="equipment"].active { flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
+  .v3 .shelves { flex: 1; overflow-y: auto; padding: 8px 44px 30px; }
+  .v3 .shelf { display: flex; align-items: stretch; gap: 0; margin-top: 16px; }
+  .v3 .shelf-tag {
+    width: 120px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid rgba(196, 30, 58, 0.35);
+    border-right: none;
+    background: linear-gradient(180deg, rgba(196, 30, 58, 0.1), rgba(196, 30, 58, 0.02));
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  }
+  .v3 .shelf-tag img { width: 42px; height: 42px; object-fit: contain; opacity: 0.9; }
+  .v3 .shelf-tag span {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #b8556a;
+  }
+  .v3 .shelf-items {
+    flex: 1;
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.015);
+    overflow-x: auto;
+  }
+  .v3 .shelf-items .eq-tile { width: 178px; flex-shrink: 0; border-radius: 0; }
+  .v3 .shelf-items .eq-tile:hover:not(.is-locked) { border-color: rgba(196, 30, 58, 0.55); box-shadow: 0 0 22px rgba(196, 30, 58, 0.18); }
+
+  .v3 .dock {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 14px 44px 20px;
+    border-top: 1px solid rgba(196, 30, 58, 0.35);
+    background: linear-gradient(180deg, rgba(10, 8, 10, 0.6), rgba(12, 8, 10, 0.9));
+  }
+  .v3 .tabs { display: flex; gap: 10px; }
+  .v3 .tabs button {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #8a8a92;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 12px 30px;
+    cursor: pointer;
+    clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  .v3 .tabs button:hover:not(.active):not(:disabled) { color: var(--white-1); transform: translateY(-2px); }
+  .v3 .tabs button.active {
+    color: var(--white-1);
+    background: linear-gradient(180deg, rgba(196, 30, 58, 0.55), rgba(139, 0, 0, 0.4));
+    border-color: rgba(196, 30, 58, 0.7);
+    box-shadow: 0 0 22px rgba(196, 30, 58, 0.3);
+  }
+  .v3 .tabs button .tab-count { display: block; font-size: 10px; letter-spacing: 2px; color: rgba(255, 255, 255, 0.45); margin-top: 1px; }
+  .v3 .tabs .tab-ghost { color: rgba(255, 255, 255, 0.18); border-style: dashed; cursor: default; }
+  .v3 .dock .meter-row { flex: 1; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Waystation — Collection Overlay (3 Variants)</h1>
+  <p>
+    Replaces the Saints Medal Chronicle modal with a tabbed player collection: SAINTS keeps every feature of
+    the old modal (medal grid, locked slots, saint detail with keyword blocks, progress meter), plus new CARDS
+    and EQUIPMENT tabs. Cards use the in-game frame, fan like the booster showcase, and clicking a card cycles
+    the viewed color (White → Red → Black; black shows +1 BLK). A dashed "+" tab reserves room for future tabs.
+  </p>
+</header>
+
+<main class="page-main">
+
+  <!-- ================= VARIANT 1 ================= -->
+  <div class="variant-header">
+    <h2>Variant 1 — Reliquary Wall</h2>
+    <p>
+      Candlelit gold chapel chrome. Arched tabs hang under the title like reliquary alcoves. Saints keep the
+      split wall/altar layout; cards sit in fanned pew rows grouped by kind; equipment fills four slot columns
+      with the in-game slot icons. Hover anything: it lifts toward the candlelight.
+    </p>
+  </div>
+  <div class="viewport-scaler">
+    <div class="viewport v1" id="v1">
+      <div class="bg-scene"></div>
+      <div class="bg-dim"></div>
+      <div class="overlay">
+        <header class="overlay-header">
+          <h2 class="overlay-title">The Crusader's Reliquary</h2>
+          <div class="overlay-sub">Waystation Collection</div>
+          <button type="button" class="btn-close" aria-label="Close">X</button>
+        </header>
+        <nav class="tabs">
+          <button type="button" data-tab="medals" class="active">Saints<span class="tab-count" data-count="medals"></span></button>
+          <button type="button" data-tab="cards">Cards<span class="tab-count" data-count="cards"></span></button>
+          <button type="button" data-tab="equipment">Equipment<span class="tab-count" data-count="equipment"></span></button>
+          <button type="button" class="tab-ghost" disabled aria-label="Future tab">+</button>
+        </nav>
+        <div class="overlay-body">
+          <section data-panel="medals" class="active">
+            <aside class="medal-wall">
+              <div class="wall-toolbar">Medals Acquired</div>
+              <div class="medal-scroll"><div class="medal-grid" data-medal-grid></div></div>
+            </aside>
+            <div class="split-detail">
+              <div class="detail-empty" data-detail-empty>
+                <div class="detail-empty-icon">+</div>
+                <p>Select a medal to read the life of the saint whose intercession you carry.</p>
+              </div>
+              <div data-saint-detail style="display:none"></div>
+            </div>
+          </section>
+          <section data-panel="cards">
+            <div class="cards-scroll" data-card-groups></div>
+            <div class="cards-hint">
+              Click a card to turn it
+              <span class="dot w"></span><span class="dot r"></span><span class="dot k"></span>
+              White · Red · Black
+            </div>
+          </section>
+          <section data-panel="equipment">
+            <div class="eq-hall" data-eq-hall></div>
+          </section>
+        </div>
+        <footer class="overlay-footer">
+          <div class="meter-row">
+            <span class="meter-label" data-meter-label>Communion of Saints</span>
+            <div class="meter-track"><div class="meter-fill" data-meter-fill></div></div>
+            <span class="meter-count" data-meter-count></span>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VARIANT 2 ================= -->
+  <div class="variant-header">
+    <h2>Variant 2 — Chronicler's Codex</h2>
+    <p>
+      A war-chronicle ledger. Ribbon tabs slide out from the book spine on the left. Saints read like an
+      illuminated manuscript with a rubricated drop cap; cards fan across the desk while a lectern on the right
+      inspects whichever card the cursor grazes (click either copy to turn its color); equipment is a quartered
+      ledger whose rows underline themselves in red ink as you pass.
+    </p>
+  </div>
+  <div class="viewport-scaler">
+    <div class="viewport v2" id="v2">
+      <div class="bg-scene"></div>
+      <div class="bg-dim"></div>
+      <div class="overlay">
+        <aside class="spine">
+          <div class="spine-title">Codex Cruciatus</div>
+          <nav class="tabs">
+            <button type="button" data-tab="medals" class="active">Saints<span class="tab-count" data-count="medals"></span></button>
+            <button type="button" data-tab="cards">Cards<span class="tab-count" data-count="cards"></span></button>
+            <button type="button" data-tab="equipment">Armory<span class="tab-count" data-count="equipment"></span></button>
+            <button type="button" class="tab-ghost" disabled aria-label="Future tab">+</button>
+          </nav>
+        </aside>
+        <div class="codex-main">
+          <button type="button" class="btn-close" aria-label="Close">X</button>
+          <header class="codex-header">
+            <h2 data-codex-title>Communion of Saints</h2>
+            <span class="folio" data-codex-folio>Folio I</span>
+          </header>
+          <section data-panel="medals" class="active">
+            <aside class="roster" data-medal-roster></aside>
+            <div class="manuscript">
+              <div class="detail-empty" data-detail-empty>
+                <div class="detail-empty-icon">+</div>
+                <p>Choose a saint from the roster to open their page in the chronicle.</p>
+              </div>
+              <div data-saint-detail style="display:none"></div>
+            </div>
+          </section>
+          <section data-panel="cards">
+            <div class="desk">
+              <div class="cards-hint">
+                Hover to inspect · click to turn
+                <span class="dot w"></span><span class="dot r"></span><span class="dot k"></span>
+              </div>
+              <div class="desk-fans" data-card-groups></div>
+            </div>
+            <aside class="lectern">
+              <div class="lectern-label">Under the Glass</div>
+              <div class="preview-holder" data-preview-holder></div>
+              <div class="preview-meta" data-preview-meta>Pass the cursor over a card below.</div>
+            </aside>
+          </section>
+          <section data-panel="equipment">
+            <div class="ledger" data-eq-ledger></div>
+          </section>
+          <footer class="codex-footer">
+            <div class="meter-row">
+              <span class="meter-label" data-meter-label>Communion of Saints</span>
+              <div class="meter-track"><div class="meter-fill" data-meter-fill></div></div>
+              <span class="meter-count" data-meter-count></span>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VARIANT 3 ================= -->
+  <div class="variant-header">
+    <h2>Variant 3 — Ossuary Vault</h2>
+    <p>
+      Obsidian and ember red, full-bleed like a game HUD screen with a bottom tab dock. Saints rest in a
+      staggered reliquary honeycomb with a slide-in dossier drawer. Cards form one giant arc fan — the whole
+      hand leans as your cursor sweeps across the screen, echoing the booster showcase fan. Equipment racks on
+      four armory shelves keyed to Head / Chest / Arms / Legs.
+    </p>
+  </div>
+  <div class="viewport-scaler">
+    <div class="viewport v3" id="v3">
+      <div class="bg-scene"></div>
+      <div class="bg-dim"></div>
+      <div class="overlay">
+        <div class="scanlines"></div>
+        <header class="vault-header">
+          <div class="vault-title">
+            <h2>Vault of Relics</h2>
+            <span>Waystation // Collection</span>
+          </div>
+          <button type="button" class="btn-close" aria-label="Close">X</button>
+        </header>
+        <div class="vault-body">
+          <section data-panel="medals" class="active">
+            <div class="ossuary"><div class="ossuary-grid" data-medal-grid></div></div>
+            <aside class="drawer" data-drawer>
+              <div class="detail-empty" data-detail-empty>
+                <div class="detail-empty-icon">+</div>
+                <p>Open a reliquary niche to read the saint's dossier.</p>
+              </div>
+              <div data-saint-detail style="display:none"></div>
+            </aside>
+          </section>
+          <section data-panel="cards">
+            <div class="arc-stage">
+              <div class="cards-hint arc-hint">
+                Sweep the cursor — the fan follows · click a card to turn it
+                <span class="dot w"></span><span class="dot r"></span><span class="dot k"></span>
+              </div>
+              <div class="arc" data-arc></div>
+            </div>
+          </section>
+          <section data-panel="equipment">
+            <div class="shelves" data-eq-shelves></div>
+          </section>
+        </div>
+        <footer class="dock">
+          <nav class="tabs">
+            <button type="button" data-tab="medals" class="active">Saints<span class="tab-count" data-count="medals"></span></button>
+            <button type="button" data-tab="cards">Cards<span class="tab-count" data-count="cards"></span></button>
+            <button type="button" data-tab="equipment">Equipment<span class="tab-count" data-count="equipment"></span></button>
+            <button type="button" class="tab-ghost" disabled aria-label="Future tab">+</button>
+          </nav>
+          <div class="meter-row">
+            <span class="meter-label" data-meter-label>Communion of Saints</span>
+            <div class="meter-track"><div class="meter-fill" data-meter-fill></div></div>
+            <span class="meter-count" data-meter-count></span>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const GAME_W = 1920;
+  const GAME_H = 1080;
+
+  /* Mirrors TooltipTextService.KeywordDefinitions */
+  const KEYWORD_DEFS = [
+    { id: 'aegis', aliases: ['aegis'], tooltip: 'X Aegis - Prevent the next X damage from any source.' },
+    { id: 'aggression', aliases: ['aggression'], tooltip: 'X Aggression - Your next non-weapon attack this turn gains +X damage.' },
+    { id: 'burn', aliases: ['burn', 'burns'], tooltip: 'X Burn - At the start of the turn, take X damage.' },
+    { id: 'brittle', aliases: ['brittle'], tooltip: 'Brittle - If you block an attack with only this card, mill 1.' },
+    { id: 'frostbite', aliases: ['frostbite'], tooltip: 'X Frostbite - When you have 3 stacks of frostbite, take 3 damage and lose 3 frostbite.' },
+    { id: 'frozen', aliases: ['frozen'], tooltip: 'Frozen - When you play a frozen card, gain 1 frostbite.' },
+    { id: 'might', aliases: ['might'], tooltip: 'X Might - Your attacks deal +X damage this turn.' },
+    { id: 'mill', aliases: ['mill', 'milled'], tooltip: 'Mill X - Discard the top X cards of your deck.' },
+    { id: 'resurrect', aliases: ['resurrect'], tooltip: 'Resurrect X - draw X random cards from your discard pile.' },
+    { id: 'scorched', aliases: ['scorched'], tooltip: 'Scorched - When pledged, lose 1 HP.' },
+    { id: 'thorned', aliases: ['thorned'], tooltip: 'Thorned - When discarded to pay a card cost, gain 1 scar.' },
+    { id: 'vigor', aliases: ['vigor'], tooltip: 'X Vigor - The next non-weapon card with a cost you play costs X discard less.' }
+  ];
+
+  /* ========================= MEDALS (Content/Medals) ========================= */
+  const MEDALS = [
+    {
+      id: 'st_adrian', name: 'St. Adrian', shortName: 'Adrian', acquired: true,
+      medalText: 'Whenever you play a red attack, 50% chance you lose 1 courage and it deals +3 base damage.',
+      yearsOnEarth: '4th century; traditionally died c. 306',
+      patronages: 'Soldiers; prison guards; butchers; those converted by the witness of others.',
+      prayer: 'St. Adrian, who found faith watching the courage of the martyrs, pray that our own endurance may lead others to Christ. Amen.',
+      bio: [
+        'Adrian was a Herculian Guard officer at Nicomedia during the persecutions of the early fourth century. Tradition holds that, moved by the courage of the Christians he was ordered to torment, he declared himself one of them and was imprisoned on the spot.',
+        'His young wife, St. Natalia, cared for him in prison and strengthened him until his martyrdom around 306. Devotion to Adrian spread widely in both East and West, and soldiers long invoked him as a comrade who chose the harder side of the line.'
+      ]
+    },
+    {
+      id: 'st_anthony_of_padua', name: 'St. Anthony of Padua', shortName: 'Anthony', acquired: true,
+      medalText: 'The first time each battle you try to draw and your deck is empty, shuffle 5 random cards from your discard pile back into your deck.',
+      yearsOnEarth: '1195-1231',
+      patronages: 'Lost things; the poor; travelers; Portugal; Padua.',
+      prayer: 'St. Anthony, finder of what is lost, pray that we may recover what matters most: faith, charity, and the souls entrusted to us. Amen.',
+      bio: [
+        'Anthony was born in Lisbon in 1195 and joined the Augustinians before the relics of Franciscan martyrs stirred him to enter the new order of St. Francis. Illness turned him back from mission territory, and an unplanned sermon revealed a preacher of astonishing power.',
+        'He taught theology to the first Franciscans and preached across Italy and southern France, drawing crowds too large for any church. He died near Padua in 1231, was canonized within a year, and is honored as the Evangelical Doctor and finder of lost things.'
+      ]
+    },
+    {
+      id: 'st_augustine', name: 'St. Augustine of Hippo', shortName: 'Augustine', acquired: true,
+      medalText: 'At the start of battle, mill 1 card. Increase your max HP by 1 when this is acquired.',
+      yearsOnEarth: '354-430',
+      patronages: 'Converts to Christianity; theologians; printers; brewers.',
+      prayer: 'You have made us for Yourself, O Lord, and our heart is restless until it rests in You.',
+      bio: [
+        'Augustine was born in Roman North Africa in 354. Brilliant and restless, he pursued rhetoric, worldly ambition, and several competing philosophies before the prayers of his mother, St. Monica, and the preaching of St. Ambrose helped lead him to baptism in 387.',
+        'He later became Bishop of Hippo and one of the Church\'s most influential theologians. His Confessions, The City of God, and writings on grace, memory, desire, and the human will continue to shape Western Christianity, earning him recognition as a Doctor of the Church.'
+      ]
+    },
+    {
+      id: 'st_bartholomew', name: 'St. Bartholomew', shortName: 'Bartholomew', acquired: false,
+      medalText: 'The first time you deal 10 or more damage to the enemy with a single attack, the enemy gains 2 wounded.',
+      yearsOnEarth: '1st century AD',
+      patronages: 'Tanners; leatherworkers; plasterers; butchers; Armenia.',
+      prayer: 'St. Bartholomew, apostle without guile, pray that we may carry the Gospel wherever it has not been heard, whatever the cost. Amen.',
+      bio: [
+        'Bartholomew was one of the Twelve Apostles, often identified with the Nathanael whom Jesus praised as an Israelite without guile. The Gospels record little else about him directly, but he stood among those sent to carry the message to the ends of the earth.',
+        'Ancient tradition has him preaching in India and Armenia, where he was martyred, by the most persistent account, by being flayed. Christian art remembers him with the knife of his martyrdom, an unflinching image of a witness who held nothing back.'
+      ]
+    },
+    {
+      id: 'st_benedict', name: 'St. Benedict', shortName: 'Benedict', acquired: true,
+      medalText: 'Whenever you pledge 3 cards, gain 1 vigor.',
+      yearsOnEarth: 'c. 480-c. 547',
+      patronages: 'Europe; monks; religious communities; students; protection against poison and temptation.',
+      prayer: 'May the Holy Cross be my light; let not the dragon be my guide.',
+      bio: [
+        'Benedict was born in Nursia around 480 and withdrew from the corruption of Roman society to live as a hermit. Disciples soon gathered around him, and he eventually founded the monastery of Monte Cassino, which became a center of prayer, learning, and disciplined community life.',
+        'His Rule of St. Benedict joined prayer, work, study, obedience, hospitality, and moderation into a durable pattern of Christian life. Its influence across Europe was so great that Benedict is often called the father of Western monasticism and was named a patron of Europe.'
+      ]
+    },
+    {
+      id: 'st_christopher', name: 'St. Christopher', shortName: 'Christopher', acquired: false,
+      medalText: 'Your brittle cards have +1 block.',
+      yearsOnEarth: '3rd century AD (traditional; exact dates unknown)',
+      patronages: 'Travelers; motorists; sailors; transportation workers; protection during journeys.',
+      prayer: 'St. Christopher, accompany all who travel. Ask God to grant us alert minds, steady hands, safe passage, and a faithful arrival at our true home. Amen.',
+      bio: [
+        'Very little can be established with certainty about Christopher beyond an ancient tradition that he was a martyr. The familiar medieval legend portrays him as a powerful ferryman who carried a child across a dangerous river, only to discover that the child was Christ bearing the weight of the world.',
+        'Christopher\'s name means "Christ-bearer," and his legend made him an enduring image of service, strength, and safe passage. His memorial was removed from the universal Roman calendar because of limited historical evidence, but he was not "unsainted" and remains widely venerated.'
+      ]
+    },
+    {
+      id: 'st_clare', name: 'St. Clare of Assisi', shortName: 'Clare', acquired: false,
+      medalText: 'At the start of battle, deal 2 damage to the enemy.',
+      yearsOnEarth: '1194-1253',
+      patronages: 'Television; telecommunications; eye disorders; embroiderers; the Poor Clares.',
+      prayer: 'May the Lord bless and guard you, look upon you with mercy, and grant you peace.',
+      bio: [
+        'Clare was born into a noble family in Assisi in 1194. Inspired by the preaching of St. Francis, she left wealth and social expectation behind, received a simple habit from Francis, and became the leader of the community later known as the Poor Clares.',
+        'She defended her community\'s radical commitment to poverty and became the first woman known to write a religious rule approved by the pope. Tradition also remembers her confidence in the Eucharist when her convent was threatened, and her reported vision of a distant Mass led to her patronage of television.'
+      ]
+    },
+    {
+      id: 'st_elijah', name: 'St. Elijah', shortName: 'Elijah', acquired: true,
+      medalText: 'The first time each battle you pledge a scorched card, the enemy gains 1 burn.',
+      yearsOnEarth: 'fl. 9th century BC; earthly death not recorded in Scripture',
+      patronages: 'The Carmelite Order; contemplatives; those seeking courage in defending the faith; prayers for rain in times of drought.',
+      prayer: 'Lord, God of Abraham, Isaac, and Israel, answer me so that Your people may know that You are God and that You turn hearts back to Yourself.',
+      bio: [
+        'Elijah was a prophet in the northern kingdom of Israel during the ninth century before Christ. He confronted King Ahab and Queen Jezebel, challenged the prophets of Baal on Mount Carmel, defended the worship of the true God, and experienced God\'s quiet presence at Horeb after fleeing in exhaustion.',
+        'Scripture says Elijah was taken up in a whirlwind with a chariot of fire. Catholic tradition venerates him as a saint, while the Carmelite Order honors him as its spiritual father because of his zeal, solitude, prayer, and association with Mount Carmel.'
+      ]
+    },
+    {
+      id: 'st_francis_de_sales', name: 'St. Francis de Sales', shortName: 'Francis', acquired: false,
+      medalText: 'At the start of battle, gain 1 temperance.',
+      yearsOnEarth: '1567-1622',
+      patronages: 'Writers; journalists; the Catholic press; deaf people; educators and authors.',
+      prayer: 'St. Francis de Sales, teach me to speak truth with gentleness, to remain patient with others, and to seek holiness in the ordinary duties of life. Amen.',
+      bio: [
+        'Francis de Sales was born in Savoy in 1567 and became a priest during a period of intense religious conflict. When preaching met resistance, he distributed clear, patient explanations of Catholic belief in printed leaflets, combining intellectual firmness with unusual gentleness.',
+        'As Bishop of Geneva, governing from Annecy, he taught that holiness was possible in every state of life. His Introduction to the Devout Life and Treatise on the Love of God made practical spirituality accessible to laypeople, and he co-founded the Visitation Order with St. Jane Frances de Chantal.'
+      ]
+    },
+    {
+      id: 'st_george', name: 'St. George', shortName: 'George', acquired: false,
+      medalText: 'Your block cards can be played as 3 damage free action attacks.',
+      yearsOnEarth: '3rd-4th century AD; traditionally died c. 303',
+      patronages: 'Soldiers; cavalry; armorers; scouts; England; Georgia.',
+      prayer: 'St. George, obtain for us courage in the face of evil, loyalty to Christ under pressure, and strength to defend those who cannot defend themselves. Amen.',
+      bio: [
+        'George is honored as a soldier and martyr who died during the persecution of Christians under the Roman emperor Diocletian, probably in the early fourth century. Reliable details of his life are scarce, but devotion to him spread rapidly through both Eastern and Western Christianity.',
+        'The famous story of George slaying a dragon arose centuries later. Rather than a historical biography, it became a powerful image of Christian courage: the faithful soldier confronting evil, protecting the innocent, and refusing to worship false gods even under threat of death.'
+      ]
+    },
+    {
+      id: 'st_homobonus', name: 'St. Homobonus', shortName: 'Homobonus', acquired: false,
+      medalText: 'After 3 encounters, gain 1 red, 1 white, and 1 black resource.',
+      yearsOnEarth: '12th century-1197 (birth year uncertain)',
+      patronages: 'Businesspeople; entrepreneurs; merchants; tailors; shoemakers; clothworkers; Cremona.',
+      prayer: 'St. Homobonus, guard me from greed and dishonest shortcuts. Help me conduct my work with justice, generosity, and concern for every person affected by it. Amen.',
+      bio: [
+        'Homobonus was a twelfth-century cloth merchant from Cremona, Italy. A married layman rather than a priest or monk, he became known for honest business, generous almsgiving, care for the poor, devotion to the Cross, and efforts to reconcile neighbors divided by civic conflict.',
+        'He died in 1197 while attending Mass and was canonized only two years later after the people of Cremona petitioned for his recognition. His life presents commerce as a field for holiness when profit is governed by justice, charity, and responsibility toward the community.'
+      ]
+    },
+    {
+      id: 'st_ignatius', name: 'St. Ignatius of Loyola', shortName: 'Ignatius', acquired: true,
+      medalText: 'The first time each battle you start your action phase with 5 or more courage, gain 2 aggression.',
+      yearsOnEarth: '1491-1556',
+      patronages: 'Soldiers; retreats and retreatants; the Society of Jesus; spiritual directors.',
+      prayer: 'Take, Lord, and receive all my liberty, my memory, my understanding, and my entire will. All that I have and possess You have given me; to You, Lord, I return it.',
+      bio: [
+        'Ignatius was a Basque soldier whose leg was shattered by a cannonball at Pamplona in 1521. Convalescing with nothing to read but lives of Christ and the saints, he found his daydreams of glory turning toward a different service, and left his sword at the altar of Montserrat.',
+        'His Spiritual Exercises distilled years of prayer and trial into a practical school of discernment. With companions gathered in Paris he founded the Society of Jesus in 1540, sending missionaries and teachers across the world under the motto "for the greater glory of God."'
+      ]
+    },
+    {
+      id: 'st_jerome', name: 'St. Jerome', shortName: 'Jerome', acquired: false,
+      medalText: 'Whenever you gain aggression, gain 1 courage.',
+      yearsOnEarth: 'c. 347-420',
+      patronages: 'Translators; librarians; biblical scholars; students; archivists; archaeologists.',
+      prayer: 'St. Jerome, pray that I may love Holy Scripture, study it with humility, and allow the word of God to correct and transform my life. Amen.',
+      bio: [
+        'Jerome was born around 347 in Dalmatia and received a classical education in Rome. After embracing an ascetic life, he studied Scripture and languages, served Pope Damasus, and eventually settled near Bethlehem, where he spent decades in scholarship, prayer, and spiritual direction.',
+        'He is best known for producing the Latin biblical translation that became the foundation of the Vulgate. Jerome\'s fierce temperament sometimes appeared in his controversies, but his relentless devotion to the word of God made him one of the four great Latin Doctors of the Church.'
+      ]
+    },
+    {
+      id: 'st_joan_of_arc', name: 'St. Joan of Arc', shortName: 'Joan', acquired: true,
+      medalText: 'Whenever you attack with your weapon, gain 1 might.',
+      yearsOnEarth: 'c. 1412-1431',
+      patronages: 'France; soldiers; prisoners and captives; those ridiculed for their faith; people facing unjust judgment.',
+      prayer: 'If I am not in God\'s grace, may He put me there; if I am, may He keep me there.',
+      bio: [
+        'Joan was born to a peasant family in France around 1412. As a teenager, she said that St. Michael, St. Catherine, and St. Margaret instructed her to aid the French cause during the Hundred Years\' War, leading to the relief of Orleans and the coronation of Charles VII.',
+        'Captured by Burgundian forces and handed to the English, Joan endured a politically driven ecclesiastical trial and was burned at the stake in 1431 at about nineteen years old. A later Church inquiry overturned the verdict in 1456, and she was canonized in 1920 as a model of courage, chastity, obedience, and fidelity under persecution.'
+      ]
+    },
+    {
+      id: 'st_jude', name: 'St. Jude', shortName: 'Jude', acquired: false,
+      medalText: 'The fourth Kunai you add to your hand is upgraded.',
+      yearsOnEarth: '1st century AD',
+      patronages: 'Hopeless and desperate causes; hospitals; the forgotten.',
+      prayer: 'St. Jude, faithful servant and friend of Jesus, intercede for us in our most desperate needs, that we may never lose hope. Amen.',
+      bio: [
+        'Jude, also called Thaddeus, was one of the Twelve Apostles, carefully distinguished by the evangelists from Judas Iscariot. The short New Testament letter bearing his name urges believers to contend for the faith once delivered to the saints.',
+        'Tradition holds that he preached in Mesopotamia and Persia and was martyred there alongside St. Simon the Zealot. Centuries of popular devotion made him the patron of causes that appear beyond saving, the saint people call on when no one else will take the case.'
+      ]
+    },
+    {
+      id: 'st_lawrence', name: 'St. Lawrence', shortName: 'Lawrence', acquired: true,
+      medalText: 'Your scorched cards deal +X damage, where X is the number of cards discarded to play it.',
+      yearsOnEarth: 'c. 225-258 (traditional)',
+      patronages: 'Deacons; cooks and chefs; firefighters; the poor; comedians.',
+      prayer: 'St. Lawrence, generous servant of the Church\'s poor, pray that those in need may receive help and that Christians may recognize Christ in them. Amen.',
+      bio: [
+        'Lawrence was one of the seven deacons serving the Church of Rome under Pope St. Sixtus II. When Roman authorities executed Sixtus during the persecution of Valerian in 258, Lawrence was given a few days to surrender the Church\'s wealth.',
+        'Tradition says Lawrence distributed the remaining goods to the needy and then presented the poor, sick, widowed, and orphaned as the true treasures of the Church. He was martyred soon afterward; the familiar account of his death on a gridiron became one of Christianity\'s most enduring martyr stories.'
+      ]
+    },
+    {
+      id: 'st_lazarus', name: 'St. Lazarus of Bethany', shortName: 'Lazarus', acquired: false,
+      medalText: 'Whenever you mill 2 cards, resurrect 1.',
+      yearsOnEarth: '1st century AD (exact dates unknown)',
+      patronages: 'The sick; the dying; the poor; gravediggers.',
+      prayer: 'St. Lazarus, friend of Jesus, pray that I may trust Christ as the Resurrection and the Life, especially in sickness, grief, and fear of death. Amen.',
+      bio: [
+        'Lazarus lived in Bethany with his sisters, Martha and Mary, and the Gospel of John calls him a beloved friend of Jesus. After Lazarus had been dead four days, Jesus called him from the tomb, revealing His authority over death and foreshadowing the Resurrection.',
+        'Scripture says nothing certain about Lazarus\'s later life, though Eastern tradition connects him with Cyprus and Western tradition with Marseille. In 2021, Pope Francis placed Saints Martha, Mary, and Lazarus together on the General Roman Calendar on July 29, emphasizing their household\'s faith, hospitality, and friendship with Christ.'
+      ]
+    },
+    {
+      id: 'st_longinus', name: 'St. Longinus', shortName: 'Longinus', acquired: false,
+      medalText: 'Whenever you pledge a thorned card, add a Kunai to your hand.',
+      yearsOnEarth: '1st century AD (traditional; exact dates unknown)',
+      patronages: 'Soldiers; converts; people with blindness or eye ailments.',
+      prayer: 'Truly, this man was the Son of God. St. Longinus, pray that I may recognize Christ, repent without delay, and remain faithful to Him. Amen.',
+      bio: [
+        'The Gospels do not name the Roman soldier who pierced Christ\'s side with a lance, nor do they explicitly identify him with the centurion who confessed Jesus as the Son of God. Later Christian tradition joined these figures and gave the soldier the name Longinus.',
+        'Medieval accounts describe Longinus converting, leaving military service, and eventually dying as a martyr. These later details cannot be established from Scripture, but his image became a striking symbol of conversion at the foot of the Cross and of faith born from encountering Christ\'s sacrificial death.'
+      ]
+    },
+    {
+      id: 'st_louie_ix', name: 'St. Louie IX, King of France', shortName: 'Louis IX', acquired: true,
+      medalText: 'At the start of every third turn, gain 1 might.',
+      yearsOnEarth: '1214-1270',
+      patronages: 'France; the French monarchy; Secular Franciscans; rulers and statesmen; barbers and hairdressers.',
+      prayer: 'St. Louis, pray for all who hold authority. Teach them to love justice, protect the weak, seek peace, and remember that every earthly power answers to God. Amen.',
+      bio: [
+        'Louis IX became King of France in 1226 while still a child and grew into a ruler renowned for personal prayer, legal reform, arbitration, charity, and direct service to the poor. He commissioned the Sainte-Chapelle in Paris to house relics of Christ\'s Passion and sought to govern according to Christian moral law.',
+        'Louis led the Seventh and Eighth Crusades, was captured in Egypt during the first, and died near Tunis during the second in 1270. His crusading reflects the violent and complicated world of medieval Christendom, while his canonization in 1297 chiefly honored his justice, humility, penance, and care for his people.'
+      ]
+    },
+    {
+      id: 'st_luke', name: 'St. Luke the Evangelist', shortName: 'Luke', acquired: true,
+      medalText: 'At the start of battle, gain 1 aegis.',
+      yearsOnEarth: '1st century AD (exact dates unknown)',
+      patronages: 'Physicians; surgeons; artists and iconographers; painters; notaries.',
+      prayer: 'St. Luke, beloved physician and evangelist, pray for those who heal the body and those who proclaim the Gospel. Help us reveal the mercy of Christ in word and deed. Amen.',
+      bio: [
+        'Luke was a companion of St. Paul, who referred to him as "the beloved physician." Christian tradition identifies him as the author of the Gospel according to Luke and the Acts of the Apostles, a two-part account moving from the life of Christ to the missionary growth of the early Church.',
+        'Luke\'s writings place special emphasis on mercy, prayer, the Holy Spirit, women, the poor, and Christ\'s concern for outsiders. A later tradition also describes him as an icon painter of the Virgin Mary, which helped make him a patron of artists as well as physicians.'
+      ]
+    },
+    {
+      id: 'st_michael', name: 'St. Michael the Archangel', shortName: 'Michael', acquired: true,
+      medalText: 'At the start of battle, gain 1 courage.',
+      yearsOnEarth: 'No human lifespan -- archangel',
+      patronages: 'The Church; soldiers; police officers; paramedics; protection against spiritual evil.',
+      prayer: 'St. Michael the Archangel, defend us in battle. By God\'s power, drive away the evil spirits that seek the ruin of souls. Amen.',
+      bio: [
+        'Michael appears in Scripture as a heavenly prince who defends God\'s people. The Book of Daniel presents him as Israel\'s protector, the Letter of Jude shows him contending with the devil, and Revelation depicts Michael and his angels defeating the dragon.',
+        'The Church honors Michael as an archangel rather than a human saint. His name means "Who is like God?" -- a declaration against pride -- and Catholic devotion invokes him for protection in spiritual conflict, especially through the prayer composed under Pope Leo XIII.'
+      ]
+    },
+    {
+      id: 'st_monica', name: 'St. Monica', shortName: 'Monica', acquired: true,
+      medalText: 'Whenever you trigger your temperance ability, resurrect 1.',
+      yearsOnEarth: '331-387',
+      patronages: 'Mothers; wives; difficult marriages; conversion of relatives; widows.',
+      prayer: 'St. Monica, who wept and prayed for years without losing hope, pray that we may persevere in love for those who wander far from God. Amen.',
+      bio: [
+        'Monica was born in Tagaste in North Africa in 331 and married Patricius, a man of difficult temper whom her patience eventually won to the faith. Her deepest trial was her brilliant, wayward son Augustine, for whom she prayed and wept for nearly two decades.',
+        'She followed Augustine from Africa to Rome and Milan, where she saw him baptized by St. Ambrose in 387. She died at Ostia that same year, telling her sons that nothing in this world now gave her delight, since her hope had been answered.'
+      ]
+    },
+    {
+      id: 'st_nicholas', name: 'St. Nicholas the Bishop', shortName: 'Nicholas', acquired: true,
+      medalText: 'When this is acquired, increase your max HP by 2 and 4 random cards from your deck become frozen.',
+      yearsOnEarth: 'c. 270-343',
+      patronages: 'Children; sailors; travelers; merchants; pawnbrokers; the falsely accused.',
+      prayer: 'Good St. Nicholas, watch over children, sailors, travelers, and all who are helpless. Lead us toward Christ and teach us to give generously without seeking praise. Amen.',
+      bio: [
+        'Nicholas was a fourth-century bishop of Myra in Asia Minor, in modern-day Turkey. Although many stories about him developed long after his lifetime, the ancient and widespread devotion surrounding him consistently remembers a courageous pastor known for generosity, protection of the vulnerable, and defense of Christian faith.',
+        'The best-known tradition says that he secretly provided dowries for three impoverished young women, saving them from exploitation. Stories of his hidden gifts eventually contributed to the figure of Santa Claus, but the Christian Nicholas remains first of all a bishop whose charity preserved the dignity of people in danger.'
+      ]
+    },
+    {
+      id: 'st_olaf', name: 'St. Olaf', shortName: 'Olaf', acquired: false,
+      medalText: 'Each time frostbite triggers, the enemy takes 3 damage instead of you.',
+      yearsOnEarth: 'c. 995-1030',
+      patronages: 'Norway; Norwegian Christians; kings and Christian rulers.',
+      prayer: 'St. Olaf, pray for Norway and for every Christian leader. Obtain for them courage, repentance, wisdom, and the grace to place service above ambition. Amen.',
+      bio: [
+        'Olaf Haraldsson was born around 995 and spent part of his youth as a Viking warrior. After receiving baptism, he returned to Norway, became king, and worked to strengthen both royal government and the country\'s still-developing Christian institutions.',
+        'Olaf\'s methods were shaped by the harsh politics of his age and were not always peaceful. Driven into exile, he returned and died at the Battle of Stiklestad in 1030; devotion spread quickly after his death, and he became the great national saint and "eternal king" of medieval Norway.'
+      ]
+    },
+    {
+      id: 'st_paul_miki', name: 'St. Paul Miki', shortName: 'Paul Miki', acquired: false,
+      medalText: 'The first time you block with a black card in a battle, add a Kunai to your hand.',
+      yearsOnEarth: 'c. 1562-1597',
+      patronages: 'Japan; Japanese Catholics; Christian martyrs; those persecuted for the faith.',
+      prayer: 'St. Paul Miki and companions, obtain for us courage to confess Christ without hatred, to forgive our persecutors, and to remain faithful even when discipleship is costly. Amen.',
+      bio: [
+        'Paul Miki was born in Japan around 1562 and entered the Society of Jesus after studying in Jesuit schools. Known as a gifted preacher, he was preparing for priestly ordination when the ruler Toyotomi Hideyoshi ordered the arrest of Christians during a growing persecution.',
+        'Paul and twenty-five companions were forced on a winter march to Nagasaki and crucified there in 1597. From the cross, Paul proclaimed his Japanese identity, professed Christ, forgave those responsible for his death, and continued preaching until he was killed with a lance.'
+      ]
+    },
+    {
+      id: 'st_peter', name: 'St. Peter the Apostle', shortName: 'Peter', acquired: true,
+      medalText: 'Each time you block with 3 black cards this quest, resurrect 1.',
+      yearsOnEarth: 'c. 1 BC-c. AD 64-68',
+      patronages: 'Popes; fishermen; net makers; shipbuilders; Rome; those seeking perseverance after failure.',
+      prayer: 'Lord, You know everything; You know that I love You.',
+      bio: [
+        'Peter was a fisherman from Bethsaida named Simon until Jesus called him "Cephas," or "Rock." He became the leading voice among the Twelve, confessed Jesus as the Messiah, witnessed the Transfiguration, failed through fear during the Passion, and was restored by the risen Christ.',
+        'Acts presents Peter as a chief preacher and leader of the first Christian community. Catholic tradition regards him as the first pope and holds that he was martyred in Rome under Nero, traditionally by crucifixion upside down because he considered himself unworthy to die exactly as Christ had.'
+      ]
+    },
+    {
+      id: 'st_rita', name: 'St. Rita of Cascia', shortName: 'Rita', acquired: true,
+      medalText: 'Whenever you play a Curse card, resurrect 2.',
+      yearsOnEarth: 'c. 1381-1457',
+      patronages: 'Impossible and lost causes; difficult marriages; abuse victims; widows; infertility; parenthood; the sick.',
+      prayer: 'St. Rita, advocate in impossible causes, bring my need before God. Obtain for me patient faith, freedom from bitterness, and courage to accept His will. Amen.',
+      bio: [
+        'Rita was born in Italy around 1381 and lived successively as a wife, mother, widow, and Augustinian nun. Her marriage was deeply troubled, her husband was murdered in a feud, and her sons died young after she struggled to prevent them from pursuing revenge.',
+        'After entering religious life, Rita became known for prayer, penance, charity, peacemaking, and intense meditation on Christ\'s Passion. A wound on her forehead was understood as a sign of sharing spiritually in the crown of thorns, and generations of Catholics came to seek her help in situations that appeared hopeless.'
+      ]
+    },
+    {
+      id: 'st_sebastian', name: 'St. Sebastian', shortName: 'Sebastian', acquired: true,
+      medalText: 'Whenever you win a battle with 1 HP remaining, increase your max HP by 1.',
+      yearsOnEarth: '3rd century AD; traditionally died c. 288',
+      patronages: 'Athletes; archers; soldiers; protection against plague and epidemics; a holy death.',
+      prayer: 'St. Sebastian, strengthen us when pain, fear, or persecution threatens our faith. Help us endure with courage and use our strength in the service of Christ. Amen.',
+      bio: [
+        'Sebastian was a Christian serving in the Roman military during the persecution associated with Emperor Diocletian. Tradition says he secretly strengthened imprisoned Christians until his faith was discovered and he was shot with arrows and left for dead.',
+        'After surviving the first execution attempt, Sebastian openly confronted the emperor and was killed. His endurance made him a patron of athletes and soldiers, while medieval Christians invoked him during epidemics because the arrows in his martyrdom became symbols of the sudden "arrows" of plague.'
+      ]
+    },
+    {
+      id: 'st_simon_of_cyrene', name: 'St. Simon of Cyrene', shortName: 'Simon', acquired: false,
+      medalText: 'At the start of battle, the enemy gains 1 anathema.',
+      yearsOnEarth: '1st century AD (exact dates unknown)',
+      patronages: 'People carrying heavy burdens; caregivers; manual laborers; passersby who aid the suffering.',
+      prayer: 'St. Simon, teach us to carry the burdens placed before us and to unite our labor and suffering with the Cross of Christ for the good of others. Amen.',
+      bio: [
+        'The Synoptic Gospels identify Simon as a man from Cyrene who was compelled by Roman soldiers to carry Jesus\'s cross on the road to Calvary. Mark also names him as the father of Alexander and Rufus, suggesting that his family may later have been known within the early Christian community.',
+        'Scripture reveals nothing certain about Simon after the Passion, and many later stories are devotional rather than historical. Even so, he remains a powerful image of discipleship that begins unexpectedly: a passerby drawn into Christ\'s suffering who physically bears a burden that Jesus can no longer carry alone.'
+      ]
+    },
+    {
+      id: 'st_thomas_aquinas', name: 'St. Thomas Aquinas', shortName: 'Aquinas', acquired: true,
+      medalText: 'Lose 2 max HP when acquired. Your max hand size is increased by 1.',
+      yearsOnEarth: '1225-1274',
+      patronages: 'Students; universities; theologians; philosophers; booksellers.',
+      prayer: 'Grant me, O merciful God, ardently to desire, prudently to study, rightly to understand, and perfectly to fulfill what is pleasing to You.',
+      bio: [
+        'Thomas was born near Aquino in 1225 and joined the young Dominican Order over the violent objections of his noble family, who imprisoned him in the family castle for a year to change his mind. He studied under St. Albert the Great, who predicted the "dumb ox" would bellow so loudly the whole world would hear.',
+        'His Summa Theologiae joined faith and reason into the most influential synthesis in Catholic theology. He stopped writing after a vision at Mass in 1273, saying all he had written seemed as straw, and died the next year on the way to the Council of Lyon. He is honored as the Angelic Doctor.'
+      ]
+    }
+  ];
+
+  /* ========================= CARDS (ECS/Objects/Cards + Content/CardArt) ========================= */
+  /* type notch mirrors CardType; weapons flagged; black view adds +1 BLK (EntityFactory rule). */
+  const CARDS = [
+    { id: 'sword', name: 'Sword', type: 'Attack', weapon: true, atk: 5, blk: 0, cost: ['Black', 'Any'], free: false, rarity: 'Starter', text: 'Gain 2 courage.' },
+    { id: 'dagger', name: 'Dagger', type: 'Attack', weapon: true, atk: 2, blk: 0, cost: [], free: true, rarity: 'Starter', text: 'As an additional cost, lose 1 courage.' },
+    { id: 'hammer', name: 'Hammer', type: 'Attack', weapon: true, atk: 3, blk: 0, cost: ['Black', 'Any'], free: false, rarity: 'Starter', text: 'Gain 1 vigor.' },
+    { id: 'smite', name: 'Smite', type: 'Attack', atk: 3, blk: 3, cost: [], free: false, rarity: 'Starter', text: '' },
+    { id: 'strike', name: 'Strike', type: 'Attack', atk: 3, blk: 3, cost: [], free: false, rarity: 'Starter', text: '50% chance to gain 1 courage.' },
+    { id: 'absolution', name: 'Absolution', type: 'Attack', atk: 10, blk: 3, cost: ['Any', 'Any', 'Any'], free: false, rarity: 'Starter', text: '' },
+    { id: 'purge', name: 'Purge', type: 'Attack', atk: 3, blk: 3, cost: [], free: true, rarity: 'Common', text: '' },
+    { id: 'reap', name: 'Reap', type: 'Attack', atk: 8, blk: 3, cost: ['Any', 'Any'], free: false, rarity: 'Common', text: 'If two red cards are discarded to play this, this gains +4 damage.' },
+    { id: 'tempest', name: 'Tempest', type: 'Attack', atk: 2, blk: 2, cost: ['White'], free: true, rarity: 'Common', text: 'Gain 1 temperance.' },
+    { id: 'impale', name: 'Impale', type: 'Attack', atk: 6, blk: 2, cost: [], free: true, rarity: 'Common', text: 'As an additional cost, lose 3 courage.' },
+    { id: 'razor_storm', name: 'Razor Storm', type: 'Attack', atk: 1, blk: 2, cost: [], free: true, rarity: 'Uncommon', text: 'Attacks 3 times.' },
+    { id: 'consecrate', name: 'Consecrate', type: 'Attack', atk: 6, blk: 3, cost: ['Black'], free: false, rarity: 'Common', text: 'If this card is pledged when played, it gains +4 damage and gain 2 courage.' },
+    { id: 'excavate', name: 'Excavate', type: 'Attack', atk: 9, blk: 3, cost: ['Black', 'Any'], free: false, rarity: 'Uncommon', text: 'If you have milled 5 or more cards this battle, this attack gains +5 damage.' },
+    { id: 'lacerate', name: 'Lacerate', type: 'Attack', atk: 2, blk: 2, cost: [], free: false, rarity: 'Common', text: 'If this attack deals 4 or more damage, the enemy gains 2 wounded.' },
+    { id: 'vindicate', name: 'Vindicate', type: 'Attack', atk: 8, blk: 3, cost: ['Red', 'Any'], free: false, rarity: 'Uncommon', text: 'If you have 5 or more courage, this attack gains +5 damage and lose all courage.' },
+    { id: 'quick_wit', name: 'Quick Wit', type: 'Attack', atk: 2, blk: 3, cost: [], free: true, rarity: 'Common', text: 'As an additional cost, lose 2 courage. Resurrect 1.' },
+    { id: 'thaw', name: 'Thaw', type: 'Attack', atk: 3, blk: 2, cost: [], free: true, rarity: 'Uncommon', text: 'Lose all frostbite, then gain X temperance where X is the amount of frostbite lost.' },
+    { id: 'deus_vult', name: 'Deus Vult', type: 'Attack', atk: 0, blk: 2, cost: [], free: true, rarity: 'Rare', text: 'You can\'t play this if you have not used your weapon this turn. Gain 1 courage. This gains +X damage, where X is your courage.' },
+    { id: 'ravage', name: 'Ravage', type: 'Attack', atk: 8, blk: 3, cost: ['Any'], free: false, rarity: 'Uncommon', text: 'As an additional cost, mill 3 cards.' },
+    { id: 'hex', name: 'Hex', type: 'Attack', atk: 5, blk: 3, cost: [], free: true, rarity: 'Uncommon', text: 'This card becomes cursed. At the end of the turn, remove Hex from this card.' },
+    { id: 'fury', name: 'Fury', type: 'Prayer', atk: 0, blk: 3, cost: [], free: true, rarity: 'Uncommon', text: 'Gain 1 aggression, then double your aggression.' },
+    { id: 'sacrifice', name: 'Sacrifice', type: 'Prayer', atk: 0, blk: 3, cost: [], free: true, rarity: 'Uncommon', text: 'Gain 1 scar, 1 temperance, and resurrect 1.' },
+    { id: 'increase_faith', name: 'Increase Faith', type: 'Prayer', atk: 0, blk: 3, cost: ['Any'], free: true, rarity: 'Uncommon', text: 'Gain 1 power.' },
+    { id: 'burn', name: 'Burn', type: 'Prayer', atk: 0, blk: 2, cost: [], free: true, rarity: 'Common', text: 'If the enemy has burn, the enemy gains 3 burn, otherwise the enemy gains 2 burn.' },
+    { id: 'divine_protection', name: 'Divine Protection', type: 'Prayer', atk: 0, blk: 2, cost: [], free: true, rarity: 'Common', text: 'Gain 2 aegis.' },
+    { id: 'stalwart', name: 'Stalwart', type: 'Block', atk: 0, blk: 7, cost: [], free: false, rarity: 'Uncommon', text: 'As an additional cost, lose 2 courage.' },
+    { id: 'mantlet', name: 'Mantlet', type: 'Block', atk: 0, blk: 4, cost: [], free: false, rarity: 'Common', text: '' },
+    { id: 'hold_the_line', name: 'Hold the Line', type: 'Block', atk: 0, blk: 3, cost: [], free: false, rarity: 'Common', text: 'Gain 2 courage.' },
+    { id: 'crusade', locked: true },
+    { id: 'whirlwind', locked: true },
+    { id: 'serpent_crush', locked: true },
+    { id: 'ark_of_the_covenant', locked: true },
+    { id: 'crimson_rite', locked: true }
+  ];
+
+  /* ========================= EQUIPMENT (ECS/Objects/Equipment + Content/Equipment) ========================= */
+  const EQUIPMENT = [
+    { id: 'knightly_helm', name: 'Knightly Helm', slot: 'Head', block: 2, color: 'Black', flavor: 'Standard issue of the order. Keeps rank heads down when arrows find the sky.' },
+    { id: 'ivory_coif', name: 'Ivory Coif', slot: 'Head', block: 1, color: 'White', flavor: 'Woven for the long vigil. Keeps the sun from your eyes and doubt from your thoughts.' },
+    { id: 'scarlet_coif', name: 'Scarlet Coif', slot: 'Head', block: 1, color: 'Red', flavor: 'Dyed for the field. A lighter hood for those who mean to press the attack.' },
+    { id: 'oathbreaker_coif', name: 'Oathbreaker Coif', slot: 'Head', block: 1, color: 'Black', text: 'Unpledge your pledged card.' },
+    { id: 'helm_of_seeing', name: 'Helm of Seeing', slot: 'Head', block: 1, color: 'Black', text: 'Resurrect 2.' },
+    { id: 'sanctified_circlet', name: 'Sanctified Circlet', slot: 'Head', block: 1, color: 'Black', text: 'Gain 2 temperance.' },
+    { id: 'knightly_chest', name: 'Knightly Chest', slot: 'Chest', block: 2, color: 'Black', flavor: 'Standard issue of the order. Meant to turn the blow that would stop the charge.' },
+    { id: 'ivory_vest', name: 'Ivory Vest', slot: 'Chest', block: 1, color: 'White', flavor: 'Blessed linen, light enough to march in and strong enough to turn a glancing blow.' },
+    { id: 'scarlet_vest', name: 'Scarlet Vest', slot: 'Chest', block: 1, color: 'Red', flavor: 'Cut close and dyed deep. Worn by crusaders who prefer speed to ceremony.' },
+    { id: 'bulwark_plate', name: 'Bulwark Plate', slot: 'Chest', block: 1, color: 'Black', text: 'Gain 4 aegis.' },
+    { id: 'heartforge_cuirass', name: 'Heartforge Cuirass', slot: 'Chest', block: 1, color: 'Black', text: 'Gain 2 vigor.' },
+    { id: 'pierced_heart_plate', name: 'Pierced Heart Plate', slot: 'Chest', block: 1, color: 'Black', text: 'Gain 3 courage. Gain 2 bleed.' },
+    { id: 'knightly_gauntlets', name: 'Knightly Gauntlets', slot: 'Arms', block: 2, color: 'Black', flavor: 'Standard issue of the order. Proofed for the grip that does not slip.' },
+    { id: 'ivory_wraps', name: 'Ivory Wraps', slot: 'Arms', block: 1, color: 'White', flavor: 'Cloth bindings worn thin on the road. They still hold when the strike comes.' },
+    { id: 'scarlet_wraps', name: 'Scarlet Wraps', slot: 'Arms', block: 1, color: 'Red', flavor: 'Red wrappings that mark the hand before it marks the enemy.' },
+    { id: 'kunai_sheath', name: 'Kunai Sheath', slot: 'Arms', block: 1, color: 'Black', text: 'Add 2 Kunai to your hand.' },
+    { id: 'whetstone_gauntlets', name: 'Whetstone Gauntlets', slot: 'Arms', block: 1, color: 'Black', text: 'Gain sharpen 2.' },
+    { id: 'purging_bracers', name: 'Purging Bracers', slot: 'Arms', block: 1, color: 'Black', text: 'Gain 2 aggression.', locked: true },
+    { id: 'warbringer_bracers', name: 'Warbringer Bracers', slot: 'Arms', block: 1, color: 'Black', text: 'Gain 2 might.', locked: true },
+    { id: 'knightly_grieves', name: 'Knightly Grieves', slot: 'Legs', block: 2, color: 'Black', flavor: 'Standard issue of the order. Built to hold the line when the march grows long.' },
+    { id: 'ivory_treads', name: 'Ivory Treads', slot: 'Legs', block: 1, color: 'White', flavor: 'Soft leather over hard miles. The faithful learn to keep walking.' },
+    { id: 'scarlet_treads', name: 'Scarlet Treads', slot: 'Legs', block: 1, color: 'Red', flavor: 'Red leather scuffed at the toe. Built for closing distance.' },
+    { id: 'fleetfoot_greaves', name: 'Fleetfoot Greaves', slot: 'Legs', block: 1, color: 'Black', text: 'Gain 1 action point.' },
+    { id: 'sunderstep_treads', name: 'Sunderstep Treads', slot: 'Legs', block: 1, color: 'Black', text: 'Remove all guard from the enemy.' }
+  ];
+
+  const EQUIP_SLOTS = ['Head', 'Chest', 'Arms', 'Legs'];
+  const SLOT_ICONS = { Head: '../Content/head.png', Chest: '../Content/chest.png', Arms: '../Content/arms.png', Legs: '../Content/legs.png' };
+  const COLOR_ORDER = ['w', 'r', 'k'];
+  const COLOR_NAMES = { w: 'White', r: 'Red', k: 'Black' };
+
+  /* ========================= helpers ========================= */
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function isTermBoundary(text, index) {
+    if (index < 0 || index >= text.length) return true;
+    return !/[a-z0-9]/i.test(text[index]);
+  }
+
+  function findKeywordMatches(text) {
+    const matches = [];
+    KEYWORD_DEFS.forEach((def, registryIndex) => {
+      def.aliases.forEach(alias => {
+        let start = 0;
+        while (start < text.length) {
+          const index = text.toLowerCase().indexOf(alias.toLowerCase(), start);
+          if (index < 0) break;
+          if (isTermBoundary(text, index - 1) && isTermBoundary(text, index + alias.length)) {
+            matches.push({ index, registryIndex, def, length: alias.length });
+            break;
+          }
+          start = index + alias.length;
+        }
+      });
+    });
+    return matches.sort((a, b) => a.index - b.index || a.registryIndex - b.registryIndex);
+  }
+
+  function highlightKeywords(text) {
+    const matches = findKeywordMatches(text);
+    const used = new Set();
+    if (matches.length === 0) return { html: escapeHtml(text), usedIds: used };
+    let html = '';
+    let cursor = 0;
+    matches.forEach(match => {
+      if (match.index < cursor) return;
+      html += escapeHtml(text.slice(cursor, match.index));
+      html += `<span class="kw">${escapeHtml(text.slice(match.index, match.index + match.length))}</span>`;
+      cursor = match.index + match.length;
+      used.add(match.def.id);
+    });
+    html += escapeHtml(text.slice(cursor));
+    return { html, usedIds: used };
+  }
+
+  function buildKeywordBlocks(usedIds) {
+    return KEYWORD_DEFS
+      .filter(def => usedIds.has(def.id))
+      .map(def => `<div class="keyword-block">${escapeHtml(def.tooltip)}</div>`)
+      .join('');
+  }
+
+  /* ========================= saint detail ========================= */
+  function saintDetailHtml(medal) {
+    const highlighted = highlightKeywords(medal.medalText);
+    const keywordHtml = buildKeywordBlocks(highlighted.usedIds);
+    return `
+      <h3 class="saint-name">${escapeHtml(medal.name)}</h3>
+      <div class="medal-effect-block">
+        <p class="medal-effect-text">${highlighted.html}</p>
+        ${keywordHtml ? `<div class="keyword-blocks">${keywordHtml}</div>` : ''}
+      </div>
+      <p class="saint-section-label">Years on Earth</p>
+      <p class="saint-years">${escapeHtml(medal.yearsOnEarth)}</p>
+      <p class="saint-bio">${escapeHtml(medal.bio[0])}</p>
+      <p class="saint-bio">${escapeHtml(medal.bio[1])}</p>
+      <p class="saint-section-label">Common patronages</p>
+      <p class="saint-patronages">${escapeHtml(medal.patronages)}</p>
+      <p class="saint-section-label">Associated prayer</p>
+      <blockquote class="saint-prayer">${escapeHtml(medal.prayer)}</blockquote>
+    `;
+  }
+
+  /* ========================= card frame ========================= */
+  function costPipsHtml(cost) {
+    return (cost || []).map(c => `<span class="pip pip-${c.toLowerCase()}"></span>`).join('');
+  }
+
+  function cardInnerHtml(card, color) {
+    const displayBlk = card.blk + (color === 'k' ? 1 : 0);
+    const notch = card.weapon ? 'Weapon' : card.type;
+    const blkChip = card.blk > 0
+      ? `<div class="chip-slot"><div class="chip chip-blk"><span class="v">${displayBlk}</span><span class="l">BLK</span></div></div>`
+      : '';
+    const atkChip = card.atk > 0
+      ? `<div class="chip-slot"><div class="chip chip-atk"><span class="v">${card.atk}</span><span class="l">ATK</span></div></div>`
+      : '';
+    const apChip = card.weapon
+      ? `<div class="chip-slot-ap"><div class="chip chip-free"><span class="v">W</span><span class="l">WPN</span></div></div>`
+      : card.free
+        ? `<div class="chip-slot-ap"><div class="chip chip-free"><span class="v">0</span><span class="l">FREE</span></div></div>`
+        : `<div class="chip-slot-ap"><div class="chip chip-ap"><span class="v">1</span><span class="l">AP</span></div></div>`;
+    const dots = COLOR_ORDER.map(c => `<i data-c="${c}" class="${c === color ? 'on' : ''}"></i>`).join('');
+    return `
+      <div class="bg"></div>
+      <div class="stripe"></div>
+      <div class="gutter"></div>
+      <div class="notch">${escapeHtml(notch)}</div>
+      <div class="stats">${blkChip}${atkChip}${apChip}</div>
+      <div class="content">
+        <div class="cost-row">${costPipsHtml(card.cost)}</div>
+        <div class="name">${escapeHtml(card.name)}</div>
+        <div class="rule"></div>
+        <div class="desc">${escapeHtml(card.text || '')}</div>
+      </div>
+      <div class="art"><img src="../Content/CardArt/${card.id}.png" alt=""></div>
+      <div class="sheen"></div>
+      <div class="cdots">${dots}</div>
+    `;
+  }
+
+  function attachSheen(cardEl) {
+    cardEl.addEventListener('pointermove', e => {
+      const r = cardEl.getBoundingClientRect();
+      cardEl.style.setProperty('--gx', `${((e.clientX - r.left) / r.width) * 100}%`);
+      cardEl.style.setProperty('--gy', `${((e.clientY - r.top) / r.height) * 100}%`);
+    });
+  }
+
+  /* Builds a fan slot. onColorChange(cardId, newColor) fires after each cycle. */
+  function buildCardSlot(card, colorState, scale, onColorChange) {
+    const slot = document.createElement('div');
+    slot.className = 'fan-slot';
+    slot.style.setProperty('--cs', scale);
+
+    if (card.locked) {
+      slot.classList.add('locked');
+      slot.innerHTML = `
+        <div class="fan-lift"><div class="cscale">
+          <div class="card-back">
+            <img src="../Content/card_back.png" alt="">
+            <span class="undiscovered">Undiscovered</span>
+          </div>
+        </div></div>`;
+      return slot;
+    }
+
+    const color = colorState.get(card.id) || 'w';
+    slot.innerHTML = `
+      <div class="fan-lift"><div class="cscale">
+        <div class="ccard ${color}" data-id="${card.id}">${cardInnerHtml(card, color)}</div>
+      </div></div>`;
+
+    const cardEl = slot.querySelector('.ccard');
+    const scaleEl = slot.querySelector('.cscale');
+    attachSheen(cardEl);
+
+    cardEl.addEventListener('click', () => {
+      const current = colorState.get(card.id) || 'w';
+      const next = COLOR_ORDER[(COLOR_ORDER.indexOf(current) + 1) % COLOR_ORDER.length];
+      colorState.set(card.id, next);
+      scaleEl.classList.remove('color-swap');
+      void scaleEl.offsetWidth;
+      scaleEl.classList.add('color-swap');
+      setTimeout(() => {
+        cardEl.className = `ccard ${next}`;
+        cardEl.innerHTML = cardInnerHtml(card, next);
+        attachSheen(cardEl);
+      }, 170);
+      if (onColorChange) onColorChange(card, next);
+    });
+    return slot;
+  }
+
+  /* Fan transforms mirror BoosterPackOpeningAnimationService.SlotStartRotationsDegrees. */
+  function applyFanTransforms(slots, stepDeg, dropPx) {
+    const center = (slots.length - 1) / 2;
+    slots.forEach((slot, i) => {
+      const offset = i - center;
+      slot.style.setProperty('--rot', `${(offset * stepDeg).toFixed(2)}deg`);
+      slot.style.setProperty('--drop', `${(Math.pow(Math.abs(offset), 1.6) * dropPx).toFixed(1)}px`);
+      slot.style.setProperty('--z', String(i + 1));
+    });
+  }
+
+  function buildFanRow(cards, colorState, opts) {
+    const row = document.createElement('div');
+    row.className = 'fan-row';
+    row.style.setProperty('--overlap', `${opts.overlap}px`);
+    const slots = cards.map(card => buildCardSlot(card, colorState, opts.scale, opts.onColorChange));
+    slots.forEach(s => row.appendChild(s));
+    applyFanTransforms(slots, opts.stepDeg, opts.dropPx);
+    return row;
+  }
+
+  function chunk(arr, size) {
+    const out = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+
+  const CARD_GROUPS = [
+    { label: 'Weapons', filter: c => !c.locked && c.weapon },
+    { label: 'Attacks', filter: c => !c.locked && !c.weapon && c.type === 'Attack' },
+    { label: 'Prayers', filter: c => !c.locked && c.type === 'Prayer' },
+    { label: 'Blocks', filter: c => !c.locked && c.type === 'Block' },
+    { label: 'Undiscovered', filter: c => c.locked }
+  ];
+
+  function buildCardGroups(container, colorState, opts) {
+    container.innerHTML = '';
+    CARD_GROUPS.forEach(group => {
+      const cards = CARDS.filter(group.filter);
+      if (!cards.length) return;
+      const label = document.createElement('div');
+      label.className = 'fan-group-label';
+      label.textContent = group.label;
+      container.appendChild(label);
+      chunk(cards, opts.perRow).forEach(rowCards => {
+        container.appendChild(buildFanRow(rowCards, colorState, opts));
+      });
+    });
+  }
+
+  /* ========================= equipment ========================= */
+  function equipTextHtml(eq) {
+    if (eq.text) {
+      const highlighted = highlightKeywords(eq.text);
+      return `<div class="eq-text">${highlighted.html}</div>`;
+    }
+    return `<div class="eq-text flavor">${escapeHtml(eq.flavor || '')}</div>`;
+  }
+
+  function buildEquipTile(eq) {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'eq-tile' + (eq.locked ? ' is-locked' : '');
+    tile.disabled = !!eq.locked;
+    const icon = eq.locked
+      ? '<span class="eq-locked-mark">?</span>'
+      : `<img src="../Content/Equipment/${eq.id}.png" alt="${escapeHtml(eq.name)}">`;
+    tile.innerHTML = `
+      <div class="eq-icon">${icon}</div>
+      <div class="eq-name">${eq.locked ? 'Unclaimed' : escapeHtml(eq.name)}</div>
+      <div class="eq-sub"><span class="eq-gem ${eq.color.toLowerCase()}"></span>${eq.slot} · ${eq.block} BLK</div>
+      ${eq.locked ? '' : equipTextHtml(eq)}
+    `;
+    if (!eq.locked) attachTilt(tile, 3.2);
+    return tile;
+  }
+
+  function attachTilt(el, maxDeg) {
+    el.addEventListener('pointermove', e => {
+      const r = el.getBoundingClientRect();
+      const dx = (e.clientX - r.left) / r.width - 0.5;
+      const dy = (e.clientY - r.top) / r.height - 0.5;
+      el.style.transform = `translateY(-4px) rotateX(${(-dy * maxDeg).toFixed(2)}deg) rotateY(${(dx * maxDeg).toFixed(2)}deg)`;
+    });
+    el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+  }
+
+  /* ========================= counts, tabs, meter ========================= */
+  const COUNTS = {
+    medals: { have: MEDALS.filter(m => m.acquired).length, total: MEDALS.length, label: 'Communion of Saints' },
+    cards: { have: CARDS.filter(c => !c.locked).length, total: CARDS.length, label: 'Cards Unlocked' },
+    equipment: { have: EQUIPMENT.filter(e => !e.locked).length, total: EQUIPMENT.length, label: 'Equipment Unlocked' }
+  };
+
+  function setupChrome(root, onTabChange) {
+    root.querySelectorAll('[data-count]').forEach(el => {
+      const c = COUNTS[el.dataset.count];
+      el.textContent = `${c.have} / ${c.total}`;
+    });
+    const tabs = root.querySelectorAll('[data-tab]');
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(b => b.classList.toggle('active', b === btn));
+        root.querySelectorAll('[data-panel]').forEach(p => {
+          p.classList.toggle('active', p.dataset.panel === btn.dataset.tab);
+        });
+        updateMeter(root, btn.dataset.tab);
+        if (onTabChange) onTabChange(btn.dataset.tab);
+      });
+    });
+    updateMeter(root, 'medals');
+  }
+
+  function updateMeter(root, tab) {
+    const c = COUNTS[tab];
+    const fill = root.querySelector('[data-meter-fill]');
+    const count = root.querySelector('[data-meter-count]');
+    const label = root.querySelector('[data-meter-label]');
+    if (!c || !fill) return;
+    fill.style.width = `${(c.have / c.total) * 100}%`;
+    count.textContent = `${c.have} / ${c.total}`;
+    label.textContent = c.label;
+  }
+
+  function setupParallax(root) {
+    root.addEventListener('pointermove', e => {
+      const r = root.getBoundingClientRect();
+      root.style.setProperty('--mx', ((e.clientX - r.left) / r.width).toFixed(3));
+      root.style.setProperty('--my', ((e.clientY - r.top) / r.height).toFixed(3));
+    });
+  }
+
+  function medalIconHtml(medal) {
+    return medal.acquired
+      ? `<img src="../Content/Medals/${medal.id}.png" alt="${escapeHtml(medal.name)}">`
+      : '<span class="medal-locked-mark">?</span>';
+  }
+
+  function showSaintDetail(root, medal) {
+    const empty = root.querySelector('[data-detail-empty]');
+    const detail = root.querySelector('[data-saint-detail]');
+    empty.style.display = 'none';
+    detail.style.display = 'block';
+    detail.innerHTML = saintDetailHtml(medal);
+  }
+
+  /* ========================= VARIANT 1 — Reliquary Wall ========================= */
+  (function initV1() {
+    const root = document.getElementById('v1');
+    const colorState = new Map();
+    setupParallax(root);
+    setupChrome(root);
+
+    const grid = root.querySelector('[data-medal-grid]');
+    MEDALS.forEach(medal => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'medal-tile' + (medal.acquired ? '' : ' is-locked');
+      btn.disabled = !medal.acquired;
+      btn.innerHTML = `
+        <div class="medal-icon-wrap">${medalIconHtml(medal)}</div>
+        <span class="medal-tile-label">${escapeHtml(medal.shortName)}</span>`;
+      if (medal.acquired) {
+        btn.addEventListener('click', () => {
+          grid.querySelectorAll('.medal-tile').forEach(t => t.classList.toggle('is-selected', t === btn));
+          showSaintDetail(root, medal);
+        });
+      }
+      grid.appendChild(btn);
+    });
+    grid.querySelector('.medal-tile:not(.is-locked)').click();
+
+    buildCardGroups(root.querySelector('[data-card-groups]'), colorState, {
+      perRow: 8, scale: 0.72, stepDeg: 3.4, dropPx: 5, overlap: -34
+    });
+
+    const hall = root.querySelector('[data-eq-hall]');
+    EQUIP_SLOTS.forEach(slotName => {
+      const col = document.createElement('div');
+      col.className = 'eq-col';
+      col.innerHTML = `
+        <div class="eq-col-head">
+          <img src="${SLOT_ICONS[slotName]}" alt="">
+          <span>${slotName}</span>
+        </div>`;
+      EQUIPMENT.filter(e => e.slot === slotName).forEach(eq => col.appendChild(buildEquipTile(eq)));
+      hall.appendChild(col);
+    });
+  })();
+
+  /* ========================= VARIANT 2 — Chronicler's Codex ========================= */
+  (function initV2() {
+    const root = document.getElementById('v2');
+    const colorState = new Map();
+    setupParallax(root);
+
+    const TITLES = {
+      medals: ['Communion of Saints', 'Folio I'],
+      cards: ['The Deck Recorded', 'Folio II'],
+      equipment: ['Arms & Panoply', 'Folio III']
+    };
+    setupChrome(root, tab => {
+      root.querySelector('[data-codex-title]').textContent = TITLES[tab][0];
+      root.querySelector('[data-codex-folio]').textContent = TITLES[tab][1];
+    });
+
+    const roster = root.querySelector('[data-medal-roster]');
+    MEDALS.forEach(medal => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'roster-row' + (medal.acquired ? '' : ' is-locked');
+      row.disabled = !medal.acquired;
+      row.innerHTML = `
+        <div class="roster-icon">${medalIconHtml(medal)}</div>
+        <div>
+          <div class="roster-name">${medal.acquired ? escapeHtml(medal.name) : 'A saint not yet met'}</div>
+          <div class="roster-effect">${medal.acquired ? escapeHtml(medal.medalText) : 'Their page remains unwritten.'}</div>
+        </div>`;
+      if (medal.acquired) {
+        row.addEventListener('click', () => {
+          roster.querySelectorAll('.roster-row').forEach(r => r.classList.toggle('is-selected', r === row));
+          showSaintDetail(root, medal);
+        });
+      }
+      roster.appendChild(row);
+    });
+    roster.querySelector('.roster-row:not(.is-locked)').click();
+
+    const holder = root.querySelector('[data-preview-holder]');
+    const meta = root.querySelector('[data-preview-meta]');
+    let previewCard = null;
+
+    function renderPreview(card) {
+      previewCard = card;
+      const color = colorState.get(card.id) || 'w';
+      holder.innerHTML = `
+        <div class="cscale">
+          <div class="ccard ${color}">${cardInnerHtml(card, color)}</div>
+        </div>`;
+      const el = holder.querySelector('.ccard');
+      attachSheen(el);
+      el.addEventListener('click', () => cyclePreviewColor(card));
+      meta.innerHTML = `
+        <b>${escapeHtml(card.name)}</b><br>
+        ${card.weapon ? 'Weapon' : escapeHtml(card.type)} · ${escapeHtml(card.rarity)} · viewing <b>${COLOR_NAMES[color]}</b>`;
+    }
+
+    function cyclePreviewColor(card) {
+      const current = colorState.get(card.id) || 'w';
+      const next = COLOR_ORDER[(COLOR_ORDER.indexOf(current) + 1) % COLOR_ORDER.length];
+      colorState.set(card.id, next);
+      renderPreview(card);
+      /* keep the desk fan in sync */
+      buildDesk();
+    }
+
+    function buildDesk() {
+      buildCardGroups(root.querySelector('[data-card-groups]'), colorState, {
+        perRow: 10, scale: 0.6, stepDeg: 2.8, dropPx: 4, overlap: -46,
+        onColorChange: card => renderPreview(card)
+      });
+      root.querySelectorAll('[data-card-groups] .fan-slot:not(.locked)').forEach((slot, idx) => {
+        const unlocked = CARDS.filter(c => !c.locked);
+        slot.addEventListener('pointerenter', () => {
+          const id = slot.querySelector('.ccard')?.dataset.id;
+          const card = unlocked.find(c => c.id === id);
+          if (card && card !== previewCard) renderPreview(card);
+        });
+      });
+    }
+    buildDesk();
+    renderPreview(CARDS.find(c => !c.locked));
+
+    const ledger = root.querySelector('[data-eq-ledger]');
+    EQUIP_SLOTS.forEach(slotName => {
+      const head = document.createElement('div');
+      head.className = 'ledger-slot-head';
+      head.innerHTML = `<img src="${SLOT_ICONS[slotName]}" alt=""><span>${slotName}</span>`;
+      ledger.appendChild(head);
+      EQUIPMENT.filter(e => e.slot === slotName).forEach(eq => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'ledger-row' + (eq.locked ? ' is-locked' : '');
+        row.disabled = !!eq.locked;
+        const icon = eq.locked
+          ? '<span class="eq-locked-mark">?</span>'
+          : `<img src="../Content/Equipment/${eq.id}.png" alt="">`;
+        const text = eq.locked
+          ? '<span class="ledger-text flavor">Not yet claimed on any climb.</span>'
+          : eq.text
+            ? `<span class="ledger-text">${highlightKeywords(eq.text).html}</span>`
+            : `<span class="ledger-text flavor">${escapeHtml(eq.flavor)}</span>`;
+        row.innerHTML = `
+          <div class="ledger-icon">${icon}</div>
+          <div class="ledger-name">${eq.locked ? 'Unclaimed' : escapeHtml(eq.name)}</div>
+          ${text}
+          <div class="ledger-stats"><span class="eq-gem ${eq.color.toLowerCase()}"></span>${eq.block} BLK</div>`;
+        ledger.appendChild(row);
+      });
+    });
+  })();
+
+  /* ========================= VARIANT 3 — Ossuary Vault ========================= */
+  (function initV3() {
+    const root = document.getElementById('v3');
+    const colorState = new Map();
+    setupParallax(root);
+    setupChrome(root);
+
+    const grid = root.querySelector('[data-medal-grid]');
+    const drawer = root.querySelector('[data-drawer]');
+    MEDALS.forEach(medal => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'medal-tile' + (medal.acquired ? '' : ' is-locked');
+      btn.disabled = !medal.acquired;
+      btn.style.setProperty('--medal-size', '92px');
+      btn.innerHTML = `
+        <div class="medal-icon-wrap">${medalIconHtml(medal)}</div>
+        <span class="medal-tile-label">${escapeHtml(medal.shortName)}</span>`;
+      if (medal.acquired) {
+        btn.addEventListener('click', () => {
+          grid.querySelectorAll('.medal-tile').forEach(t => t.classList.toggle('is-selected', t === btn));
+          showSaintDetail(root, medal);
+          drawer.classList.remove('slide-in');
+          void drawer.offsetWidth;
+          drawer.classList.add('slide-in');
+        });
+      }
+      grid.appendChild(btn);
+    });
+    grid.querySelector('.medal-tile:not(.is-locked)').click();
+
+    /* One giant arc fan of the whole collection. */
+    const arc = root.querySelector('[data-arc]');
+    const fanCards = CARDS.slice();
+    const step = Math.min(96 / Math.max(1, fanCards.length - 1), 3.4);
+    const center = (fanCards.length - 1) / 2;
+    fanCards.forEach((card, i) => {
+      const slot = buildCardSlot(card, colorState, 0.8, null);
+      slot.style.setProperty('--rot', `${((i - center) * step).toFixed(2)}deg`);
+      slot.style.setProperty('--z', String(i + 1));
+      arc.appendChild(slot);
+    });
+  })();
+
+  /* ========================= viewport scaling ========================= */
+  function fitViewports() {
+    document.querySelectorAll('.viewport-scaler').forEach(scaler => {
+      const vp = scaler.querySelector('.viewport');
+      const scale = scaler.clientWidth / GAME_W;
+      vp.style.transform = `translateX(-50%) scale(${scale})`;
+      scaler.style.height = `${GAME_H * scale}px`;
+    });
+  }
+  window.addEventListener('resize', fitViewports);
+  window.addEventListener('load', fitViewports);
+  fitViewports();
+</script>
+</body>
+</html>

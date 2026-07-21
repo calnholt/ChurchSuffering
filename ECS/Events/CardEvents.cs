@@ -434,6 +434,16 @@ namespace Crusaders30XX.ECS.Events
     }
 
     /// <summary>
+    /// Emitted after equipment remaining uses change so the loadout save can stay in sync.
+    /// </summary>
+    public class EquipmentRemainingUsesChanged
+    {
+        public string EquipmentId { get; set; }
+        public EquipmentSlot Slot { get; set; }
+        public int RemainingUses { get; set; }
+    }
+
+    /// <summary>
     /// Emitted when an equipment is destroyed by activation.
     /// </summary>
     public class EquipmentDestroyed

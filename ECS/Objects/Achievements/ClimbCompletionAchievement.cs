@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using Crusaders30XX.ECS.Core;
 using Crusaders30XX.ECS.Data.Achievements;
 using Crusaders30XX.ECS.Events;
-using Crusaders30XX.ECS.Singletons;
 
 namespace Crusaders30XX.ECS.Objects.Achievements
 {
-	/// <summary>Tracks completed climbs, optionally filtered by starting weapon and difficulty.</summary>
+	/// <summary>Tracks completed climbs, optionally filtered by starting weapon and minimum Penance.</summary>
 	public sealed class ClimbCompletionAchievement : AchievementBase
 	{
 		private readonly string _requiredWeaponId;
-		private readonly RunDifficulty? _requiredDifficulty;
+		private readonly int? _requiredPenanceLevel;
 		private readonly int _requiredCompletions;
 
 		public ClimbCompletionAchievement(
@@ -22,7 +21,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
 			int column,
 			bool startsVisible,
 			string requiredWeaponId = null,
-			RunDifficulty? requiredDifficulty = null,
+			int? requiredPenanceLevel = null,
 			int requiredCompletions = 1)
 		{
 			Id = id;
@@ -32,7 +31,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
 			Column = column;
 			StartsVisible = startsVisible;
 			_requiredWeaponId = requiredWeaponId;
-			_requiredDifficulty = requiredDifficulty;
+			_requiredPenanceLevel = requiredPenanceLevel;
 			_requiredCompletions = Math.Max(1, requiredCompletions);
 			TargetValue = _requiredCompletions > 1 ? _requiredCompletions : 0;
 		}
@@ -55,7 +54,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
 			{
 				return;
 			}
-			if (_requiredDifficulty.HasValue && evt.Difficulty != _requiredDifficulty.Value) return;
+			if (_requiredPenanceLevel.HasValue && evt.PenanceLevel < _requiredPenanceLevel.Value) return;
 
 			IncrementProgress();
 			if (!IsCompleted) AchievementManager.SaveProgress();
@@ -73,14 +72,51 @@ namespace Crusaders30XX.ECS.Objects.Achievements
 		{
 			yield return Create("first_ascent", "First Ascent", "Complete your first climb", 1, 4, true);
 			yield return Create("veteran_climber", "Veteran Climber", "Complete 5 climbs", 1, 3, false, completions: 5);
-			yield return Create("tempered_steel", "Tempered Steel", "Complete a climb with the Sword on Normal difficulty", 0, 4, false, "sword", RunDifficulty.Normal);
-			yield return Create("by_the_sword", "By the Sword", "Complete a climb with the Sword on Hard difficulty", 0, 5, false, "sword", RunDifficulty.Hard);
-			yield return Create("quick_work", "Quick Work", "Complete a climb with the Dagger on Easy difficulty", 1, 5, false, "dagger", RunDifficulty.Easy);
-			yield return Create("knifes_edge", "Knife's Edge", "Complete a climb with the Dagger on Normal difficulty", 1, 6, false, "dagger", RunDifficulty.Normal);
-			yield return Create("silent_execution", "Silent Execution", "Complete a climb with the Dagger on Hard difficulty", 1, 7, false, "dagger", RunDifficulty.Hard);
-			yield return Create("first_strike", "First Strike", "Complete a climb with the Hammer on Easy difficulty", 2, 4, false, "hammer", RunDifficulty.Easy);
-			yield return Create("judgment_falls", "Judgment Falls", "Complete a climb with the Hammer on Normal difficulty", 2, 5, false, "hammer", RunDifficulty.Normal);
-			yield return Create("unbreakable_force", "Unbreakable Force", "Complete a climb with the Hammer on Hard difficulty", 2, 6, false, "hammer", RunDifficulty.Hard);
+			foreach (var achievement in CreateWeaponMilestones("sword", "Sword", 0, 3)) yield return achievement;
+			foreach (var achievement in CreateWeaponMilestones("dagger", "Dagger", 1, 5)) yield return achievement;
+			foreach (var achievement in CreateWeaponMilestones("hammer", "Hammer", 2, 3)) yield return achievement;
+		}
+
+		private static IEnumerable<AchievementBase> CreateWeaponMilestones(
+			string weaponId,
+			string weaponName,
+			int row,
+			int firstColumn)
+		{
+			int[] levels = { 0, 6, 12, 18, 24 };
+			for (int index = 0; index < levels.Length; index++)
+			{
+				int level = levels[index];
+				string numeral = ToRoman(level);
+				yield return Create(
+					$"{weaponId}_penance_{level}",
+					$"{weaponName} Penance {numeral}",
+					$"Complete a climb with the {weaponName} at Penance {numeral}",
+					row,
+					firstColumn + index,
+					false,
+					weaponId,
+					level);
+			}
+		}
+
+		private static string ToRoman(int value)
+		{
+			if (value <= 0) return "0";
+			var numerals = new (int Value, string Text)[]
+			{
+				(10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"),
+			};
+			string result = string.Empty;
+			foreach (var numeral in numerals)
+			{
+				while (value >= numeral.Value)
+				{
+					result += numeral.Text;
+					value -= numeral.Value;
+				}
+			}
+			return result;
 		}
 
 		private static ClimbCompletionAchievement Create(
@@ -91,7 +127,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
 			int column,
 			bool startsVisible,
 			string weaponId = null,
-			RunDifficulty? difficulty = null,
+			int? penanceLevel = null,
 			int completions = 1)
 		{
 			return new ClimbCompletionAchievement(
@@ -102,7 +138,7 @@ namespace Crusaders30XX.ECS.Objects.Achievements
 				column,
 				startsVisible,
 				weaponId,
-				difficulty,
+				penanceLevel,
 				completions);
 		}
 	}

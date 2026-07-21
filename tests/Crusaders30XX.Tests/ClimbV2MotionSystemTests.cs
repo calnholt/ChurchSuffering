@@ -39,6 +39,39 @@ public sealed class ClimbV2MotionSystemTests
 	}
 
 	[Fact]
+	public void Encounter_entrance_restores_ashes_colors_gradually_while_motion_settles()
+	{
+		var entityManager = new EntityManager();
+		var entity = entityManager.CreateEntity("encounter");
+		entityManager.AddComponent(entity, new ClimbSlotPresentation { Kind = ClimbSlotKind.Encounter });
+		entityManager.AddComponent(entity, new ClimbEncounterPresentation());
+		entityManager.AddComponent(entity, new ClimbV2ChoiceMotion
+		{
+			Phase = ClimbV2MotionPhase.Entering,
+			Grayscale = 1f,
+			Sepia = 1f,
+		});
+		var system = new ClimbV2MotionSystem(entityManager);
+
+		system.Update(Frame(0.36f));
+
+		var motion = entity.GetComponent<ClimbV2ChoiceMotion>();
+		Assert.Equal(ClimbV2MotionPhase.Entering, motion.Phase);
+		Assert.Equal(0.5f, motion.Grayscale, 3);
+		Assert.Equal(0.5f, motion.Sepia, 3);
+		Assert.Equal(0.79f, motion.Brightness, 3);
+		Assert.Equal(2.5f, motion.Blur, 3);
+
+		system.Update(Frame(0.36f));
+
+		Assert.Equal(ClimbV2MotionPhase.Settled, motion.Phase);
+		Assert.Equal(0f, motion.Grayscale);
+		Assert.Equal(0f, motion.Sepia);
+		Assert.Equal(1f, motion.Brightness);
+		Assert.Equal(0f, motion.Blur);
+	}
+
+	[Fact]
 	public void Purchase_motion_holds_the_departed_item_transparent_until_layout_reconciliation()
 	{
 		var entityManager = new EntityManager();

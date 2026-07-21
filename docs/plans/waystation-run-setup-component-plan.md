@@ -1,10 +1,12 @@
 # WayStation Run-Setup as Component State Plan
 
+> **Superseded:** The difficulty-based design in this draft is replaced by `docs/plans/waystation-penance-v2-plan.md`. Do not implement both models.
+
 > RFC-08 of the deep-module refactor series. The smallest, cleanest standalone win — one file added, one static deleted, ~10 read/write sites repointed. Behavior-preserving. De-risks parallel tests by removing one process-global.
 
 ## Document Status
 
-- **Status:** Draft design, ready for implementation review.
+- **Status:** Superseded by Waystation Penance V2.
 - **Repository:** `Crusaders30XX`
 - **Runtime:** .NET 8.0, MonoGame DesktopGL, ECS architecture.
 - **RFC sequence:** #08 — in-process; effort/risk small / low.

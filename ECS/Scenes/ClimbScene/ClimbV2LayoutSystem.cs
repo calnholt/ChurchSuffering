@@ -107,14 +107,15 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		}
 	}
 
-	private void OnLoadScene(LoadSceneEvent evt)
-	{
-		if (evt?.Scene != SceneId.Climb) return;
+		private void OnLoadScene(LoadSceneEvent evt)
+		{
+			if (evt?.Scene != SceneId.Climb) return;
+			var climb = SaveCache.GetClimbState();
 		_restoreReturnSnapshotRequested = evt.PreviousScene == SceneId.Battle && _returnSnapshot != null;
 		_returnSnapshotActive = false;
 		if (!_restoreReturnSnapshotRequested) _returnSnapshot = null;
-		_freshEntranceRequested = evt.PreviousScene == SceneId.WayStation
-			&& ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0) == 0;
+			_freshEntranceRequested = evt.PreviousScene == SceneId.WayStation
+				&& ClimbRuleService.ClampTime(climb, climb?.time ?? 0) == 0;
 	}
 
 	private void OnSceneDeactivating(SceneDeactivating evt)
@@ -371,7 +372,8 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	private void UpdatePreview(ClimbPreviewState preview, ClimbSaveState climb)
 	{
 		if (preview == null) return;
-		int current = ClimbRuleService.ClampTime(climb?.time ?? 0);
+		int maxTime = ClimbRuleService.GetMaxTime(climb);
+		int current = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
 		var hovered = EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>()
 			.Select(e => new { Slot = e.GetComponent<ClimbSlotPresentation>(), Ui = e.GetComponent<UIElement>() })
 			.FirstOrDefault(x => x.Ui?.IsHovered == true && !x.Ui.IsHidden && x.Slot?.IsUnavailable != true
@@ -380,18 +382,18 @@ public sealed class ClimbV2LayoutSystem : Core.System
 		{
 			preview.Clear();
 			preview.ProjectedUsedTime = current;
-			preview.ProjectedRemainingTime = ClimbRuleService.MaxTime - current;
+			preview.ProjectedRemainingTime = maxTime - current;
 			preview.ProjectedResources = Clone(climb?.resources);
 			FillAffordable(preview, climb);
 			return;
 		}
 
-		int projected = ClimbRuleService.ClampTime(current + hovered.Slot.TimeCost);
+		int projected = ClimbRuleService.ClampTime(climb, current + hovered.Slot.TimeCost);
 		preview.IsActive = projected > current || hovered.Slot.Kind == ClimbSlotKind.Event;
 		preview.SourceSlotId = hovered.Slot.SlotId;
 		preview.Amount = projected - current;
 		preview.ProjectedUsedTime = projected;
-		preview.ProjectedRemainingTime = ClimbRuleService.MaxTime - projected;
+		preview.ProjectedRemainingTime = maxTime - projected;
 		preview.ProjectedResources = Clone(climb?.resources);
 		if (hovered.Slot.Kind == ClimbSlotKind.Shop) ClimbRuleService.TrySpend(preview.ProjectedResources, hovered.Slot.Cost);
 		else if (hovered.Slot.Kind == ClimbSlotKind.Encounter || hovered.Slot.EventKind == ClimbEventKind.Hazard)
@@ -403,8 +405,9 @@ public sealed class ClimbV2LayoutSystem : Core.System
 	private static void FillWouldVanish(ClimbPreviewState preview, ClimbSaveState climb, int projected)
 	{
 		preview.WouldVanishSlotIds.Clear();
-		int current = ClimbRuleService.ClampTime(climb?.time ?? 0);
-		int refresh = ((current / ClimbRuleService.ShopRefreshInterval) + 1) * ClimbRuleService.ShopRefreshInterval;
+		int current = ClimbRuleService.ClampTime(climb, climb?.time ?? 0);
+		int shopRefreshInterval = ClimbRuleService.GetShopRefreshInterval(climb);
+		int refresh = ((current / shopRefreshInterval) + 1) * shopRefreshInterval;
 		if (projected >= refresh)
 			foreach (var slot in climb?.shopSlots ?? new List<ClimbShopSlotSave>()) if (!string.IsNullOrWhiteSpace(slot?.id)) preview.WouldVanishSlotIds.Add(slot.id);
 		foreach (var slot in climb?.encounterSlots ?? new List<ClimbEncounterSlotSave>())
@@ -685,7 +688,7 @@ public sealed class ClimbV2LayoutSystem : Core.System
 
 	private static int Remaining(ClimbSlotPresentation slot, int time) => slot == null || slot.Duration <= 0
 		? 0
-		: Math.Clamp(slot.GeneratedAtTime + slot.Duration - ClimbRuleService.ClampTime(time), 0, slot.Duration);
+		: Math.Clamp(slot.GeneratedAtTime + slot.Duration - Math.Max(0, time), 0, slot.Duration);
 
 	private static string Fingerprint(string slotId, string title, int timeCost, int generatedAtTime, bool unavailable, string asset) =>
 		$"{slotId}|{title}|{timeCost}|{generatedAtTime}|{unavailable}|{asset}";

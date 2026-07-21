@@ -11,10 +11,12 @@ using Crusaders30XX.ECS.Data.Locations;
 using Crusaders30XX.ECS.Services;
 using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Data.Ids;
+using Crusaders30XX.ECS.Data.RunSetup;
 using Crusaders30XX.ECS.Objects.Cards;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Data.Tutorials;
+using Crusaders30XX.Diagnostics;
 
 namespace Crusaders30XX.ECS.Factories
 {
@@ -80,6 +82,7 @@ namespace Crusaders30XX.ECS.Factories
                 var equipHeadEntity = world.CreateEntity("Equip_Head");
                 var equipment = EquipmentFactory.Create(loadout.headId);
                 equipment.Initialize(world.EntityManager, equipHeadEntity);
+                RunEquipmentService.ApplySavedRemainingUses(equipment, loadout);
                 world.AddComponent(equipHeadEntity, new Transform { Position = new Vector2(0, 0), ZOrder = 10001 });
                 world.AddComponent(equipHeadEntity, new UIElement { IsInteractable = true });
                 world.AddComponent(equipHeadEntity, new EquippedEquipment { EquippedOwner = entity, Equipment = equipment });
@@ -90,6 +93,7 @@ namespace Crusaders30XX.ECS.Factories
                 var equipLegsEntity = world.CreateEntity("Equip_Legs");
                 var equipment = EquipmentFactory.Create(loadout.legsId);
                 equipment.Initialize(world.EntityManager, equipLegsEntity);
+                RunEquipmentService.ApplySavedRemainingUses(equipment, loadout);
                 world.AddComponent(equipLegsEntity, new Transform { Position = new Vector2(0, 0), ZOrder = 10001 });
                 world.AddComponent(equipLegsEntity, new UIElement { IsInteractable = true });
                 world.AddComponent(equipLegsEntity, new EquippedEquipment { EquippedOwner = entity, Equipment = equipment });
@@ -100,6 +104,7 @@ namespace Crusaders30XX.ECS.Factories
                 var equipArmsEntity = world.CreateEntity("Equip_Arms");
                 var equipment = EquipmentFactory.Create(loadout.armsId);
                 equipment.Initialize(world.EntityManager, equipArmsEntity);
+                RunEquipmentService.ApplySavedRemainingUses(equipment, loadout);
                 world.AddComponent(equipArmsEntity, new Transform { Position = new Vector2(0, 0), ZOrder = 10001 });
                 world.AddComponent(equipArmsEntity, new UIElement { IsInteractable = true });
                 world.AddComponent(equipArmsEntity, new EquippedEquipment { EquippedOwner = entity, Equipment = equipment });
@@ -110,6 +115,7 @@ namespace Crusaders30XX.ECS.Factories
                 var equipChestEntity = world.CreateEntity("Equip_Chest");
                 var equipment = EquipmentFactory.Create(loadout.chestId);
                 equipment.Initialize(world.EntityManager, equipChestEntity);
+                RunEquipmentService.ApplySavedRemainingUses(equipment, loadout);
                 world.AddComponent(equipChestEntity, new Transform { Position = new Vector2(0, 0), ZOrder = 10001 });
                 world.AddComponent(equipChestEntity, new UIElement { IsInteractable = true });
                 world.AddComponent(equipChestEntity, new EquippedEquipment { EquippedOwner = entity, Equipment = equipment });
@@ -515,7 +521,10 @@ namespace Crusaders30XX.ECS.Factories
         private static void ApplyWayStationEnemyHealthModifier(EnemyBase def)
         {
             if (def == null) return;
-            float modifier = WayStationRunSetupSingleton.EnemyHealthModifier;
+			int penanceLevel = TestFightRuntime.IsActive
+				? TestFightRuntime.Options.PenanceLevel
+				: SaveCache.GetClimbState()?.penanceLevel ?? 0;
+			float modifier = PenanceRules.Calculate(penanceLevel).EnemyHealthModifier;
             if (modifier <= 0f) modifier = 1f;
 
             def.MaxHealth = Math.Max(1, (int)Math.Round(def.MaxHealth * modifier));
@@ -529,8 +538,9 @@ namespace Crusaders30XX.ECS.Factories
         {
             if (def == null) return;
 
-            int climbTime = ClimbRuleService.ClampTime(SaveCache.GetClimbState()?.time ?? 0);
-            int intervals = climbTime / ClimbRuleService.ShopRefreshInterval;
+            var climbState = SaveCache.GetClimbState();
+            int climbTime = ClimbRuleService.ClampTime(climbState, climbState?.time ?? 0);
+			int intervals = climbTime / ClimbRuleService.EnemyHealthScalingInterval;
             if (intervals <= 0) return;
 
             float scale = 1f + ClimbTimeHealthBonusPerInterval * intervals;

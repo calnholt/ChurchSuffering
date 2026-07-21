@@ -58,12 +58,14 @@ public sealed class CollectionProgressionSystem : Core.System
 		int points = CollectionProgressionRules.CalculateClimbPoints(
 			evt.TimeReached,
 			evt.CompletedFinalBoss,
-			evt.Abandoned);
+			evt.Abandoned,
+			evt.ShopRefreshInterval);
 		var collection = SaveCache.GetCollection();
 		if (points > 0) collection.pendingClimbPoints += points;
 		collection.pendingClimbPointAward = new PendingClimbPointAwardSave
 		{
 			timeReached = Math.Max(0, evt.TimeReached),
+			shopRefreshInterval = Math.Max(1, evt.ShopRefreshInterval),
 			abandoned = evt.Abandoned,
 			completedFinalBoss = evt.CompletedFinalBoss,
 			pointsAwarded = points,

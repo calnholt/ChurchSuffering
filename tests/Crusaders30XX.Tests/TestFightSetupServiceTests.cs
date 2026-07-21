@@ -2,10 +2,10 @@ using System.Linq;
 using Crusaders30XX.Diagnostics;
 using Crusaders30XX.ECS.Components;
 using Crusaders30XX.ECS.Core;
+using Crusaders30XX.ECS.Data.Save;
 using Crusaders30XX.ECS.Events;
 using Crusaders30XX.ECS.Objects.Enemies;
 using Crusaders30XX.ECS.Services;
-using Crusaders30XX.ECS.Singletons;
 using Crusaders30XX.ECS.Systems;
 using Xunit;
 
@@ -14,7 +14,7 @@ namespace Crusaders30XX.Tests;
 public class TestFightSetupServiceTests
 {
 	[Fact]
-	public void PrepareWorld_builds_isolated_hard_run_setup_with_easy_enemy_rules()
+	public void PrepareWorld_builds_isolated_max_penance_run_setup()
 	{
 		TestFightRuntime.Configure(Options());
 		try
@@ -46,6 +46,8 @@ public class TestFightSetupServiceTests
 	public void RegenerateDeck_replaces_all_cards_and_uses_a_new_seed()
 	{
 		int seed = 100;
+		SaveCache.DeleteSaveFilesIfPresent();
+		SaveCache.UnlockAllCollectionItems();
 		TestFightRuntime.Configure(Options());
 		TestFightRuntime.SetDeckSeedProviderForTests(() => ++seed);
 		EventManager.Clear();
@@ -73,12 +75,20 @@ public class TestFightSetupServiceTests
 			Assert.Equal(102, TestFightRuntime.LastDeckSeed);
 			Assert.Empty(firstIds.Intersect(secondIds));
 			Assert.All(deck.Cards, card => Assert.NotNull(card.GetComponent<RunDeckCard>()));
-			Assert.All(deck.Cards, card => Assert.True(card.GetComponent<CardData>().Card.IsStarter));
+			Assert.Equal(12, deck.Cards.Count(card => card.GetComponent<CardData>().Card.IsStarter));
+			Assert.Equal(8, deck.Cards.Count(HasReparationRestriction));
 			Assert.Equal(
 				deck.Cards.Count,
 				deck.Cards.Select(card => card.GetComponent<RunDeckCard>().EntryId).Distinct().Count());
 
 			var expectedLoadout = StartingDeckGeneratorService.BuildStartingLoadout("hammer", 102, "test_fight");
+			ReparationService.Apply(
+				expectedLoadout,
+				"hammer",
+				102,
+				24,
+				SaveCache.GetCollection(),
+				8);
 			var actualKeys = deck.Cards
 				.Select(card => card.GetComponent<RunDeckCard>().CardKey)
 				.OrderBy(key => key)
@@ -93,6 +103,7 @@ public class TestFightSetupServiceTests
 		{
 			EventManager.Clear();
 			TestFightRuntime.Reset();
+			SaveCache.DeleteSaveFilesIfPresent();
 		}
 	}
 
@@ -172,8 +183,17 @@ public class TestFightSetupServiceTests
 		{
 			WeaponId = "hammer",
 			EnemyId = "skeleton",
-			Difficulty = RunDifficulty.Hard,
+			PenanceLevel = 24,
 		};
+	}
+
+	private static bool HasReparationRestriction(Entity card)
+	{
+		return card.HasComponent<Thorned>()
+			|| card.HasComponent<Scorched>()
+			|| card.HasComponent<Cursed>()
+			|| card.HasComponent<Frozen>()
+			|| card.HasComponent<Brittle>();
 	}
 
 	private static World BuildWorld()

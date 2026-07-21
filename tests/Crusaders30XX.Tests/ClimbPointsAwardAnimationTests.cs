@@ -53,6 +53,18 @@ public sealed class ClimbPointsAwardAnimationTests
 	}
 
 	[Fact]
+	public void Pilgrimage_scenario_uses_dynamic_refresh_thresholds_and_copy()
+	{
+		var beforeRefresh = ClimbPointsAwardAnimationService.CreateScenario(8, false, false, shopRefreshInterval: 9);
+		var thirdRefresh = ClimbPointsAwardAnimationService.CreateScenario(27, false, false, shopRefreshInterval: 9);
+		var thirdTier = ClimbPointsAwardAnimationService.Tiers.Single(tier => tier.Id == "shop3");
+
+		Assert.Equal(0, ClimbPointsAwardAnimationService.GetEarnedTierCount(beforeRefresh));
+		Assert.Equal(3, ClimbPointsAwardAnimationService.GetEarnedTierCount(thirdRefresh));
+		Assert.Equal("THIRD SHOP REFRESH REACHED | TIME 27+", ClimbPointsAwardAnimationService.GetTierRequirement(thirdTier, thirdRefresh));
+	}
+
+	[Fact]
 	public void Display_system_exposes_all_six_fixed_no_argument_debug_previews()
 	{
 		string[] expected =

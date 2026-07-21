@@ -16,10 +16,10 @@ For detailed design philosophy and rationale, see `DESIGN_PHILOSOPHY.md`.
 ### HP
 
 - **Range:** ~14 - 53 (`HP` on each enemy; authored base max HP)
-- **Max HP at spawn:** `ApplyBaseHealth` then difficulty then climb-time bonus in `EntityFactory.CreateEnemyFromId`
-- **Difficulty:** `WayStationRunSetupSingleton.EnemyHealthModifier` (Easy 0.7 / Normal 0.85 / Hard 1.0), applied first
-- **Climb time:** after difficulty, `+10%` of post-difficulty HP per shop-refresh interval (every 8 climb time)
-- Example: Skeleton 26 at time 0 → 18 Easy / 22 Normal / 26 Hard; Hard at time 9 → 29
+- **Max HP at spawn:** `ApplyBaseHealth`, then Mortification, then climb-time bonus in `EntityFactory.CreateEnemyFromId`
+- **Mortification:** multiplier is `0.70 + 0.05 * stacks`, applied first (0 through 6 stacks yields 0.70 through 1.00)
+- **Climb time:** after Mortification, `+10%` of post-Penance HP per fixed eight climb time; Penitential Pilgrimage changes shop refreshes but not this cadence
+- Example: Skeleton 26 at time 0 is 18 at Penance 0 and 26 with all six Mortification stacks; at climb time 8 the latter becomes 29
 
 ### Damage Ranges
 

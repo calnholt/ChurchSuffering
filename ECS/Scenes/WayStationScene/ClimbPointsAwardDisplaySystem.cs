@@ -38,7 +38,6 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 	private readonly SpriteFont _bodyFont;
 	private readonly float[] _titleGlyphWidths;
 	private readonly float[] _bodyGlyphWidths;
-	private readonly float[] _tierRequirementScales;
 	private readonly IPlayerInputSource _inputSource;
 
 	private Texture2D _vignetteMask;
@@ -107,16 +106,6 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		_bodyFont = FontSingleton.ChakraPetchFont;
 		_titleGlyphWidths = BuildGlyphWidths(_titleFont);
 		_bodyGlyphWidths = BuildGlyphWidths(_bodyFont);
-		_tierRequirementScales = new float[ClimbPointsAwardAnimationService.Tiers.Length];
-		for (int index = 0; index < _tierRequirementScales.Length; index++)
-		{
-			_tierRequirementScales[index] = FitSpacedStringScale(
-				_bodyFont,
-				ClimbPointsAwardAnimationService.Tiers[index].Requirement,
-				0.078f,
-				2f,
-				270f);
-		}
 
 		EventManager.Subscribe<LoadSceneEvent>(OnLoadScene);
 		EventManager.Subscribe<TransitionCompleteEvent>(OnTransitionComplete);
@@ -227,7 +216,13 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		if (evt?.Scene != SceneId.WayStation) return;
 		var pending = SaveCache.GetCollection().pendingClimbPointAward;
 		if (pending == null) return;
-		Open(true, pending.timeReached, pending.completedFinalBoss, pending.abandoned, pending.pointsAwarded);
+		Open(
+			true,
+			pending.timeReached,
+			pending.completedFinalBoss,
+			pending.abandoned,
+			pending.pointsAwarded,
+			pending.shopRefreshInterval);
 	}
 
 	private void OnTransitionComplete(TransitionCompleteEvent evt)
@@ -263,17 +258,20 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		int timeReached,
 		bool completedFinalBoss,
 		bool abandoned,
-		int? pointsAwarded = null)
+		int? pointsAwarded = null,
+		int shopRefreshInterval = CollectionProgressionRules.FirstShopRefreshTime)
 	{
 		var state = EnsureOverlay();
 		state.IsAuthoritative = authoritative;
 		state.TimeReached = Math.Max(0, timeReached);
+		state.ShopRefreshInterval = Math.Max(1, shopRefreshInterval);
 		state.CompletedFinalBoss = completedFinalBoss;
 		state.Abandoned = abandoned;
 		state.PointsAwarded = pointsAwarded ?? CollectionProgressionRules.CalculateClimbPoints(
 			state.TimeReached,
 			completedFinalBoss,
-			abandoned);
+			abandoned,
+			state.ShopRefreshInterval);
 		state.ElapsedSeconds = 0f;
 		state.PreviousElapsedSeconds = 0f;
 		state.ExitElapsedSeconds = 0f;
@@ -382,7 +380,8 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		ClimbPointsAwardAnimationService.CreateScenario(
 			state.TimeReached,
 			state.CompletedFinalBoss,
-			state.Abandoned);
+			state.Abandoned,
+			state.ShopRefreshInterval);
 
 	private ClimbPointsAwardRumbleSettings BuildRumbleSettings() =>
 		new(
@@ -590,7 +589,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		{
 			var tier = ClimbPointsAwardAnimationService.Tiers[tierIndex];
 			if (!ClimbPointsAwardAnimationService.IsTierEarned(tier, scenario)) continue;
-			DrawRouteRow(tier, tierIndex, earnedCount, earnedIndex, elapsed, alpha);
+			DrawRouteRow(tier, scenario, earnedCount, earnedIndex, elapsed, alpha);
 			earnedIndex++;
 		}
 	}
@@ -615,7 +614,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 
 	private void DrawRouteRow(
 		ClimbPointsAwardTier tier,
-		int tierIndex,
+		ClimbPointsAwardScenario scenario,
 		int earnedCount,
 		int earnedIndex,
 		float elapsed,
@@ -634,7 +633,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		float cardX = left ? 518f : 1012f;
 		cardX += MathHelper.Lerp(left ? -24f : 24f, 0f, cardProgress);
 		var card = new Rectangle((int)MathF.Round(cardX), (int)MathF.Round(rowTop + 4f), 390, 78);
-		DrawRouteCard(card, left, tier, tierIndex, rowAlpha);
+		DrawRouteCard(card, left, tier, scenario, rowAlpha);
 
 		float nodeProgress = ClimbPointsAwardAnimationService.EaseSlam((elapsed - reveal - 0.08f) / 0.52f);
 		if (nodeProgress > 0f)
@@ -656,7 +655,12 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		}
 	}
 
-	private void DrawRouteCard(Rectangle card, bool left, ClimbPointsAwardTier tier, int tierIndex, float alpha)
+	private void DrawRouteCard(
+		Rectangle card,
+		bool left,
+		ClimbPointsAwardTier tier,
+		ClimbPointsAwardScenario scenario,
+		float alpha)
 	{
 		DrawHorizontalGradient(card, new Color(13, 10, 11), new Color(31, 7, 12), 20, RouteCardAlpha * alpha);
 		DrawBorder(card, new Color(183, 173, 163) * (0.24f * alpha), 1);
@@ -674,17 +678,18 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 		float pointsScale = 0.328f;
 		string points = PointLabels[Math.Clamp(tier.Points, 0, PointLabels.Length - 1)];
 		const float requirementSpacing = 2f;
-		float requirementScale = _tierRequirementScales[tierIndex];
+		string requirement = ClimbPointsAwardAnimationService.GetTierRequirement(tier, scenario);
+		float requirementScale = FitSpacedStringScale(_bodyFont, requirement, 0.078f, requirementSpacing, 270f);
 		if (left)
 		{
 			DrawRightAlignedString(_titleFont, tier.Name, card.Right - 82f, card.Y + 9f, 0.195f, new Color(242, 237, 227) * alpha);
-			DrawRightAlignedSpacedString(_bodyFont, tier.Requirement, card.Right - 82f, card.Y + 43f, requirementScale, requirementSpacing, new Color(183, 173, 163) * alpha);
+			DrawRightAlignedSpacedString(_bodyFont, requirement, card.Right - 82f, card.Y + 43f, requirementScale, requirementSpacing, new Color(183, 173, 163) * alpha);
 			DrawCenteredString(_titleFont, points, new Rectangle(card.Right - 72, card.Y, 62, card.Height), new Color(255, 241, 172) * alpha, pointsScale);
 		}
 		else
 		{
 			DrawString(_titleFont, tier.Name, new Vector2(card.X + 82f, card.Y + 9f), 0.195f, new Color(242, 237, 227) * alpha);
-			DrawSpacedString(_bodyFont, tier.Requirement, new Vector2(card.X + 82f, card.Y + 43f), requirementScale, requirementSpacing, new Color(183, 173, 163) * alpha);
+			DrawSpacedString(_bodyFont, requirement, new Vector2(card.X + 82f, card.Y + 43f), requirementScale, requirementSpacing, new Color(183, 173, 163) * alpha);
 			DrawCenteredString(_titleFont, points, new Rectangle(card.X + 10, card.Y, 62, card.Height), new Color(255, 241, 172) * alpha, pointsScale);
 		}
 	}

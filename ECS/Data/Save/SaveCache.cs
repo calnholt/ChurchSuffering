@@ -14,7 +14,7 @@ using Crusaders30XX.ECS.Data.Tutorials;
 using Crusaders30XX.ECS.Data.Climb;
 using Crusaders30XX.ECS.Data.Ids;
 using Crusaders30XX.Diagnostics;
-using Crusaders30XX.ECS.Singletons;
+using Crusaders30XX.ECS.Data.RunSetup;
 
 namespace Crusaders30XX.ECS.Data.Save
 {
@@ -81,17 +81,9 @@ namespace Crusaders30XX.ECS.Data.Save
 			lock (_lock)
 			{
 				EnsureWayStationMetaLocked();
-				foreach (var weapon in Enum.GetValues<StartingWeapon>())
-				{
-					string weaponId = weapon.ToString().ToLowerInvariant();
-					RecordCompletedClimbLocked(weaponId, RunDifficulty.Easy);
-					RecordCompletedClimbLocked(weaponId, RunDifficulty.Normal);
-				}
-
-				int prerequisiteCompletionCount = Enum.GetValues<StartingWeapon>().Length * 2;
-				_save.waystation.climbCompletions = Math.Max(
-					_save.waystation.climbCompletions,
-					prerequisiteCompletionCount);
+				_save.waystation.highestPenanceByWeapon = Enum.GetValues<StartingWeapon>()
+					.ToDictionary(PenanceRules.GetWeaponId, _ => PenanceRules.MaxLevel, StringComparer.OrdinalIgnoreCase);
+				_save.waystation.climbCompletions = Math.Max(_save.waystation.climbCompletions, 3);
 				Persist();
 			}
 		}
@@ -235,7 +227,7 @@ namespace Crusaders30XX.ECS.Data.Save
 		public static void ConfigurePrimaryRunSetup(
 			string weaponId,
 			string temperanceId,
-			RunDifficulty difficulty)
+			int penanceLevel)
 		{
 			EnsureLoaded();
 			lock (_lock)
@@ -266,7 +258,16 @@ namespace Crusaders30XX.ECS.Data.Save
 				savedLoadout.headId ??= string.Empty;
 				savedLoadout.medalIds ??= new List<string>();
 
-				_save.climb = ClimbRuleService.CreateInitialState(_save.runMapSeed, savedLoadout, difficulty);
+				int level = PenanceRules.ClampLevel(penanceLevel);
+				var penance = PenanceRules.Calculate(level);
+				ReparationService.Apply(
+					savedLoadout,
+					resolvedWeaponId,
+					_save.runMapSeed,
+					level,
+					_save.collection,
+					penance.ReparationStacks);
+				_save.climb = ClimbRuleService.CreateInitialState(_save.runMapSeed, savedLoadout, level);
 				Persist();
 			}
 		}
@@ -501,7 +502,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				EnsureWayStationMetaLocked();
 				if (arrivalKind == WayStationArrivalKind.ReturnedFromCompletedClimb)
 				{
-					RecordCompletedClimbLocked(_save.climb);
+					RecordPenanceCompletionLocked(_save.climb);
 					_save.waystation.climbCompletions = Math.Max(0, _save.waystation.climbCompletions) + 1;
 				}
 
@@ -827,7 +828,7 @@ namespace Crusaders30XX.ECS.Data.Save
 					RestoreClimbEventTransactionBackup(backup);
 					return false;
 				}
-				pendingSlot = CloneClimbEventSlot(slot);
+				pendingSlot = CloneClimbEventSlot(slot, ClimbRuleService.GetMaxTime(climb));
 				return true;
 			}
 		}
@@ -985,7 +986,7 @@ namespace Crusaders30XX.ECS.Data.Save
 						Succeeded = true,
 						AlreadyResolved = true,
 						EventSlotId = slot.id,
-						ReachedFinalTime = ClimbRuleService.ClampTime(climb?.time ?? 0) >= ClimbRuleService.MaxTime,
+						ReachedFinalTime = ClimbRuleService.ClampTime(climb, climb?.time ?? 0) >= ClimbRuleService.GetMaxTime(climb),
 					};
 					return true;
 				}
@@ -1040,7 +1041,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				int appliedTime = ClimbRuleService.ApplyTime(climb, 1);
 				EnsurePrimaryLoadout(_save);
 				var primaryLoadout = _save.loadouts.First(loadout => loadout.id == RunDeckService.PrimaryLoadoutId);
-				if (ClimbRuleService.ShouldRefreshShopAtTime(previousTime, climb.time))
+				if (ClimbRuleService.ShouldRefreshShopAtTime(climb, previousTime, climb.time))
 				{
 					ClimbRuleService.RefreshShopSlots(climb, _save.runMapSeed, primaryLoadout);
 				}
@@ -1050,7 +1051,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				{
 					ClimbRuleService.RerollEncounterMutationTargets(climb, _save.runMapSeed, primaryLoadout);
 				}
-				bool reachedFinalTime = ClimbRuleService.ClampTime(climb.time) >= ClimbRuleService.MaxTime;
+				bool reachedFinalTime = ClimbRuleService.ClampTime(climb, climb.time) >= ClimbRuleService.GetMaxTime(climb);
 				if (!Persist())
 				{
 					RestoreClimbEventTransactionBackup(backup);
@@ -1436,22 +1437,7 @@ namespace Crusaders30XX.ECS.Data.Save
 					}
 					else if (itemType == ForSaleItemType.Equipment)
 					{
-						EquipmentBase equipment = EquipmentFactory.Create(itemId);
-						switch (equipment.Slot)
-						{
-							case EquipmentSlot.Chest:
-								loadout.chestId = itemId;
-								break;
-							case EquipmentSlot.Legs:
-								loadout.legsId = itemId;
-								break;
-							case EquipmentSlot.Arms:
-								loadout.armsId = itemId;
-								break;
-							case EquipmentSlot.Head:
-								loadout.headId = itemId;
-								break;
-						}
+						RunEquipmentService.ApplyEquipmentToLoadout(loadout, itemId);
 					}
 				}
 
@@ -1677,15 +1663,17 @@ namespace Crusaders30XX.ECS.Data.Save
 		private static ClimbSaveState CloneClimbState(ClimbSaveState state)
 		{
 			if (state == null) return null;
+			int penanceLevel = PenanceRules.ClampLevel(state.penanceLevel);
+			int maxTime = ClimbRuleService.GetMaxTime(penanceLevel);
 			return new ClimbSaveState
 			{
 				startingWeaponId = string.IsNullOrWhiteSpace(state.startingWeaponId) ? "sword" : state.startingWeaponId,
-				difficulty = state.difficulty,
-				time = ClimbRuleService.ClampTime(state.time),
+				penanceLevel = penanceLevel,
+				time = Math.Clamp(state.time, 0, maxTime),
 				resources = CloneClimbResources(state.resources),
-				shopSlots = CloneClimbShopSlots(state.shopSlots),
-				encounterSlots = CloneClimbEncounterSlots(state.encounterSlots),
-				eventSlots = CloneClimbEventSlots(state.eventSlots),
+				shopSlots = CloneClimbShopSlots(state.shopSlots, maxTime),
+				encounterSlots = CloneClimbEncounterSlots(state.encounterSlots, maxTime),
+				eventSlots = CloneClimbEventSlots(state.eventSlots, maxTime),
 				shownMedalIds = CloneStringList(state.shownMedalIds),
 				shownEquipmentIds = CloneStringList(state.shownEquipmentIds),
 				pendingReplacementOffer = CloneClimbReplacementOffer(state.pendingReplacementOffer),
@@ -1706,7 +1694,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			};
 		}
 
-		private static List<ClimbShopSlotSave> CloneClimbShopSlots(List<ClimbShopSlotSave> slots)
+		private static List<ClimbShopSlotSave> CloneClimbShopSlots(List<ClimbShopSlotSave> slots, int maxTime)
 		{
 			var clone = new List<ClimbShopSlotSave>();
 			if (slots == null) return clone;
@@ -1724,13 +1712,13 @@ namespace Crusaders30XX.ECS.Data.Save
 					cost = CloneClimbResources(slot.cost),
 					timeCost = Math.Max(0, slot.timeCost),
 					isSold = slot.isSold,
-					generatedAtTime = ClimbRuleService.ClampTime(slot.generatedAtTime),
+					generatedAtTime = Math.Clamp(slot.generatedAtTime, 0, maxTime),
 				});
 			}
 			return clone;
 		}
 
-		private static List<ClimbEncounterSlotSave> CloneClimbEncounterSlots(List<ClimbEncounterSlotSave> slots)
+		private static List<ClimbEncounterSlotSave> CloneClimbEncounterSlots(List<ClimbEncounterSlotSave> slots, int maxTime)
 		{
 			var clone = new List<ClimbEncounterSlotSave>();
 			if (slots == null) return clone;
@@ -1741,7 +1729,7 @@ namespace Crusaders30XX.ECS.Data.Save
 				{
 					id = slot.id ?? string.Empty,
 					enemyId = slot.enemyId ?? string.Empty,
-					generatedAtTime = ClimbRuleService.ClampTime(slot.generatedAtTime),
+					generatedAtTime = Math.Clamp(slot.generatedAtTime, 0, maxTime),
 					duration = Math.Max(0, slot.duration),
 					timeCost = Math.Max(0, slot.timeCost),
 					battleLocation = slot.battleLocation,
@@ -1757,7 +1745,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			return clone;
 		}
 
-		private static List<ClimbEventSlotSave> CloneClimbEventSlots(List<ClimbEventSlotSave> slots)
+		private static List<ClimbEventSlotSave> CloneClimbEventSlots(List<ClimbEventSlotSave> slots, int maxTime)
 		{
 			var clone = new List<ClimbEventSlotSave>();
 			if (slots == null) return clone;
@@ -1771,8 +1759,8 @@ namespace Crusaders30XX.ECS.Data.Save
 					kind = slot.kind,
 					hazardEffect = slot.hazardEffect,
 					characterReward = slot.characterReward,
-					scheduledAppearanceTime = ClimbRuleService.ClampTime(slot.scheduledAppearanceTime),
-					activatedAtTime = slot.activatedAtTime < 0 ? -1 : ClimbRuleService.ClampTime(slot.activatedAtTime),
+					scheduledAppearanceTime = Math.Clamp(slot.scheduledAppearanceTime, 0, maxTime),
+					activatedAtTime = slot.activatedAtTime < 0 ? -1 : Math.Clamp(slot.activatedAtTime, 0, maxTime),
 					duration = Math.Max(0, slot.duration),
 					timeCost = Math.Max(0, slot.timeCost),
 					effectAmount = Math.Max(0, slot.effectAmount),
@@ -1783,9 +1771,9 @@ namespace Crusaders30XX.ECS.Data.Save
 			return clone;
 		}
 
-		private static ClimbEventSlotSave CloneClimbEventSlot(ClimbEventSlotSave slot)
+		private static ClimbEventSlotSave CloneClimbEventSlot(ClimbEventSlotSave slot, int maxTime)
 		{
-			return CloneClimbEventSlots(slot == null ? null : new List<ClimbEventSlotSave> { slot }).FirstOrDefault();
+			return CloneClimbEventSlots(slot == null ? null : new List<ClimbEventSlotSave> { slot }, maxTime).FirstOrDefault();
 		}
 
 		private static ClimbEventSlotSave FindClimbEventSlot(ClimbSaveState climb, string eventSlotId)
@@ -1966,6 +1954,7 @@ namespace Crusaders30XX.ECS.Data.Save
 					: new PendingClimbPointAwardSave
 					{
 						timeReached = Math.Max(0, collection.pendingClimbPointAward.timeReached),
+						shopRefreshInterval = Math.Max(1, collection.pendingClimbPointAward.shopRefreshInterval),
 						abandoned = collection.pendingClimbPointAward.abandoned,
 						completedFinalBoss = collection.pendingClimbPointAward.completedFinalBoss,
 						pointsAwarded = Math.Max(0, collection.pendingClimbPointAward.pointsAwarded),
@@ -1999,8 +1988,8 @@ namespace Crusaders30XX.ECS.Data.Save
 
 		private static bool DidCurrentClimbReachNpcDialogueThreshold()
 		{
-			int threshold = Math.Max(1, (ClimbRuleService.MaxTime + 1) / 2);
-			return ClimbRuleService.ClampTime(_save?.climb?.time ?? 0) >= threshold;
+			int threshold = Math.Max(1, (ClimbRuleService.GetMaxTime(_save?.climb) + 1) / 2);
+			return ClimbRuleService.ClampTime(_save?.climb, _save?.climb?.time ?? 0) >= threshold;
 		}
 
 		private static WayStationMetaSave CloneWayStationMeta(WayStationMetaSave meta)
@@ -2009,7 +1998,7 @@ namespace Crusaders30XX.ECS.Data.Save
 			{
 				climbAttempts = Math.Max(0, meta?.climbAttempts ?? 0),
 				climbCompletions = Math.Max(0, meta?.climbCompletions ?? 0),
-				completedClimbs = CloneCompletedClimbs(meta?.completedClimbs),
+				highestPenanceByWeapon = CloneHighestPenance(meta?.highestPenanceByWeapon),
 				deferredNpcDialogueCounter = Math.Clamp(meta?.deferredNpcDialogueCounter ?? 0, 0, WayStationNpcDialogueCounterThreshold),
 				pendingNpcDialogueOffer = meta?.pendingNpcDialogueOffer == true,
 				purchasedMedalIds = CloneStringList(meta?.purchasedMedalIds),
@@ -2029,48 +2018,31 @@ namespace Crusaders30XX.ECS.Data.Save
 			return clone;
 		}
 
-		private static void RecordCompletedClimbLocked(ClimbSaveState climb)
+		private static void RecordPenanceCompletionLocked(ClimbSaveState climb)
 		{
 			if (climb == null) return;
-			string weaponId = string.IsNullOrWhiteSpace(climb.startingWeaponId)
-				? "sword"
-				: climb.startingWeaponId.Trim().ToLowerInvariant();
-			RecordCompletedClimbLocked(weaponId, climb.difficulty);
-		}
-
-		private static void RecordCompletedClimbLocked(string weaponId, RunDifficulty difficulty)
-		{
-			_save.waystation.completedClimbs ??= new List<CompletedClimbSave>();
-			if (_save.waystation.completedClimbs.Any(entry =>
-				entry != null
-					&& string.Equals(entry.startingWeaponId, weaponId, StringComparison.OrdinalIgnoreCase)
-					&& entry.difficulty == difficulty))
+			string weaponId = PenanceRules.GetWeaponId(PenanceRules.ParseWeapon(climb.startingWeaponId));
+			var progression = _save.waystation.highestPenanceByWeapon ??= CloneHighestPenance(null);
+			if (!progression.TryGetValue(weaponId, out int highest)) return;
+			highest = PenanceRules.ClampLevel(highest);
+			if (PenanceRules.ClampLevel(climb.penanceLevel) == highest && highest < PenanceRules.MaxLevel)
 			{
-				return;
+				progression[weaponId] = highest + 1;
 			}
 
-			_save.waystation.completedClimbs.Add(new CompletedClimbSave
-			{
-				startingWeaponId = weaponId,
-				difficulty = difficulty,
-			});
+			if (weaponId == "sword" && !progression.ContainsKey("dagger")) progression["dagger"] = 0;
+			if (weaponId == "dagger" && !progression.ContainsKey("hammer")) progression["hammer"] = 0;
 		}
 
-		private static List<CompletedClimbSave> CloneCompletedClimbs(IEnumerable<CompletedClimbSave> completedClimbs)
+		private static Dictionary<string, int> CloneHighestPenance(IReadOnlyDictionary<string, int> values)
 		{
-			if (completedClimbs == null) return new List<CompletedClimbSave>();
-			return completedClimbs
-				.Where(entry => entry != null && !string.IsNullOrWhiteSpace(entry.startingWeaponId))
-				.GroupBy(
-					entry => $"{entry.startingWeaponId.Trim().ToLowerInvariant()}|{entry.difficulty}",
-					StringComparer.OrdinalIgnoreCase)
-				.Select(group => group.First())
-				.Select(entry => new CompletedClimbSave
-				{
-					startingWeaponId = entry.startingWeaponId.Trim().ToLowerInvariant(),
-					difficulty = entry.difficulty,
-				})
-				.ToList();
+			var clone = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["sword"] = 0 };
+			foreach (var weapon in Enum.GetValues<StartingWeapon>())
+			{
+				string id = PenanceRules.GetWeaponId(weapon);
+				if (values != null && values.TryGetValue(id, out int level)) clone[id] = PenanceRules.ClampLevel(level);
+			}
+			return clone;
 		}
 
 		private static WayStationVisitSave CloneWayStationVisit(WayStationVisitSave visit)
@@ -2167,6 +2139,10 @@ namespace Crusaders30XX.ECS.Data.Save
 				legsId = loadout.legsId,
 				armsId = loadout.armsId,
 				headId = loadout.headId,
+				chestRemainingUses = loadout.chestRemainingUses,
+				legsRemainingUses = loadout.legsRemainingUses,
+				armsRemainingUses = loadout.armsRemainingUses,
+				headRemainingUses = loadout.headRemainingUses,
 				medalIds = CloneStringList(loadout.medalIds),
 			};
 		}
