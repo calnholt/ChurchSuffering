@@ -1,185 +1,71 @@
-# Crusaders30XX - ECS Deckbuilder Card Game
+# Crusaders30XX
 
-A deckbuilder card game built with MonoGame using Entity Component System (ECS) architecture.
+A .NET 8.0 MonoGame DesktopGL deckbuilder built around an Entity Component System (ECS). Runs start at the WayStation, climb under Penance pressure, and fight in block-then-act combat.
 
-## Architecture Overview
+## Play
 
-This project implements a robust ECS (Entity Component System) architecture designed specifically for card games. The architecture provides:
+Download builds from itch.io: [calnholt.itch.io/church-suffering](https://calnholt.itch.io/church-suffering).
 
-- **Separation of Concerns**: Data (Components), Logic (Systems), and Identity (Entities) are cleanly separated
-- **Modularity**: Easy to add new card types, game mechanics, and systems
-- **Performance**: Efficient entity queries and component management
-- **Scalability**: Can handle complex card interactions and game states
+The in-repo release number lives in [`VERSION`](VERSION).
 
-## Core ECS Structure
+## Gameplay
 
-### Entities
-Entities are simple containers that hold components. They have:
-- Unique ID
-- Name
-- Active/Inactive state
-- Component collection
+- **Block, then act.** Enemies attack first each turn; your hand blocks incoming attacks and deals damage on your action phase.
+- **WayStation → Climb.** Depart from the WayStation into a timed Climb with shops, encounters, and run-scoped loadouts.
+- **Penance.** Scale difficulty per weapon (Sword, Dagger, Hammer) with accumulating constraints.
+- **Build identity.** Cards, equipment, medals, and meta unlocks shape each run.
 
-### Components
-Components hold data and should be lightweight. Key components include:
+Full rules: [`docs/GAME_RULES.md`](docs/GAME_RULES.md).
 
-#### Card Components
-- `CardData`: Basic card information (name, description, cost, type, rarity)
+## Requirements
 
-#### Game State Components
-- `Player`: Player stats (health, energy, block, gold)
-- `Enemy`: Enemy stats and AI state
-- `Deck`: Deck management (draw pile, discard pile, hand, exhaust pile)
-- `GameState`: Overall game state (phase, turn, player turn)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- MonoGame DesktopGL (pulled via the project)
 
-#### Rendering Components
-- `Transform`: Position, rotation, scale, z-order
-- `Sprite`: Texture, tint, visibility
-- `UIElement`: UI bounds, interaction state
-- `Animation`: Animation state and timing
+On macOS/Linux, ordinary builds use pre-built content; rebuilding shaders/audio needs extra tooling — see [`docs/build-run.md`](docs/build-run.md).
 
-### Systems
-Systems contain the logic that operates on entities with specific components:
+## Build and run
 
-#### Core Systems
-- `DeckManagementSystem`: Handles shuffling, drawing, discarding
-- `CombatSystem`: Manages damage, block, and combat mechanics
-- `RenderingSystem`: Handles sprite rendering and animations
-- `InputSystem`: Processes user input and UI interactions
+```bash
+dotnet build
+dotnet run
+dotnet run -- new   # wipe saves and start fresh
+dotnet test tests/Crusaders30XX.Tests/Crusaders30XX.Tests.csproj
+```
 
-## Project Structure
+Handy developer flags (details in [`docs/build-run.md`](docs/build-run.md)): `unlock`, `skip-tutorials`, `test-fight`, `no-shaders`.
+
+## Repository layout
 
 ```
 Crusaders30XX/
-├── ECS/
-│   ├── Core/
-│   │   ├── Entity.cs              # Base entity class
-│   │   ├── IComponent.cs          # Component interface
-│   │   ├── EntityManager.cs       # Entity lifecycle management
-│   │   ├── System.cs              # Base system class
-│   │   ├── SystemManager.cs       # System coordination
-│   │   └── World.cs               # Main ECS entry point
-│   ├── Components/
-│   │   └── CardComponents.cs      # All game components
-│   ├── Systems/
-│   │   └── CardGameSystems.cs     # Game-specific systems
-│   └── Factories/
-│       └── EntityFactory.cs       # Entity creation helpers
-├── Game1.cs                       # Main game class
-└── README.md                      # This file
+├── ECS/           # Components, systems, scenes, objects, services, events, data
+├── Content/       # Assets and Content.mgcb
+├── Game1.cs       # World init, system registration, game loop
+├── Program.cs     # Entry and launch flags
+├── tests/         # Unit tests and visual baselines
+├── docs/          # Architecture, rules, build, ADRs, plans
+└── scripts/       # Verification and content tooling
 ```
 
-## Usage Examples
+## Documentation
 
-### Creating a Card
-```csharp
-var card = EntityFactory.CreateCard(world, "Fireball", "Deal 8 damage", 2, 
-    CardData.CardType.Attack, CardData.CardRarity.Uncommon);
-```
+| Topic | Doc |
+|-------|-----|
+| Build, run, verification | [`docs/build-run.md`](docs/build-run.md) |
+| ECS architecture | [`docs/architecture.md`](docs/architecture.md) |
+| Coding standards | [`docs/coding-standards.md`](docs/coding-standards.md) |
+| Snapshot fixtures | [`docs/display-snapshots.md`](docs/display-snapshots.md) |
+| Game rules | [`docs/GAME_RULES.md`](docs/GAME_RULES.md) |
+| Passive keywords | [`docs/PASSIVE_KEYWORDS.md`](docs/PASSIVE_KEYWORDS.md) |
+| Dialogue / effects | [`docs/DialogEffects.md`](docs/DialogEffects.md) |
+| Architectural decisions | [`docs/adr/`](docs/adr/) |
+| Implementation plans | [`docs/plans/`](docs/plans/) |
 
-### Creating a Player
-```csharp
-var player = EntityFactory.CreatePlayer(world, "Hero");
-```
+## Agents and contributors
 
-### Adding a System
-```csharp
-var customSystem = new CustomSystem(world.EntityManager);
-world.AddSystem(customSystem);
-```
-
-### Querying Entities
-```csharp
-// Get all entities with a specific component
-var cards = world.GetEntitiesWithComponent<CardData>();
-
-// Get all entities with multiple components
-var playableCards = world.EntityManager.GetEntitiesWithComponents(
-    typeof(CardData), typeof(CardInPlay));
-```
-
-## Card Game Features
-
-### Card Types
-- **Attack**: Deal damage to enemies
-- **Skill**: Provide utility effects
-- **Power**: Provide ongoing effects
-- **Curse**: Negative effects
-- **Status**: Temporary effects
-
-### Rarity System
-- **Common**: Basic cards
-- **Uncommon**: Better than common
-- **Rare**: Powerful cards
-- **Legendary**: Most powerful cards
-
-### Deck Management
-- Draw pile shuffling
-- Hand size limits
-- Discard pile management
-- Exhaust pile for removed cards
-
-### Combat System
-- Damage calculation with block
-- Energy management
-- Turn-based combat
-- Enemy AI framework
-
-## Extending the System
-
-### Adding New Components
-1. Create a new class implementing `IComponent`
-2. Add the component to entities using `world.AddComponent()`
-3. Create systems that operate on the new component
-
-### Adding New Systems
-1. Inherit from `Core.System`
-2. Override `GetRelevantEntities()` to specify which entities to process
-3. Override `UpdateEntity()` to implement the system logic
-4. Register the system with `world.AddSystem()`
-
-### Adding New Card Types
-1. Extend `CardData.CardType` enum
-2. Create card creation methods in `EntityFactory`
-3. Add card-specific logic to relevant systems
-
-## Performance Considerations
-
-- Components are stored in dictionaries for O(1) access
-- Entity queries are cached for efficiency
-- Systems only process relevant entities
-- Component addition/removal is optimized
-
-## Future Enhancements
-
-- **Card Effects System**: Scriptable card effects
-- **AI System**: Enemy AI and card playing
-- **Save/Load System**: Game state persistence
-- **Networking**: Multiplayer support
-- **Modding Support**: Plugin system for custom cards
-- **Visual Effects**: Particle systems and animations
-- **Sound System**: Audio integration
-- **UI Framework**: Advanced UI components
-
-## Getting Started
-
-1. Build the project
-2. Run the game
-3. The game will create a basic setup with:
-   - A player entity
-   - A deck with basic cards
-   - Some enemy entities
-   - UI elements
-
-## Contributing
-
-When adding new features:
-1. Follow the ECS pattern
-2. Keep components data-only
-3. Put logic in systems
-4. Use the factory pattern for entity creation
-5. Document new components and systems
+Coding agents and contributors should start with [`AGENTS.md`](AGENTS.md) and follow [`docs/coding-standards.md`](docs/coding-standards.md). Prefer those docs over duplicating project rules here.
 
 ## License
 
-This project is open source and available under the MIT License. "# Crusaders30XX" 
+Proprietary. All rights reserved.
