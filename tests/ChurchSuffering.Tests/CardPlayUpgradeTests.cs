@@ -28,7 +28,7 @@ public sealed class CardPlayUpgradeTests : IDisposable
 	}
 
 	[Fact]
-	public void Unlocked_pledged_fervor_upgrade_accepts_any_color_for_its_cost()
+	public void Upgraded_pledged_fervor_still_requires_a_red_card_for_its_cost()
 	{
 		var entityManager = BuildActionBattle(1, "fervor", out var deck);
 		var fervor = AddCard(entityManager, deck, "fervor", CardData.CardColor.Red, isUpgraded: true);
@@ -37,16 +37,14 @@ public sealed class CardPlayUpgradeTests : IDisposable
 		AddCard(entityManager, deck, "smite", CardData.CardColor.Black);
 		_ = new CardPlaySystem(entityManager);
 		OpenPayCostOverlayEvent openedOverlay = null;
-		var messages = new List<string>();
+		string message = null;
 		EventManager.Subscribe<OpenPayCostOverlayEvent>(evt => openedOverlay = evt);
-		EventManager.Subscribe<CantPlayCardMessage>(evt => messages.Add(evt.Message));
+		EventManager.Subscribe<CantPlayCardMessage>(evt => message = evt.Message);
 
 		EventManager.Publish(new PlayCardRequested { Card = fervor });
 
-		Assert.NotNull(openedOverlay);
-		Assert.Same(fervor, openedOverlay.CardToPlay);
-		Assert.Equal(["Any"], openedOverlay.RequiredCosts);
-		Assert.Empty(messages);
+		Assert.Null(openedOverlay);
+		Assert.Equal("You need a red card in your hand to pay for the discard cost", message);
 	}
 
 	[Fact]

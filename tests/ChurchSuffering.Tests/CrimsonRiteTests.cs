@@ -35,8 +35,9 @@ public sealed class CrimsonRiteTests : IDisposable
         var card = cardEntity.GetComponent<CardData>().Card;
         card.OnPlay(entityManager, cardEntity);
 
-        Assert.Equal(playerHpBefore + 7, player.GetComponent<HP>().Current);
-        Assert.Equal(enemyHpBefore - 7, enemy.GetComponent<HP>().Current);
+        // Base 4 + Might 1 + Aggression 3
+        Assert.Equal(playerHpBefore + 8, player.GetComponent<HP>().Current);
+        Assert.Equal(enemyHpBefore - 8, enemy.GetComponent<HP>().Current);
     }
 
     [Fact]
@@ -51,8 +52,9 @@ public sealed class CrimsonRiteTests : IDisposable
 
         var passives = player.GetComponent<AppliedPassives>().Passives;
         Assert.True(passives.TryGetValue(AppliedPassiveType.Aegis, out int aegis));
-        Assert.Equal(7, aegis);
-        Assert.Equal(23, enemy.GetComponent<HP>().Current);
+        // Upgraded base 5 + Might 1 + Aggression 3
+        Assert.Equal(9, aegis);
+        Assert.Equal(21, enemy.GetComponent<HP>().Current);
     }
 
     private static (EntityManager EntityManager, Entity Player, Entity Enemy, Entity CardEntity) BuildCombatWithCrimsonRite(bool isUpgraded)
@@ -75,6 +77,8 @@ public sealed class CrimsonRiteTests : IDisposable
         var cardEntity = entityManager.CreateEntity("crimson_rite");
         entityManager.AddComponent(cardEntity, new CardData { Card = card });
         entityManager.AddComponent(cardEntity, new ModifiedDamage());
+        if (isUpgraded)
+            card.OnUpgrade(entityManager, cardEntity);
 
         return (entityManager, player, enemy, cardEntity);
     }

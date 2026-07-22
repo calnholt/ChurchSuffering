@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
@@ -12,7 +11,6 @@ namespace ChurchSuffering.ECS.Objects.Cards
     {
         private int CourageThreshold = 5;
         private int DamageBonus = 3;
-        private List<string> CostUpgrade = ["Any"];
         public Fervor()
         {
             CardId = CardIds.Fervor.ToKey();
@@ -50,8 +48,10 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
             OnUpgrade = (entityManager, card) =>
             {
+                if (card == null) return;
                 Block += 1;
-                Cost = CostUpgrade;
+                CourageThreshold -= 1;
+                Text = $"If you have {CourageThreshold}+ courage, this attack gains +{DamageBonus} damage.";
             };
 
         }

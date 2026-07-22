@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
@@ -11,7 +9,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 {
     public class CrimsonRite : CardBase
     {
-        private List<string> CostUpgrade = ["Any", "Any"];
+        private const int DamageUpgrade = 1;
         public CrimsonRite()
         {
             CardId = CardIds.CrimsonRite.ToKey();
@@ -71,7 +69,8 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
             OnUpgrade = (entityManager, card) =>
             {
-                Cost = CostUpgrade;
+                if (card == null) return;
+                Damage += DamageUpgrade;
                 Text = "Gain X aegis where X is the damage dealt from this attack.";
             };
         }
