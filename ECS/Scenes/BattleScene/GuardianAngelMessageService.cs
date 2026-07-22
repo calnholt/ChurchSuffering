@@ -36,7 +36,6 @@ namespace ChurchSuffering.ECS.Systems
                 [CardId.BloodPrice] = ["Careful. That strength costs dearly!", "A hard price. Spend it well!"],
                 [CardId.Burn] = ["Hot hands! Let it fly!", "A little fire for them!"],
                 [CardId.CarpeDiem] = ["This is our moment!", "Take the day by the reins!"],
-                [CardId.Colorless3Block] = ["A quick guard!", "Safe and steady!"],
                 [CardId.Comeback] = ["They cannot keep you down!", "Rise again and answer!"],
                 [CardId.Consecrate] = ["Make this ground holy!", "Let no darkness stand here!"],
                 [CardId.Courageous] = ["That is the brave heart I know!", "Courage looks good on you!"],

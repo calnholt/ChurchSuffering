@@ -21,7 +21,6 @@ namespace ChurchSuffering.ECS.Factories
                 { CardId.BloodPrice, () => new BloodPrice() },
                 { CardId.Burn, () => new Burn() },
                 { CardId.CarpeDiem, () => new CarpeDiem() },
-                { CardId.Colorless3Block, () => new ColorlessBlock() },
                 { CardId.Comeback, () => new Comeback() },
                 { CardId.Consecrate, () => new Consecrate() },
                 { CardId.Courageous, () => new Courageous() },
