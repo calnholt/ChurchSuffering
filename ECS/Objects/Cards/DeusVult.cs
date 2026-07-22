@@ -2,6 +2,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -14,7 +16,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         public DeusVult()
         {
             Name = "Deus Vult";
-            CardId = "deus_vult";
+            CardId = CardIds.DeusVult.ToKey();
             Text = $"You can't play this if you have not used your weapon this turn. Gain {CourageBonus} courage. This gains +X damage, where X is your courage";
             VisualEffectRecipe = PlayerAttackEffect();
             Damage = 0;

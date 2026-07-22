@@ -15,9 +15,10 @@ Add a new card to ChurchSuffering: one `CardBase` subclass + factory registratio
 - [ ] 1. Parse spec (name, stats, text, cost, upgrade, conditionals)
 - [ ] 2. Ask only if blocked (name, spend vs gate, ambiguous condition)
 - [ ] 3. Find 1-2 similar cards in ECS/Objects/Cards/ and match their pattern
-- [ ] 4. Create ECS/Objects/Cards/{PascalName}.cs
-- [ ] 5. Register snake_case id in CardFactory.Create() and GetAllCards() (alphabetical)
-- [ ] 6. dotnet build — fix compile errors before done
+- [ ] 4. Add CardId enum + ToKey in ECS/Data/Ids/GameIds.cs (alphabetical)
+- [ ] 5. Create ECS/Objects/Cards/{PascalName}.cs (CardId = CardIds.X.ToKey())
+- [ ] 6. Register CardId in CardFactory.CardConstructors (alphabetical)
+- [ ] 7. dotnet build — fix compile errors before done
 ```
 
 Do **not** edit deck JSON, shop pools, or reward tables unless the user asks.
@@ -27,7 +28,8 @@ Do **not** edit deck JSON, shop pools, or reward tables unless the user asks.
 | Item | Convention | Example |
 |------|------------|---------|
 | Class / file | PascalCase | `EmberHarvest.cs` |
-| `CardId` / factory key | snake_case | `ember_harvest` |
+| `CardId` enum | PascalCase | `CardId.EmberHarvest` |
+| `ToKey` / string id | snake_case | `ember_harvest` |
 | Display `Name` | Title Case | `Ember Harvest` |
 
 ## Spec defaults (when omitted)
@@ -80,7 +82,9 @@ var paymentCards = cacheEntity?.GetComponent<LastPaymentCache>()?.PaymentCards;
 
 ```csharp
 using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Ids;
 using ChurchSuffering.ECS.Events;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -88,7 +92,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
     {
         public MyCard()
         {
-            CardId = "my_card";
+            CardId = CardIds.MyCard.ToKey();
             Name = "My Card";
             Target = "Enemy";
             Cost = ["Any"];
@@ -112,17 +116,23 @@ namespace ChurchSuffering.ECS.Objects.Cards
 }
 ```
 
-## Factory registration
+Alias `CardIds` avoids colliding with the `string CardId` property.
 
-In [ECS/Factories/CardFactory.cs](../../../ECS/Factories/CardFactory.cs), add **both**:
+## GameIds + factory registration
+
+In [ECS/Data/Ids/GameIds.cs](../../../ECS/Data/Ids/GameIds.cs), add enum member + `ToKey` (alphabetical):
 
 ```csharp
-"my_card" => new MyCard(),
+CardId.MyCard,
 // ...
-{ "my_card", new MyCard() },
+CardId.MyCard => "my_card",
 ```
 
-Keep entries **alphabetical** by `CardId`.
+In [ECS/Factories/CardFactory.cs](../../../ECS/Factories/CardFactory.cs), add to `CardConstructors` (alphabetical):
+
+```csharp
+{ CardId.MyCard, () => new MyCard() },
+```
 
 ## Clarify before implementing
 
@@ -134,8 +144,9 @@ Ask only when the spec is ambiguous:
 
 ## Verification
 
-- [ ] `CardId` matches factory key exactly
-- [ ] Both factory sites updated
+- [ ] `CardId` enum + `ToKey` added in `GameIds.cs`
+- [ ] Constructor uses `CardIds.X.ToKey()` (no hardcoded string id)
+- [ ] `CardFactory.CardConstructors` updated
 - [ ] `dotnet build` passes with 0 errors
 - [ ] No tests added unless user requested
 

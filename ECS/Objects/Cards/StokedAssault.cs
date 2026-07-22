@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public StokedAssault()
         {
-            CardId = "stoked_assault";
+            CardId = CardIds.StokedAssault.ToKey();
             Name = "Stoked Assault";
             Target = "Enemy";
             Text = $"You can't play this if you don't have {VigorRequired} vigor.";

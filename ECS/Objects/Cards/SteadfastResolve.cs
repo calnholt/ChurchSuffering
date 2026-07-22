@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -14,7 +16,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public SteadfastResolve()
         {
-            CardId = "steadfast_resolve";
+            CardId = CardIds.SteadfastResolve.ToKey();
             Rarity = Rarity.Common;
             Name = "Steadfast Resolve";
             Target = "Player";

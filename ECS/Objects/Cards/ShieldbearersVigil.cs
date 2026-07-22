@@ -3,6 +3,8 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -13,7 +15,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public ShieldbearersVigil()
         {
-            CardId = "shieldbearers_vigil";
+            CardId = CardIds.ShieldbearersVigil.ToKey();
             Name = "Shieldbearer's Vigil";
             Target = "Enemy";
             Text = "When this card is in your hand and not pledged, your other cards gain +1 block.";

@@ -2,6 +2,8 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -12,7 +14,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private const int BlockUpgrade = 1;
         public UnburdenedStrike()
         {
-            CardId = "unburdened_strike";
+            CardId = CardIds.UnburdenedStrike.ToKey();
             Rarity = Rarity.Uncommon;
             Name = "Unburdened Strike";
             Target = "Enemy";

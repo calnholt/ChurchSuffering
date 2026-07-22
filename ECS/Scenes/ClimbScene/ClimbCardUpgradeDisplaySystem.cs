@@ -123,6 +123,8 @@ namespace ChurchSuffering.ECS.Systems
 				DeckEntryId = evt.DeckEntryId,
 				BaseCardKey = evt.BaseCardKey,
 				UpgradedCardKey = evt.UpgradedCardKey,
+				BeforeSecondaryColor = evt.BeforeSecondaryColor ?? string.Empty,
+				AfterSecondaryColor = evt.AfterSecondaryColor ?? string.Empty,
 				ReleasesClimbTurnover = evt.DelayClimbTurnoverUntilComplete,
 			});
 			if (_active == null) TryStartNext();
@@ -214,8 +216,16 @@ namespace ChurchSuffering.ECS.Systems
 			else
 			{
 				var boons = ResolveBoons(request.DeckEntryId);
-				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey, secondaryColor: secondaryColor, boons: boons);
-				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey, secondaryColor: secondaryColor, boons: boons);
+				CardData.CardColor? beforeSecondary = !string.IsNullOrWhiteSpace(request.BeforeSecondaryColor)
+					|| !string.IsNullOrWhiteSpace(request.AfterSecondaryColor)
+					? ParseSecondaryColor(request.BeforeSecondaryColor)
+					: secondaryColor;
+				CardData.CardColor? afterSecondary = !string.IsNullOrWhiteSpace(request.BeforeSecondaryColor)
+					|| !string.IsNullOrWhiteSpace(request.AfterSecondaryColor)
+					? ParseSecondaryColor(request.AfterSecondaryColor)
+					: secondaryColor;
+				baseCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.BaseCardKey, secondaryColor: beforeSecondary, boons: boons);
+				finalCard = CardRestrictionMutationDisplayFactory.CreateDisplayCard(EntityManager, request.UpgradedCardKey, secondaryColor: afterSecondary, boons: boons);
 			}
 
 			if (baseCard == null || finalCard == null)

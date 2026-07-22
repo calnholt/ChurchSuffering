@@ -2,6 +2,8 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -13,7 +15,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public Lacerate()
         {
-            CardId = "lacerate";
+            CardId = CardIds.Lacerate.ToKey();
             Name = "Lacerate";
             Target = "Enemy";
             VisualEffectRecipe = PlayerAttackEffect();

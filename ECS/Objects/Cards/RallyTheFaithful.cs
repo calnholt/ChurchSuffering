@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int CourageAmountUpgrade = 1;
         public RallyTheFaithful()
         {
-            CardId = "rally_the_faithful";
+            CardId = CardIds.RallyTheFaithful.ToKey();
             Rarity = Rarity.Common;
             Name = "Rally the Faithful";
             Target = "Player";

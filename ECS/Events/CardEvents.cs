@@ -661,6 +661,14 @@ namespace ChurchSuffering.ECS.Events
         public int Amount { get; set; }
     }
 
+    /// <summary>
+    /// Emitted when a specific card becomes intimidated.
+    /// </summary>
+    public class CardIntimidatedEvent
+    {
+        public Entity Card { get; set; }
+    }
+
     public class ShackleEvent
     {
         public int Amount { get; set; }

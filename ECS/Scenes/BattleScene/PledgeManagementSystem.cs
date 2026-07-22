@@ -76,8 +76,12 @@ namespace ChurchSuffering.ECS.Systems
         private void OnCardMoved(CardMoved evt)
         {
             if (evt?.Card == null) return;
-            if (evt.From != CardZoneType.Hand) return;
-            if (evt.To == CardZoneType.Hand || evt.To == CardZoneType.HandStaged) return;
+            if (evt.To == CardZoneType.Hand
+                || evt.To == CardZoneType.HandStaged
+                || evt.To == CardZoneType.AssignedBlock)
+            {
+                return;
+            }
             RemovePledgeFromCard(evt.Card);
         }
 

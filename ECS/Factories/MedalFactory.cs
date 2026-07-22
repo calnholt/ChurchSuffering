@@ -26,6 +26,7 @@ namespace ChurchSuffering.ECS.Factories
                 { MedalId.StClare, () => new StClare() },
                 { MedalId.StElijah, () => new StElijah() },
                 { MedalId.StJoanOfArc, () => new StJoanOfArc() },
+                { MedalId.StJoseph, () => new StJoseph() },
                 { MedalId.StJerome, () => new StJerome() },
                 { MedalId.StLonginus, () => new StLonginus() },
                 { MedalId.StBenedict, () => new StBenedict() },

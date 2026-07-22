@@ -23,7 +23,7 @@ namespace ChurchSuffering.ECS.Systems
         public AppliedPassivesManagementSystem(EntityManager entityManager) : base(entityManager)
         {
             EventManager.Subscribe<ChangeBattlePhaseEvent>(OnChangeBattlePhase);
-            EventManager.Subscribe<ApplyPassiveEvent>(OnApplyPassive);
+            EventManager.Subscribe<ApplyPassiveEvent>(OnApplyPassive, priority: 1);
             EventManager.Subscribe<ApplyEffect>(OnApplyEffect);
             EventManager.Subscribe<RemovePassive>(OnRemovePassive, priority: 1);
             EventManager.Subscribe<UpdatePassive>(OnUpdatePassive);
@@ -324,7 +324,27 @@ namespace ChurchSuffering.ECS.Systems
                 ["delta"] = e.Delta,
                 ["targetId"] = e.Target?.Id ?? -1
             });
-            if (e == null || e.Target == null) return;
+            if (e == null || e.Target == null || e.IsCancelled) return;
+
+            if (e.Type == AppliedPassiveType.Scar && e.Delta > 0)
+            {
+                var request = new ReplaceableEffectRequest
+                {
+                    Kind = ReplaceableEffectKind.ScarGain,
+                    OriginalSource = e.Target,
+                    OriginalTarget = e.Target,
+                    OriginalDelta = e.Delta,
+                    DamageType = ModifyTypeEnum.Effect,
+                    PassiveType = AppliedPassiveType.Scar.ToString()
+                };
+                EventManager.Publish(request);
+                if (request.IsHandled)
+                {
+                    e.IsCancelled = true;
+                    return;
+                }
+            }
+
             var ap = e.Target.GetComponent<AppliedPassives>();
             if (ap == null)
             {

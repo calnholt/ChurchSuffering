@@ -155,6 +155,11 @@ namespace ChurchSuffering.ECS.Objects.Cards
         public Action<EntityManager, Entity>? OnCantPlay { get; protected set; }
         public Func<EntityManager, Entity, int>? GetConditionalDamage { get; protected set; } = (a, b) => 0;
 
+        /// <summary>
+        /// When true, upgrading a run-deck copy rolls and persists a Dual Color secondary color.
+        /// </summary>
+        public virtual bool GrantsRandomDualColorOnUpgrade => false;
+
         protected static VisualEffectRecipe PlayerAttackEffect()
         {
             return VisualEffectPresets.PlayerAttack();

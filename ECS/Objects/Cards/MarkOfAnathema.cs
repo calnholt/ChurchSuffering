@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -12,7 +14,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public MarkOfAnathema()
         {
-            CardId = "mark_of_anathema";
+            CardId = CardIds.MarkOfAnathema.ToKey();
             Name = "Mark of Anathema";
             Target = "Enemy";
             Text = $"The enemy gains {AnathemaAmount} anathema.";

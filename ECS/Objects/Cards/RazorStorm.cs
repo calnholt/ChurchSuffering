@@ -1,5 +1,7 @@
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards;
 
@@ -7,7 +9,7 @@ public class RazorStorm : CardBase
 {
   public RazorStorm()
   {
-    CardId = "razor_storm";
+    CardId = CardIds.RazorStorm.ToKey();
     Rarity = Rarity.Uncommon;
     Name = "Razor Storm";
     Target = "Enemy";

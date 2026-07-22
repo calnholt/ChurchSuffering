@@ -150,6 +150,7 @@ namespace ChurchSuffering.ECS.Services
 			if (option == null) return false;
 
 			bool applied = false;
+			LoadoutCardEntry replacementEntry = null;
 			if (string.Equals(option.kind, DeckRewardOfferKinds.Exchange, StringComparison.OrdinalIgnoreCase))
 			{
 				var inheritedRestrictions = SaveCache.GetRunDeckEntryRestrictions(
@@ -159,7 +160,7 @@ namespace ChurchSuffering.ECS.Services
 					RunDeckService.PrimaryLoadoutId,
 					option.outgoingEntryId,
 					option.incomingCardKey,
-					out var replacementEntry,
+					out replacementEntry,
 					countsAsTraded: true);
 				if (applied && replacementEntry != null && inheritedRestrictions.Count > 0)
 				{
@@ -184,12 +185,12 @@ namespace ChurchSuffering.ECS.Services
 				{
 					if (RunDeckService.IsUpgradedCardKey(option.incomingCardKey))
 					{
-						CardUpgradeService.InvokeUpgradeConfirmed(option.incomingCardKey);
+						CardUpgradeService.InvokeUpgradeConfirmed(option.incomingCardKey, replacementEntry?.entryId);
 					}
 				}
 				else if (string.Equals(option.kind, DeckRewardOfferKinds.Upgrade, StringComparison.OrdinalIgnoreCase))
 				{
-					CardUpgradeService.InvokeUpgradeConfirmed(option.upgradedCardKey);
+					CardUpgradeService.InvokeUpgradeConfirmed(option.upgradedCardKey, option.outgoingEntryId);
 				}
 				SaveCache.RecordAcceptedDeckRewardMutation();
 				SaveCache.ClearPendingDeckRewardOffer();

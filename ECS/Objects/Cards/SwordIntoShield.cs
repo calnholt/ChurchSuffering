@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -10,7 +12,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public SwordIntoShield()
         {
-            CardId = "sword_into_shield";
+            CardId = CardIds.SwordIntoShield.ToKey();
             Name = "Sword Into Shield";
             Target = "Player";
             Text = $"The next non-weapon attack card you play this turn gains +{DamageGain} damage this climb, then this becomes a textless block card.";

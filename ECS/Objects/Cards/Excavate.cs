@@ -3,6 +3,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -15,7 +17,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public Excavate()
         {
-            CardId = "excavate";
+            CardId = CardIds.Excavate.ToKey();
             Name = "Excavate";
             Target = "Enemy";
             Text = $"If you have milled {MillThreshold} or more cards this battle, this attack gains +{GetDamageBonus(IsUpgraded)} damage.";

@@ -92,6 +92,7 @@ namespace ChurchSuffering.ECS.Systems
 				{
 					var cardData = card.GetComponent<CardData>();
 					EntityManager.AddComponent(card, new Intimidated { Owner = card });
+					EventManager.Publish(new CardIntimidatedEvent { Card = card });
 					LoggingService.Append("IntimidateManagementSystem.ApplyIntimidateEffects", new System.Text.Json.Nodes.JsonObject { ["action"] = "Card intimidated", ["cardId"] = cardData?.Card.CardId ?? "unknown" });
 				}
 		}

@@ -2,6 +2,8 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -13,7 +15,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int BattleDamageBonusUpgrade = 4;
         public RelentlessStrike()
         {
-            CardId = "relentless_strike";
+            CardId = CardIds.RelentlessStrike.ToKey();
             Name = "Relentless Strike";
             Target = "Enemy";
             Text = $"The first time you play this each battle, it goes to the bottom of your deck. It gains +{GetBattleDamageBonus(IsUpgraded)} damage for the rest of the battle.";

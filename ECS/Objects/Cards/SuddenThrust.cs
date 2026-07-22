@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public SuddenThrust()
         {
-            CardId = "sudden_thrust";
+            CardId = CardIds.SuddenThrust.ToKey();
             Name = "Sudden Thrust";
             Target = "Enemy";
             Text = $"Gain {CourageGain} courage.";

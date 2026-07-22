@@ -7,6 +7,30 @@ using ChurchSuffering.ECS.Objects.EnemyAttacks;
 
 namespace ChurchSuffering.ECS.Services
 {
+	public enum HandBlockEligibilityFailure
+	{
+		None,
+		InvalidContext,
+		NotInHand,
+		MissingCardData,
+		WeaponOrToken,
+		Intimidated,
+		Pledged,
+		CannotBlockThisAttack,
+		AlreadyAssigned,
+		Transitioning,
+		SelectedForPayment,
+		FilteredFromHand,
+		CardUnavailable,
+		ShackledCardUnavailable,
+		BlockingRestriction,
+	}
+
+	public readonly record struct HandBlockEligibilityResult(
+		bool IsEligible,
+		HandBlockEligibilityFailure Failure,
+		string RejectionMessage);
+
 	public static class EnemyBlockerEligibilityService
 	{
 		public static int CountEligibleBlockers(EntityManager entityManager, PlannedAttack plannedAttack)
@@ -19,39 +43,78 @@ namespace ChurchSuffering.ECS.Services
 
 		public static bool IsEligibleHandBlocker(EntityManager entityManager, Entity card, PlannedAttack plannedAttack)
 		{
-			if (entityManager == null || card == null || plannedAttack?.AttackDefinition == null) return false;
+			return EvaluateHandBlocker(entityManager, card, plannedAttack).IsEligible;
+		}
+
+		public static HandBlockEligibilityResult EvaluateHandBlocker(
+			EntityManager entityManager,
+			Entity card,
+			PlannedAttack plannedAttack)
+		{
+			if (entityManager == null || card == null || plannedAttack?.AttackDefinition == null)
+				return Ineligible(HandBlockEligibilityFailure.InvalidContext);
 
 			var deck = GetDeck(entityManager);
-			if (deck?.Hand == null || !deck.Hand.Contains(card)) return false;
+			if (deck?.Hand == null || !deck.Hand.Contains(card))
+				return Ineligible(HandBlockEligibilityFailure.NotInHand);
 
 			var data = card.GetComponent<CardData>();
-			if (data?.Card == null) return false;
-			if (data.Card.IsWeapon || data.Card.IsToken) return false;
-			if (card.GetComponent<Intimidated>() != null) return false;
-			if (card.GetComponent<Pledge>() != null) return false;
-			if (card.GetComponent<CannotBlockThisAttack>() != null) return false;
-			if (card.GetComponent<AssignedBlockCard>() != null) return false;
-			if (card.GetComponent<AnimatingHandToDiscard>() != null) return false;
-			if (card.GetComponent<AnimatingHandToZone>() != null) return false;
-			if (card.GetComponent<AnimatingHandToDrawPile>() != null) return false;
-			if (card.GetComponent<SelectedForPayment>() != null) return false;
-			if (card.GetComponent<FilteredFromHand>() != null) return false;
+			if (data?.Card == null) return Ineligible(HandBlockEligibilityFailure.MissingCardData);
+			if (data.Card.IsWeapon || data.Card.IsToken)
+				return Ineligible(HandBlockEligibilityFailure.WeaponOrToken);
+			if (card.GetComponent<Intimidated>() != null)
+				return Ineligible(
+					HandBlockEligibilityFailure.Intimidated,
+					"Can't block with intimidated cards!");
+			if (card.GetComponent<Pledge>() != null
+				&& !HandBlockRestrictionOverrideService.IsOverridden(
+					entityManager,
+					card,
+					plannedAttack,
+					HandBlockRestriction.Pledged))
+			{
+				return Ineligible(
+					HandBlockEligibilityFailure.Pledged,
+					"Can't block with pledged card!");
+			}
+			if (card.GetComponent<CannotBlockThisAttack>() is CannotBlockThisAttack cannotBlock)
+				return Ineligible(HandBlockEligibilityFailure.CannotBlockThisAttack, cannotBlock.Reason);
+			if (card.GetComponent<AssignedBlockCard>() != null)
+				return Ineligible(HandBlockEligibilityFailure.AlreadyAssigned);
+			if (card.GetComponent<AnimatingHandToDiscard>() != null
+				|| card.GetComponent<AnimatingHandToZone>() != null
+				|| card.GetComponent<AnimatingHandToDrawPile>() != null)
+			{
+				return Ineligible(HandBlockEligibilityFailure.Transitioning);
+			}
+			if (card.GetComponent<SelectedForPayment>() != null)
+				return Ineligible(HandBlockEligibilityFailure.SelectedForPayment);
+			if (card.GetComponent<FilteredFromHand>() != null)
+				return Ineligible(HandBlockEligibilityFailure.FilteredFromHand);
 
 			if (data.Card.Type == CardType.Block
 				&& data.Card.CanPlay != null
 				&& !data.Card.CanPlay(entityManager, card))
 			{
-				return false;
+				return Ineligible(HandBlockEligibilityFailure.CardUnavailable);
 			}
 
 			if (card.GetComponent<Shackle>() != null && !AllShackledBlockCardsArePlayable(entityManager, deck.Hand))
 			{
-				return false;
+				return Ineligible(
+					HandBlockEligibilityFailure.ShackledCardUnavailable,
+					"All shackled cards must be playable!");
 			}
 
-			return CardColorQualificationService.MeetsBlockingRestriction(
-				card,
-				plannedAttack.AttackDefinition.BlockingRestrictionType);
+			var restriction = plannedAttack.AttackDefinition.BlockingRestrictionType;
+			if (!CardColorQualificationService.MeetsBlockingRestriction(card, restriction))
+			{
+				var message = EnemyAttackTextHelper.GetBlockingRestrictionText(restriction);
+				if (message.EndsWith('.')) message = message[..^1] + "!";
+				return Ineligible(HandBlockEligibilityFailure.BlockingRestriction, message);
+			}
+
+			return new HandBlockEligibilityResult(true, HandBlockEligibilityFailure.None, string.Empty);
 		}
 
 		public static bool IsEligibleEquipmentBlocker(EntityManager entityManager, Entity equipmentEntity, PlannedAttack plannedAttack)
@@ -123,6 +186,13 @@ namespace ChurchSuffering.ECS.Services
 				BlockingRestrictionType.NotBlack => color != CardData.CardColor.Black,
 				_ => true,
 			};
+		}
+
+		private static HandBlockEligibilityResult Ineligible(
+			HandBlockEligibilityFailure failure,
+			string rejectionMessage = "")
+		{
+			return new HandBlockEligibilityResult(false, failure, rejectionMessage ?? string.Empty);
 		}
 	}
 }

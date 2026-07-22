@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int AegisGainedUpgrade = 1;
         public DivineProtection()
         {
-            CardId = "divine_protection";
+            CardId = CardIds.DivineProtection.ToKey();
             Name = "Divine Protection";
             Target = "Player";
             Text = $"Gain {AegisGained} aegis.";

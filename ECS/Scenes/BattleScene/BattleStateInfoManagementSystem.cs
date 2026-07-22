@@ -67,12 +67,21 @@ namespace ChurchSuffering.ECS.Systems
 
         private void OnModifyHp(ModifyHpEvent evt)
         {
+            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
+            if (player != null && evt.Target == player && evt.Delta < 0)
+            {
+                OnTrackingEvent(new TrackingEvent
+                {
+                    Type = TrackingTypeEnum.DamageTaken.ToString(),
+                    Delta = 1
+                });
+            }
+
             if (evt.DamageType != ModifyTypeEnum.Attack || evt.Delta >= 0) return;
 
             var phase = EntityManager.GetEntitiesWithComponent<PhaseState>().FirstOrDefault()?.GetComponent<PhaseState>();
             if (phase?.Sub != SubPhase.Action) return;
 
-            var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
             var enemy = EntityManager.GetEntitiesWithComponent<Enemy>().FirstOrDefault();
             if (player == null || enemy == null) return;
             if (evt.Source != player || evt.Target != enemy) return;

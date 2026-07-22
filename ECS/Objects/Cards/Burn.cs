@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 
 
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int BurnAmount = 1;
         public Burn()
         {
-            CardId = "burn";
+            CardId = CardIds.Burn.ToKey();
             Name = "Burn";
             Target = "Enemy";
             Text = $"If the enemy has burn, the enemy gains {BurnAmount + 1} burn, otherwise the enemy gains {BurnAmount} burn.";

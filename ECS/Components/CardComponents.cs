@@ -247,6 +247,7 @@ namespace ChurchSuffering.ECS.Components
         CardsMilled,
         CursesRemoved,
         PrayersPlayed,
+        DamageTaken,
     }
     
     /// <summary>
@@ -1291,7 +1292,8 @@ namespace ChurchSuffering.ECS.Components
     /// - Stay in hand ignoring max hand size
     /// - Can only be played during Action phase once CanPlay is true (unlocked at end of player turn)
     /// - Cannot be played the same turn they were pledged (CanPlay starts false)
-    /// - Cannot be used to block or pay for other cards' costs
+    /// - Cannot normally be used to block or pay for other cards' costs
+    /// - Keep their pledge while temporarily assigned as block; resolution to a final pile clears it
     /// - Are protected from intimidate, freeze, and discard effects
     /// </summary>
     public class Pledge : IComponent

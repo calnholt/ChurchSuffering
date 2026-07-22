@@ -12,6 +12,11 @@ namespace ChurchSuffering.ECS.Events
         public Entity Target { get; set; }
         public AppliedPassiveType Type { get; set; }
         public int Delta { get; set; }
+        /// <summary>
+        /// When true, remaining ApplyPassive subscribers should skip side effects
+        /// (used when a replacement effect cancels the original passive gain).
+        /// </summary>
+        public bool IsCancelled { get; set; }
     }
 
     /// <summary>

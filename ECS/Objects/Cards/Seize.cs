@@ -2,6 +2,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public Seize()
         {
-            CardId = "seize";
+            CardId = CardIds.Seize.ToKey();
             Rarity = Rarity.Common;
             Name = "Seize";
             Target = "Enemy";

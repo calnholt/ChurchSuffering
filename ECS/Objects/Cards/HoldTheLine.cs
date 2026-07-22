@@ -1,5 +1,7 @@
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -9,7 +11,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         public int BlockUpgrade = 1;
         public HoldTheLine()
         {
-            CardId = "hold_the_line";
+            CardId = CardIds.HoldTheLine.ToKey();
             Rarity = Rarity.Common;
             Name = "Hold the Line";
             Text = $"Gain {Courage} courage.";

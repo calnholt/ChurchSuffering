@@ -3,6 +3,8 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Systems;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private List<string> CostUpgrade = ["Red"];
         public Whirlwind()
         {
-            CardId = "whirlwind";
+            CardId = CardIds.Whirlwind.ToKey();
             Rarity = Rarity.Common;
             Name = "Whirlwind";
             Target = "Enemy";

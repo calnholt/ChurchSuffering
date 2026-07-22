@@ -176,6 +176,7 @@ namespace ChurchSuffering.ECS.Systems
 
 		private void OnApplyPassive(ApplyPassiveEvent e)
 		{
+			if (e == null || e.IsCancelled) return;
 			LoggingService.Append("HpManagementSystem.OnApplyPassive", new System.Text.Json.Nodes.JsonObject
 			{
 				["passiveType"] = e.Type.ToString(),

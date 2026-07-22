@@ -5,6 +5,8 @@ using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Systems;
 using ChurchSuffering.ECS.Services;
 using static ChurchSuffering.ECS.Components.CardData;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -14,7 +16,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int CourageBonusUpgrade = 2;
         public Reap()
         {
-            CardId = "reap";
+            CardId = CardIds.Reap.ToKey();
             Name = "Reap";
             Target = "Player";
             Cost = ["Any","Any"];

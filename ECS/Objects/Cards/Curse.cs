@@ -1,11 +1,13 @@
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
     public class Curse : CardBase
     {
-        public const string CardIdValue = "curse";
+        public static readonly string CardIdValue = CardIds.Curse.ToKey();
 
         public Curse()
         {

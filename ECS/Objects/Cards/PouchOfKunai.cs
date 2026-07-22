@@ -17,7 +17,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int MinKunaiUpgrade = 1;
         public PouchOfKunai()
         {
-            CardId = "pouch_of_kunai";
+            CardId = CardIds.PouchOfKunai.ToKey();
             Name = "Pouch of Kunai";
             Target = "Player";
             Text = $"Put {GetMinKunai(IsUpgraded)} to {GetMaxKunai(IsUpgraded)} Kunai cards in your hand.";
@@ -26,7 +26,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
             Type = CardType.Prayer;
             Block = 3;
             IsFreeAction = true;
-            CardTooltip = GameIdExtensions.ToKey(CardIds.Kunai);
+            CardTooltip = CardIds.Kunai.ToKey();
 
             OnPlay = (entityManager, card) =>
             {

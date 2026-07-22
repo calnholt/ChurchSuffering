@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -13,7 +15,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public BattleScars()
         {
-            CardId = "battle_scars";
+            CardId = CardIds.BattleScars.ToKey();
             Name = "Battle Scars";
             Target = "Enemy";
             Cost = new List<string> { "Any" };

@@ -3,24 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChurchSuffering — Waystation Collection Overlay (3 Variants)</title>
-<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<title>ChurchSuffering — Waystation Collection Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=New+Rocker&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /*
     MonoGame notes (1920x1080 virtual; page chrome not shipped):
     - Replaces waystation-saints-medals-modal-v1.html. Full-screen overlay on waystation.png, dim rgba(0,0,0,0.72).
-    - Three tabs now: SAINTS (medal chronicle, same functionality as v1 modal), CARDS (unlocked card
-      collection, in-game card frame, fanned like BoosterPackOpeningAnimationService slot rotations),
-      EQUIPMENT (unlocked equipment from Content/Equipment). A ghost "+" tab reserves space for future tabs.
-    - Cards: clicking a card cycles the viewed color W -> R -> K (black shows +1 BLK per game rule).
-      Locked cards render card_back.png. Fan slots: rotate (i-center)*step with an arc drop, hover
-      counter-rotates + lifts (mirrors SlotStartRotationsDegrees fanning).
-    - VARIANT 1 "Reliquary Wall": warm candlelit gold; top arch tabs; medal votive wall + altar detail;
-      card fans grouped in pew rows; equipment in four slot alcove columns.
-    - VARIANT 2 "Chronicler's Codex": vellum ledger; left spine ribbon tabs; medal roster + manuscript page;
-      card desk-fan with large inspection preview; equipment as ledger rows with wax seals.
-    - VARIANT 3 "Ossuary Vault": obsidian + ember red; bottom HUD dock tabs; offset medal reliquary grid with
-      slide-in drawer; one giant arc fan of every card that pans with the cursor; equipment on slot shelves.
+    - Three tabs: CARDS (unlocked card collection, in-game card frame), SAINTS (medal chronicle,
+      same functionality as v1 modal), EQUIPMENT (unlocked equipment from Content/Equipment).
+    - Cards: alphabetical grid; each grid cell is a 3-layer color stack (W/R/K). Clicking cycles which
+      color is in front (black shows +1 BLK per game rule). Type filter chips: All / Attack / Block /
+      Prayer / Weapon. Undiscovered cards are not shown.
+    - Equipment: BLOCK chip mirrors EquipmentTooltipDisplaySystem.DrawChipStack (label slab over value,
+      CardPalette.BlockChip* colors) plus use pips (EquipmentBase.MaxUses = 3). Fixed tile heights.
+    - Layout "Reliquary Wall": white chapel chrome; top arch tabs; medal votive wall + altar detail;
+      cards in an alphabetical stack grid; equipment in four slot alcove columns.
   */
   :root {
     --black-0: #050505;
@@ -206,7 +203,6 @@
     transition: transform 0.18s ease;
     position: relative;
   }
-  .medal-tile:hover:not(.is-locked) { transform: translateY(-4px); }
   .medal-tile.is-locked { cursor: default; opacity: 0.45; }
 
   .medal-icon-wrap {
@@ -223,16 +219,29 @@
     transition: box-shadow 0.2s ease;
   }
   .medal-tile:hover:not(.is-locked) .medal-icon-wrap {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 8px 22px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 18px rgba(255, 255, 255, 0.28);
   }
   .medal-tile.is-selected .medal-icon-wrap {
     box-shadow: 0 0 0 2px var(--sel-color, var(--red-3)), 0 0 22px var(--sel-glow, var(--red-glow));
+  }
+  .medal-tile.is-selected:hover:not(.is-locked) .medal-icon-wrap {
+    box-shadow: 0 0 0 2px var(--sel-color, var(--red-3)), 0 0 26px var(--sel-glow, var(--red-glow));
   }
   .medal-tile.is-locked .medal-icon-wrap {
     background: #191919;
     border: 2px dashed rgba(255, 255, 255, 0.12);
   }
-  .medal-icon-wrap img { width: 100%; height: 100%; object-fit: contain; }
+  .medal-icon-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.22s ease, filter 0.22s ease;
+  }
+  .medal-tile:hover:not(.is-locked) .medal-icon-wrap img {
+    transform: scale(1.1);
+    filter: brightness(1.15);
+  }
+  .medal-tile:hover:not(.is-locked) .medal-tile-label { color: var(--white-1); }
   .medal-locked-mark {
     font-family: 'New Rocker', cursive;
     font-size: 34px;
@@ -324,42 +333,40 @@
   /* =====================================================================
      SHARED — in-game card frame (approximates CardDisplaySystem look)
      ===================================================================== */
-  .fan-slot {
+  .card-stack {
     width: calc(240px * var(--cs, 0.72));
     height: calc(340px * var(--cs, 0.72));
     position: relative;
     flex-shrink: 0;
-    transform: rotate(var(--rot, 0deg)) translateY(var(--drop, 0px));
+    cursor: pointer;
+    z-index: 1;
+  }
+  .card-stack:hover { z-index: 10; }
+  .card-stack .stack-layer {
+    position: absolute;
+    inset: 0;
     transform-origin: 50% 100%;
-    transition: transform 0.22s ease;
-    z-index: var(--z, 1);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease;
   }
-  .fan-slot:hover { z-index: 60; }
-  .fan-lift {
-    width: 100%;
-    height: 100%;
-    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), filter 0.24s ease;
+  .card-stack .stack-layer.pos-back-l {
+    transform: rotate(-6deg);
+    z-index: 1;
+    filter: brightness(0.6) saturate(0.8);
   }
-  .fan-slot:hover .fan-lift {
-    transform: rotate(calc(var(--rot, 0deg) * -1)) translateY(calc(-34px - var(--drop, 0px))) scale(1.16);
-    filter: drop-shadow(0 22px 26px rgba(0, 0, 0, 0.65));
+  .card-stack .stack-layer.pos-back-r {
+    transform: rotate(6deg);
+    z-index: 2;
+    filter: brightness(0.6) saturate(0.8);
   }
-  .fan-slot.locked .fan-lift { filter: saturate(0.4) brightness(0.8); }
-  .fan-slot.locked:hover .fan-lift {
-    transform: rotate(calc(var(--rot, 0deg) * -1)) translateY(calc(-14px - var(--drop, 0px))) scale(1.05);
-    filter: saturate(0.55) brightness(0.95);
-  }
+  .card-stack .stack-layer.pos-front { z-index: 3; }
+  .card-stack:hover .stack-layer.pos-back-l { transform: rotate(-11deg); }
+  .card-stack:hover .stack-layer.pos-back-r { transform: rotate(11deg); }
+  .card-stack:hover .stack-layer.pos-front { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6)); }
   .cscale {
     width: 240px;
     height: 340px;
     transform: scale(var(--cs, 0.72));
     transform-origin: top left;
-  }
-  .cscale.color-swap { animation: colorflip 0.36s ease; }
-  @keyframes colorflip {
-    0%   { transform: scale(var(--cs, 0.72)) rotateY(0deg); }
-    50%  { transform: scale(var(--cs, 0.72)) rotateY(90deg); }
-    100% { transform: scale(var(--cs, 0.72)) rotateY(0deg); }
   }
 
   .ccard {
@@ -487,17 +494,6 @@
   }
   .ccard .art img { width: 100%; height: 100%; object-fit: contain; }
 
-  .ccard .sheen {
-    position: absolute;
-    inset: 0;
-    z-index: 8;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    background: radial-gradient(300px circle at var(--gx, 50%) var(--gy, 40%), rgba(255, 255, 255, 0.16), transparent 62%);
-  }
-  .fan-slot:hover .ccard .sheen { opacity: 1; }
-
   .ccard .cdots {
     position: absolute;
     right: 7px; bottom: 7px;
@@ -519,53 +515,52 @@
   .ccard .cdots i[data-c="k"] { background: #111; border: 1px solid #777; }
   .ccard .cdots i.on { opacity: 1; transform: rotate(45deg) scale(1.45); }
 
-  .card-back {
-    width: 240px;
-    height: 340px;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-    background: #0c0c0c;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+  .card-filters {
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0 6px;
+    flex-shrink: 0;
   }
-  .card-back img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
-  .card-back .undiscovered {
-    position: absolute;
-    bottom: 14px; left: 0; right: 0;
-    text-align: center;
-    font-size: 12px;
+  .card-filters .filter-label {
+    font-size: 11px;
     letter-spacing: 3px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.55);
-    text-shadow: 0 2px 6px #000;
+    color: #8f887e;
+    margin-right: 6px;
   }
-
-  .fan-row {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    padding: 34px 0 10px;
-  }
-  .fan-row .fan-slot + .fan-slot { margin-left: var(--overlap, -38px); }
-
-  .cards-hint {
-    text-align: center;
-    font-size: 12.5px;
+  .card-filters button {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #8f887e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    color: var(--white-3);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 90px;
+    padding: 7px 18px;
+    cursor: pointer;
+    transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
   }
-  .cards-hint .dot { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); display: inline-block; }
-  .cards-hint .dot.w { background: #e6ddcb; }
-  .cards-hint .dot.r { background: #b43232; }
-  .cards-hint .dot.k { background: #111; border: 1px solid #777; }
+  .card-filters button:hover:not(.active) {
+    color: var(--white-1);
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+  .card-filters button.active {
+    color: #111;
+    background: var(--white-2);
+    border-color: var(--white-1);
+  }
+
+  .card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px 34px;
+    padding: 20px 0 10px;
+  }
 
   /* =====================================================================
      SHARED — equipment tile
@@ -573,54 +568,122 @@
   .eq-tile {
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.03);
-    padding: 14px 14px 12px;
+    padding: 16px;
     cursor: pointer;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    text-align: center;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+    text-align: left;
     color: var(--white-2);
     font-family: 'Chakra Petch', sans-serif;
-    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
     position: relative;
   }
   .eq-tile:hover:not(.is-locked) {
-    transform: translateY(-4px);
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.05), 0 0 18px rgba(255, 255, 255, 0.08);
   }
   .eq-tile.is-locked { opacity: 0.4; cursor: default; }
   .eq-icon {
-    width: 84px; height: 84px;
+    width: 128px;
+    height: 128px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
   }
-  .eq-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
-  .eq-locked-mark { font-family: 'New Rocker', cursive; font-size: 34px; color: rgba(255, 255, 255, 0.3); }
-  .eq-name { font-family: 'New Rocker', cursive; font-size: 15.5px; color: var(--white-1); line-height: 1.15; }
-  .eq-sub {
-    font-size: 10.5px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #8f887e;
+  .eq-icon img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.22s ease;
+  }
+  .eq-tile:hover:not(.is-locked) .eq-icon img { transform: scale(1.08); }
+  .eq-locked-mark { font-family: 'New Rocker', cursive; font-size: 42px; color: rgba(255, 255, 255, 0.3); }
+  .eq-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 2px;
+  }
+  .eq-name-row {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 10px;
   }
-  .eq-gem { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .eq-name {
+    font-family: 'New Rocker', cursive;
+    font-size: 17px;
+    color: var(--white-1);
+    line-height: 1.15;
+  }
+  .eq-gem { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .eq-gem.white { background: #e6ddcb; }
   .eq-gem.red { background: #b43232; }
   .eq-gem.black { background: #161616; border: 1px solid #777; }
-  .eq-text { font-size: 12.5px; line-height: 1.45; color: #b4b0a8; }
+
+  /* BLOCK chip mirrors EquipmentTooltipDisplaySystem.DrawChipStack:
+     ChipSize 38, ChipLabelHeight 13, ChipValueHeight 25, radius 3,
+     colors from CardPalette.BlockLabelSlab* / BlockChip*. */
+  .eq-stat-row { display: flex; align-items: center; gap: 12px; }
+  .eq-chip {
+    width: 38px;
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .eq-chip .l {
+    height: 13px;
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(50, 100, 140, 0.4);
+    color: #8ab8d8;
+  }
+  .eq-chip .v {
+    height: 25px;
+    font-family: 'New Rocker', cursive;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a4a5e;
+    color: #b0d4e8;
+  }
+  .eq-chip.chip-white .l { background: rgba(40, 80, 120, 0.2); color: #5a8aaa; }
+  .eq-chip.chip-white .v { background: #4a7a9a; color: #ffffff; }
+
+  /* Use pips mirror DrawUsePips (MaxUses = 3, filled circle w/ halo). */
+  .eq-pips { display: flex; align-items: center; gap: 4px; }
+  .eq-pips i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--white-2);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+  }
+  .eq-pips i.spent {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.62);
+    box-shadow: none;
+  }
+
+  .eq-text { font-size: 15.5px; line-height: 1.45; color: #b4b0a8; }
   .eq-text .kw { color: var(--kw-color); font-weight: 600; }
   .eq-text.flavor { font-style: italic; color: #8f887e; }
 
   /* =====================================================================
-     VARIANT 1 — Reliquary Wall
+     Reliquary Wall
      ===================================================================== */
   .v1 .overlay {
     position: absolute;
@@ -629,14 +692,14 @@
     display: flex;
     flex-direction: column;
     background:
-      radial-gradient(1200px 500px at 50% -8%, rgba(212, 168, 74, 0.10), transparent 60%),
-      linear-gradient(180deg, rgba(20, 16, 10, 0.97), rgba(10, 8, 6, 0.97));
-    border: 2px solid rgba(212, 168, 74, 0.55);
-    outline: 1px solid rgba(212, 168, 74, 0.16);
+      radial-gradient(1200px 500px at 50% -8%, rgba(255, 255, 255, 0.07), transparent 60%),
+      linear-gradient(180deg, rgba(16, 15, 14, 0.97), rgba(8, 8, 8, 0.97));
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    outline: 1px solid rgba(255, 255, 255, 0.15);
     outline-offset: 5px;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8), 0 40px 90px rgba(0, 0, 0, 0.8);
-    --sel-color: var(--gold);
-    --sel-glow: rgba(212, 168, 74, 0.4);
+    --sel-color: var(--white-1);
+    --sel-glow: rgba(255, 255, 255, 0.35);
   }
   .v1 .overlay-header {
     flex-shrink: 0;
@@ -648,8 +711,8 @@
     font-family: 'New Rocker', cursive;
     font-size: 46px;
     letter-spacing: 3px;
-    color: var(--gold-hi);
-    text-shadow: 0 0 26px rgba(212, 168, 74, 0.35);
+    color: var(--white-1);
+    text-shadow: 0 0 26px rgba(255, 255, 255, 0.3);
     line-height: 1;
   }
   .v1 .overlay-sub {
@@ -657,9 +720,9 @@
     font-size: 12px;
     letter-spacing: 6px;
     text-transform: uppercase;
-    color: #8a7a55;
+    color: #8f887e;
   }
-  .v1 .btn-close { top: 26px; right: 26px; border-color: rgba(212, 168, 74, 0.5); }
+  .v1 .btn-close { top: 26px; right: 26px; border-color: rgba(255, 255, 255, 0.5); }
 
   .v1 .tabs {
     display: flex;
@@ -674,9 +737,9 @@
     font-family: 'New Rocker', cursive;
     font-size: 20px;
     letter-spacing: 2px;
-    color: #9a8a63;
-    background: linear-gradient(180deg, rgba(212, 168, 74, 0.06), rgba(212, 168, 74, 0.015));
-    border: 1px solid rgba(212, 168, 74, 0.3);
+    color: #9a948a;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-bottom: none;
     border-radius: 90px 90px 0 0;
     padding: 16px 38px 12px;
@@ -685,35 +748,27 @@
     position: relative;
   }
   .v1 .tabs button:hover:not(.active):not(:disabled) {
-    color: var(--gold-hi);
+    color: var(--white-1);
     transform: translateY(-3px);
   }
   .v1 .tabs button.active {
-    color: var(--gold-hi);
-    background: linear-gradient(180deg, rgba(212, 168, 74, 0.2), rgba(212, 168, 74, 0.04));
-    box-shadow: 0 -8px 26px rgba(212, 168, 74, 0.15);
+    color: var(--white-1);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03));
+    box-shadow: 0 -8px 26px rgba(255, 255, 255, 0.12);
   }
   .v1 .tabs button .tab-count {
     display: block;
     font-family: 'Chakra Petch', sans-serif;
     font-size: 10px;
     letter-spacing: 3px;
-    color: #7a6a45;
+    color: #7c7770;
     margin-top: 3px;
-  }
-  .v1 .tabs .tab-ghost {
-    font-family: 'Chakra Petch', sans-serif;
-    font-size: 18px;
-    padding: 14px 20px 10px;
-    color: rgba(212, 168, 74, 0.25);
-    border-style: dashed;
-    cursor: default;
   }
 
   .v1 .overlay-body {
     flex: 1;
     min-height: 0;
-    border-top: 1px solid rgba(212, 168, 74, 0.35);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
     display: flex;
     flex-direction: column;
   }
@@ -721,7 +776,7 @@
   .v1 [data-panel="medals"].active { flex: 1; min-height: 0; }
   .v1 .medal-wall {
     width: 46%;
-    border-right: 1px solid rgba(212, 168, 74, 0.18);
+    border-right: 1px solid rgba(255, 255, 255, 0.16);
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -731,11 +786,11 @@
     font-size: 12px;
     letter-spacing: 4px;
     text-transform: uppercase;
-    color: #8a7a55;
+    color: #8f887e;
   }
   .v1 .medal-scroll { flex: 1; overflow-y: auto; padding: 14px 28px 28px; }
   .v1 .medal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px 12px; }
-  .v1 .medal-tile .medal-icon-wrap { border: 1px solid rgba(212, 168, 74, 0.25); }
+  .v1 .medal-tile .medal-icon-wrap { border: 1px solid rgba(255, 255, 255, 0.22); }
   .v1 .split-detail {
     flex: 1;
     min-width: 0;
@@ -748,27 +803,6 @@
   .v1 [data-panel="cards"].active,
   .v1 [data-panel="equipment"].active { flex: 1; min-height: 0; flex-direction: column; }
   .v1 .cards-scroll { flex: 1; overflow-y: auto; padding: 8px 40px 30px; }
-  .v1 .fan-group-label {
-    text-align: center;
-    font-size: 11px;
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    color: #8a7a55;
-    margin-top: 18px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    justify-content: center;
-  }
-  .v1 .fan-group-label::before,
-  .v1 .fan-group-label::after {
-    content: '';
-    height: 1px;
-    width: 120px;
-    background: linear-gradient(90deg, transparent, rgba(212, 168, 74, 0.35));
-  }
-  .v1 .fan-group-label::after { background: linear-gradient(270deg, transparent, rgba(212, 168, 74, 0.35)); }
-  .v1 .cards-hint { padding: 12px 0 2px; }
 
   .v1 .eq-hall {
     flex: 1;
@@ -779,539 +813,51 @@
     padding: 10px 30px 26px;
   }
   .v1 .eq-col { padding: 0 14px; }
-  .v1 .eq-col + .eq-col { border-left: 1px solid rgba(212, 168, 74, 0.14); }
+  .v1 .eq-col + .eq-col { border-left: 1px solid rgba(255, 255, 255, 0.12); }
   .v1 .eq-col-head {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
     padding: 12px 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: linear-gradient(180deg, rgba(14, 13, 12, 0.98) 70%, rgba(14, 13, 12, 0.85));
   }
   .v1 .eq-col-head img { width: 40px; height: 40px; object-fit: contain; opacity: 0.85; }
-  .v1 .eq-col-head span { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: #8a7a55; }
-  .v1 .eq-col .eq-tile { margin-bottom: 12px; width: 100%; border-radius: 6px; }
-  .v1 .eq-tile:hover:not(.is-locked) { border-color: rgba(212, 168, 74, 0.5); }
+  .v1 .eq-col-head span { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: #8f887e; }
+  .v1 .eq-col .eq-tile { margin-bottom: 14px; width: 100%; border-radius: 6px; min-height: 160px; }
+  .v1 .eq-tile:hover:not(.is-locked) { border-color: rgba(255, 255, 255, 0.4); }
 
   .v1 .overlay-footer {
     flex-shrink: 0;
     padding: 14px 32px;
-    border-top: 1px solid rgba(212, 168, 74, 0.25);
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
   }
 
-  /* =====================================================================
-     VARIANT 2 — Chronicler's Codex
-     ===================================================================== */
-  .v2 .overlay {
-    position: absolute;
-    inset: 44px 56px;
-    z-index: 10;
-    display: flex;
-    background: linear-gradient(180deg, #1d1811, #15110c);
-    border: 1px solid rgba(220, 200, 160, 0.35);
-    box-shadow:
-      inset 0 0 0 1px rgba(0, 0, 0, 0.6),
-      inset 0 0 120px rgba(0, 0, 0, 0.55),
-      0 40px 90px rgba(0, 0, 0, 0.8);
-    --sel-color: #b9945a;
-    --sel-glow: rgba(185, 148, 90, 0.4);
-  }
-  .v2 .spine {
-    width: 128px;
-    flex-shrink: 0;
-    background: linear-gradient(90deg, #241d13, #1a1510);
-    border-right: 1px solid rgba(220, 200, 160, 0.22);
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 26px 0;
-    gap: 10px;
-  }
-  .v2 .spine-title {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font-family: 'New Rocker', cursive;
-    font-size: 26px;
-    letter-spacing: 4px;
-    color: #d8b878;
-    align-self: center;
-    margin-bottom: 22px;
-  }
-  .v2 .tabs { display: flex; flex-direction: column; gap: 10px; padding: 0 14px 0 18px; }
-  .v2 .tabs button {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    text-align: left;
-    color: #8f8064;
-    background: rgba(220, 200, 160, 0.04);
-    border: 1px solid rgba(220, 200, 160, 0.16);
-    border-right: none;
-    border-radius: 4px 0 0 4px;
-    padding: 15px 10px 15px 16px;
-    cursor: pointer;
-    margin-right: -15px;
-    position: relative;
-    transition: color 0.2s ease, background 0.2s ease, margin-right 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .v2 .tabs button:hover:not(.active):not(:disabled) { color: #e8d5ab; margin-right: -8px; }
-  .v2 .tabs button.active {
-    color: #f4e4bc;
-    background: linear-gradient(90deg, rgba(143, 29, 34, 0.55), rgba(143, 29, 34, 0.18));
-    border-color: rgba(220, 120, 100, 0.4);
-    margin-right: -1px;
-  }
-  .v2 .tabs button .tab-count { display: block; font-size: 10px; letter-spacing: 2px; color: #7a6c50; margin-top: 2px; }
-  .v2 .tabs .tab-ghost {
-    color: rgba(220, 200, 160, 0.22);
-    border-style: dashed;
-    cursor: default;
-    text-align: center;
-    padding-left: 10px;
-  }
-  .v2 .codex-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
-  .v2 .btn-close { top: 20px; right: 20px; border-color: rgba(220, 200, 160, 0.4); border-radius: 50%; }
-  .v2 .codex-header {
-    flex-shrink: 0;
-    padding: 24px 84px 16px 36px;
-    border-bottom: 1px solid rgba(220, 200, 160, 0.18);
-    display: flex;
-    align-items: baseline;
-    gap: 18px;
-  }
-  .v2 .codex-header h2 {
-    font-family: 'New Rocker', cursive;
-    font-size: 34px;
-    color: #f4e4bc;
-    letter-spacing: 1px;
-  }
-  .v2 .codex-header .folio {
-    font-size: 12px;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: #8f8064;
-  }
-
-  .v2 [data-panel="medals"].active { flex: 1; min-height: 0; }
-  .v2 .roster {
-    width: 37%;
-    border-right: 1px solid rgba(220, 200, 160, 0.14);
-    overflow-y: auto;
-    padding: 14px 0 24px;
-  }
-  .v2 .roster-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 9px 22px;
-    background: transparent;
-    border: none;
-    border-left: 3px solid transparent;
-    cursor: pointer;
-    text-align: left;
-    color: var(--white-2);
-    font-family: 'Chakra Petch', sans-serif;
-    transition: background 0.15s ease, border-color 0.15s ease, padding-left 0.2s ease;
-  }
-  .v2 .roster-row:hover:not(.is-locked) { background: rgba(220, 200, 160, 0.05); padding-left: 28px; }
-  .v2 .roster-row.is-selected {
-    background: linear-gradient(90deg, rgba(143, 29, 34, 0.28), transparent);
-    border-left-color: #8f1d22;
-  }
-  .v2 .roster-row.is-locked { opacity: 0.4; cursor: default; }
-  .v2 .roster-icon {
-    width: 52px; height: 52px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #000;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(220, 200, 160, 0.25);
-  }
-  .v2 .roster-icon img { width: 100%; height: 100%; object-fit: contain; }
-  .v2 .roster-icon .medal-locked-mark { font-size: 22px; }
-  .v2 .roster-name { font-family: 'New Rocker', cursive; font-size: 16px; color: #e8dcc0; line-height: 1.1; }
-  .v2 .roster-effect {
-    font-size: 11.5px;
-    color: #8f8064;
-    line-height: 1.35;
-    margin-top: 3px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .v2 .manuscript {
-    flex: 1;
-    min-width: 0;
-    overflow-y: auto;
-    padding: 30px 44px 36px;
-    display: flex;
-    flex-direction: column;
-    background:
-      radial-gradient(700px 300px at 70% 0%, rgba(220, 200, 160, 0.05), transparent 70%);
-  }
-  .v2 .manuscript .saint-name { color: #f4e4bc; }
-  .v2 .manuscript .saint-bio:first-of-type::first-letter {
-    font-family: 'New Rocker', cursive;
-    font-size: 52px;
-    float: left;
-    line-height: 0.8;
-    padding: 6px 10px 0 0;
-    color: #8f1d22;
-  }
-
-  .v2 [data-panel="cards"].active { flex: 1; min-height: 0; }
-  .v2 .desk {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    overflow: hidden;
-    position: relative;
-  }
-  .v2 .desk-fans { overflow-y: auto; padding: 12px 26px 24px; }
-  .v2 .desk .cards-hint { padding: 14px 0 4px; flex-shrink: 0; }
-  .v2 .lectern {
-    width: 420px;
-    flex-shrink: 0;
-    border-left: 1px solid rgba(220, 200, 160, 0.14);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 26px 20px 20px;
-    gap: 16px;
-    background: radial-gradient(400px 320px at 50% 30%, rgba(220, 200, 160, 0.06), transparent 75%);
-  }
-  .v2 .lectern-label { font-size: 11px; letter-spacing: 5px; text-transform: uppercase; color: #8f8064; }
-  .v2 .preview-holder {
-    width: 288px;
-    height: 408px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .v2 .preview-holder .cscale { transform: scale(1.2); transform-origin: center; }
-  .v2 .preview-holder .ccard { cursor: pointer; }
-  .v2 .preview-meta {
-    text-align: center;
-    font-size: 12px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: #8f8064;
-    line-height: 1.9;
-  }
-  .v2 .preview-meta b { color: #e8d5ab; font-weight: 600; }
-
-  .v2 [data-panel="equipment"].active { flex: 1; min-height: 0; flex-direction: column; }
-  .v2 .ledger { flex: 1; overflow-y: auto; padding: 10px 40px 30px; }
-  .v2 .ledger-slot-head {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 22px 0 8px;
-    font-size: 11px;
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    color: #8f8064;
-  }
-  .v2 .ledger-slot-head img { width: 30px; height: 30px; object-fit: contain; opacity: 0.8; }
-  .v2 .ledger-slot-head::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(220, 200, 160, 0.3), transparent);
-  }
-  .v2 .ledger-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    padding: 10px 16px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px dashed rgba(220, 200, 160, 0.12);
-    cursor: pointer;
-    text-align: left;
-    color: var(--white-2);
-    font-family: 'Chakra Petch', sans-serif;
-    position: relative;
-    transition: background 0.15s ease;
-  }
-  .v2 .ledger-row::after {
-    content: '';
-    position: absolute;
-    left: 16px; bottom: -1px;
-    height: 2px;
-    width: 0;
-    background: #8f1d22;
-    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .v2 .ledger-row:hover:not(.is-locked) { background: rgba(220, 200, 160, 0.045); }
-  .v2 .ledger-row:hover:not(.is-locked)::after { width: calc(100% - 32px); }
-  .v2 .ledger-row.is-locked { opacity: 0.4; cursor: default; }
-  .v2 .ledger-icon { width: 58px; height: 58px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .v2 .ledger-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
-  .v2 .ledger-name { font-family: 'New Rocker', cursive; font-size: 17px; color: #e8dcc0; width: 210px; flex-shrink: 0; }
-  .v2 .ledger-text { flex: 1; font-size: 13px; line-height: 1.45; color: #a89a7e; }
-  .v2 .ledger-text .kw { color: var(--kw-color); font-weight: 600; }
-  .v2 .ledger-text.flavor { font-style: italic; color: #8b7d62; }
-  .v2 .ledger-stats {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #8f8064;
-  }
-
-  .v2 .codex-footer {
-    flex-shrink: 0;
-    padding: 12px 36px;
-    border-top: 1px solid rgba(220, 200, 160, 0.18);
-  }
-
-  /* =====================================================================
-     VARIANT 3 — Ossuary Vault
-     ===================================================================== */
-  .v3 .overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    background:
-      radial-gradient(1400px 700px at 50% 115%, rgba(196, 30, 58, 0.13), transparent 65%),
-      linear-gradient(180deg, rgba(6, 6, 9, 0.92), rgba(8, 8, 11, 0.97));
-    --sel-color: var(--red-3);
-    --sel-glow: var(--red-glow);
-  }
-  .v3 .scanlines {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 4px);
-  }
-  .v3 .vault-header {
-    flex-shrink: 0;
-    position: relative;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 26px 44px 14px;
-  }
-  .v3 .vault-title { display: flex; align-items: baseline; gap: 16px; }
-  .v3 .vault-title h2 {
-    font-family: 'New Rocker', cursive;
-    font-size: 40px;
-    color: var(--white-1);
-    letter-spacing: 2px;
-    text-shadow: 0 0 30px rgba(196, 30, 58, 0.4);
-  }
-  .v3 .vault-title span {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 600;
-    font-size: 13px;
-    letter-spacing: 6px;
-    text-transform: uppercase;
-    color: #77303c;
-  }
-  .v3 .btn-close { position: static; clip-path: polygon(12% 0, 100% 0, 100% 88%, 88% 100%, 0 100%, 0 12%); }
-
-  .v3 .vault-body { flex: 1; min-height: 0; position: relative; z-index: 5; display: flex; flex-direction: column; }
-
-  .v3 [data-panel="medals"].active { flex: 1; min-height: 0; }
-  .v3 .ossuary {
-    flex: 1;
-    min-width: 0;
-    overflow-y: auto;
-    padding: 24px 40px 40px 56px;
-  }
-  .v3 .ossuary-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 26px 14px;
-    max-width: 900px;
-  }
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 7),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 8),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 9),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 10),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 11),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 12) { transform: translateX(50%); }
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 7):hover:not(.is-locked),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 8):hover:not(.is-locked),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 9):hover:not(.is-locked),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 10):hover:not(.is-locked),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 11):hover:not(.is-locked),
-  .v3 .ossuary-grid .medal-tile:nth-child(12n + 12):hover:not(.is-locked) { transform: translateX(50%) translateY(-4px); }
-  .v3 .medal-tile .medal-icon-wrap {
-    border: 1px solid rgba(196, 30, 58, 0.35);
-    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8);
-  }
-  .v3 .medal-tile:hover:not(.is-locked) .medal-icon-wrap {
-    box-shadow: 0 0 0 1px rgba(196, 30, 58, 0.6), 0 0 24px rgba(196, 30, 58, 0.3);
-  }
-  .v3 .drawer {
-    width: 620px;
-    flex-shrink: 0;
-    background: linear-gradient(270deg, rgba(14, 12, 16, 0.98), rgba(12, 10, 13, 0.92));
-    border-left: 1px solid rgba(196, 30, 58, 0.4);
-    box-shadow: -30px 0 60px rgba(0, 0, 0, 0.55);
-    overflow-y: auto;
-    padding: 30px 38px 36px;
-    display: flex;
-    flex-direction: column;
-    transform: translateX(24px);
-    opacity: 0.92;
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
-  }
-  .v3 .drawer.slide-in { transform: translateX(0); opacity: 1; }
-
-  .v3 [data-panel="cards"].active { flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
-  .v3 .arc-stage {
-    flex: 1;
-    min-height: 0;
-    position: relative;
-    overflow: hidden;
-  }
-  .v3 .arc-hint {
-    position: absolute;
-    top: 18px; left: 0; right: 0;
-    z-index: 3;
-  }
-  .v3 .arc {
-    position: absolute;
-    left: 50%;
-    bottom: 150px;
-    width: 0;
-    height: 0;
-    transform: rotate(calc((var(--mx, 0.5) - 0.5) * -10deg));
-    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
-  }
-  .v3 .arc .fan-slot {
-    position: absolute;
-    left: calc(-120px * var(--cs, 0.8));
-    bottom: 0;
-    transform: rotate(var(--rot, 0deg));
-    /* pivot ~1100px below the card center = big showcase arc */
-    transform-origin: 50% 1240px;
-  }
-  .v3 .arc .fan-slot:hover .fan-lift {
-    transform: translateY(-56px) scale(1.22) rotate(calc(var(--rot, 0deg) * -0.55));
-    filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.7));
-  }
-  .v3 .arc .fan-slot.locked:hover .fan-lift {
-    transform: translateY(-22px) scale(1.06) rotate(calc(var(--rot, 0deg) * -0.35));
-  }
-
-  .v3 [data-panel="equipment"].active { flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
-  .v3 .shelves { flex: 1; overflow-y: auto; padding: 8px 44px 30px; }
-  .v3 .shelf { display: flex; align-items: stretch; gap: 0; margin-top: 16px; }
-  .v3 .shelf-tag {
-    width: 120px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 1px solid rgba(196, 30, 58, 0.35);
-    border-right: none;
-    background: linear-gradient(180deg, rgba(196, 30, 58, 0.1), rgba(196, 30, 58, 0.02));
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
-  }
-  .v3 .shelf-tag img { width: 42px; height: 42px; object-fit: contain; opacity: 0.9; }
-  .v3 .shelf-tag span {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    color: #b8556a;
-  }
-  .v3 .shelf-items {
-    flex: 1;
-    display: flex;
-    gap: 12px;
-    padding: 12px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.015);
-    overflow-x: auto;
-  }
-  .v3 .shelf-items .eq-tile { width: 178px; flex-shrink: 0; border-radius: 0; }
-  .v3 .shelf-items .eq-tile:hover:not(.is-locked) { border-color: rgba(196, 30, 58, 0.55); box-shadow: 0 0 22px rgba(196, 30, 58, 0.18); }
-
-  .v3 .dock {
-    flex-shrink: 0;
-    position: relative;
-    z-index: 6;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 30px;
-    padding: 14px 44px 20px;
-    border-top: 1px solid rgba(196, 30, 58, 0.35);
-    background: linear-gradient(180deg, rgba(10, 8, 10, 0.6), rgba(12, 8, 10, 0.9));
-  }
-  .v3 .tabs { display: flex; gap: 10px; }
-  .v3 .tabs button {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: #8a8a92;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    padding: 12px 30px;
-    cursor: pointer;
-    clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-  }
-  .v3 .tabs button:hover:not(.active):not(:disabled) { color: var(--white-1); transform: translateY(-2px); }
-  .v3 .tabs button.active {
-    color: var(--white-1);
-    background: linear-gradient(180deg, rgba(196, 30, 58, 0.55), rgba(139, 0, 0, 0.4));
-    border-color: rgba(196, 30, 58, 0.7);
-    box-shadow: 0 0 22px rgba(196, 30, 58, 0.3);
-  }
-  .v3 .tabs button .tab-count { display: block; font-size: 10px; letter-spacing: 2px; color: rgba(255, 255, 255, 0.45); margin-top: 1px; }
-  .v3 .tabs .tab-ghost { color: rgba(255, 255, 255, 0.18); border-style: dashed; cursor: default; }
-  .v3 .dock .meter-row { flex: 1; justify-content: flex-end; }
 </style>
 </head>
 <body>
 
 <header class="page-header">
-  <h1>Waystation — Collection Overlay (3 Variants)</h1>
+  <h1>Waystation — Collection Overlay</h1>
   <p>
     Replaces the Saints Medal Chronicle modal with a tabbed player collection: SAINTS keeps every feature of
     the old modal (medal grid, locked slots, saint detail with keyword blocks, progress meter), plus new CARDS
-    and EQUIPMENT tabs. Cards use the in-game frame, fan like the booster showcase, and clicking a card cycles
-    the viewed color (White → Red → Black; black shows +1 BLK). A dashed "+" tab reserves room for future tabs.
+    and EQUIPMENT tabs. Cards list alphabetically in a grid; each entry is a fanned three-color stack and
+    clicking cycles the viewed color (White → Red → Black; black shows +1 BLK), with type filter chips.
   </p>
 </header>
 
 <main class="page-main">
 
-  <!-- ================= VARIANT 1 ================= -->
   <div class="variant-header">
-    <h2>Variant 1 — Reliquary Wall</h2>
+    <h2>Reliquary Wall</h2>
     <p>
-      Candlelit gold chapel chrome. Arched tabs hang under the title like reliquary alcoves. Saints keep the
-      split wall/altar layout; cards sit in fanned pew rows grouped by kind; equipment fills four slot columns
-      with the in-game slot icons. Hover anything: it lifts toward the candlelight.
+      White chapel chrome. Arched tabs hang under the title like reliquary alcoves. Saints keep the split
+      wall/altar layout; cards fill an alphabetical grid of fanned color stacks with type filters; equipment
+      fills four slot columns with the in-game BLOCK chip and use pips. Hover glows instead of lifting.
     </p>
   </div>
   <div class="viewport-scaler">
@@ -1325,13 +871,16 @@
           <button type="button" class="btn-close" aria-label="Close">X</button>
         </header>
         <nav class="tabs">
-          <button type="button" data-tab="medals" class="active">Saints<span class="tab-count" data-count="medals"></span></button>
-          <button type="button" data-tab="cards">Cards<span class="tab-count" data-count="cards"></span></button>
+          <button type="button" data-tab="cards" class="active">Cards<span class="tab-count" data-count="cards"></span></button>
+          <button type="button" data-tab="medals">Saints<span class="tab-count" data-count="medals"></span></button>
           <button type="button" data-tab="equipment">Equipment<span class="tab-count" data-count="equipment"></span></button>
-          <button type="button" class="tab-ghost" disabled aria-label="Future tab">+</button>
         </nav>
         <div class="overlay-body">
-          <section data-panel="medals" class="active">
+          <section data-panel="cards" class="active">
+            <div class="card-filters" data-card-filters></div>
+            <div class="cards-scroll"><div class="card-grid" data-card-grid></div></div>
+          </section>
+          <section data-panel="medals">
             <aside class="medal-wall">
               <div class="wall-toolbar">Medals Acquired</div>
               <div class="medal-scroll"><div class="medal-grid" data-medal-grid></div></div>
@@ -1344,152 +893,11 @@
               <div data-saint-detail style="display:none"></div>
             </div>
           </section>
-          <section data-panel="cards">
-            <div class="cards-scroll" data-card-groups></div>
-            <div class="cards-hint">
-              Click a card to turn it
-              <span class="dot w"></span><span class="dot r"></span><span class="dot k"></span>
-              White · Red · Black
-            </div>
-          </section>
           <section data-panel="equipment">
             <div class="eq-hall" data-eq-hall></div>
           </section>
         </div>
         <footer class="overlay-footer">
-          <div class="meter-row">
-            <span class="meter-label" data-meter-label>Communion of Saints</span>
-            <div class="meter-track"><div class="meter-fill" data-meter-fill></div></div>
-            <span class="meter-count" data-meter-count></span>
-          </div>
-        </footer>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= VARIANT 2 ================= -->
-  <div class="variant-header">
-    <h2>Variant 2 — Chronicler's Codex</h2>
-    <p>
-      A war-chronicle ledger. Ribbon tabs slide out from the book spine on the left. Saints read like an
-      illuminated manuscript with a rubricated drop cap; cards fan across the desk while a lectern on the right
-      inspects whichever card the cursor grazes (click either copy to turn its color); equipment is a quartered
-      ledger whose rows underline themselves in red ink as you pass.
-    </p>
-  </div>
-  <div class="viewport-scaler">
-    <div class="viewport v2" id="v2">
-      <div class="bg-scene"></div>
-      <div class="bg-dim"></div>
-      <div class="overlay">
-        <aside class="spine">
-          <div class="spine-title">Codex Cruciatus</div>
-          <nav class="tabs">
-            <button type="button" data-tab="medals" class="active">Saints<span class="tab-count" data-count="medals"></span></button>
-            <button type="button" data-tab="cards">Cards<span class="tab-count" data-count="cards"></span></button>
-            <button type="button" data-tab="equipment">Armory<span class="tab-count" data-count="equipment"></span></button>
-            <button type="button" class="tab-ghost" disabled aria-label="Future tab">+</button>
-          </nav>
-        </aside>
-        <div class="codex-main">
-          <button type="button" class="btn-close" aria-label="Close">X</button>
-          <header class="codex-header">
-            <h2 data-codex-title>Communion of Saints</h2>
-            <span class="folio" data-codex-folio>Folio I</span>
-          </header>
-          <section data-panel="medals" class="active">
-            <aside class="roster" data-medal-roster></aside>
-            <div class="manuscript">
-              <div class="detail-empty" data-detail-empty>
-                <div class="detail-empty-icon">+</div>
-                <p>Choose a saint from the roster to open their page in the chronicle.</p>
-              </div>
-              <div data-saint-detail style="display:none"></div>
-            </div>
-          </section>
-          <section data-panel="cards">
-            <div class="desk">
-              <div class="cards-hint">
-                Hover to inspect · click to turn
-                <span class="dot w"></span><span class="dot r"></span><span class="dot k"></span>
-              </div>
-              <div class="desk-fans" data-card-groups></div>
-            </div>
-            <aside class="lectern">
-              <div class="lectern-label">Under the Glass</div>
-              <div class="preview-holder" data-preview-holder></div>
-              <div class="preview-meta" data-preview-meta>Pass the cursor over a card below.</div>
-            </aside>
-          </section>
-          <section data-panel="equipment">
-            <div class="ledger" data-eq-ledger></div>
-          </section>
-          <footer class="codex-footer">
-            <div class="meter-row">
-              <span class="meter-label" data-meter-label>Communion of Saints</span>
-              <div class="meter-track"><div class="meter-fill" data-meter-fill></div></div>
-              <span class="meter-count" data-meter-count></span>
-            </div>
-          </footer>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= VARIANT 3 ================= -->
-  <div class="variant-header">
-    <h2>Variant 3 — Ossuary Vault</h2>
-    <p>
-      Obsidian and ember red, full-bleed like a game HUD screen with a bottom tab dock. Saints rest in a
-      staggered reliquary honeycomb with a slide-in dossier drawer. Cards form one giant arc fan — the whole
-      hand leans as your cursor sweeps across the screen, echoing the booster showcase fan. Equipment racks on
-      four armory shelves keyed to Head / Chest / Arms / Legs.
-    </p>
-  </div>
-  <div class="viewport-scaler">
-    <div class="viewport v3" id="v3">
-      <div class="bg-scene"></div>
-      <div class="bg-dim"></div>
-      <div class="overlay">
-        <div class="scanlines"></div>
-        <header class="vault-header">
-          <div class="vault-title">
-            <h2>Vault of Relics</h2>
-            <span>Waystation // Collection</span>
-          </div>
-          <button type="button" class="btn-close" aria-label="Close">X</button>
-        </header>
-        <div class="vault-body">
-          <section data-panel="medals" class="active">
-            <div class="ossuary"><div class="ossuary-grid" data-medal-grid></div></div>
-            <aside class="drawer" data-drawer>
-              <div class="detail-empty" data-detail-empty>
-                <div class="detail-empty-icon">+</div>
-                <p>Open a reliquary niche to read the saint's dossier.</p>
-              </div>
-              <div data-saint-detail style="display:none"></div>
-            </aside>
-          </section>
-          <section data-panel="cards">
-            <div class="arc-stage">
-              <div class="cards-hint arc-hint">
-                Sweep the cursor — the fan follows · click a card to turn it
-                <span class="dot w"></span><span class="dot r"></span><span class="dot k"></span>
-              </div>
-              <div class="arc" data-arc></div>
-            </div>
-          </section>
-          <section data-panel="equipment">
-            <div class="shelves" data-eq-shelves></div>
-          </section>
-        </div>
-        <footer class="dock">
-          <nav class="tabs">
-            <button type="button" data-tab="medals" class="active">Saints<span class="tab-count" data-count="medals"></span></button>
-            <button type="button" data-tab="cards">Cards<span class="tab-count" data-count="cards"></span></button>
-            <button type="button" data-tab="equipment">Equipment<span class="tab-count" data-count="equipment"></span></button>
-            <button type="button" class="tab-ghost" disabled aria-label="Future tab">+</button>
-          </nav>
           <div class="meter-row">
             <span class="meter-label" data-meter-label>Communion of Saints</span>
             <div class="meter-track"><div class="meter-fill" data-meter-fill></div></div>
@@ -2038,112 +1446,81 @@
         <div class="desc">${escapeHtml(card.text || '')}</div>
       </div>
       <div class="art"><img src="../Content/CardArt/${card.id}.png" alt=""></div>
-      <div class="sheen"></div>
       <div class="cdots">${dots}</div>
     `;
   }
 
-  function attachSheen(cardEl) {
-    cardEl.addEventListener('pointermove', e => {
-      const r = cardEl.getBoundingClientRect();
-      cardEl.style.setProperty('--gx', `${((e.clientX - r.left) / r.width) * 100}%`);
-      cardEl.style.setProperty('--gy', `${((e.clientY - r.top) / r.height) * 100}%`);
+  /* Builds one grid cell: a 3-layer color stack (W/R/K). Clicking cycles which
+     color sits in front; the other two stay fanned behind. */
+  function buildCardStack(card, colorState, scale) {
+    const stack = document.createElement('div');
+    stack.className = 'card-stack';
+    stack.style.setProperty('--cs', scale);
+
+    const layers = {};
+    COLOR_ORDER.forEach(color => {
+      const layer = document.createElement('div');
+      layer.className = 'stack-layer';
+      layer.innerHTML = `<div class="cscale"><div class="ccard ${color}" data-id="${card.id}">${cardInnerHtml(card, color)}</div></div>`;
+      layers[color] = layer;
+      stack.appendChild(layer);
     });
-  }
 
-  /* Builds a fan slot. onColorChange(cardId, newColor) fires after each cycle. */
-  function buildCardSlot(card, colorState, scale, onColorChange) {
-    const slot = document.createElement('div');
-    slot.className = 'fan-slot';
-    slot.style.setProperty('--cs', scale);
-
-    if (card.locked) {
-      slot.classList.add('locked');
-      slot.innerHTML = `
-        <div class="fan-lift"><div class="cscale">
-          <div class="card-back">
-            <img src="../Content/card_back.png" alt="">
-            <span class="undiscovered">Undiscovered</span>
-          </div>
-        </div></div>`;
-      return slot;
+    function applyPositions() {
+      const front = colorState.get(card.id) || 'w';
+      const i = COLOR_ORDER.indexOf(front);
+      layers[front].className = 'stack-layer pos-front';
+      layers[COLOR_ORDER[(i + 1) % 3]].className = 'stack-layer pos-back-r';
+      layers[COLOR_ORDER[(i + 2) % 3]].className = 'stack-layer pos-back-l';
     }
+    applyPositions();
 
-    const color = colorState.get(card.id) || 'w';
-    slot.innerHTML = `
-      <div class="fan-lift"><div class="cscale">
-        <div class="ccard ${color}" data-id="${card.id}">${cardInnerHtml(card, color)}</div>
-      </div></div>`;
-
-    const cardEl = slot.querySelector('.ccard');
-    const scaleEl = slot.querySelector('.cscale');
-    attachSheen(cardEl);
-
-    cardEl.addEventListener('click', () => {
+    stack.addEventListener('click', () => {
       const current = colorState.get(card.id) || 'w';
-      const next = COLOR_ORDER[(COLOR_ORDER.indexOf(current) + 1) % COLOR_ORDER.length];
-      colorState.set(card.id, next);
-      scaleEl.classList.remove('color-swap');
-      void scaleEl.offsetWidth;
-      scaleEl.classList.add('color-swap');
-      setTimeout(() => {
-        cardEl.className = `ccard ${next}`;
-        cardEl.innerHTML = cardInnerHtml(card, next);
-        attachSheen(cardEl);
-      }, 170);
-      if (onColorChange) onColorChange(card, next);
+      colorState.set(card.id, COLOR_ORDER[(COLOR_ORDER.indexOf(current) + 1) % 3]);
+      applyPositions();
     });
-    return slot;
+    return stack;
   }
 
-  /* Fan transforms mirror BoosterPackOpeningAnimationService.SlotStartRotationsDegrees. */
-  function applyFanTransforms(slots, stepDeg, dropPx) {
-    const center = (slots.length - 1) / 2;
-    slots.forEach((slot, i) => {
-      const offset = i - center;
-      slot.style.setProperty('--rot', `${(offset * stepDeg).toFixed(2)}deg`);
-      slot.style.setProperty('--drop', `${(Math.pow(Math.abs(offset), 1.6) * dropPx).toFixed(1)}px`);
-      slot.style.setProperty('--z', String(i + 1));
-    });
-  }
-
-  function buildFanRow(cards, colorState, opts) {
-    const row = document.createElement('div');
-    row.className = 'fan-row';
-    row.style.setProperty('--overlap', `${opts.overlap}px`);
-    const slots = cards.map(card => buildCardSlot(card, colorState, opts.scale, opts.onColorChange));
-    slots.forEach(s => row.appendChild(s));
-    applyFanTransforms(slots, opts.stepDeg, opts.dropPx);
-    return row;
-  }
-
-  function chunk(arr, size) {
-    const out = [];
-    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-    return out;
-  }
-
-  const CARD_GROUPS = [
-    { label: 'Weapons', filter: c => !c.locked && c.weapon },
-    { label: 'Attacks', filter: c => !c.locked && !c.weapon && c.type === 'Attack' },
-    { label: 'Prayers', filter: c => !c.locked && c.type === 'Prayer' },
-    { label: 'Blocks', filter: c => !c.locked && c.type === 'Block' },
-    { label: 'Undiscovered', filter: c => c.locked }
+  const CARD_FILTERS = [
+    { id: 'all', label: 'All', match: () => true },
+    { id: 'attack', label: 'Attack', match: c => !c.weapon && c.type === 'Attack' },
+    { id: 'block', label: 'Block', match: c => c.type === 'Block' },
+    { id: 'prayer', label: 'Prayer', match: c => c.type === 'Prayer' },
+    { id: 'weapon', label: 'Weapon', match: c => !!c.weapon }
   ];
 
-  function buildCardGroups(container, colorState, opts) {
-    container.innerHTML = '';
-    CARD_GROUPS.forEach(group => {
-      const cards = CARDS.filter(group.filter);
-      if (!cards.length) return;
-      const label = document.createElement('div');
-      label.className = 'fan-group-label';
-      label.textContent = group.label;
-      container.appendChild(label);
-      chunk(cards, opts.perRow).forEach(rowCards => {
-        container.appendChild(buildFanRow(rowCards, colorState, opts));
+  /* Alphabetical grid of unlocked cards; undiscovered cards are not shown. */
+  function buildCardCollection(filterBar, grid, colorState, opts) {
+    const unlocked = CARDS
+      .filter(c => !c.locked)
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name));
+    let activeFilter = 'all';
+
+    function renderGrid() {
+      const filter = CARD_FILTERS.find(f => f.id === activeFilter);
+      grid.innerHTML = '';
+      unlocked.filter(filter.match).forEach(card => {
+        grid.appendChild(buildCardStack(card, colorState, opts.scale));
       });
+    }
+
+    filterBar.innerHTML = '<span class="filter-label">Type</span>';
+    CARD_FILTERS.forEach(f => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = f.label;
+      btn.classList.toggle('active', f.id === activeFilter);
+      btn.addEventListener('click', () => {
+        activeFilter = f.id;
+        filterBar.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+        renderGrid();
+      });
+      filterBar.appendChild(btn);
     });
+    renderGrid();
   }
 
   /* ========================= equipment ========================= */
@@ -2155,6 +1532,15 @@
     return `<div class="eq-text flavor">${escapeHtml(eq.flavor || '')}</div>`;
   }
 
+  /* MaxUses defaults to 3 in EquipmentBase; mockup shows all uses remaining. */
+  function usePipsHtml(eq) {
+    const max = eq.maxUses || 3;
+    const remaining = eq.remainingUses != null ? eq.remainingUses : max;
+    let pips = '';
+    for (let i = 0; i < max; i++) pips += `<i class="${i < remaining ? '' : 'spent'}"></i>`;
+    return `<div class="eq-pips">${pips}</div>`;
+  }
+
   function buildEquipTile(eq) {
     const tile = document.createElement('button');
     tile.type = 'button';
@@ -2163,24 +1549,22 @@
     const icon = eq.locked
       ? '<span class="eq-locked-mark">?</span>'
       : `<img src="../Content/Equipment/${eq.id}.png" alt="${escapeHtml(eq.name)}">`;
+    const chipClass = eq.color === 'White' ? 'eq-chip chip-white' : 'eq-chip';
     tile.innerHTML = `
       <div class="eq-icon">${icon}</div>
-      <div class="eq-name">${eq.locked ? 'Unclaimed' : escapeHtml(eq.name)}</div>
-      <div class="eq-sub"><span class="eq-gem ${eq.color.toLowerCase()}"></span>${eq.slot} · ${eq.block} BLK</div>
-      ${eq.locked ? '' : equipTextHtml(eq)}
+      <div class="eq-body">
+        <div class="eq-name-row">
+          <div class="eq-name">${eq.locked ? 'Unclaimed' : escapeHtml(eq.name)}</div>
+          <span class="eq-gem ${eq.color.toLowerCase()}"></span>
+        </div>
+        <div class="eq-stat-row">
+          <div class="${chipClass}"><span class="l">BLOCK</span><span class="v">${eq.block}</span></div>
+          ${usePipsHtml(eq)}
+        </div>
+        ${eq.locked ? '' : equipTextHtml(eq)}
+      </div>
     `;
-    if (!eq.locked) attachTilt(tile, 3.2);
     return tile;
-  }
-
-  function attachTilt(el, maxDeg) {
-    el.addEventListener('pointermove', e => {
-      const r = el.getBoundingClientRect();
-      const dx = (e.clientX - r.left) / r.width - 0.5;
-      const dy = (e.clientY - r.top) / r.height - 0.5;
-      el.style.transform = `translateY(-4px) rotateX(${(-dy * maxDeg).toFixed(2)}deg) rotateY(${(dx * maxDeg).toFixed(2)}deg)`;
-    });
-    el.addEventListener('pointerleave', () => { el.style.transform = ''; });
   }
 
   /* ========================= counts, tabs, meter ========================= */
@@ -2206,7 +1590,7 @@
         if (onTabChange) onTabChange(btn.dataset.tab);
       });
     });
-    updateMeter(root, 'medals');
+    updateMeter(root, 'cards');
   }
 
   function updateMeter(root, tab) {
@@ -2242,7 +1626,7 @@
     detail.innerHTML = saintDetailHtml(medal);
   }
 
-  /* ========================= VARIANT 1 — Reliquary Wall ========================= */
+  /* ========================= Reliquary Wall ========================= */
   (function initV1() {
     const root = document.getElementById('v1');
     const colorState = new Map();
@@ -2268,9 +1652,11 @@
     });
     grid.querySelector('.medal-tile:not(.is-locked)').click();
 
-    buildCardGroups(root.querySelector('[data-card-groups]'), colorState, {
-      perRow: 8, scale: 0.72, stepDeg: 3.4, dropPx: 5, overlap: -34
-    });
+    buildCardCollection(
+      root.querySelector('[data-card-filters]'),
+      root.querySelector('[data-card-grid]'),
+      colorState,
+      { scale: 1.08 });
 
     const hall = root.querySelector('[data-eq-hall]');
     EQUIP_SLOTS.forEach(slotName => {
@@ -2283,162 +1669,6 @@
         </div>`;
       EQUIPMENT.filter(e => e.slot === slotName).forEach(eq => col.appendChild(buildEquipTile(eq)));
       hall.appendChild(col);
-    });
-  })();
-
-  /* ========================= VARIANT 2 — Chronicler's Codex ========================= */
-  (function initV2() {
-    const root = document.getElementById('v2');
-    const colorState = new Map();
-    setupParallax(root);
-
-    const TITLES = {
-      medals: ['Communion of Saints', 'Folio I'],
-      cards: ['The Deck Recorded', 'Folio II'],
-      equipment: ['Arms & Panoply', 'Folio III']
-    };
-    setupChrome(root, tab => {
-      root.querySelector('[data-codex-title]').textContent = TITLES[tab][0];
-      root.querySelector('[data-codex-folio]').textContent = TITLES[tab][1];
-    });
-
-    const roster = root.querySelector('[data-medal-roster]');
-    MEDALS.forEach(medal => {
-      const row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'roster-row' + (medal.acquired ? '' : ' is-locked');
-      row.disabled = !medal.acquired;
-      row.innerHTML = `
-        <div class="roster-icon">${medalIconHtml(medal)}</div>
-        <div>
-          <div class="roster-name">${medal.acquired ? escapeHtml(medal.name) : 'A saint not yet met'}</div>
-          <div class="roster-effect">${medal.acquired ? escapeHtml(medal.medalText) : 'Their page remains unwritten.'}</div>
-        </div>`;
-      if (medal.acquired) {
-        row.addEventListener('click', () => {
-          roster.querySelectorAll('.roster-row').forEach(r => r.classList.toggle('is-selected', r === row));
-          showSaintDetail(root, medal);
-        });
-      }
-      roster.appendChild(row);
-    });
-    roster.querySelector('.roster-row:not(.is-locked)').click();
-
-    const holder = root.querySelector('[data-preview-holder]');
-    const meta = root.querySelector('[data-preview-meta]');
-    let previewCard = null;
-
-    function renderPreview(card) {
-      previewCard = card;
-      const color = colorState.get(card.id) || 'w';
-      holder.innerHTML = `
-        <div class="cscale">
-          <div class="ccard ${color}">${cardInnerHtml(card, color)}</div>
-        </div>`;
-      const el = holder.querySelector('.ccard');
-      attachSheen(el);
-      el.addEventListener('click', () => cyclePreviewColor(card));
-      meta.innerHTML = `
-        <b>${escapeHtml(card.name)}</b><br>
-        ${card.weapon ? 'Weapon' : escapeHtml(card.type)} · ${escapeHtml(card.rarity)} · viewing <b>${COLOR_NAMES[color]}</b>`;
-    }
-
-    function cyclePreviewColor(card) {
-      const current = colorState.get(card.id) || 'w';
-      const next = COLOR_ORDER[(COLOR_ORDER.indexOf(current) + 1) % COLOR_ORDER.length];
-      colorState.set(card.id, next);
-      renderPreview(card);
-      /* keep the desk fan in sync */
-      buildDesk();
-    }
-
-    function buildDesk() {
-      buildCardGroups(root.querySelector('[data-card-groups]'), colorState, {
-        perRow: 10, scale: 0.6, stepDeg: 2.8, dropPx: 4, overlap: -46,
-        onColorChange: card => renderPreview(card)
-      });
-      root.querySelectorAll('[data-card-groups] .fan-slot:not(.locked)').forEach((slot, idx) => {
-        const unlocked = CARDS.filter(c => !c.locked);
-        slot.addEventListener('pointerenter', () => {
-          const id = slot.querySelector('.ccard')?.dataset.id;
-          const card = unlocked.find(c => c.id === id);
-          if (card && card !== previewCard) renderPreview(card);
-        });
-      });
-    }
-    buildDesk();
-    renderPreview(CARDS.find(c => !c.locked));
-
-    const ledger = root.querySelector('[data-eq-ledger]');
-    EQUIP_SLOTS.forEach(slotName => {
-      const head = document.createElement('div');
-      head.className = 'ledger-slot-head';
-      head.innerHTML = `<img src="${SLOT_ICONS[slotName]}" alt=""><span>${slotName}</span>`;
-      ledger.appendChild(head);
-      EQUIPMENT.filter(e => e.slot === slotName).forEach(eq => {
-        const row = document.createElement('button');
-        row.type = 'button';
-        row.className = 'ledger-row' + (eq.locked ? ' is-locked' : '');
-        row.disabled = !!eq.locked;
-        const icon = eq.locked
-          ? '<span class="eq-locked-mark">?</span>'
-          : `<img src="../Content/Equipment/${eq.id}.png" alt="">`;
-        const text = eq.locked
-          ? '<span class="ledger-text flavor">Not yet claimed on any climb.</span>'
-          : eq.text
-            ? `<span class="ledger-text">${highlightKeywords(eq.text).html}</span>`
-            : `<span class="ledger-text flavor">${escapeHtml(eq.flavor)}</span>`;
-        row.innerHTML = `
-          <div class="ledger-icon">${icon}</div>
-          <div class="ledger-name">${eq.locked ? 'Unclaimed' : escapeHtml(eq.name)}</div>
-          ${text}
-          <div class="ledger-stats"><span class="eq-gem ${eq.color.toLowerCase()}"></span>${eq.block} BLK</div>`;
-        ledger.appendChild(row);
-      });
-    });
-  })();
-
-  /* ========================= VARIANT 3 — Ossuary Vault ========================= */
-  (function initV3() {
-    const root = document.getElementById('v3');
-    const colorState = new Map();
-    setupParallax(root);
-    setupChrome(root);
-
-    const grid = root.querySelector('[data-medal-grid]');
-    const drawer = root.querySelector('[data-drawer]');
-    MEDALS.forEach(medal => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'medal-tile' + (medal.acquired ? '' : ' is-locked');
-      btn.disabled = !medal.acquired;
-      btn.style.setProperty('--medal-size', '92px');
-      btn.innerHTML = `
-        <div class="medal-icon-wrap">${medalIconHtml(medal)}</div>
-        <span class="medal-tile-label">${escapeHtml(medal.shortName)}</span>`;
-      if (medal.acquired) {
-        btn.addEventListener('click', () => {
-          grid.querySelectorAll('.medal-tile').forEach(t => t.classList.toggle('is-selected', t === btn));
-          showSaintDetail(root, medal);
-          drawer.classList.remove('slide-in');
-          void drawer.offsetWidth;
-          drawer.classList.add('slide-in');
-        });
-      }
-      grid.appendChild(btn);
-    });
-    grid.querySelector('.medal-tile:not(.is-locked)').click();
-
-    /* One giant arc fan of the whole collection. */
-    const arc = root.querySelector('[data-arc]');
-    const fanCards = CARDS.slice();
-    const step = Math.min(96 / Math.max(1, fanCards.length - 1), 3.4);
-    const center = (fanCards.length - 1) / 2;
-    fanCards.forEach((card, i) => {
-      const slot = buildCardSlot(card, colorState, 0.8, null);
-      slot.style.setProperty('--rot', `${((i - center) * step).toFixed(2)}deg`);
-      slot.style.setProperty('--z', String(i + 1));
-      arc.appendChild(slot);
     });
   })();
 

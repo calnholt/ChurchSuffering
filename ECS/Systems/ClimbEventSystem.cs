@@ -258,15 +258,24 @@ namespace ChurchSuffering.ECS.Systems
 				if (RunDeckService.TryParseCardKey(result.UpgradedCardKey, out var cardId, out var color, out _))
 				{
 					string baseKey = RunDeckService.BuildCardKey(cardId, color, isUpgraded: false);
+					var beforeEntry = SaveCache.GetRunDeckEntry(RunDeckService.PrimaryLoadoutId, result.UpgradedEntryId);
+					string beforeSecondary = beforeEntry?.secondaryColor ?? string.Empty;
+					CardUpgradeService.InvokeUpgradeConfirmed(result.UpgradedCardKey, result.UpgradedEntryId);
+					var afterEntry = SaveCache.GetRunDeckEntry(RunDeckService.PrimaryLoadoutId, result.UpgradedEntryId);
 					EventManager.Publish(new ClimbCardUpgradeAnimationRequested
 					{
 						DeckEntryId = result.UpgradedEntryId,
 						BaseCardKey = baseKey,
 						UpgradedCardKey = result.UpgradedCardKey,
+						BeforeSecondaryColor = beforeSecondary,
+						AfterSecondaryColor = afterEntry?.secondaryColor ?? beforeSecondary,
 						DelayClimbTurnoverUntilComplete = true,
 					});
 				}
-				CardUpgradeService.InvokeUpgradeConfirmed(result.UpgradedCardKey);
+				else
+				{
+					CardUpgradeService.InvokeUpgradeConfirmed(result.UpgradedCardKey, result.UpgradedEntryId);
+				}
 			}
 			if (result.ReachedFinalTime)
 			{

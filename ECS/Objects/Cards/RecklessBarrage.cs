@@ -3,6 +3,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -13,7 +15,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public RecklessBarrage()
         {
-            CardId = "reckless_barrage";
+            CardId = CardIds.RecklessBarrage.ToKey();
             Name = "Reckless Barrage";
             Target = "Enemy";
             Text = $"You need {NonPledgedRequired}+ other non-pledged cards in your hand to play this. As an additional cost, discard a random card from your hand.";

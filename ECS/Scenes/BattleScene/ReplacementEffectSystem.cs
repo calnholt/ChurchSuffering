@@ -51,9 +51,31 @@ namespace ChurchSuffering.ECS.Systems
                 });
 
                 ExecuteActions(request);
-                break;
+                LogRequest(request);
+                return;
             }
 
+            var pledgedCards = EntityManager.GetEntitiesWithComponent<Pledge>()
+                .OrderBy(entity => entity.Id)
+                .ToList();
+
+            foreach (var cardEntity in pledgedCards)
+            {
+                var card = cardEntity.GetComponent<CardData>()?.Card;
+                if (card is not IReplacementEffectProvider provider) continue;
+                if (!provider.TryReplace(request)) continue;
+
+                request.IsHandled = true;
+                ExecuteActions(request);
+                LogRequest(request);
+                return;
+            }
+
+            LogRequest(request);
+        }
+
+        private static void LogRequest(ReplaceableEffectRequest request)
+        {
             LoggingService.Append("ReplacementEffectSystem.OnReplaceableEffectRequest", new JsonObject
             {
                 ["kind"] = request.Kind.ToString(),
@@ -78,6 +100,14 @@ namespace ChurchSuffering.ECS.Systems
                             Target = action.Target,
                             Delta = action.Delta,
                             DamageType = action.DamageType
+                        });
+                        break;
+                    case ReplacementEffectActionType.ApplyPassive:
+                        EventManager.Publish(new ApplyPassiveEvent
+                        {
+                            Target = action.Target,
+                            Type = action.PassiveType,
+                            Delta = action.Delta
                         });
                         break;
                 }

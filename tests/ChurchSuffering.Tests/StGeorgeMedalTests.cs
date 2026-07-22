@@ -7,6 +7,7 @@ using ChurchSuffering.ECS.Data.Ids;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Factories;
 using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Objects.EnemyAttacks;
 using ChurchSuffering.ECS.Objects.Medals;
 using ChurchSuffering.ECS.Systems;
 using Microsoft.Xna.Framework;
@@ -155,7 +156,7 @@ public sealed class StGeorgeMedalTests : IDisposable
         entityManager.AddComponent(enemy, new AttackIntent
         {
             ActiveAttackSequence = 1,
-            Planned = [new PlannedAttack()],
+            Planned = [new PlannedAttack { AttackDefinition = new EnemyAttackBase() }],
         });
 
         _ = new HandBlockInteractionSystem(entityManager);

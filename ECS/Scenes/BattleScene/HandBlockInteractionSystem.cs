@@ -4,9 +4,7 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
-using ChurchSuffering.ECS.Objects.Cards;
 using ChurchSuffering.ECS.Services;
-using ChurchSuffering.ECS.Objects.EnemyAttacks;
 
 namespace ChurchSuffering.ECS.Systems
 {
@@ -56,70 +54,18 @@ namespace ChurchSuffering.ECS.Systems
 			if (ui == null || data?.Card == null) return;
 			if (card.GetComponent<AssignedBlockCard>() != null) return;
 
-			string id = data.Card.CardId ?? string.Empty;
-			// Weapons and tokens cannot be assigned as block.
-			try
+			var eligibility = EnemyBlockerEligibilityService.EvaluateHandBlocker(EntityManager, card, pa);
+			if (!eligibility.IsEligible)
 			{
-				if (!string.IsNullOrEmpty(id))
+				if (eligibility.Failure == HandBlockEligibilityFailure.CardUnavailable)
 				{
-					if (data.Card.IsWeapon || data.Card.IsToken) return;
+					data.Card.OnCantPlay?.Invoke(EntityManager, card);
 				}
-			}
-			catch { }
-
-			if (card.GetComponent<Intimidated>() != null)
-			{
-				EventManager.Publish(new CantPlayCardMessage { Message = "Can't block with intimidated cards!" });
-				return;
-			}
-
-			if (card.GetComponent<Pledge>() != null)
-			{
-				EventManager.Publish(new CantPlayCardMessage { Message = "Can't block with pledged card!" });
-				return;
-			}
-
-			if (card.GetComponent<CannotBlockThisAttack>() is CannotBlockThisAttack cannotBlock)
-			{
-				EventManager.Publish(cannotBlock.Reason);
-				return;
-			}
-
-			if (data.Card.Type == CardType.Block && !data.Card.CanPlay(EntityManager, card))
-			{
-				data.Card.OnCantPlay?.Invoke(EntityManager, card);
-				return;
-			}
-
-			if (card.GetComponent<Shackle>() != null)
-			{
-				var allShackled = deck.Hand.Where(c => c.GetComponent<Shackle>() != null).ToList();
-				foreach (var shackledCard in allShackled)
+				else if (!string.IsNullOrWhiteSpace(eligibility.RejectionMessage))
 				{
-					var shackledData = shackledCard.GetComponent<CardData>();
-					if (shackledData?.Card != null
-						&& shackledData.Card.Type == CardType.Block
-						&& !shackledData.Card.CanPlay(EntityManager, shackledCard))
-					{
-						EventManager.Publish(new CantPlayCardMessage { Message = "All shackled cards must be playable!" });
-						return;
-					}
+					EventManager.Publish(new CantPlayCardMessage { Message = eligibility.RejectionMessage });
 				}
-			}
-
-			var enemyAttack = GetComponentHelper.GetPlannedAttack(EntityManager);
-			if (enemyAttack != null && enemyAttack.BlockingRestrictionType != BlockingRestrictionType.None)
-			{
-				var message = EnemyAttackTextHelper.GetBlockingRestrictionText(enemyAttack.BlockingRestrictionType);
-				if (message.EndsWith(".")) message = message.Substring(0, message.Length - 1) + "!";
-				bool canPlay = CardColorQualificationService.MeetsBlockingRestriction(
-					card,
-					enemyAttack.BlockingRestrictionType);
-				if (!canPlay)
-				{
-					EventManager.Publish(new CantPlayCardMessage { Message = message });
-					return;
-				}
+				return;
 			}
 
 			int blockValue = BlockValueService.GetTotalBlockValue(card);

@@ -1,16 +1,19 @@
 using System.Collections.Generic;
+using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 
 namespace ChurchSuffering.ECS.Events
 {
     public enum ReplaceableEffectKind
     {
-        FrostbiteThresholdDamage
+        FrostbiteThresholdDamage,
+        ScarGain
     }
 
     public enum ReplacementEffectActionType
     {
-        ModifyHp
+        ModifyHp,
+        ApplyPassive
     }
 
     public interface IReplacementEffectProvider
@@ -39,5 +42,6 @@ namespace ChurchSuffering.ECS.Events
         public Entity Target { get; set; }
         public int Delta { get; set; }
         public ModifyTypeEnum DamageType { get; set; } = ModifyTypeEnum.Effect;
+        public AppliedPassiveType PassiveType { get; set; }
     }
 }

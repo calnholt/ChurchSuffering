@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -10,7 +12,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int HealAmountUpgrade = 1;
         public ArkOfTheCovenant()
         {
-            CardId = "ark_of_the_covenant";
+            CardId = CardIds.ArkOfTheCovenant.ToKey();
             Name = "Ark of the Covenant";
             Target = "Player";
             Text = $"When this card is discarded to pay for a card cost, heal {HealAmount} HP.";

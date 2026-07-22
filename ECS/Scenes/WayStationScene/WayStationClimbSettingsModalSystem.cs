@@ -245,6 +245,11 @@ namespace ChurchSuffering.ECS.Systems
 			var close = EnsureEntity(WayStationSceneConstants.CloseButtonName);
 			EnsureComponent(close, new WayStationClimbModalCloseButton());
 			EnsureComponent(close, new WayStationPenanceMotion { Role = WayStationPenanceMotionRole.Close });
+			EnsureComponent(close, new HotKey
+			{
+				Button = FaceButton.B,
+				IsKeyboardMouseEnabled = false,
+			});
 			EnsureUi(close);
 		}
 

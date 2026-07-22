@@ -3,6 +3,8 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Services;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -14,7 +16,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public RenounceAndHone()
         {
-            CardId = "renounce_and_hone";
+            CardId = CardIds.RenounceAndHone.ToKey();
             Name = "Renounce and Hone";
             Target = "Player";
             Text = $"As an additional cost, discard your pledged card that was not pledged this turn. Gain {VigorAmount} vigor and {GetCourageAmount(IsUpgraded)} courage.";

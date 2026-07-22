@@ -163,7 +163,7 @@ namespace ChurchSuffering.ECS.Services
 				RunDeckService.PrimaryLoadoutId,
 				outgoingEntryId,
 				offer.incomingCardKey,
-				out _,
+				out var replacementEntry,
 				countsAsTraded: true))
 			{
 				return false;
@@ -173,7 +173,7 @@ namespace ChurchSuffering.ECS.Services
 			climb.pendingReplacementOffer = null;
 			if (RunDeckService.IsUpgradedCardKey(offer.incomingCardKey))
 			{
-				CardUpgradeService.InvokeUpgradeConfirmed(offer.incomingCardKey);
+				CardUpgradeService.InvokeUpgradeConfirmed(offer.incomingCardKey, replacementEntry?.entryId);
 			}
 			ClimbRuleService.AdvanceTimeAndUpdateSlots(
 				climb,
@@ -262,14 +262,19 @@ namespace ChurchSuffering.ECS.Services
 				RunDeckService.PrimaryLoadoutId,
 				slot.deckEntryId,
 				upgraded,
-				out _)) return false;
+				out var upgradedEntry)) return false;
+
+			string beforeSecondary = upgradedEntry?.secondaryColor ?? string.Empty;
+			CardUpgradeService.InvokeUpgradeConfirmed(upgraded, slot.deckEntryId);
+			var afterEntry = SaveCache.GetRunDeckEntry(RunDeckService.PrimaryLoadoutId, slot.deckEntryId);
 			EventManager.Publish(new ClimbCardUpgradeAnimationRequested
 			{
 				DeckEntryId = slot.deckEntryId,
 				BaseCardKey = current,
 				UpgradedCardKey = upgraded,
+				BeforeSecondaryColor = beforeSecondary,
+				AfterSecondaryColor = afterEntry?.secondaryColor ?? beforeSecondary,
 			});
-			CardUpgradeService.InvokeUpgradeConfirmed(upgraded);
 			return true;
 		}
 

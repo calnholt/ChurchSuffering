@@ -3,6 +3,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -14,7 +16,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int DamageUpgradeAmount = 2;
         public Crusade()
         {
-            CardId = "crusade";
+            CardId = CardIds.Crusade.ToKey();
             Name = "Crusade";
             Target = "Enemy";
             Text = $"If this card is pledged when played, gain {ActionPointGain} action point and {MightGain} might.";

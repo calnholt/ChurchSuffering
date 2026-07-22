@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public ZealousVow()
         {
-            CardId = "zealous_vow";
+            CardId = CardIds.ZealousVow.ToKey();
             Name = "Zealous Vow";
             Target = "Player";
             Text = $"Gain {AggressionAmount} aggression.\n\nWhen this is pledged, gain {SharpenAmount} sharpen. ";

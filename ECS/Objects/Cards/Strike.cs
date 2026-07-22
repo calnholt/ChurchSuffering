@@ -2,6 +2,8 @@ using System;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int CourageGained = 2;
         public Strike()
         {
-            CardId = "strike";
+            CardId = CardIds.Strike.ToKey();
             Name = "Strike";
             Target = "Enemy";
             Text = $"{Chance}% chance to gain {CourageGained} courage.";

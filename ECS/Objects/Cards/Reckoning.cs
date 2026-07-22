@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -12,7 +14,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private List<string> CostUpgrade = ["Red", "Any"];
         public Reckoning()
         {
-            CardId = "reckoning";
+            CardId = CardIds.Reckoning.ToKey();
             Rarity = Rarity.Starter;
             Name = "Reckoning";
             Target = "Enemy";

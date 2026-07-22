@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -10,7 +12,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int RequiredAttackHitsUpgrade = 1;
         public Kunai()
         {
-            CardId = "kunai";
+            CardId = CardIds.Kunai.ToKey();
             Name = "Kunai";
             Target = "Enemy";
             Text = $"Wounds the enemy if you have dealt attack damage {RequiredAttackHits} times this action phase. Exhaust on play or at the end of your turn";

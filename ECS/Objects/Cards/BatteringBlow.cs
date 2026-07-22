@@ -2,6 +2,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public BatteringBlow()
         {
-            CardId = "battering_blow";
+            CardId = CardIds.BatteringBlow.ToKey();
             Name = "Battering Blow";
             Target = "Enemy";
             Text = $"If no cards were discarded to play this, gain {CourageGain} courage.";

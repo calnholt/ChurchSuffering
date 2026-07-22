@@ -96,6 +96,8 @@ namespace ChurchSuffering.ECS.Events
 		public string DeckEntryId { get; set; } = string.Empty;
 		public string BaseCardKey { get; set; } = string.Empty;
 		public string UpgradedCardKey { get; set; } = string.Empty;
+		public string BeforeSecondaryColor { get; set; } = string.Empty;
+		public string AfterSecondaryColor { get; set; } = string.Empty;
 		public bool DelayClimbTurnoverUntilComplete { get; set; }
 	}
 

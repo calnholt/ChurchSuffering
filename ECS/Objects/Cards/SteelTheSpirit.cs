@@ -2,6 +2,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -12,7 +14,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
         private int CourageCostUpgrade = 1;
         public SteelTheSpirit()
         {
-            CardId = "steel_the_spirit";
+            CardId = CardIds.SteelTheSpirit.ToKey();
             Name = "Steel the Spirit";
             Target = "Player";
             Text = $"As an additional cost, lose {GetCourageCost(IsUpgraded)} courage. Gain {VigorGained} vigor.";

@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -8,7 +10,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
     {
         public PierceThrough()
         {
-            CardId = "pierce_through";
+            CardId = CardIds.PierceThrough.ToKey();
             Name = "Pierce Through";
             Target = "Enemy";
             Cost = ["Any", "Any"];

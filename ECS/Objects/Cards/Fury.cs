@@ -4,6 +4,8 @@ using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
     {
         public Fury()
         {
-            CardId = "fury";
+            CardId = CardIds.Fury.ToKey();
             Name = "Fury";
             Target = "Player";
             Text = "Gain 1 aggression, then double your aggression.";

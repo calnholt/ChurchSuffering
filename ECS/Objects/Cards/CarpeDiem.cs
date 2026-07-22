@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -11,7 +13,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public CarpeDiem()
         {
-            CardId = "carpe_diem";
+            CardId = CardIds.CarpeDiem.ToKey();
             Name = "Carpe Diem";
             Target = "Player";
             Text = $"Gain {CourageGain} courage. At the end of the turn, lose all courage.";

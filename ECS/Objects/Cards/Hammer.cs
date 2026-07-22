@@ -1,6 +1,8 @@
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
+using ChurchSuffering.ECS.Data.Ids;
+using CardIds = ChurchSuffering.ECS.Data.Ids.CardId;
 
 namespace ChurchSuffering.ECS.Objects.Cards
 {
@@ -10,7 +12,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
 
         public Hammer()
         {
-            CardId = "hammer";
+            CardId = CardIds.Hammer.ToKey();
             Name = "Hammer";
             Target = "Enemy";
             Text = $"Gain {VigorGained} vigor.";

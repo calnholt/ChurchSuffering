@@ -5,6 +5,7 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Objects.Cards;
+using ChurchSuffering.ECS.Objects.EnemyAttacks;
 using ChurchSuffering.ECS.Services;
 using ChurchSuffering.ECS.Systems;
 using Microsoft.Xna.Framework;
@@ -189,7 +190,7 @@ public class PledgeAndBlockInteractionTests : IDisposable
 		entityManager.AddComponent(enemy, new AttackIntent
 		{
 			ActiveAttackSequence = 1,
-			Planned = [new PlannedAttack()],
+			Planned = [new PlannedAttack { AttackDefinition = new EnemyAttackBase() }],
 		});
         var system = new HandBlockInteractionSystem(entityManager);
         int moves = 0;
