@@ -453,13 +453,13 @@ public sealed class EncounterDisplaySystem : Core.System
 	[DebugEditable(DisplayName = "Portrait Parallax Multiplier Y", Step = 0.01f, Min = 0f, Max = 0.25f)]
 	public float PortraitParallaxMultiplierY { get; set; } = 0.01f;
 	[DebugEditable(DisplayName = "Portrait Parallax Max Offset", Step = 1f, Min = 0f, Max = 200f)]
-	public float PortraitParallaxMaxOffset { get; set; } = 151f;
+	public float PortraitParallaxMaxOffset { get; set; } = 150f;
 	[DebugEditable(DisplayName = "Portrait Parallax Smooth Time", Step = 0.01f, Min = 0f, Max = 0.5f)]
 	public float PortraitParallaxSmoothTime { get; set; }
 	[DebugEditable(DisplayName = "Portrait Parallax Zoom", Step = 0.01f, Min = 0.5f, Max = 1.5f)]
 	public float PortraitParallaxZoom { get; set; } = 0.8f;
 	[DebugEditable(DisplayName = "Portrait Crop Top Bias", Step = 0.01f, Min = 0f, Max = 1f)]
-	public float PortraitCropTopBias { get; set; } = 0.07f;
+	public float PortraitCropTopBias { get; set; } = 0f;
 	public EncounterDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em)
 	{
 		_batch = batch; _assets = assets; _pixel = assets.GetPixel(Color.White);
@@ -642,13 +642,13 @@ public sealed class ChoiceStatsRailDisplaySystem : Core.System
 public sealed class ClimbChoicePreviewDisplaySystem : Core.System
 {
 	[DebugEditable(DisplayName = "Expiry Pulse Seconds", Step = 0.01f, Min = 0.2f, Max = 4f)]
-	public float PulseSeconds { get; set; } = 1.15f;
+	public float PulseSeconds { get; set; } = 1.5f;
 	[DebugEditable(DisplayName = "Expiry Minimum Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
-	public float MinimumOpacity { get; set; } = 0.35f;
+	public float MinimumOpacity { get; set; } = 0.7f;
 	[DebugEditable(DisplayName = "Expiry Maximum Grayscale", Step = 0.01f, Min = 0f, Max = 1f)]
-	public float MaximumGrayscale { get; set; } = 1f;
+	public float MaximumGrayscale { get; set; } = 0.8f;
 	[DebugEditable(DisplayName = "Expiry Restore Seconds", Step = 0.01f, Min = 0.01f, Max = 1f)]
-	public float RestoreSeconds { get; set; } = 0.18f;
+	public float RestoreSeconds { get; set; } = 0.01f;
 
 	public ClimbChoicePreviewDisplaySystem(EntityManager em, SpriteBatch batch, ImageAssetService assets) : base(em) { }
 	protected override IEnumerable<Entity> GetRelevantEntities() => EntityManager.GetEntitiesWithComponent<ClimbSlotPresentation>();
