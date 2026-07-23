@@ -204,6 +204,8 @@ namespace ChurchSuffering.ECS.Systems
                 SfxTrack.DeckShuffle => "SFX/deck-shuffle",
                 SfxTrack.ShieldBlock => "SFX/shield-block",
 				SfxTrack.GemDrop => "SFX/gem-drop",
+				SfxTrack.ClimbPointsTier => "SFX/climb-points-award/climb-points-tier",
+				SfxTrack.ClimbPointsTotal => "SFX/climb-points-award/climb-points-total",
                 _ => null
             };
 

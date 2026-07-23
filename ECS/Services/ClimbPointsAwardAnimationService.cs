@@ -11,9 +11,20 @@ public enum ClimbPointsAwardRumbleMilestoneKind
 	CountUpComplete,
 }
 
+public enum ClimbPointsAwardAudioMilestoneKind
+{
+	TierReveal,
+	CrestReveal,
+}
+
 public readonly record struct ClimbPointsAwardRumbleMilestone(
 	ClimbPointsAwardRumbleMilestoneKind Kind,
 	float Seconds);
+
+public readonly record struct ClimbPointsAwardAudioMilestone(
+	ClimbPointsAwardAudioMilestoneKind Kind,
+	float Seconds,
+	int TierIndex = -1);
 
 public readonly record struct ClimbPointsAwardRumbleSample(
 	float LowFrequency = 0f,
@@ -305,6 +316,37 @@ public static class ClimbPointsAwardAnimationService
 			{
 				yield return milestone;
 			}
+		}
+	}
+
+	public static IEnumerable<ClimbPointsAwardAudioMilestone> GetCrossedAudioMilestones(
+		float previousSeconds,
+		float currentSeconds,
+		int earnedTierCount)
+	{
+		float previous = ClampElapsed(previousSeconds);
+		float current = ClampElapsed(currentSeconds);
+		if (current <= previous) yield break;
+
+		int earned = Math.Max(0, earnedTierCount);
+		for (int index = 0; index < earned; index++)
+		{
+			float reveal = GetTierRevealSeconds(index);
+			if (reveal > previous + BoundaryEpsilon && reveal <= current + BoundaryEpsilon)
+			{
+				yield return new ClimbPointsAwardAudioMilestone(
+					ClimbPointsAwardAudioMilestoneKind.TierReveal,
+					reveal,
+					index);
+			}
+		}
+
+		float crest = GetCrestRevealSeconds(earned);
+		if (crest > previous + BoundaryEpsilon && crest <= current + BoundaryEpsilon)
+		{
+			yield return new ClimbPointsAwardAudioMilestone(
+				ClimbPointsAwardAudioMilestoneKind.CrestReveal,
+				crest);
 		}
 	}
 

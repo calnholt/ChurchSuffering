@@ -209,6 +209,50 @@ public sealed class ClimbPointsAwardAnimationTests
 	}
 
 	[Fact]
+	public void GetCrossedAudioMilestones_fires_tier_and_crest_boundaries()
+	{
+		const int earnedTierCount = 3;
+		float firstTier = ClimbPointsAwardAnimationService.GetTierRevealSeconds(0);
+		float secondTier = ClimbPointsAwardAnimationService.GetTierRevealSeconds(1);
+		float crest = ClimbPointsAwardAnimationService.GetCrestRevealSeconds(earnedTierCount);
+
+		var firstCrossing = ClimbPointsAwardAnimationService.GetCrossedAudioMilestones(
+			firstTier - 0.01f,
+			firstTier + 0.01f,
+			earnedTierCount).ToArray();
+		var secondCrossing = ClimbPointsAwardAnimationService.GetCrossedAudioMilestones(
+			secondTier - 0.01f,
+			secondTier + 0.01f,
+			earnedTierCount).ToArray();
+		var crestCrossing = ClimbPointsAwardAnimationService.GetCrossedAudioMilestones(
+			crest - 0.01f,
+			crest + 0.01f,
+			earnedTierCount).ToArray();
+
+		Assert.Single(firstCrossing);
+		Assert.Equal(ClimbPointsAwardAudioMilestoneKind.TierReveal, firstCrossing[0].Kind);
+		Assert.Equal(0, firstCrossing[0].TierIndex);
+		Assert.Single(secondCrossing);
+		Assert.Equal(1, secondCrossing[0].TierIndex);
+		Assert.Single(crestCrossing);
+		Assert.Equal(ClimbPointsAwardAudioMilestoneKind.CrestReveal, crestCrossing[0].Kind);
+	}
+
+	[Fact]
+	public void GetCrossedAudioMilestones_empty_run_yields_only_crest()
+	{
+		float crest = ClimbPointsAwardAnimationService.GetCrestRevealSeconds(0);
+		var crossings = ClimbPointsAwardAnimationService.GetCrossedAudioMilestones(
+			0f,
+			crest + 0.5f,
+			0).ToArray();
+
+		Assert.Single(crossings);
+		Assert.Equal(ClimbPointsAwardAudioMilestoneKind.CrestReveal, crossings[0].Kind);
+		Assert.Equal(crest, crossings[0].Seconds);
+	}
+
+	[Fact]
 	public void Finale_profiles_and_scales_scale_with_progress_cap()
 	{
 		Assert.Equal(

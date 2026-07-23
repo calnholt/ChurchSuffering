@@ -89,6 +89,24 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 	[DebugEditable(DisplayName = "Rumble Empty Pulse Trigger", Step = 0.05f, Min = 0f, Max = 1f)]
 	public float RumbleEmptyPulseTrigger { get; set; } = 0.04f;
 
+	[DebugEditable(DisplayName = "SFX Volume", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float SfxVolume { get; set; } = 0.5f;
+
+	[DebugEditable(DisplayName = "Tier SFX Pitch Base", Step = 0.05f, Min = -1f, Max = 1f)]
+	public float TierSfxPitchBase { get; set; } = -0.45f;
+
+	[DebugEditable(DisplayName = "Tier SFX Pitch Step", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float TierSfxPitchStep { get; set; } = 0.18f;
+
+	[DebugEditable(DisplayName = "Total SFX Pitch Base", Step = 0.05f, Min = -1f, Max = 1f)]
+	public float TotalSfxPitchBase { get; set; } = -0.35f;
+
+	[DebugEditable(DisplayName = "Total SFX Pitch Step", Step = 0.05f, Min = 0f, Max = 1f)]
+	public float TotalSfxPitchStep { get; set; } = 0.18f;
+
+	[DebugEditable(DisplayName = "Empty Total SFX Pitch", Step = 0.05f, Min = -1f, Max = 1f)]
+	public float EmptyTotalPitch { get; set; } = -0.90f;
+
 	public ClimbPointsAwardDisplaySystem(
 		EntityManager entityManager,
 		GraphicsDevice graphicsDevice,
@@ -138,6 +156,7 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 				state.ElapsedSeconds += delta;
 				int earned = ClimbPointsAwardAnimationService.GetEarnedTierCount(GetScenario(state));
 				UpdateRumble(state, earned);
+				UpdateSfx(state, earned);
 				if (state.ElapsedSeconds >= ClimbPointsAwardAnimationService.GetReadySeconds(earned))
 					state.Phase = ClimbPointsAwardOverlayPhase.Ready;
 				break;
@@ -451,6 +470,43 @@ public sealed class ClimbPointsAwardDisplaySystem : Core.System, IDebugInspectab
 				Scale = scale,
 				Group = RumbleGroup.Default,
 			});
+		}
+	}
+
+	private void UpdateSfx(ClimbPointsAwardOverlayState state, int earnedTierCount)
+	{
+		if (SfxVolume <= 0f) return;
+
+		foreach (var milestone in ClimbPointsAwardAnimationService.GetCrossedAudioMilestones(
+			state.PreviousElapsedSeconds,
+			state.ElapsedSeconds,
+			earnedTierCount))
+		{
+			switch (milestone.Kind)
+			{
+				case ClimbPointsAwardAudioMilestoneKind.TierReveal:
+					EventManager.Publish(new PlaySfxEvent
+					{
+						Track = SfxTrack.ClimbPointsTier,
+						Volume = SfxVolume,
+						Pitch = MathHelper.Clamp(
+							TierSfxPitchBase + milestone.TierIndex * TierSfxPitchStep,
+							-1f,
+							1f),
+					});
+					break;
+				case ClimbPointsAwardAudioMilestoneKind.CrestReveal:
+					float pitch = earnedTierCount <= 0
+						? EmptyTotalPitch
+						: TotalSfxPitchBase + earnedTierCount * TotalSfxPitchStep;
+					EventManager.Publish(new PlaySfxEvent
+					{
+						Track = SfxTrack.ClimbPointsTotal,
+						Volume = SfxVolume,
+						Pitch = MathHelper.Clamp(pitch, -1f, 1f),
+					});
+					break;
+			}
 		}
 	}
 

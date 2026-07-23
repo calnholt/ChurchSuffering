@@ -14,7 +14,7 @@ namespace ChurchSuffering.ECS.Events
 		public int NewLevel { get; set; }
 		public bool WeaponChanged { get; set; }
 	}
-	public class OpenWayStationSaintsMedalsModalEvent { }
+	public class OpenWayStationCollectionModalEvent { }
 
 	public class WayStationDialoguePoiSelectedEvent
 	{

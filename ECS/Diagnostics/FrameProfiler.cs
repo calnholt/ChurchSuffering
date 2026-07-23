@@ -99,7 +99,7 @@ namespace ChurchSuffering.Diagnostics
             "HandDisplaySystem.DrawHand",
             "CardListModalSystem.DrawForeground",
             "BoosterPackOpeningDisplaySystem.Draw",
-            "WayStationSaintsMedalsModalSystem.Draw",
+            "WayStationCollectionModalV2.Draw",
         };
 
         private static readonly BoundedHistogram RenderCadenceSession = new();

@@ -9,9 +9,9 @@ using Microsoft.Xna.Framework;
 
 namespace ChurchSuffering.ECS.Systems
 {
-	public sealed class ClimbOverviewGamepadInputSystem : Core.System
+	public sealed class RewardModalGamepadInputSystem : Core.System
 	{
-		public ClimbOverviewGamepadInputSystem(EntityManager entityManager)
+		public RewardModalGamepadInputSystem(EntityManager entityManager)
 			: base(entityManager)
 		{
 		}
@@ -40,8 +40,8 @@ namespace ChurchSuffering.ECS.Systems
 		{
 			if (!Game1.WindowIsActive) return false;
 			if (StateSingleton.IsActive) return false;
-			if (!IsClimbScene()) return false;
-			if (RewardModalDisplaySystem.IsOverlayOpen(EntityManager)) return false;
+			if (!IsSupportedScene()) return false;
+			if (!RewardModalDisplaySystem.IsInteractiveOverlayOpen(EntityManager)) return false;
 
 			PlayerInputFrame frame = PlayerInputService.GetFrame(EntityManager);
 			if (!frame.IsGamepadConnected) return false;
@@ -50,12 +50,13 @@ namespace ChurchSuffering.ECS.Systems
 			return true;
 		}
 
-		private bool IsClimbScene()
+		private bool IsSupportedScene()
 		{
-			return EntityManager.GetEntitiesWithComponent<SceneState>()
+			SceneId scene = EntityManager.GetEntitiesWithComponent<SceneState>()
 				.FirstOrDefault()
 				?.GetComponent<SceneState>()
-				?.Current == SceneId.Climb;
+				?.Current ?? SceneId.None;
+			return scene is SceneId.Climb or SceneId.Battle;
 		}
 
 		private bool IsPauseMenuActive()
@@ -72,7 +73,6 @@ namespace ChurchSuffering.ECS.Systems
 				return;
 			}
 
-			if (StateSingleton.PreventClicking) return;
 			if (ClimbOverviewViewService.IsUnrelatedModalOpen(EntityManager)) return;
 
 			ClimbOverviewViewService.Open(EntityManager);

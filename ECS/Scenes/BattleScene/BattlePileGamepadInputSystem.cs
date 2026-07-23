@@ -46,6 +46,7 @@ namespace ChurchSuffering.ECS.Systems
 			if (!Game1.WindowIsActive) return false;
 			if (StateSingleton.IsActive) return false;
 			if (!IsBattleScene()) return false;
+			if (RewardModalDisplaySystem.ShouldSuppressBattleSceneDisplay(EntityManager)) return false;
 
 			PlayerInputFrame frame = PlayerInputService.GetFrame(EntityManager);
 			if (!frame.IsGamepadConnected) return false;

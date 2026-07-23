@@ -26,6 +26,7 @@ namespace ChurchSuffering.Diagnostics.Snapshots
 			Register(new PassiveApplicationSnapshotFixture());
             Register(new NarrativeEventModalSnapshotFixture());
             Register(new WayStationSnapshotFixture());
+            Register(new WayStationCollectionSnapshotFixture());
             Register(new PlayerHudSnapshotFixture());
             Register(new EquipmentTooltipSnapshotFixture());
 			Register(new EnemyDamageMeterSnapshotFixture());

@@ -86,7 +86,7 @@ namespace ChurchSuffering.ECS.Systems
 			{
 				HidePoi(WayStationSceneConstants.ClimbPoiName);
 				HidePoi(WayStationSceneConstants.AchievementPoiName);
-				HidePoi(WayStationSceneConstants.SaintsMedalsPoiName);
+				HidePoi(WayStationSceneConstants.CollectionPoiName);
 				return;
 			}
 
@@ -111,15 +111,16 @@ namespace ChurchSuffering.ECS.Systems
 				AchievementPoiHoverScale,
 				visible: true);
 
+			bool collectionVisible = HasAnyCollectionItems();
 			SyncScreenPoi(
-				WayStationSceneConstants.SaintsMedalsPoiName,
-				"saints-medals",
-				"Saints Medals",
+				WayStationSceneConstants.CollectionPoiName,
+				"collection",
+				"Collection",
 				MedalPoiRightMargin,
 				MedalPoiBottomMargin,
 				MedalPoiIconSize,
 				MedalPoiHoverScale,
-				visible: HasPurchasedAnyMedals());
+				visible: collectionVisible);
 
 			if (climbVisible && WasClicked(WayStationSceneConstants.ClimbPoiName))
 			{
@@ -131,9 +132,9 @@ namespace ChurchSuffering.ECS.Systems
 				EventManager.Publish(new ShowTransition { Scene = SceneId.Achievement, SkipHold = true });
 			}
 
-			if (HasPurchasedAnyMedals() && WasClicked(WayStationSceneConstants.SaintsMedalsPoiName))
+			if (collectionVisible && WasClicked(WayStationSceneConstants.CollectionPoiName))
 			{
-				EventManager.Publish(new OpenWayStationSaintsMedalsModalEvent());
+				EventManager.Publish(new OpenWayStationCollectionModalEvent());
 			}
 		}
 
@@ -147,7 +148,7 @@ namespace ChurchSuffering.ECS.Systems
 			DrawPoi(_climbPoi, WayStationSceneConstants.ClimbPoiName);
 			DrawPoi(_achievementPoi, WayStationSceneConstants.AchievementPoiName);
 			DrawAchievementBadge();
-			DrawPoi(_medalPoi, WayStationSceneConstants.SaintsMedalsPoiName);
+			DrawPoi(_medalPoi, WayStationSceneConstants.CollectionPoiName);
 		}
 
 		private void DrawAchievementBadge()
@@ -320,9 +321,11 @@ namespace ChurchSuffering.ECS.Systems
 			return EntityManager.GetEntity(name)?.GetComponent<UIElement>()?.IsHovered == true;
 		}
 
-		private static bool HasPurchasedAnyMedals()
+		private static bool HasAnyCollectionItems()
 		{
-			return SaveCache.GetPurchasedWayStationMedalIds().Count > 0;
+			return WayStationCollectionCatalogService.HasAnyUnlocked(
+				SaveCache.GetCollection(),
+				SaveCache.GetWayStationMeta());
 		}
 
 		private static bool HasAchievementRewardsToClaim()

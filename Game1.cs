@@ -58,7 +58,12 @@ public class Game1 : Game
     private WayStationPenanceNodeDisplaySystem _wayStationPenanceNodeDisplaySystem;
     private WayStationPenanceTallyDisplaySystem _wayStationPenanceTallyDisplaySystem;
     private WayStationPenanceFooterDisplaySystem _wayStationPenanceFooterDisplaySystem;
-    private WayStationSaintsMedalsModalSystem _wayStationSaintsMedalsModalSystem;
+    private WayStationCollectionModalSystemV2 _wayStationCollectionModalSystem;
+    private WayStationCollectionMotionSystem _wayStationCollectionMotionSystem;
+    private WayStationCollectionChromeDisplaySystem _wayStationCollectionChromeDisplaySystem;
+    private WayStationCollectionCardsDisplaySystem _wayStationCollectionCardsDisplaySystem;
+    private WayStationCollectionSaintsDisplaySystem _wayStationCollectionSaintsDisplaySystem;
+    private WayStationCollectionEquipmentDisplaySystem _wayStationCollectionEquipmentDisplaySystem;
 	private ClimbPointsAwardDisplaySystem _climbPointsAwardDisplaySystem;
     private BattleSceneSystem _battleSceneSystem;
     private ClimbSceneSystem _climbSceneSystem;
@@ -82,6 +87,7 @@ public class Game1 : Game
     private EquipmentEquipDebugSystem _equipmentEquipDebugSystem;
     private LocationNameDisplaySystem _locationNameDisplaySystem;
     private RewardModalDisplaySystem _rewardModalDisplaySystem;
+    private RewardModalGamepadInputSystem _rewardModalGamepadInputSystem;
     private NarrativeEventModalDisplaySystem _narrativeEventModalDisplaySystem;
     private CardListModalSystem _cardListModalSystem;
     private BoosterPackOpeningDisplaySystem _boosterPackOpeningDisplaySystem;
@@ -233,7 +239,12 @@ public class Game1 : Game
         _wayStationPenanceNodeDisplaySystem = new WayStationPenanceNodeDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationPenanceTallyDisplaySystem = new WayStationPenanceTallyDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
         _wayStationPenanceFooterDisplaySystem = new WayStationPenanceFooterDisplaySystem(_world.EntityManager, _spriteBatch, _imageAssets);
-        _wayStationSaintsMedalsModalSystem = new WayStationSaintsMedalsModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _wayStationCollectionModalSystem = new WayStationCollectionModalSystemV2(_world.EntityManager);
+        _wayStationCollectionMotionSystem = new WayStationCollectionMotionSystem(_world.EntityManager);
+        _wayStationCollectionChromeDisplaySystem = new WayStationCollectionChromeDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _wayStationCollectionCardsDisplaySystem = new WayStationCollectionCardsDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _wayStationCollectionSaintsDisplaySystem = new WayStationCollectionSaintsDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
+        _wayStationCollectionEquipmentDisplaySystem = new WayStationCollectionEquipmentDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _battleSceneSystem = new BattleSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _climbSceneSystem = new ClimbSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content, _imageAssets);
         _achievementSceneSystem = new AchievementSceneSystem(_world.EntityManager, _world.SystemManager, _world, GraphicsDevice, _spriteBatch, Content);
@@ -313,7 +324,12 @@ public class Game1 : Game
         _world.AddSystem(_wayStationPenanceNodeDisplaySystem);
         _world.AddSystem(_wayStationPenanceTallyDisplaySystem);
         _world.AddSystem(_wayStationPenanceFooterDisplaySystem);
-        _world.AddSystem(_wayStationSaintsMedalsModalSystem);
+        _world.AddSystem(_wayStationCollectionModalSystem);
+        _world.AddSystem(_wayStationCollectionMotionSystem);
+        _world.AddSystem(_wayStationCollectionChromeDisplaySystem);
+        _world.AddSystem(_wayStationCollectionCardsDisplaySystem);
+        _world.AddSystem(_wayStationCollectionSaintsDisplaySystem);
+        _world.AddSystem(_wayStationCollectionEquipmentDisplaySystem);
 		_world.AddSystem(_climbPointsAwardDisplaySystem);
         _world.AddSystem(_battleSceneSystem);
         _world.AddSystem(_climbSceneSystem);
@@ -363,6 +379,8 @@ public class Game1 : Game
         _world.AddSystem(_equipmentEquipDebugSystem);
         _rewardModalDisplaySystem = new RewardModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets, Content);
         _world.AddSystem(_rewardModalDisplaySystem);
+        _rewardModalGamepadInputSystem = new RewardModalGamepadInputSystem(_world.EntityManager);
+        _world.AddSystem(_rewardModalGamepadInputSystem);
         _narrativeEventModalDisplaySystem = new NarrativeEventModalDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
         _world.AddSystem(_narrativeEventModalDisplaySystem);
         _cardListModalSystem = new CardListModalSystem(_world.EntityManager, GraphicsDevice, _spriteBatch, _imageAssets);
@@ -663,7 +681,7 @@ public class Game1 : Game
                 FrameProfiler.Measure("WayStationPenanceNodeDisplaySystem.Draw", _wayStationPenanceNodeDisplaySystem.Draw);
                 FrameProfiler.Measure("WayStationPenanceTallyDisplaySystem.Draw", _wayStationPenanceTallyDisplaySystem.Draw);
                 FrameProfiler.Measure("WayStationPenanceFooterDisplaySystem.Draw", _wayStationPenanceFooterDisplaySystem.Draw);
-                FrameProfiler.Measure("WayStationSaintsMedalsModalSystem.Draw", _wayStationSaintsMedalsModalSystem.Draw);
+                FrameProfiler.Measure("WayStationCollectionModalV2.Draw", DrawWayStationCollectionModal);
                 break;
             }
             case SceneId.Battle:
@@ -699,6 +717,14 @@ public class Game1 : Game
         }
         // Cursor blur trail (additive pass before cursor) - skip in card debug mode
         DrawCursor();
+    }
+
+    private void DrawWayStationCollectionModal()
+    {
+        _wayStationCollectionChromeDisplaySystem.Draw();
+        _wayStationCollectionCardsDisplaySystem.Draw();
+        _wayStationCollectionSaintsDisplaySystem.Draw();
+        _wayStationCollectionEquipmentDisplaySystem.Draw();
     }
 
     private void DrawGlobalOverlays()

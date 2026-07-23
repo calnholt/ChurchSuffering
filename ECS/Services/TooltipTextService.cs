@@ -13,6 +13,7 @@ namespace ChurchSuffering.ECS.Services
 	internal static class TooltipTextService
 	{
 		public readonly record struct TooltipTextBlock(string Id, string Text);
+		public readonly record struct KeywordTextRun(string Text, bool IsKeyword);
 
 		private sealed class KeywordDefinition
 		{
@@ -355,6 +356,50 @@ namespace ChurchSuffering.ECS.Services
 		public static IReadOnlyList<TooltipTextBlock> GetKeywordTooltipBlocks(string text)
 		{
 			return BuildRecursiveKeywordBlocks([text], new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+		}
+
+		internal static IReadOnlyList<KeywordTextRun> GetKeywordTextRuns(string text)
+		{
+			if (string.IsNullOrEmpty(text)) return [];
+
+			var candidates = new List<(int Index, int Length, int RegistryIndex)>();
+			for (int registryIndex = 0; registryIndex < KeywordDefinitions.Length; registryIndex++)
+			{
+				var definition = KeywordDefinitions[registryIndex];
+				foreach (var alias in definition.Aliases)
+				{
+					int start = 0;
+					while (start < text.Length)
+					{
+						int index = text.IndexOf(alias, start, StringComparison.OrdinalIgnoreCase);
+						if (index < 0) break;
+						if (IsTermBoundary(text, index - 1) && IsTermBoundary(text, index + alias.Length))
+						{
+							candidates.Add((index, alias.Length, registryIndex));
+							break;
+						}
+						start = index + alias.Length;
+					}
+				}
+			}
+
+			var matches = candidates
+				.OrderBy(match => match.Index)
+				.ThenBy(match => match.RegistryIndex)
+				.ThenByDescending(match => match.Length)
+				.ToArray();
+			var runs = new List<KeywordTextRun>();
+			int cursor = 0;
+			foreach (var match in matches)
+			{
+				if (match.Index < cursor) continue;
+				if (match.Index > cursor)
+					runs.Add(new KeywordTextRun(text[cursor..match.Index], false));
+				runs.Add(new KeywordTextRun(text.Substring(match.Index, match.Length), true));
+				cursor = match.Index + match.Length;
+			}
+			if (cursor < text.Length) runs.Add(new KeywordTextRun(text[cursor..], false));
+			return runs.Count == 0 ? [new KeywordTextRun(text, false)] : runs;
 		}
 
 		private static IReadOnlyList<TooltipTextBlock> BuildRecursiveKeywordBlocks(

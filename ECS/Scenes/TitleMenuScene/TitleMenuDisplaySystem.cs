@@ -37,6 +37,15 @@ namespace ChurchSuffering.ECS.Systems
 		[DebugEditable(DisplayName = "Text Offset Y", Step = 2, Min = -2000, Max = 2000)]
 		public int TextOffsetY { get; set; } = 0;
 
+		[DebugEditable(DisplayName = "Version Padding", Step = 1, Min = 0, Max = 128)]
+		public int VersionPadding { get; set; } = 24;
+
+		[DebugEditable(DisplayName = "Version Text Scale", Step = 0.01f, Min = 0.05f, Max = 1f)]
+		public float VersionTextScale { get; set; } = 0.12f;
+
+		[DebugEditable(DisplayName = "Version Alpha", Step = 0.05f, Min = 0f, Max = 1f)]
+		public float VersionAlpha { get; set; } = 0.75f;
+
 		public TitleMenuDisplaySystem(World world, SpriteBatch spriteBatch)
 			: base(world.EntityManager)
 		{
@@ -132,6 +141,22 @@ namespace ChurchSuffering.ECS.Systems
 				var pos = new Vector2(w / 2f - lineWidth / 2f + TextOffsetX, startY + i * lineHeight);
 				_spriteBatch.DrawString(FontSingleton.TitleFont, lines[i], pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
 			}
+
+			DrawVersionLabel(h);
+		}
+
+		private void DrawVersionLabel(int viewportHeight)
+		{
+			var font = FontSingleton.ChakraPetchFont;
+			if (font == null) return;
+
+			string label = GameVersionService.DisplayLabel;
+			float versionScale = System.Math.Max(0.01f, VersionTextScale);
+			Vector2 size = font.MeasureString(label) * versionScale;
+			int padding = System.Math.Max(0, VersionPadding);
+			var position = new Vector2(padding, viewportHeight - size.Y - padding);
+			var versionColor = Color.White * MathHelper.Clamp(VersionAlpha, 0f, 1f);
+			_spriteBatch.DrawString(font, label, position, versionColor, 0f, Vector2.Zero, versionScale, SpriteEffects.None, 0f);
 		}
 	}
 }

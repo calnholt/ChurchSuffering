@@ -38,7 +38,7 @@ namespace ChurchSuffering.ECS.Data.Tutorials
                 };
             }
 
-            Add("equipment", "Equipment can block or activate for an effect once per battle.", "equipment", "Equipment", "right", "has_equipment");
+            Add("equipment", "Equipment has limited uses and can only be used once per battle.", "equipment", "Equipment", "right", "has_equipment");
             return definitions;
         }
     }

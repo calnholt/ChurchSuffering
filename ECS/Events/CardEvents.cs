@@ -560,8 +560,10 @@ namespace ChurchSuffering.ECS.Events
         UpgradeCard = 40,
         BoosterPackReveal = 41,
         DeckShuffle = 42,
-        ShieldBlock = 43,
+		ShieldBlock = 43,
 		GemDrop = 44,
+		ClimbPointsTier = 45,
+		ClimbPointsTotal = 46,
     }
 
     /// <summary>

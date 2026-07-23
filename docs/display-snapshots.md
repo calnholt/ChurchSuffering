@@ -70,6 +70,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `modular-fx` | Modular battle FX | Fixed battle anchors with one modular effect at a sampled animation time |
 | `passive-application` | Passive application animation | Status seals at fixed player/enemy anchors, including stagger and concurrent attack variants |
 | `waystation` | WayStation hub | Hub scene with the Waystation banner, Climb POI, and Achievement POI |
+| `waystation-collection` | WayStation collection modal | Reliquary cards, saints, and equipment tabs |
 | `player-hud` | Production player HUD systems | Player HUD geometry and state variants |
 | `equipment-tooltip` | Equipment panel and tooltip | Active, passive, and used equipment states |
 | `enemy-damage-meter` | Enemy damage meter | Initial, transitioning, settled, and absorb animation samples |
@@ -682,6 +683,30 @@ This feature fixture is a plain, non-baseline capture. Inspect the generated PNG
 ### Output file
 
 `debug/snapshots/waystation/penance-12.png`
+
+---
+
+## `waystation-collection`
+
+Captures the production Crusader's Reliquary modal with a deterministic partial
+collection and all three weapons unlocked. This fixture intentionally has no visual
+baseline. Do not use `--verify` or `--accept`; compare fresh captures manually with
+`mockups/waystation-collection-overlay-v1.html`.
+
+```bash
+dotnet run -- snapshot waystation-collection cards
+dotnet run -- snapshot waystation-collection cards-hover
+dotnet run -- snapshot waystation-collection saints
+dotnet run -- snapshot waystation-collection saints-hover
+dotnet run -- snapshot waystation-collection equipment
+dotnet run -- snapshot waystation-collection equipment-hover
+./scripts/capture-waystation-collection-snapshots.sh
+```
+
+Outputs are written to `debug/snapshots/waystation-collection/`. Run the complete
+six-variant script at most twice for one implementation verification: inspect all
+six images after the first pass, make one correction if needed, then capture the
+whole set once more.
 
 ---
 

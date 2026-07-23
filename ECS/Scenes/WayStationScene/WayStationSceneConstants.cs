@@ -4,7 +4,7 @@ namespace ChurchSuffering.ECS.Systems
 	{
 		public const string ClimbPoiName = "WayStation_POI_Climb";
 		public const string AchievementPoiName = "WayStation_POI_Achievement";
-		public const string SaintsMedalsPoiName = "WayStation_POI_SaintsMedals";
+		public const string CollectionPoiName = "WayStation_POI_Collection";
 		public const string KeeperDialoguePoiName = "WayStation_POI_KeeperDialogue";
 		public const string NpcDialoguePoiName = "WayStation_POI_NpcDialogue";
 		public const string RookTutorialDialoguePoiName = "WayStation_POI_RookTutorialDialogue";
@@ -24,12 +24,18 @@ namespace ChurchSuffering.ECS.Systems
 		public const string HammerButtonName = "WayStation_Button_Hammer";
 		public const string DepartButtonName = "WayStation_Button_Depart";
 		public const string ModalContextId = "waystation-climb-modal";
-		public const string SaintsMedalsModalRootName = "WayStation_SaintsMedalsModalRoot";
-		public const string SaintsMedalsModalPanelName = "WayStation_SaintsMedalsModalPanel";
-		public const string SaintsMedalsModalCloseButtonName = "WayStation_SaintsMedalsModalClose";
-		public const string SaintsMedalsModalListScrollName = "WayStation_SaintsMedalsModalListScroll";
-		public const string SaintsMedalsModalDetailScrollName = "WayStation_SaintsMedalsModalDetailScroll";
-		public const string SaintsMedalsModalTilePrefix = "WayStation_SaintsMedalsModalTile_";
-		public const string SaintsMedalsModalContextId = "waystation-saints-medals-modal";
+		public const string CollectionModalRootName = "WayStation_CollectionModalRoot";
+		public const string CollectionModalShellName = "WayStation_CollectionModalShell";
+		public const string CollectionModalCloseButtonName = "WayStation_CollectionModalClose";
+		public const string CollectionModalContextId = "waystation-collection-modal";
+		public const string CollectionTabPrefix = "WayStation_CollectionTab_";
+		public const string CollectionFilterPrefix = "WayStation_CollectionFilter_";
+		public const string CollectionCardStackPrefix = "WayStation_CollectionCard_";
+		public const string CollectionSaintTilePrefix = "WayStation_CollectionSaint_";
+		public const string CollectionEquipmentTilePrefix = "WayStation_CollectionEquipment_";
+		public const string CollectionCardScrollName = "WayStation_CollectionCardScroll";
+		public const string CollectionSaintListScrollName = "WayStation_CollectionSaintListScroll";
+		public const string CollectionSaintDetailScrollName = "WayStation_CollectionSaintDetailScroll";
+		public const string CollectionEquipmentScrollName = "WayStation_CollectionEquipmentScroll";
 	}
 }

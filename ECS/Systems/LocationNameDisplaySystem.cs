@@ -251,7 +251,7 @@ namespace ChurchSuffering.ECS.Systems
 		private bool IsAnyWayStationModalOpen()
 		{
 			return IsModalOpen(WayStationSceneConstants.ModalRootName)
-				|| IsModalOpen(WayStationSceneConstants.SaintsMedalsModalRootName);
+				|| IsModalOpen(WayStationSceneConstants.CollectionModalRootName);
 		}
 
 		private bool IsModalOpen(string entityName)

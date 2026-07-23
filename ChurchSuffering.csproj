@@ -60,6 +60,9 @@
 
   <!-- Include your content assets -->
   <ItemGroup>
+    <None Include="VERSION">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Content Include="Content\Data\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

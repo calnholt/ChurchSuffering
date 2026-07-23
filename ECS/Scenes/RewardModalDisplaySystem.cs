@@ -773,9 +773,16 @@ public sealed class RewardModalDisplaySystem : Core.System
 			if (state.IsEncounterReward)
 				ClimbEncounterService.ResolvePendingEncounterReward(EntityManager);
 		}
+		CloseClimbOverviewIfOpen();
 		DestroyViews();
 		ResetState(state);
 		StateSingleton.PreventClicking = false;
+	}
+
+	private void CloseClimbOverviewIfOpen()
+	{
+		if (ClimbOverviewViewService.IsOverviewOpen(EntityManager))
+			ClimbOverviewViewService.Close(EntityManager);
 	}
 
 	private void SyncControls(QuestRewardOverlayState state, float elapsedSeconds)
@@ -1613,6 +1620,16 @@ public sealed class RewardModalDisplaySystem : Core.System
 
 	public static bool IsOverlayOpen(EntityManager entityManager) =>
 		entityManager?.GetEntity("QuestRewardOverlay")?.GetComponent<QuestRewardOverlayState>()?.IsOpen == true;
+
+	public static bool IsInteractiveOverlayOpen(EntityManager entityManager)
+	{
+		QuestRewardOverlayState state = entityManager?.GetEntity("QuestRewardOverlay")?.GetComponent<QuestRewardOverlayState>();
+		return state != null
+			&& state.IsOpen
+			&& !state.IsPreviewOnly
+			&& !state.DismissInProgress
+			&& state.Phase == QuestRewardPresentationPhase.Visible;
+	}
 
 	public static bool ShouldSuppressBattleSceneDisplay(EntityManager entityManager)
 	{

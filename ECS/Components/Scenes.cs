@@ -118,30 +118,6 @@ namespace ChurchSuffering.ECS.Components
 		public Entity Owner { get; set; }
 	}
 
-	public class WayStationSaintsMedalsModalRoot : IComponent
-	{
-		public Entity Owner { get; set; }
-		public string SelectedMedalId { get; set; } = string.Empty;
-		public int ListScrollOffset { get; set; }
-		public int DetailScrollOffset { get; set; }
-	}
-
-	public class WayStationSaintsMedalsModalPanel : IComponent
-	{
-		public Entity Owner { get; set; }
-	}
-
-	public class WayStationSaintsMedalsModalCloseButton : IComponent
-	{
-		public Entity Owner { get; set; }
-	}
-
-	public class WayStationSaintsMedalsModalTile : IComponent
-	{
-		public Entity Owner { get; set; }
-		public string MedalId { get; set; } = string.Empty;
-	}
-
 	public enum WayStationArrivalKind
 	{
 		Initial,

@@ -406,6 +406,18 @@
 /processorParam:TextureFormat=Color
 /build:Equipment/pierced_heart_plate.png
 
+#begin Equipment/purging_bracers.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Equipment/purging_bracers.png
+
 #begin Equipment/sanctified_circlet.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -429,6 +441,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Equipment/sunderstep_treads.png
+
+#begin Equipment/warbringer_bracers.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Equipment/warbringer_bracers.png
 
 #begin Equipment/whetstone_gauntlets.png
 /importer:TextureImporter
@@ -1481,6 +1505,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Medals/st_joan_of_arc.png
+
+#begin Medals/st_jospeh.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=True
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Medals/st_jospeh.png
 
 #begin Medals/st_jude.png
 /importer:TextureImporter
@@ -2581,6 +2617,83 @@
 /processorParam:TextureFormat=Color
 /build:CardArt/sword_into_shield.png
 
+#begin CardArt/blessed_onslaught.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/blessed_onslaught.png
+
+#begin CardArt/comeback.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/comeback.png
+
+#begin CardArt/even_temper.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/even_temper.png
+
+#begin CardArt/full_force.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/full_force.png
+
+#begin CardArt/oath_guard.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/oath_guard.png
+
+#begin CardArt/retaliate.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/retaliate.png
+
+#begin CardArt/warding_pledge.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=0,0,0,0
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:TextureFormat=Color
+/build:CardArt/warding_pledge.png
+
 #---------------------------------- Data JSON Files ---------------------------------#
 
 #begin Data/Equipment/focus_visor.json
@@ -3044,6 +3157,16 @@
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /build:SFX/gem-drop.wav
+
+#begin SFX/climb-points-award/climb-points-tier.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/climb-points-award/climb-points-tier.wav
+
+#begin SFX/climb-points-award/climb-points-total.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/climb-points-award/climb-points-total.wav
 
 #begin Enemies/Hex_Bailiff.png
 /importer:TextureImporter
