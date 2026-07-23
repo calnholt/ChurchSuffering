@@ -744,6 +744,7 @@ namespace ChurchSuffering.ECS.Systems
 				{
 					stack.PendingFrontColor = WayStationCollectionModalLogic.NextColor(stack.FrontColor);
 					stack.ColorSwitchProgress = 0f;
+					EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.DrawCard, Volume = 0.5f });
 				}
 				return;
 			}

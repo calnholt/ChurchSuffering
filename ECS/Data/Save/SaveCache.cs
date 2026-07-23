@@ -146,6 +146,40 @@ namespace ChurchSuffering.ECS.Data.Save
 			}
 		}
 
+		public static int GetCursorSpeedLevel()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				return ClampCursorSpeedLevel(_save?.cursorSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
+			}
+		}
+
+		public static int GetCursorFastSpeedLevel()
+		{
+			EnsureLoaded();
+			lock (_lock)
+			{
+				return ClampCursorSpeedLevel(_save?.cursorFastSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
+			}
+		}
+
+		public static void SetCursorSpeedLevel(int value)
+		{
+			SetCursorSpeedLevels(cursorSpeedLevel: value, cursorFastSpeedLevel: null);
+		}
+
+		public static void SetCursorFastSpeedLevel(int value)
+		{
+			SetCursorSpeedLevels(cursorSpeedLevel: null, cursorFastSpeedLevel: value);
+		}
+
+		/// <summary>Maps a -50–+50 slider level to a 0.5–1.5 scale around the default (level 0 = 1.0).</summary>
+		public static float CursorSpeedScaleFromLevel(int level)
+		{
+			return 1f + ClampCursorSpeedLevel(level) / 100f;
+		}
+
 		public static void SetMusicVolumeLevel(int value)
 		{
 			SetAudioVolumeLevels(musicVolumeLevel: value, sfxVolumeLevel: null);
@@ -181,6 +215,35 @@ namespace ChurchSuffering.ECS.Data.Save
 				{
 					MusicVolumeLevel = resolvedMusic,
 					SfxVolumeLevel = resolvedSfx,
+				});
+			}
+		}
+
+		private static void SetCursorSpeedLevels(int? cursorSpeedLevel, int? cursorFastSpeedLevel)
+		{
+			bool changed = false;
+			int resolvedCursor = SaveFile.DEFAULT_CURSOR_SPEED_LEVEL;
+			int resolvedFast = SaveFile.DEFAULT_CURSOR_SPEED_LEVEL;
+			lock (_lock)
+			{
+				EnsureLoaded();
+				if (_save == null) _save = new SaveFile();
+
+				resolvedCursor = ClampCursorSpeedLevel(cursorSpeedLevel ?? _save.cursorSpeedLevel);
+				resolvedFast = ClampCursorSpeedLevel(cursorFastSpeedLevel ?? _save.cursorFastSpeedLevel);
+				if (_save.cursorSpeedLevel == resolvedCursor && _save.cursorFastSpeedLevel == resolvedFast) return;
+
+				_save.cursorSpeedLevel = resolvedCursor;
+				_save.cursorFastSpeedLevel = resolvedFast;
+				changed = Persist();
+			}
+
+			if (changed)
+			{
+				EventManager.Publish(new CursorSettingsChangedEvent
+				{
+					CursorSpeedLevel = resolvedCursor,
+					CursorFastSpeedLevel = resolvedFast,
 				});
 			}
 		}
@@ -646,6 +709,8 @@ namespace ChurchSuffering.ECS.Data.Save
 			var seenTutorials = prior?.seenTutorials;
 			int musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
 			int sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
+			int cursorSpeedLevel = ClampCursorSpeedLevel(prior?.cursorSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
+			int cursorFastSpeedLevel = ClampCursorSpeedLevel(prior?.cursorFastSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
 			bool rumbleEnabled = prior?.rumbleEnabled ?? true;
 			var save = CreateDefaultRunSave();
 			save.achievements = achievements ?? new Dictionary<string, AchievementProgress>();
@@ -655,6 +720,8 @@ namespace ChurchSuffering.ECS.Data.Save
 			save.collection = CloneCollection(prior?.collection) ?? CreateInitialCollection();
 			save.musicVolumeLevel = musicVolumeLevel;
 			save.sfxVolumeLevel = sfxVolumeLevel;
+			save.cursorSpeedLevel = cursorSpeedLevel;
+			save.cursorFastSpeedLevel = cursorFastSpeedLevel;
 			save.rumbleEnabled = rumbleEnabled;
 			return save;
 		}
@@ -668,6 +735,8 @@ namespace ChurchSuffering.ECS.Data.Save
 				gold = 0,
 				musicVolumeLevel = ClampAudioVolumeLevel(prior?.musicVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
 					sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
+					cursorSpeedLevel = ClampCursorSpeedLevel(prior?.cursorSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL),
+					cursorFastSpeedLevel = ClampCursorSpeedLevel(prior?.cursorFastSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL),
 					rumbleEnabled = prior?.rumbleEnabled ?? true,
 				runMapSeed = 0,
 				items = new List<SaveItem>(),
@@ -688,6 +757,11 @@ namespace ChurchSuffering.ECS.Data.Save
 		private static int ClampAudioVolumeLevel(int value)
 		{
 			return Math.Clamp(value, 0, 100);
+		}
+
+		private static int ClampCursorSpeedLevel(int value)
+		{
+			return Math.Clamp(value, SaveFile.MIN_CURSOR_SPEED_LEVEL, SaveFile.MAX_CURSOR_SPEED_LEVEL);
 		}
 
 		private static SaveFile CreateDefaultRunSave()

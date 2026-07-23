@@ -564,6 +564,8 @@ namespace ChurchSuffering.ECS.Events
 		GemDrop = 44,
 		ClimbPointsTier = 45,
 		ClimbPointsTotal = 46,
+		GameOver = 47,
+		AchievementReveal = 48,
     }
 
     /// <summary>

@@ -22,6 +22,8 @@ namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 		{
 			_variant = ParseVariant(args ?? Array.Empty<string>());
 			SaveCache.SetRumbleEnabled(_variant == "rumble-on");
+			SaveCache.SetCursorSpeedLevel(SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
+			SaveCache.SetCursorFastSpeedLevel(SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
 			ctx.SceneEntity.GetComponent<SceneState>().Current = SceneId.Climb;
 			_pause = ctx.World.GetSystem<PauseMenuDisplaySystem>()
 				?? throw new DisplaySnapshotSetupException("Pause menu system was not registered.");

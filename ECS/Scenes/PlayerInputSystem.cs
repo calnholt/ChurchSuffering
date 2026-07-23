@@ -4,6 +4,7 @@ using System.Linq;
 using ChurchSuffering.Diagnostics;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Data.Save;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Input;
 using ChurchSuffering.ECS.Services;
@@ -21,6 +22,8 @@ namespace ChurchSuffering.ECS.Systems
         private int _lastViewportWidth = -1;
         private int _lastViewportHeight = -1;
         private bool _inputEnabled = true;
+        private float _cursorSpeedScale = 1f;
+        private float _cursorFastSpeedScale = 1f;
 
         [DebugEditable(DisplayName = "Cursor Radius (px)", Step = 1f, Min = 2f, Max = 256f)]
         public int CursorRadius { get; set; } = 26;
@@ -47,7 +50,11 @@ namespace ChurchSuffering.ECS.Systems
             : base(entityManager)
         {
             _inputSource = inputSource;
+            ApplyCursorSpeedLevels(
+                SaveCache.GetCursorSpeedLevel(),
+                SaveCache.GetCursorFastSpeedLevel());
             EventManager.Subscribe<SetPlayerInputEnabledEvent>(e => _inputEnabled = e.Enabled);
+            EventManager.Subscribe<CursorSettingsChangedEvent>(OnCursorSettingsChanged);
         }
 
         protected override IEnumerable<Entity> GetRelevantEntities()
@@ -175,7 +182,7 @@ namespace ChurchSuffering.ECS.Systems
                 10f);
             if (frame.RightTrigger > 0.1f)
             {
-                multiplier *= TriggerSpeedMultiplier;
+                multiplier *= TriggerSpeedMultiplier * _cursorFastSpeedScale;
             }
             else
             {
@@ -185,6 +192,7 @@ namespace ChurchSuffering.ECS.Systems
             float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
             _cursorPosition += new Vector2(direction.X, -direction.Y)
                 * BaseSpeed
+                * _cursorSpeedScale
                 * multiplier
                 * elapsed;
             _cursorPosition.X = MathHelper.Clamp(_cursorPosition.X, 0f, Game1.VirtualWidth);
@@ -226,6 +234,17 @@ namespace ChurchSuffering.ECS.Systems
             return isOverInteractable
                 ? MathHelper.Clamp(SlowdownMultiplier, 0.05f, 1f)
                 : 1f;
+        }
+
+        private void OnCursorSettingsChanged(CursorSettingsChangedEvent evt)
+        {
+            ApplyCursorSpeedLevels(evt.CursorSpeedLevel, evt.CursorFastSpeedLevel);
+        }
+
+        private void ApplyCursorSpeedLevels(int cursorSpeedLevel, int cursorFastSpeedLevel)
+        {
+            _cursorSpeedScale = SaveCache.CursorSpeedScaleFromLevel(cursorSpeedLevel);
+            _cursorFastSpeedScale = SaveCache.CursorSpeedScaleFromLevel(cursorFastSpeedLevel);
         }
 
         private CursorTarget ResolveCursorTarget(Vector2 position)

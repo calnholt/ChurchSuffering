@@ -93,6 +93,7 @@ namespace ChurchSuffering.ECS.Systems
             var transform = entity.GetComponent<Transform>();
             if (transform == null) return;
 
+            EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.AchievementReveal, Volume = 0.5f });
             SpawnConfetti(transform.Position);
         }
 

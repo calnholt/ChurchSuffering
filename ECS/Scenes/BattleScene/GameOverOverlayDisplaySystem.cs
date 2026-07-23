@@ -72,6 +72,7 @@ namespace ChurchSuffering.ECS.Systems
 			state.Elapsed = 0f;
 			state.SceneSwitched = false;
 			StateSingleton.PreventClicking = true;
+			EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.GameOver, Volume = 0.5f });
 		}
 
 		public static bool IsOverlayActive(EntityManager entityManager)

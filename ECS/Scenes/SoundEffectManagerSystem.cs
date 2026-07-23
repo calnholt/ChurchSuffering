@@ -206,6 +206,8 @@ namespace ChurchSuffering.ECS.Systems
 				SfxTrack.GemDrop => "SFX/gem-drop",
 				SfxTrack.ClimbPointsTier => "SFX/climb-points-award/climb-points-tier",
 				SfxTrack.ClimbPointsTotal => "SFX/climb-points-award/climb-points-total",
+				SfxTrack.GameOver => "SFX/game-over",
+				SfxTrack.AchievementReveal => "SFX/achievement-reveal",
                 _ => null
             };
 

@@ -3168,6 +3168,16 @@
 /processor:SoundEffectProcessor
 /build:SFX/climb-points-award/climb-points-total.wav
 
+#begin SFX/game-over.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/game-over.wav
+
+#begin SFX/achievement-reveal.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/achievement-reveal.wav
+
 #begin Enemies/Hex_Bailiff.png
 /importer:TextureImporter
 /processor:TextureProcessor

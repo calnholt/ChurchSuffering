@@ -15,7 +15,9 @@ namespace ChurchSuffering.ECS.Components
 	{
 		None,
 		MusicVolume,
-		SfxVolume
+		SfxVolume,
+		CursorSpeed,
+		CursorFastSpeed
 	}
 
 	public class PauseMenuOverlay : IComponent

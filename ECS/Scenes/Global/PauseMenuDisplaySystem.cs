@@ -25,6 +25,8 @@ namespace ChurchSuffering.ECS.Systems
 		private const string SkipTutorialName = "PauseMenu_SkipTutorialButton";
 		private const string MusicSliderName = "PauseMenu_MusicSlider";
 		private const string SfxSliderName = "PauseMenu_SfxSlider";
+		private const string CursorSliderName = "PauseMenu_CursorSlider";
+		private const string CursorFastSliderName = "PauseMenu_CursorFastSlider";
 		private const string RumbleToggleName = "PauseMenu_RumbleToggle";
 
 		private readonly SpriteBatch _spriteBatch;
@@ -39,6 +41,8 @@ namespace ChurchSuffering.ECS.Systems
 		private Entity _skipTutorialButtonEntity;
 		private Entity _musicSliderEntity;
 		private Entity _sfxSliderEntity;
+		private Entity _cursorSliderEntity;
+		private Entity _cursorFastSliderEntity;
 		private Entity _rumbleToggleEntity;
 
 		private static readonly Color DimColor = Color.Black;
@@ -113,8 +117,14 @@ namespace ChurchSuffering.ECS.Systems
 		[DebugEditable(DisplayName = "SFX Row Y", Step = 1, Min = 0, Max = 800)]
 		public int SfxRowY { get; set; } = 352;
 
-		[DebugEditable(DisplayName = "Rumble Row Y", Step = 1, Min = 0, Max = 900)]
-		public int RumbleRowY { get; set; } = 500;
+		[DebugEditable(DisplayName = "Cursor Row Y", Step = 1, Min = 0, Max = 900)]
+		public int CursorRowY { get; set; } = 504;
+
+		[DebugEditable(DisplayName = "Fast Cursor Row Y", Step = 1, Min = 0, Max = 900)]
+		public int CursorFastRowY { get; set; } = 656;
+
+		[DebugEditable(DisplayName = "Rumble Row Y", Step = 1, Min = 0, Max = 1000)]
+		public int RumbleRowY { get; set; } = 808;
 
 		[DebugEditable(DisplayName = "Toggle Width", Step = 1, Min = 40, Max = 240)]
 		public int ToggleWidth { get; set; } = 92;
@@ -239,6 +249,8 @@ namespace ChurchSuffering.ECS.Systems
 			overlay.Progress01 = 0f;
 			ResetSlider(_musicSliderEntity, "Music", PauseMenuSliderSetting.MusicVolume, SaveCache.GetMusicVolumeLevel());
 			ResetSlider(_sfxSliderEntity, "SFX", PauseMenuSliderSetting.SfxVolume, SaveCache.GetSfxVolumeLevel());
+			ResetSlider(_cursorSliderEntity, "Cursor", PauseMenuSliderSetting.CursorSpeed, SaveCache.GetCursorSpeedLevel());
+			ResetSlider(_cursorFastSliderEntity, "Fast", PauseMenuSliderSetting.CursorFastSpeed, SaveCache.GetCursorFastSpeedLevel());
 			UpdateEntityLayout(overlay);
 			SyncEntitiesActive(true, GetCurrentScene());
 		}
@@ -250,6 +262,8 @@ namespace ChurchSuffering.ECS.Systems
 			overlay.Progress01 = 1f;
 			ResetSlider(_musicSliderEntity, "Music", PauseMenuSliderSetting.MusicVolume, SaveCache.GetMusicVolumeLevel());
 			ResetSlider(_sfxSliderEntity, "SFX", PauseMenuSliderSetting.SfxVolume, SaveCache.GetSfxVolumeLevel());
+			ResetSlider(_cursorSliderEntity, "Cursor", PauseMenuSliderSetting.CursorSpeed, SaveCache.GetCursorSpeedLevel());
+			ResetSlider(_cursorFastSliderEntity, "Fast", PauseMenuSliderSetting.CursorFastSpeed, SaveCache.GetCursorFastSpeedLevel());
 			UpdateEntityLayout(overlay);
 			SyncEntitiesActive(true, GetCurrentScene());
 		}
@@ -339,6 +353,18 @@ namespace ChurchSuffering.ECS.Systems
 				"SFX",
 				PauseMenuSliderSetting.SfxVolume,
 				SaveCache.GetSfxVolumeLevel());
+			_cursorSliderEntity = EnsureSliderEntity(
+				_cursorSliderEntity,
+				CursorSliderName,
+				"Cursor",
+				PauseMenuSliderSetting.CursorSpeed,
+				SaveCache.GetCursorSpeedLevel());
+			_cursorFastSliderEntity = EnsureSliderEntity(
+				_cursorFastSliderEntity,
+				CursorFastSliderName,
+				"Fast",
+				PauseMenuSliderSetting.CursorFastSpeed,
+				SaveCache.GetCursorFastSpeedLevel());
 
 			if (_rumbleToggleEntity == null || EntityManager.GetEntity(RumbleToggleName) == null)
 			{
@@ -407,7 +433,14 @@ namespace ChurchSuffering.ECS.Systems
 				ShowHoverHighlight = false,
 				IsHidden = true,
 			});
-			EnsureComponent(entity, new PauseMenuSlider { Label = label, Setting = setting, Value = value, Min = 0, Max = 100 });
+			int min = 0;
+			int max = 100;
+			if (setting is PauseMenuSliderSetting.CursorSpeed or PauseMenuSliderSetting.CursorFastSpeed)
+			{
+				min = SaveFile.MIN_CURSOR_SPEED_LEVEL;
+				max = SaveFile.MAX_CURSOR_SPEED_LEVEL;
+			}
+			EnsureComponent(entity, new PauseMenuSlider { Label = label, Setting = setting, Value = value, Min = min, Max = max });
 			InputContextService.EnsureMember(EntityManager, entity, ContextId);
 			EnsureDontDestroy(entity);
 			return entity;
@@ -436,8 +469,16 @@ namespace ChurchSuffering.ECS.Systems
 			slider.Label = label;
 			slider.Setting = setting;
 			slider.Value = value;
-			slider.Min = 0;
-			slider.Max = 100;
+			if (setting is PauseMenuSliderSetting.CursorSpeed or PauseMenuSliderSetting.CursorFastSpeed)
+			{
+				slider.Min = SaveFile.MIN_CURSOR_SPEED_LEVEL;
+				slider.Max = SaveFile.MAX_CURSOR_SPEED_LEVEL;
+			}
+			else
+			{
+				slider.Min = 0;
+				slider.Max = 100;
+			}
 			slider.IsDragging = false;
 		}
 
@@ -448,9 +489,14 @@ namespace ChurchSuffering.ECS.Systems
 			var context = _blockerEntity?.GetComponent<InputContext>();
 			if (context != null) context.IsActive = !hidden;
 
+			bool showCursorSettings = !hidden && IsGamepadInputActive();
+			var layout = ComputeLayout(showCursorSettings);
+
 			SetUiActive(_blockerEntity, !hidden, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight));
 			SetUiActive(_musicSliderEntity, !hidden, _musicSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
 			SetUiActive(_sfxSliderEntity, !hidden, _sfxSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
+			SetUiActive(_cursorSliderEntity, showCursorSettings, _cursorSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
+			SetUiActive(_cursorFastSliderEntity, showCursorSettings, _cursorFastSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
 			SetUiActive(_rumbleToggleEntity, !hidden, _rumbleToggleEntity?.GetComponent<PauseMenuToggle>()?.RowBounds ?? Rectangle.Empty);
 
 			bool showAbandon = !hidden
@@ -458,7 +504,6 @@ namespace ChurchSuffering.ECS.Systems
 				&& !GuidedTutorialService.IsActive(EntityManager);
 			bool showSkipTutorial = !hidden
 				&& GuidedTutorialService.IsActive(EntityManager);
-			var layout = ComputeLayout();
 			SetUiActive(_abandonButtonEntity, showAbandon, layout.AbandonButton);
 			SetUiActive(_skipTutorialButtonEntity, showSkipTutorial, layout.AbandonButton);
 		}
@@ -479,7 +524,8 @@ namespace ChurchSuffering.ECS.Systems
 
 		private void UpdateEntityLayout(PauseMenuOverlay overlay)
 		{
-			var layout = ComputeLayout();
+			bool showCursorSettings = IsGamepadInputActive();
+			var layout = ComputeLayout(showCursorSettings);
 			int railX = CalculateRailX(overlay);
 			layout = layout.Offset(railX, 0);
 
@@ -487,12 +533,16 @@ namespace ChurchSuffering.ECS.Systems
 			UpdateTransform(_blockerEntity, ZOrder, Vector2.Zero);
 			UpdateTransform(_musicSliderEntity, ZOrder + 2, new Vector2(layout.MusicRow.X, layout.MusicRow.Y));
 			UpdateTransform(_sfxSliderEntity, ZOrder + 2, new Vector2(layout.SfxRow.X, layout.SfxRow.Y));
+			UpdateTransform(_cursorSliderEntity, ZOrder + 2, new Vector2(layout.CursorRow.X, layout.CursorRow.Y));
+			UpdateTransform(_cursorFastSliderEntity, ZOrder + 2, new Vector2(layout.CursorFastRow.X, layout.CursorFastRow.Y));
 			UpdateTransform(_rumbleToggleEntity, ZOrder + 2, new Vector2(layout.RumbleRow.X, layout.RumbleRow.Y));
 			UpdateTransform(_abandonButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
 			UpdateTransform(_skipTutorialButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
 
 			UpdateSliderLayout(_musicSliderEntity, layout.MusicRow, layout.MusicTrack);
 			UpdateSliderLayout(_sfxSliderEntity, layout.SfxRow, layout.SfxTrack);
+			UpdateSliderLayout(_cursorSliderEntity, layout.CursorRow, layout.CursorTrack);
+			UpdateSliderLayout(_cursorFastSliderEntity, layout.CursorFastRow, layout.CursorFastTrack);
 			UpdateToggleLayout(_rumbleToggleEntity, layout.RumbleRow, layout.RumbleToggle);
 
 			var abandonUi = _abandonButtonEntity?.GetComponent<UIElement>();
@@ -535,7 +585,8 @@ namespace ChurchSuffering.ECS.Systems
 			var overlay = _rootEntity?.GetComponent<PauseMenuOverlay>();
 			if (overlay == null || overlay.Phase == PauseMenuPhase.Hidden || overlay.Progress01 <= 0f) return;
 
-			var layout = ComputeLayout();
+			bool showCursorSettings = IsGamepadInputActive();
+			var layout = ComputeLayout(showCursorSettings);
 			int railX = CalculateRailX(overlay);
 			float alpha = EaseOut(MathHelper.Clamp(overlay.Progress01, 0f, 1f));
 			var drawLayout = layout.Offset(railX, 0);
@@ -606,7 +657,6 @@ namespace ChurchSuffering.ECS.Systems
 			var titlePos = new Vector2(layout.ContentX, layout.TitleY);
 			_spriteBatch.DrawString(_titleFont, "Paused", titlePos + new Vector2(0, 4), Color.Black * (0.9f * alpha), 0f, Vector2.Zero, TitleScale, SpriteEffects.None, 0f);
 			_spriteBatch.DrawString(_titleFont, "Paused", titlePos, White * alpha, 0f, Vector2.Zero, TitleScale, SpriteEffects.None, 0f);
-			_spriteBatch.DrawString(_bodyFont, "Audio and haptics", new Vector2(layout.ContentX, layout.SubtitleY), MutedWhite * alpha, 0f, Vector2.Zero, SubtitleScale, SpriteEffects.None, 0f);
 		}
 
 		private void DrawFooterButtons(PauseMenuLayout layout, float alpha)
@@ -677,8 +727,23 @@ namespace ChurchSuffering.ECS.Systems
 
 		private PauseMenuLayout ComputeLayout()
 		{
+			return ComputeLayout(IsGamepadInputActive());
+		}
+
+		private bool IsGamepadInputActive()
+		{
+			return PlayerInputService.GetFrame(EntityManager).Device == PlayerInputDevice.Gamepad;
+		}
+
+		private PauseMenuLayout ComputeLayout(bool showCursorSettings)
+		{
 			int buttonY = Game1.VirtualHeight - ButtonBottom - ButtonHeight;
 			int contentX = RailPadLeft;
+			// When cursor settings are hidden, place rumble under SFX with Music→SFX spacing.
+			int rumbleRowY = showCursorSettings
+				? RumbleRowY
+				: SfxRowY + (CursorRowY - SfxRowY);
+
 			return new PauseMenuLayout
 			{
 				ContentX = contentX,
@@ -688,10 +753,14 @@ namespace ChurchSuffering.ECS.Systems
 				Accent = new Rectangle(RailWidth - AccentWidth, AccentTopBottom, AccentWidth, Math.Max(0, Game1.VirtualHeight - AccentTopBottom * 2)),
 				MusicRow = new Rectangle(contentX, MusicRowY, ContentWidth, SliderRowHeight),
 				SfxRow = new Rectangle(contentX, SfxRowY, ContentWidth, SliderRowHeight),
+				CursorRow = new Rectangle(contentX, CursorRowY, ContentWidth, SliderRowHeight),
+				CursorFastRow = new Rectangle(contentX, CursorFastRowY, ContentWidth, SliderRowHeight),
 				MusicTrack = new Rectangle(contentX, MusicRowY + TrackOffsetY, ContentWidth, TrackHeight),
 				SfxTrack = new Rectangle(contentX, SfxRowY + TrackOffsetY, ContentWidth, TrackHeight),
-				RumbleRow = new Rectangle(contentX, RumbleRowY, ContentWidth, SliderRowHeight),
-				RumbleToggle = new Rectangle(contentX + ContentWidth - ToggleWidth, RumbleRowY, ToggleWidth, ToggleHeight),
+				CursorTrack = new Rectangle(contentX, CursorRowY + TrackOffsetY, ContentWidth, TrackHeight),
+				CursorFastTrack = new Rectangle(contentX, CursorFastRowY + TrackOffsetY, ContentWidth, TrackHeight),
+				RumbleRow = new Rectangle(contentX, rumbleRowY, ContentWidth, SliderRowHeight),
+				RumbleToggle = new Rectangle(contentX + ContentWidth - ToggleWidth, rumbleRowY, ToggleWidth, ToggleHeight),
 				AbandonButton = new Rectangle(contentX, buttonY, ContentWidth, ButtonHeight),
 			};
 		}
@@ -718,8 +787,12 @@ namespace ChurchSuffering.ECS.Systems
 			public Rectangle Accent;
 			public Rectangle MusicRow;
 			public Rectangle SfxRow;
+			public Rectangle CursorRow;
+			public Rectangle CursorFastRow;
 			public Rectangle MusicTrack;
 			public Rectangle SfxTrack;
+			public Rectangle CursorTrack;
+			public Rectangle CursorFastTrack;
 			public Rectangle RumbleRow;
 			public Rectangle RumbleToggle;
 			public Rectangle AbandonButton;
@@ -735,8 +808,12 @@ namespace ChurchSuffering.ECS.Systems
 					Accent = OffsetRect(Accent, x, y),
 					MusicRow = OffsetRect(MusicRow, x, y),
 					SfxRow = OffsetRect(SfxRow, x, y),
+					CursorRow = OffsetRect(CursorRow, x, y),
+					CursorFastRow = OffsetRect(CursorFastRow, x, y),
 					MusicTrack = OffsetRect(MusicTrack, x, y),
 					SfxTrack = OffsetRect(SfxTrack, x, y),
+					CursorTrack = OffsetRect(CursorTrack, x, y),
+					CursorFastTrack = OffsetRect(CursorFastTrack, x, y),
 					RumbleRow = OffsetRect(RumbleRow, x, y),
 					RumbleToggle = OffsetRect(RumbleToggle, x, y),
 					AbandonButton = OffsetRect(AbandonButton, x, y),

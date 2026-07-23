@@ -11,12 +11,17 @@ namespace ChurchSuffering.ECS.Data.Save
 	{
 		public const int CURRENT_VERSION = 27;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
+		public const int DEFAULT_CURSOR_SPEED_LEVEL = 0;
+		public const int MIN_CURSOR_SPEED_LEVEL = -50;
+		public const int MAX_CURSOR_SPEED_LEVEL = 50;
 
 		public int version { get; set; } = 0;
 		public bool isRunActive { get; set; }
         public int gold { get; set; } = 0;
 		public int musicVolumeLevel { get; set; } = DEFAULT_AUDIO_VOLUME_LEVEL;
 		public int sfxVolumeLevel { get; set; } = DEFAULT_AUDIO_VOLUME_LEVEL;
+		public int cursorSpeedLevel { get; set; } = DEFAULT_CURSOR_SPEED_LEVEL;
+		public int cursorFastSpeedLevel { get; set; } = DEFAULT_CURSOR_SPEED_LEVEL;
 		public bool rumbleEnabled { get; set; } = true;
 		public int runMapSeed { get; set; }
 		public List<SaveItem> items { get; set; } = new List<SaveItem>();

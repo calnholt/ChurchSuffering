@@ -121,7 +121,7 @@ namespace ChurchSuffering.ECS.Systems
 		{
 			var row = slider.RowBounds;
 			string label = slider.Label ?? string.Empty;
-			string value = $"{slider.Value}%";
+			string value = FormatSliderValue(slider);
 
 			var labelPos = new Vector2(row.X, row.Y);
 			_spriteBatch.DrawString(_font, label, labelPos, LabelColor, 0f, Vector2.Zero, LabelScale, SpriteEffects.None, 0f);
@@ -138,6 +138,16 @@ namespace ChurchSuffering.ECS.Systems
 			bool active = ui.IsHovered || slider.IsDragging;
 			float scale = active ? HoverKnobScale : 1f;
 			DrawKnob(slider.KnobBounds, scale);
+		}
+
+		private static string FormatSliderValue(PauseMenuSlider slider)
+		{
+			if (slider.Setting is PauseMenuSliderSetting.CursorSpeed or PauseMenuSliderSetting.CursorFastSpeed)
+			{
+				return slider.Value > 0 ? $"+{slider.Value}%" : $"{slider.Value}%";
+			}
+
+			return $"{slider.Value}%";
 		}
 
 		private void DrawKnob(Rectangle knob, float scale)
@@ -262,6 +272,12 @@ namespace ChurchSuffering.ECS.Systems
 					break;
 				case PauseMenuSliderSetting.SfxVolume:
 					SaveCache.SetSfxVolumeLevel(slider.Value);
+					break;
+				case PauseMenuSliderSetting.CursorSpeed:
+					SaveCache.SetCursorSpeedLevel(slider.Value);
+					break;
+				case PauseMenuSliderSetting.CursorFastSpeed:
+					SaveCache.SetCursorFastSpeedLevel(slider.Value);
 					break;
 			}
 		}
