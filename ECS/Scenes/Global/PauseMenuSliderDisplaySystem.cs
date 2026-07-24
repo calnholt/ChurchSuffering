@@ -347,6 +347,9 @@ namespace ChurchSuffering.ECS.Systems
 				case PauseMenuSliderSetting.CursorFastSpeed:
 					SaveCache.SetCursorFastSpeedLevel(slider.Value);
 					break;
+				case PauseMenuSliderSetting.RumbleLevel:
+					SaveCache.SetRumbleLevel(slider.Value);
+					break;
 			}
 		}
 	}

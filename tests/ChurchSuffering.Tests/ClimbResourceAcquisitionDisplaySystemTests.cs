@@ -44,6 +44,42 @@ public sealed class ClimbResourceAcquisitionDisplaySystemTests
 	}
 
 	[Fact]
+	public void EncounterPresentationPrefersPersistedPendingResourcesAndReturnsAClone()
+	{
+		EventManager.Clear();
+		try
+		{
+			SaveCache.DeleteSaveFilesIfPresent();
+			SaveCache.StartNewRun();
+			var climb = SaveCache.GetClimbState();
+			climb.pendingEncounterReward = new ClimbEncounterRewardSave
+			{
+				resources = new ClimbResourceSave { red = 2, white = 1, black = 1 },
+			};
+			SaveCache.SaveClimbState(climb);
+			var evt = new ShowQuestRewardOverlay
+			{
+				IsEncounterReward = true,
+				ClimbResources = new ClimbResourceSave { red = 1, white = 0, black = 0 },
+			};
+
+			var resolved = RewardModalDisplaySystem.ResolveClimbResourcesForPresentation(evt);
+
+			Assert.Equal(2, resolved.red);
+			Assert.Equal(1, resolved.white);
+			Assert.Equal(1, resolved.black);
+			resolved.red = 99;
+			Assert.Equal(2, SaveCache.GetClimbState().pendingEncounterReward.resources.red);
+			Assert.Equal(1, evt.ClimbResources.red);
+		}
+		finally
+		{
+			EventManager.Clear();
+			SaveCache.DeleteSaveFilesIfPresent();
+		}
+	}
+
+	[Fact]
 	public void BuildGemSequence_usesLiteralRoundRobinColorOrder()
 	{
 		var sequence = ClimbResourceAcquisitionDisplaySystem.BuildGemSequence(

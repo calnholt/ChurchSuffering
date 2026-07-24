@@ -1,4 +1,5 @@
 using System;
+using ChurchSuffering.ECS.Data.Save;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -12,7 +13,7 @@ namespace ChurchSuffering.ECS.Input
         private GamePadState _previousGamepad;
         private PlayerInputDevice _device = PlayerInputDevice.KeyboardMouse;
         private long _sequence;
-		private bool _rumbleEnabled = true;
+		private int _rumbleLevel = SaveFile.DEFAULT_RUMBLE_LEVEL;
 
         public MonoGamePlayerInputAdapter()
         {
@@ -87,7 +88,7 @@ namespace ChurchSuffering.ECS.Input
 
         public void SetRumbleChannel(string channelId, RumbleMotorState motors)
         {
-            if (!_rumbleEnabled) return;
+            if (_rumbleLevel <= 0) return;
             _rumbleMixer.SetChannel(channelId, motors);
             ApplyMixedRumble();
         }
@@ -100,7 +101,7 @@ namespace ChurchSuffering.ECS.Input
 
         public void PlayRumblePattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default)
         {
-            if (!_rumbleEnabled) return;
+            if (_rumbleLevel <= 0) return;
             _rumbleMixer.PlayPattern(pattern, group);
             ApplyMixedRumble();
         }
@@ -117,11 +118,12 @@ namespace ChurchSuffering.ECS.Input
 			ApplyMixedRumble();
 		}
 
-		public void SetRumbleEnabled(bool enabled)
+		public void SetRumbleLevel(int level)
 		{
-			if (_rumbleEnabled == enabled) return;
-			_rumbleEnabled = enabled;
-			if (!enabled) _rumbleMixer.ClearAll();
+			int clamped = Math.Clamp(level, 0, 100);
+			if (_rumbleLevel == clamped) return;
+			_rumbleLevel = clamped;
+			if (_rumbleLevel <= 0) _rumbleMixer.ClearAll();
 			ApplyMixedRumble();
 		}
 
@@ -133,9 +135,9 @@ namespace ChurchSuffering.ECS.Input
 
         private void ApplyMixedRumble()
         {
-			RumbleMotorState motors = _rumbleEnabled
-				? _rumbleMixer.Combine()
-				: RumbleMotorState.Zero;
+			RumbleMotorState motors = _rumbleLevel <= 0
+				? RumbleMotorState.Zero
+				: _rumbleMixer.Combine().Scaled(_rumbleLevel / 100f);
             GamePad.SetVibration(
 				PlayerIndex.One,
 				motors.LowFrequency,

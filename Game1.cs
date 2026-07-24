@@ -282,7 +282,7 @@ public class Game1 : Game
         _controllerRumbleSystem = new ControllerRumbleSystem(
             _world.EntityManager,
 			playerInputAdapter,
-			SaveCache.GetRumbleEnabled());
+			SaveCache.GetRumbleLevel());
         _uiInteractionSystem = new UIInteractionSystem(_world.EntityManager);
         _pauseMenuDisplaySystem = new PauseMenuDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);
         _pauseMenuSliderDisplaySystem = new PauseMenuSliderDisplaySystem(_world.EntityManager, GraphicsDevice, _spriteBatch);

@@ -577,6 +577,7 @@ namespace ChurchSuffering.ECS.Events
 		FireSpellLayer = 57,
 		BellLowMagical = 58,
 		ChoirChord = 59,
+		ClimbWhoosh = 60,
     }
 
     /// <summary>

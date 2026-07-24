@@ -11,7 +11,7 @@ namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 {
 	public sealed class PauseMenuSnapshotFixture : IDisplaySnapshotFixture
 	{
-		private string _variant = "rumble-on";
+		private string _variant = "rumble-50";
 		private PauseMenuDisplaySystem _pause;
 		private PauseMenuSliderDisplaySystem _sliders;
 		private Texture2D _pixel;
@@ -23,7 +23,7 @@ namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 		public void Setup(DisplaySnapshotContext ctx, string[] args)
 		{
 			_variant = ParseVariant(args ?? Array.Empty<string>());
-			SaveCache.SetRumbleEnabled(_variant == "rumble-on");
+			SaveCache.SetRumbleLevel(_variant == "rumble-50" ? 50 : 0);
 			SaveCache.SetCursorSpeedLevel(SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
 			SaveCache.SetCursorFastSpeedLevel(SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
 			ctx.SceneEntity.GetComponent<SceneState>().Current = SceneId.Climb;
@@ -75,8 +75,8 @@ namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 
 		private static string ParseVariant(string[] args)
 		{
-			if (args.Length == 1 && args[0] is "rumble-on" or "rumble-off") return args[0];
-			throw new DisplaySnapshotSetupException("pause-menu expects one variant: rumble-on or rumble-off");
+			if (args.Length == 1 && args[0] is "rumble-50" or "rumble-0") return args[0];
+			throw new DisplaySnapshotSetupException("pause-menu expects one variant: rumble-50 or rumble-0");
 		}
 	}
 }

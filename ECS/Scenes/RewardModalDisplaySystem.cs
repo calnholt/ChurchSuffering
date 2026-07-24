@@ -544,7 +544,13 @@ public sealed class RewardModalDisplaySystem : Core.System
 
 		if (evt?.DeckRewardOffer?.options?.Any(option => option != null) == true)
 		{
-			OpenDeckOffer(evt.DeckRewardOffer, evt.IsEncounterReward, evt.ClimbResources, evt.DismissScene, previewOnly: false, skipEntrance: false);
+			OpenDeckOffer(
+				evt.DeckRewardOffer,
+				evt.IsEncounterReward,
+				ResolveClimbResourcesForPresentation(evt),
+				evt.DismissScene,
+				previewOnly: false,
+				skipEntrance: false);
 			return;
 		}
 
@@ -603,7 +609,7 @@ public sealed class RewardModalDisplaySystem : Core.System
 		QuestRewardOverlayState state = GetState();
 		ResetState(state);
 		state.IsEncounterReward = evt?.IsEncounterReward == true;
-		state.ClimbResources = CloneResources(evt?.ClimbResources);
+		state.ClimbResources = ResolveClimbResourcesForPresentation(evt);
 		state.DismissScene = evt?.DismissScene ?? SceneId.Climb;
 		state.PendingAutoContinue = true;
 
@@ -1563,6 +1569,17 @@ public sealed class RewardModalDisplaySystem : Core.System
 		white = Math.Max(0, resources.white),
 		black = Math.Max(0, resources.black),
 	};
+
+	internal static ClimbResourceSave ResolveClimbResourcesForPresentation(ShowQuestRewardOverlay evt)
+	{
+		ClimbResourceSave resources = evt?.ClimbResources;
+		if (evt?.IsEncounterReward == true)
+		{
+			resources = SaveCache.GetClimbState()?.pendingEncounterReward?.resources ?? resources;
+		}
+
+		return CloneResources(resources);
+	}
 
 	internal static DeckRewardOfferSave BuildRandomDebugOffer(Random random)
 	{

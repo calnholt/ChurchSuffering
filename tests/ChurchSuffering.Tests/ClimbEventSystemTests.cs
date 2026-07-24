@@ -21,14 +21,19 @@ public class ClimbEventSystemTests
 		try
 		{
 			PrepareRun(
-				new List<LoadoutCardEntry> { Entry("entry_a", "smite|White") },
+				new List<LoadoutCardEntry>
+				{
+					Entry("entry_a", "smite|White", RunScopedStateService.RestrictionBrittle),
+				},
 				Hazard("hazard", ClimbHazardEffectType.Frozen, rewardRed: 2));
 			var world = ClimbWorld();
 			_ = new ClimbEventSystem(world.EntityManager);
 			ShowNarrativeEventOverlay shown = null;
 			var resourceAnimations = new List<ClimbResourceAcquisitionAnimationRequested>();
+			var mutationAnimations = new List<ClimbCardMutationAnimationRequested>();
 			EventManager.Subscribe<ShowNarrativeEventOverlay>(evt => shown = evt);
 			EventManager.Subscribe<ClimbResourceAcquisitionAnimationRequested>(evt => resourceAnimations.Add(evt));
+			EventManager.Subscribe<ClimbCardMutationAnimationRequested>(evt => mutationAnimations.Add(evt));
 
 			EventManager.Publish(new ClimbEventSlotSelectedEvent { SlotId = "hazard" });
 
@@ -36,7 +41,8 @@ public class ClimbEventSystemTests
 			Assert.Equal(1, pending.resources.red);
 			Assert.Equal(ClimbEventStatus.Pending, pending.eventSlots.Single(slot => slot.id == "hazard").status);
 			Assert.Equal(ClimbEventFlowPhase.HazardConfirmation, pending.pendingEvent.phase);
-			Assert.Empty(SaveCache.GetRunDeckEntryRestrictions(RunDeckService.PrimaryLoadoutId, "entry_a"));
+			Assert.DoesNotContain(RunScopedStateService.RestrictionFrozen,
+				SaveCache.GetRunDeckEntryRestrictions(RunDeckService.PrimaryLoadoutId, "entry_a"));
 			Assert.NotNull(shown?.Content);
 			Assert.Contains("Effect: One random deck card becomes Frozen.", shown.Content.Body);
 			Assert.Contains("Gain: 2 Red", shown.Content.Body);
@@ -59,6 +65,14 @@ public class ClimbEventSystemTests
 			Assert.Equal(2, resourceAnimations[0].Resources.red);
 			Assert.Equal(0, resourceAnimations[0].Resources.white);
 			Assert.Equal(0, resourceAnimations[0].Resources.black);
+			Assert.Single(mutationAnimations);
+			Assert.Equal("entry_a", mutationAnimations[0].DeckEntryId);
+			Assert.Equal("smite|White", mutationAnimations[0].CardKey);
+			Assert.Equal(RunScopedStateService.RestrictionFrozen, mutationAnimations[0].RestrictionName);
+			Assert.Equal(
+				new[] { RunScopedStateService.RestrictionBrittle },
+				mutationAnimations[0].CurrentRestrictionNames);
+			Assert.False(mutationAnimations[0].TransitionToBattleOnComplete);
 
 			var repeated = new NarrativeModalChoiceRequested
 			{
@@ -70,6 +84,7 @@ public class ClimbEventSystemTests
 			Assert.True(repeated.Handled);
 			Assert.Equal(3, SaveCache.GetClimbState().resources.red);
 			Assert.Single(resourceAnimations);
+			Assert.Single(mutationAnimations);
 		}
 		finally
 		{
@@ -94,6 +109,38 @@ public class ClimbEventSystemTests
 		Assert.True(result.Succeeded);
 		Assert.Equal(string.Empty, result.RestrictedEntryId);
 		Assert.Equal(2, SaveCache.GetClimbState().resources.red);
+	}
+
+	[Fact]
+	public void Non_restriction_hazard_does_not_publish_mutation_animation()
+	{
+		EventManager.Clear();
+		try
+		{
+			PrepareRun(
+				new List<LoadoutCardEntry> { Entry("entry_a", "smite|White") },
+				Hazard("hazard", ClimbHazardEffectType.Fear, effectAmount: 2, rewardRed: 1));
+			var world = ClimbWorld();
+			_ = new ClimbEventSystem(world.EntityManager);
+			ShowNarrativeEventOverlay shown = null;
+			var mutationAnimations = new List<ClimbCardMutationAnimationRequested>();
+			EventManager.Subscribe<ShowNarrativeEventOverlay>(evt => shown = evt);
+			EventManager.Subscribe<ClimbCardMutationAnimationRequested>(evt => mutationAnimations.Add(evt));
+
+			EventManager.Publish(new ClimbEventSlotSelectedEvent { SlotId = "hazard" });
+			EventManager.Publish(new NarrativeModalChoiceRequested
+			{
+				ResolutionContextId = shown.ResolutionContextId,
+				ChoiceIndex = 0,
+			});
+
+			Assert.Empty(mutationAnimations);
+			Assert.Equal(2, SaveCache.GetClimbState().nextBattlePenalty.fear);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
 	}
 
 	[Fact]

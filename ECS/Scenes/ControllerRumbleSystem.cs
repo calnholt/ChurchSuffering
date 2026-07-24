@@ -13,7 +13,7 @@ namespace ChurchSuffering.ECS.Systems
     {
         private readonly IPlayerInputSource _inputSource;
 		private PlayerInputFrame _latestFrame;
-		private bool _enabled;
+		private int _level;
 
         [DebugEditable(DisplayName = "Rumble Duration (s)", Step = 0.01f, Min = 0f, Max = 1f)]
         public float RumbleDurationSeconds { get; set; } = 0.04f;
@@ -27,12 +27,12 @@ namespace ChurchSuffering.ECS.Systems
         public ControllerRumbleSystem(
 			EntityManager entityManager,
 			IPlayerInputSource inputSource,
-			bool enabled = true)
+			int rumbleLevel = 50)
             : base(entityManager)
         {
             _inputSource = inputSource;
-			_enabled = enabled;
-			_inputSource.SetRumbleEnabled(_enabled);
+			_level = MathHelper.Clamp(rumbleLevel, 0, 100);
+			_inputSource.SetRumbleLevel(_level);
             EventManager.Subscribe<UIElementHoverEnteredEvent>(OnUIElementHoverEntered);
             EventManager.Subscribe<PlayerInputEvent>(OnPlayerInput);
 			EventManager.Subscribe<RumbleRequested>(OnRumbleRequested);
@@ -89,7 +89,7 @@ namespace ChurchSuffering.ECS.Systems
 
 		private void PlayProfile(RumbleProfile profile, float scale, RumbleGroup group)
 		{
-			if (!_enabled
+			if (_level <= 0
 				|| !_latestFrame.IsWindowActive
 				|| !_latestFrame.IsGamepadConnected
 				|| profile == RumbleProfile.None)
@@ -103,9 +103,9 @@ namespace ChurchSuffering.ECS.Systems
 
 		private void OnRumbleSettingsChanged(RumbleSettingsChangedEvent evt)
 		{
-			_enabled = evt?.Enabled == true;
-			_inputSource.SetRumbleEnabled(_enabled);
-			if (!_enabled) _inputSource.ClearAllRumble();
+			_level = MathHelper.Clamp(evt?.Level ?? 0, 0, 100);
+			_inputSource.SetRumbleLevel(_level);
+			if (_level <= 0) _inputSource.ClearAllRumble();
 		}
     }
 }

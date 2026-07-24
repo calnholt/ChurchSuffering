@@ -400,17 +400,78 @@ public sealed class ClimbV2MotionSystemTests
 	}
 
 	[Fact]
-	public void Encounter_portrait_parallax_matches_v1_cursor_direction_and_clamps_magnitude()
+	public void Encounter_portrait_parallax_matches_v1_cursor_direction_without_clamping()
 	{
 		Vector2 target = EncounterDisplaySystem.ComputePortraitParallaxTarget(
-			new Vector2(Game1.VirtualWidth, 0f), true, 0.01f, 0.01f, 151f);
-		Vector2 clamped = EncounterDisplaySystem.ComputePortraitParallaxTarget(
-			new Vector2(Game1.VirtualWidth, 0f), true, 0.01f, 0.01f, 5f);
+			new Vector2(Game1.VirtualWidth, 0f), true, 0.01f, 0.01f);
+		Vector2 distant = EncounterDisplaySystem.ComputePortraitParallaxTarget(
+			new Vector2(Game1.VirtualWidth + 1000f, -1000f), true, 0.01f, 0.01f);
 
 		Assert.Equal(-9.6f, target.X, 3);
 		Assert.Equal(5.4f, target.Y, 3);
-		Assert.Equal(5f, clamped.Length(), 3);
-		Assert.Equal(Vector2.Zero, EncounterDisplaySystem.ComputePortraitParallaxTarget(Vector2.Zero, false, 1f, 1f, 5f));
+		Assert.Equal(-19.6f, distant.X, 3);
+		Assert.Equal(15.4f, distant.Y, 3);
+		Assert.Equal(Vector2.Zero, EncounterDisplaySystem.ComputePortraitParallaxTarget(Vector2.Zero, false, 1f, 1f));
+	}
+
+	[Theory]
+	[InlineData(10f, 20f, 10, 20, 90, 80, 0, 0, 90, 80)]
+	[InlineData(-10f, -20f, 0, 0, 90, 80, 10, 20, 90, 80)]
+	public void Encounter_portrait_translation_moves_freely_on_both_axes_and_clips_to_art(
+		float offsetX,
+		float offsetY,
+		int destinationX,
+		int destinationY,
+		int destinationWidth,
+		int destinationHeight,
+		int sourceX,
+		int sourceY,
+		int sourceWidth,
+		int sourceHeight)
+	{
+		bool visible = ClimbSceneDrawHelpers.TryComputeTranslatedPortraitDraw(
+			100,
+			200,
+			new Rectangle(0, 0, 100, 100),
+			0f,
+			new Vector2(offsetX, offsetY),
+			1f,
+			out Rectangle destination,
+			out Rectangle source);
+
+		Assert.True(visible);
+		Assert.Equal(new Rectangle(destinationX, destinationY, destinationWidth, destinationHeight), destination);
+		Assert.Equal(new Rectangle(sourceX, sourceY, sourceWidth, sourceHeight), source);
+	}
+
+	[Fact]
+	public void Encounter_portrait_translation_preserves_center_framing_and_handles_full_exit()
+	{
+		bool centered = ClimbSceneDrawHelpers.TryComputeTranslatedPortraitDraw(
+			100,
+			200,
+			new Rectangle(25, 35, 100, 100),
+			0.25f,
+			Vector2.Zero,
+			1f,
+			out Rectangle centeredDestination,
+			out Rectangle centeredSource);
+		bool outside = ClimbSceneDrawHelpers.TryComputeTranslatedPortraitDraw(
+			100,
+			200,
+			new Rectangle(25, 35, 100, 100),
+			0.25f,
+			new Vector2(100f, 0f),
+			1f,
+			out Rectangle outsideDestination,
+			out Rectangle outsideSource);
+
+		Assert.True(centered);
+		Assert.Equal(new Rectangle(25, 35, 100, 100), centeredDestination);
+		Assert.Equal(new Rectangle(0, 50, 100, 100), centeredSource);
+		Assert.False(outside);
+		Assert.Equal(Rectangle.Empty, outsideDestination);
+		Assert.Equal(Rectangle.Empty, outsideSource);
 	}
 
 	private static EntityManager BuildClimbEntityManager()

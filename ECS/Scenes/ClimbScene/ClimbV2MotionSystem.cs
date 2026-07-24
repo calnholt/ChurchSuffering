@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
+using ChurchSuffering.ECS.Events;
 using Microsoft.Xna.Framework;
 
 namespace ChurchSuffering.ECS.Systems;
@@ -12,6 +13,11 @@ public sealed class ClimbV2MotionSystem : Core.System
 	private const float AshesSeconds = 1.05f;
 	private const float TurnoverGapSeconds = 0.08f;
 	private const float PurchaseExitSeconds = 0.42f;
+	private const float WhooshVolume = 0.3f;
+	/// <summary>log2(0.75) — ~25% slower / lower pitch.</summary>
+	private const float WhooshLeavePitch = -0.415f;
+	/// <summary>log2(1.25) — ~25% faster / higher pitch.</summary>
+	private const float WhooshEnterPitch = 0.322f;
 
 	public ClimbV2MotionSystem(EntityManager entityManager) : base(entityManager) { }
 
@@ -40,6 +46,8 @@ public sealed class ClimbV2MotionSystem : Core.System
 			}
 			return;
 		}
+
+		TryPlayWhoosh(motion);
 
 		if (motion.Phase == ClimbV2MotionPhase.AshesExiting)
 		{
@@ -92,6 +100,33 @@ public sealed class ClimbV2MotionSystem : Core.System
 		base.Update(gameTime);
 		bool active = GetRelevantEntities().Any(entity => entity.GetComponent<ClimbV2ChoiceMotion>()?.Phase != ClimbV2MotionPhase.Settled);
 		SyncInputSuppression(active);
+	}
+
+	private static void TryPlayWhoosh(ClimbV2ChoiceMotion motion)
+	{
+		if (motion.WhooshPlayedForPhase == motion.Phase) return;
+
+		float pitch;
+		switch (motion.Phase)
+		{
+			case ClimbV2MotionPhase.Entering:
+				pitch = WhooshEnterPitch;
+				break;
+			case ClimbV2MotionPhase.AshesExiting:
+			case ClimbV2MotionPhase.Purchasing:
+				pitch = WhooshLeavePitch;
+				break;
+			default:
+				return;
+		}
+
+		motion.WhooshPlayedForPhase = motion.Phase;
+		EventManager.Publish(new PlaySfxEvent
+		{
+			Track = SfxTrack.ClimbWhoosh,
+			Volume = WhooshVolume,
+			Pitch = pitch,
+		});
 	}
 
 	private static void ApplyAshes(ClimbV2ChoiceMotion motion, float seconds)

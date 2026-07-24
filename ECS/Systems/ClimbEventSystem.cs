@@ -213,6 +213,11 @@ namespace ChurchSuffering.ECS.Systems
 				});
 			}
 
+			if (result?.AlreadyResolved != true)
+			{
+				TryPublishHazardMutationAnimation(result);
+			}
+
 			RunDeckService.EnsureRunDeck(EntityManager);
 			RunScopedStateService.HydrateRunCardRestrictions(EntityManager);
 			var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault(entity => entity.IsActive);
@@ -231,6 +236,32 @@ namespace ChurchSuffering.ECS.Systems
 					});
 				}
 			}
+		}
+
+		private static void TryPublishHazardMutationAnimation(ClimbEventMutationResult result)
+		{
+			if (result == null
+				|| string.IsNullOrWhiteSpace(result.RestrictedEntryId)
+				|| string.IsNullOrWhiteSpace(result.RestrictionName))
+			{
+				return;
+			}
+
+			var entry = SaveCache.GetRunDeckEntry(RunDeckService.PrimaryLoadoutId, result.RestrictedEntryId);
+			if (entry == null || string.IsNullOrWhiteSpace(entry.cardKey)) return;
+
+			EventManager.Publish(new ClimbCardMutationAnimationRequested
+			{
+				DeckEntryId = entry.entryId,
+				CardKey = entry.cardKey,
+				RestrictionName = result.RestrictionName,
+				CurrentRestrictionNames = (entry.restrictions ?? new List<string>())
+					.Where(name => !string.IsNullOrWhiteSpace(name)
+						&& !string.Equals(name, result.RestrictionName, StringComparison.OrdinalIgnoreCase))
+					.Distinct(StringComparer.OrdinalIgnoreCase)
+					.ToList(),
+				TransitionToBattleOnComplete = false,
+			});
 		}
 
 		private static bool HasResources(ClimbResourceSave resources)

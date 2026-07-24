@@ -294,23 +294,85 @@ namespace ChurchSuffering.ECS.Systems
 			float zoom,
 			float opacity = 1f)
 		{
-			if (texture == null || dest.Width <= 0 || dest.Height <= 0) return;
+			if (texture == null) return;
+			if (!TryComputeTranslatedPortraitDraw(
+				texture.Width,
+				texture.Height,
+				dest,
+				topCenterBias,
+				parallaxOffset,
+				zoom,
+				out var visibleDestination,
+				out var visibleSource))
+			{
+				return;
+			}
+
+			spriteBatch.Draw(
+				texture,
+				visibleDestination,
+				visibleSource,
+				Color.White * MathHelper.Clamp(opacity, 0f, 1f));
+		}
+
+		internal static bool TryComputeTranslatedPortraitDraw(
+			int textureWidth,
+			int textureHeight,
+			Rectangle clip,
+			float topCenterBias,
+			Vector2 parallaxOffset,
+			float zoom,
+			out Rectangle visibleDestination,
+			out Rectangle visibleSource)
+		{
+			visibleDestination = Rectangle.Empty;
+			visibleSource = Rectangle.Empty;
+			if (textureWidth <= 0 || textureHeight <= 0 || clip.Width <= 0 || clip.Height <= 0) return false;
 
 			zoom = Math.Max(1f, zoom);
-			float scale = Math.Max(dest.Width / (float)texture.Width, dest.Height / (float)texture.Height) * zoom;
-			int srcW = Math.Min(texture.Width, (int)Math.Ceiling(dest.Width / scale));
-			int srcH = Math.Min(texture.Height, (int)Math.Ceiling(dest.Height / scale));
-			float sourcePerScreenPixel = 1f / scale;
+			float scale = Math.Max(clip.Width / (float)textureWidth, clip.Height / (float)textureHeight) * zoom;
+			int sourceWidth = Math.Min(textureWidth, (int)Math.Ceiling(clip.Width / scale));
+			int sourceHeight = Math.Min(textureHeight, (int)Math.Ceiling(clip.Height / scale));
+			int sourceX = (textureWidth - sourceWidth) / 2;
+			int sourceY = (int)MathHelper.Clamp(
+				textureHeight * topCenterBias,
+				0,
+				Math.Max(0, textureHeight - sourceHeight));
+			var baseSource = new Rectangle(sourceX, sourceY, sourceWidth, sourceHeight);
 
-			int centeredX = (texture.Width - srcW) / 2;
-			int biasedY = (int)MathHelper.Clamp(texture.Height * topCenterBias, 0, Math.Max(0, texture.Height - srcH));
-			int srcX = (int)Math.Round(centeredX - parallaxOffset.X * sourcePerScreenPixel);
-			int srcY = (int)Math.Round(biasedY - parallaxOffset.Y * sourcePerScreenPixel);
-			srcX = (int)MathHelper.Clamp(srcX, 0, Math.Max(0, texture.Width - srcW));
-			srcY = (int)MathHelper.Clamp(srcY, 0, Math.Max(0, texture.Height - srcH));
+			var translatedDestination = new Rectangle(
+				clip.X + (int)MathF.Round(parallaxOffset.X),
+				clip.Y + (int)MathF.Round(parallaxOffset.Y),
+				clip.Width,
+				clip.Height);
+			visibleDestination = Rectangle.Intersect(clip, translatedDestination);
+			if (visibleDestination.Width <= 0 || visibleDestination.Height <= 0)
+			{
+				visibleDestination = Rectangle.Empty;
+				return false;
+			}
 
-			var source = new Rectangle(srcX, srcY, srcW, srcH);
-			spriteBatch.Draw(texture, dest, source, Color.White * MathHelper.Clamp(opacity, 0f, 1f));
+			float sourcePixelsPerDestinationX = baseSource.Width / (float)translatedDestination.Width;
+			float sourcePixelsPerDestinationY = baseSource.Height / (float)translatedDestination.Height;
+			int clippedLeft = visibleDestination.Left - translatedDestination.Left;
+			int clippedTop = visibleDestination.Top - translatedDestination.Top;
+			int clippedRight = visibleDestination.Right - translatedDestination.Left;
+			int clippedBottom = visibleDestination.Bottom - translatedDestination.Top;
+			int visibleSourceLeft = baseSource.Left + (int)MathF.Floor(clippedLeft * sourcePixelsPerDestinationX);
+			int visibleSourceTop = baseSource.Top + (int)MathF.Floor(clippedTop * sourcePixelsPerDestinationY);
+			int visibleSourceRight = baseSource.Left + (int)MathF.Ceiling(clippedRight * sourcePixelsPerDestinationX);
+			int visibleSourceBottom = baseSource.Top + (int)MathF.Ceiling(clippedBottom * sourcePixelsPerDestinationY);
+
+			visibleSourceLeft = Math.Clamp(visibleSourceLeft, baseSource.Left, baseSource.Right);
+			visibleSourceTop = Math.Clamp(visibleSourceTop, baseSource.Top, baseSource.Bottom);
+			visibleSourceRight = Math.Clamp(visibleSourceRight, visibleSourceLeft, baseSource.Right);
+			visibleSourceBottom = Math.Clamp(visibleSourceBottom, visibleSourceTop, baseSource.Bottom);
+			visibleSource = new Rectangle(
+				visibleSourceLeft,
+				visibleSourceTop,
+				visibleSourceRight - visibleSourceLeft,
+				visibleSourceBottom - visibleSourceTop);
+			return visibleSource.Width > 0 && visibleSource.Height > 0;
 		}
 
 		public static void DrawHourglassIcon(

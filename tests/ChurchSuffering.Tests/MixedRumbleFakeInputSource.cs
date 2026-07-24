@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using ChurchSuffering.ECS.Data.Save;
 using ChurchSuffering.ECS.Input;
 using Microsoft.Xna.Framework;
 
@@ -14,7 +16,7 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
         _frames = new Queue<PlayerInputFrame>(frames);
     }
 
-	private bool _rumbleEnabled = true;
+	private int _rumbleLevel = SaveFile.DEFAULT_RUMBLE_LEVEL;
 
     public List<(float Low, float High, float LeftTrigger, float RightTrigger)> VibrationCalls { get; } = new();
 
@@ -29,7 +31,7 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
 
     public void SetRumbleChannel(string channelId, RumbleMotorState motors)
     {
-		if (!_rumbleEnabled) return;
+		if (_rumbleLevel <= 0) return;
         _mixer.SetChannel(channelId, motors);
         ApplyMixedRumble();
     }
@@ -42,7 +44,7 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
 
     public void PlayRumblePattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default)
     {
-		if (!_rumbleEnabled) return;
+		if (_rumbleLevel <= 0) return;
         _mixer.PlayPattern(pattern, group);
         ApplyMixedRumble();
     }
@@ -53,10 +55,11 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
 		ApplyMixedRumble();
 	}
 
-	public void SetRumbleEnabled(bool enabled)
+	public void SetRumbleLevel(int level)
 	{
-		_rumbleEnabled = enabled;
-		if (!enabled) _mixer.ClearAll();
+		int clamped = Math.Clamp(level, 0, 100);
+		_rumbleLevel = clamped;
+		if (_rumbleLevel <= 0) _mixer.ClearAll();
 		ApplyMixedRumble();
 	}
 
@@ -74,7 +77,9 @@ internal class MixedRumbleFakeInputSource : IPlayerInputSource
 
     private void ApplyMixedRumble()
     {
-		RumbleMotorState motors = _rumbleEnabled ? _mixer.Combine() : RumbleMotorState.Zero;
+		RumbleMotorState motors = _rumbleLevel <= 0
+			? RumbleMotorState.Zero
+			: _mixer.Combine().Scaled(_rumbleLevel / 100f);
         VibrationCalls.Add((motors.LowFrequency, motors.HighFrequency, motors.LeftTrigger, motors.RightTrigger));
     }
 }

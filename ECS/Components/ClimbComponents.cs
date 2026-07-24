@@ -158,6 +158,7 @@ namespace ChurchSuffering.ECS.Components
 		public float Blur { get; set; }
 		public string Fingerprint { get; set; } = string.Empty;
 		public bool Initialized { get; set; }
+		public ClimbV2MotionPhase? WhooshPlayedForPhase { get; set; }
 	}
 
 	public sealed class ClimbV2InputSuppression : IComponent

@@ -28,7 +28,7 @@ namespace ChurchSuffering.ECS.Systems
 		private const string SfxSliderName = "PauseMenu_SfxSlider";
 		private const string CursorSliderName = "PauseMenu_CursorSlider";
 		private const string CursorFastSliderName = "PauseMenu_CursorFastSlider";
-		private const string RumbleToggleName = "PauseMenu_RumbleToggle";
+		private const string RumbleSliderName = "PauseMenu_RumbleSlider";
 
 		private readonly SpriteBatch _spriteBatch;
 		private readonly GraphicsDevice _graphicsDevice;
@@ -45,13 +45,12 @@ namespace ChurchSuffering.ECS.Systems
 		private Entity _sfxSliderEntity;
 		private Entity _cursorSliderEntity;
 		private Entity _cursorFastSliderEntity;
-		private Entity _rumbleToggleEntity;
+		private Entity _rumbleSliderEntity;
 
 		private static readonly Color DimColor = Color.Black;
 		private static readonly Color RailFill = new Color(8, 8, 8) * 0.92f;
 		private static readonly Color White = Color.White;
 		private static readonly Color WarmWhite = new Color(240, 236, 230);
-		private static readonly Color MutedWhite = new Color(200, 192, 184);
 		private static readonly Color RailAccent = new Color(255, 77, 98);
 		private static readonly Color RailAccentGlow = new Color(255, 55, 80);
 		private static readonly Color RailAccentChannel = new Color(22, 4, 10);
@@ -139,12 +138,6 @@ namespace ChurchSuffering.ECS.Systems
 
 		[DebugEditable(DisplayName = "Rumble Row Y", Step = 1, Min = 0, Max = 1000)]
 		public int RumbleRowY { get; set; } = 808;
-
-		[DebugEditable(DisplayName = "Toggle Width", Step = 1, Min = 40, Max = 240)]
-		public int ToggleWidth { get; set; } = 92;
-
-		[DebugEditable(DisplayName = "Toggle Height", Step = 1, Min = 20, Max = 100)]
-		public int ToggleHeight { get; set; } = 42;
 
 		[DebugEditable(DisplayName = "Slider Row Height", Step = 1, Min = 20, Max = 160)]
 		public int SliderRowHeight { get; set; } = 80;
@@ -266,6 +259,7 @@ namespace ChurchSuffering.ECS.Systems
 			ResetSlider(_sfxSliderEntity, "SFX", PauseMenuSliderSetting.SfxVolume, SaveCache.GetSfxVolumeLevel());
 			ResetSlider(_cursorSliderEntity, "Cursor", PauseMenuSliderSetting.CursorSpeed, SaveCache.GetCursorSpeedLevel());
 			ResetSlider(_cursorFastSliderEntity, "Fast", PauseMenuSliderSetting.CursorFastSpeed, SaveCache.GetCursorFastSpeedLevel());
+			ResetSlider(_rumbleSliderEntity, "Rumble", PauseMenuSliderSetting.RumbleLevel, SaveCache.GetRumbleLevel());
 			UpdateEntityLayout(overlay);
 			SyncEntitiesActive(true, GetCurrentScene());
 		}
@@ -279,6 +273,7 @@ namespace ChurchSuffering.ECS.Systems
 			ResetSlider(_sfxSliderEntity, "SFX", PauseMenuSliderSetting.SfxVolume, SaveCache.GetSfxVolumeLevel());
 			ResetSlider(_cursorSliderEntity, "Cursor", PauseMenuSliderSetting.CursorSpeed, SaveCache.GetCursorSpeedLevel());
 			ResetSlider(_cursorFastSliderEntity, "Fast", PauseMenuSliderSetting.CursorFastSpeed, SaveCache.GetCursorFastSpeedLevel());
+			ResetSlider(_rumbleSliderEntity, "Rumble", PauseMenuSliderSetting.RumbleLevel, SaveCache.GetRumbleLevel());
 			UpdateEntityLayout(overlay);
 			SyncEntitiesActive(true, GetCurrentScene());
 		}
@@ -385,24 +380,12 @@ namespace ChurchSuffering.ECS.Systems
 				"Fast",
 				PauseMenuSliderSetting.CursorFastSpeed,
 				SaveCache.GetCursorFastSpeedLevel());
-
-			if (_rumbleToggleEntity == null || EntityManager.GetEntity(RumbleToggleName) == null)
-			{
-				_rumbleToggleEntity = EntityManager.GetEntity(RumbleToggleName) ?? EntityManager.CreateEntity(RumbleToggleName);
-				EnsureComponent(_rumbleToggleEntity, new Transform { Position = Vector2.Zero, ZOrder = ZOrder + 2 });
-				EnsureComponent(_rumbleToggleEntity, new UIElement
-				{
-					Bounds = Rectangle.Empty,
-					IsInteractable = false,
-					LayerType = UILayerType.Overlay,
-					EventType = UIElementEventType.ToggleRumble,
-					ShowHoverHighlight = false,
-					IsHidden = true,
-				});
-				EnsureComponent(_rumbleToggleEntity, new PauseMenuToggle { Label = "Rumble" });
-				InputContextService.EnsureMember(EntityManager, _rumbleToggleEntity, ContextId);
-				EnsureDontDestroy(_rumbleToggleEntity);
-			}
+			_rumbleSliderEntity = EnsureSliderEntity(
+				_rumbleSliderEntity,
+				RumbleSliderName,
+				"Rumble",
+				PauseMenuSliderSetting.RumbleLevel,
+				SaveCache.GetRumbleLevel());
 
 			if (_abandonButtonEntity == null || EntityManager.GetEntity(AbandonName) == null)
 			{
@@ -443,7 +426,7 @@ namespace ChurchSuffering.ECS.Systems
 			EnsureTutorialInteractionPermitted(_sfxSliderEntity);
 			EnsureTutorialInteractionPermitted(_cursorSliderEntity);
 			EnsureTutorialInteractionPermitted(_cursorFastSliderEntity);
-			EnsureTutorialInteractionPermitted(_rumbleToggleEntity);
+			EnsureTutorialInteractionPermitted(_rumbleSliderEntity);
 			EnsureTutorialInteractionPermitted(_abandonButtonEntity);
 			EnsureTutorialInteractionPermitted(_skipTutorialButtonEntity);
 		}
@@ -534,7 +517,7 @@ namespace ChurchSuffering.ECS.Systems
 			SetUiActive(_sfxSliderEntity, !hidden, _sfxSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
 			SetUiActive(_cursorSliderEntity, showGamepadSettings, _cursorSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
 			SetUiActive(_cursorFastSliderEntity, showGamepadSettings, _cursorFastSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
-			SetUiActive(_rumbleToggleEntity, showGamepadSettings, _rumbleToggleEntity?.GetComponent<PauseMenuToggle>()?.RowBounds ?? Rectangle.Empty);
+			SetUiActive(_rumbleSliderEntity, showGamepadSettings, _rumbleSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
 
 			bool showAbandon = !hidden
 				&& SaveCache.IsRunActive()
@@ -572,7 +555,7 @@ namespace ChurchSuffering.ECS.Systems
 			UpdateTransform(_sfxSliderEntity, ZOrder + 2, new Vector2(layout.SfxRow.X, layout.SfxRow.Y));
 			UpdateTransform(_cursorSliderEntity, ZOrder + 2, new Vector2(layout.CursorRow.X, layout.CursorRow.Y));
 			UpdateTransform(_cursorFastSliderEntity, ZOrder + 2, new Vector2(layout.CursorFastRow.X, layout.CursorFastRow.Y));
-			UpdateTransform(_rumbleToggleEntity, ZOrder + 2, new Vector2(layout.RumbleRow.X, layout.RumbleRow.Y));
+			UpdateTransform(_rumbleSliderEntity, ZOrder + 2, new Vector2(layout.RumbleRow.X, layout.RumbleRow.Y));
 			UpdateTransform(_abandonButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
 			UpdateTransform(_skipTutorialButtonEntity, ZOrder + 2, new Vector2(layout.AbandonButton.X, layout.AbandonButton.Y));
 
@@ -580,23 +563,13 @@ namespace ChurchSuffering.ECS.Systems
 			UpdateSliderLayout(_sfxSliderEntity, layout.SfxRow, layout.SfxTrack);
 			UpdateSliderLayout(_cursorSliderEntity, layout.CursorRow, layout.CursorTrack);
 			UpdateSliderLayout(_cursorFastSliderEntity, layout.CursorFastRow, layout.CursorFastTrack);
-			UpdateToggleLayout(_rumbleToggleEntity, layout.RumbleRow, layout.RumbleToggle);
+			UpdateSliderLayout(_rumbleSliderEntity, layout.RumbleRow, layout.RumbleTrack);
 
 			var abandonUi = _abandonButtonEntity?.GetComponent<UIElement>();
 			if (abandonUi?.IsInteractable == true) abandonUi.Bounds = layout.AbandonButton;
 
 			var skipTutorialUi = _skipTutorialButtonEntity?.GetComponent<UIElement>();
 			if (skipTutorialUi?.IsInteractable == true) skipTutorialUi.Bounds = layout.AbandonButton;
-		}
-
-		private static void UpdateToggleLayout(Entity entity, Rectangle row, Rectangle toggleBounds)
-		{
-			var toggle = entity?.GetComponent<PauseMenuToggle>();
-			var ui = entity?.GetComponent<UIElement>();
-			if (toggle == null) return;
-			toggle.RowBounds = row;
-			toggle.ToggleBounds = toggleBounds;
-			if (ui?.IsInteractable == true) ui.Bounds = row;
 		}
 
 		private void UpdateSliderLayout(Entity entity, Rectangle row, Rectangle track)
@@ -633,37 +606,8 @@ namespace ChurchSuffering.ECS.Systems
 			_spriteBatch.Draw(_pixel, drawLayout.Rail, RailFill * alpha);
 			DrawAccent(drawLayout.Accent, alpha);
 			DrawHeader(drawLayout, alpha);
-			DrawRumbleToggle(drawLayout, alpha);
 			DrawFooterButtons(drawLayout, alpha);
 			DrawResumeHint(alpha);
-		}
-
-		private void DrawRumbleToggle(PauseMenuLayout layout, float alpha)
-		{
-			var ui = _rumbleToggleEntity?.GetComponent<UIElement>();
-			if (ui == null || ui.IsHidden) return;
-			bool enabled = SaveCache.GetRumbleEnabled();
-			_spriteBatch.DrawString(
-				_bodyFont,
-				"Rumble",
-				new Vector2(layout.RumbleRow.X, layout.RumbleRow.Y),
-				MutedWhite * alpha,
-				0f,
-				Vector2.Zero,
-				SubtitleScale,
-				SpriteEffects.None,
-				0f);
-
-			Color fill = enabled ? RailAccent : ButtonFill;
-			Color border = ui.IsHovered ? ButtonBorderHover : ButtonBorder;
-			_spriteBatch.Draw(_pixel, layout.RumbleToggle, fill * alpha);
-			DrawBorder(layout.RumbleToggle, border * alpha, ButtonBorderThickness);
-			string value = enabled ? "ON" : "OFF";
-			Vector2 size = _bodyFont.MeasureString(value) * ButtonTextScale;
-			var position = new Vector2(
-				layout.RumbleToggle.Center.X - size.X / 2f,
-				layout.RumbleToggle.Center.Y - size.Y / 2f);
-			_spriteBatch.DrawString(_bodyFont, value, position, WarmWhite * alpha, 0f, Vector2.Zero, ButtonTextScale, SpriteEffects.None, 0f);
 		}
 
 		private void DrawLeftFalloff(float alpha)
@@ -840,7 +784,7 @@ namespace ChurchSuffering.ECS.Systems
 		{
 			int buttonY = Game1.VirtualHeight - ButtonBottom - ButtonHeight;
 			int contentX = RailPadLeft;
-			// When gamepad-only settings are hidden, rumble layout is unused (toggle is inactive).
+			// When gamepad-only settings are hidden, rumble layout is unused (slider is inactive).
 			int rumbleRowY = showGamepadSettings
 				? RumbleRowY
 				: SfxRowY + (CursorRowY - SfxRowY);
@@ -861,7 +805,7 @@ namespace ChurchSuffering.ECS.Systems
 				CursorTrack = new Rectangle(contentX, CursorRowY + TrackOffsetY, ContentWidth, TrackHeight),
 				CursorFastTrack = new Rectangle(contentX, CursorFastRowY + TrackOffsetY, ContentWidth, TrackHeight),
 				RumbleRow = new Rectangle(contentX, rumbleRowY, ContentWidth, SliderRowHeight),
-				RumbleToggle = new Rectangle(contentX + ContentWidth - ToggleWidth, rumbleRowY, ToggleWidth, ToggleHeight),
+				RumbleTrack = new Rectangle(contentX, rumbleRowY + TrackOffsetY, ContentWidth, TrackHeight),
 				AbandonButton = new Rectangle(contentX, buttonY, ContentWidth, ButtonHeight),
 			};
 		}
@@ -895,7 +839,7 @@ namespace ChurchSuffering.ECS.Systems
 			public Rectangle CursorTrack;
 			public Rectangle CursorFastTrack;
 			public Rectangle RumbleRow;
-			public Rectangle RumbleToggle;
+			public Rectangle RumbleTrack;
 			public Rectangle AbandonButton;
 
 			public PauseMenuLayout Offset(int x, int y)
@@ -916,7 +860,7 @@ namespace ChurchSuffering.ECS.Systems
 					CursorTrack = OffsetRect(CursorTrack, x, y),
 					CursorFastTrack = OffsetRect(CursorFastTrack, x, y),
 					RumbleRow = OffsetRect(RumbleRow, x, y),
-					RumbleToggle = OffsetRect(RumbleToggle, x, y),
+					RumbleTrack = OffsetRect(RumbleTrack, x, y),
 					AbandonButton = OffsetRect(AbandonButton, x, y),
 				};
 			}

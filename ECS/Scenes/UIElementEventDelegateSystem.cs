@@ -31,11 +31,6 @@ namespace ChurchSuffering.ECS.Systems
             LoggingService.Append("UIElementEventDelegateService.HandleEvent", handleLog);
             switch(type)
             {
-				case UIElementEventType.ToggleRumble:
-				{
-					SaveCache.SetRumbleEnabled(!SaveCache.GetRumbleEnabled());
-					break;
-				}
 				case UIElementEventType.BoosterPackOpeningClose:
 				{
 					EventManager.Publish(new CloseBoosterPackOpeningOverlayEvent());

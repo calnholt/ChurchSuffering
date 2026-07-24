@@ -119,30 +119,32 @@ namespace ChurchSuffering.ECS.Data.Save
 			}
 		}
 
-		public static bool GetRumbleEnabled()
+		public static int GetRumbleLevel()
 		{
 			EnsureLoaded();
 			lock (_lock)
 			{
-				return _save?.rumbleEnabled ?? true;
+				return ClampRumbleLevel(_save?.rumbleLevel ?? SaveFile.DEFAULT_RUMBLE_LEVEL);
 			}
 		}
 
-		public static void SetRumbleEnabled(bool enabled)
+		public static void SetRumbleLevel(int value)
 		{
 			bool changed;
+			int resolved;
 			lock (_lock)
 			{
 				EnsureLoaded();
 				_save ??= new SaveFile();
-				if (_save.rumbleEnabled == enabled) return;
-				_save.rumbleEnabled = enabled;
+				resolved = ClampRumbleLevel(value);
+				if (_save.rumbleLevel == resolved) return;
+				_save.rumbleLevel = resolved;
 				changed = Persist();
 			}
 
 			if (changed)
 			{
-				EventManager.Publish(new RumbleSettingsChangedEvent { Enabled = enabled });
+				EventManager.Publish(new RumbleSettingsChangedEvent { Level = resolved });
 			}
 		}
 
@@ -711,7 +713,7 @@ namespace ChurchSuffering.ECS.Data.Save
 			int sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL);
 			int cursorSpeedLevel = ClampCursorSpeedLevel(prior?.cursorSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
 			int cursorFastSpeedLevel = ClampCursorSpeedLevel(prior?.cursorFastSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL);
-			bool rumbleEnabled = prior?.rumbleEnabled ?? true;
+			int rumbleLevel = ClampRumbleLevel(prior?.rumbleLevel ?? SaveFile.DEFAULT_RUMBLE_LEVEL);
 			var save = CreateDefaultRunSave();
 			save.achievements = achievements ?? new Dictionary<string, AchievementProgress>();
 			save.seenTutorials = seenTutorials ?? new List<string>();
@@ -722,7 +724,7 @@ namespace ChurchSuffering.ECS.Data.Save
 			save.sfxVolumeLevel = sfxVolumeLevel;
 			save.cursorSpeedLevel = cursorSpeedLevel;
 			save.cursorFastSpeedLevel = cursorFastSpeedLevel;
-			save.rumbleEnabled = rumbleEnabled;
+			save.rumbleLevel = rumbleLevel;
 			return save;
 		}
 
@@ -737,7 +739,7 @@ namespace ChurchSuffering.ECS.Data.Save
 					sfxVolumeLevel = ClampAudioVolumeLevel(prior?.sfxVolumeLevel ?? SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL),
 					cursorSpeedLevel = ClampCursorSpeedLevel(prior?.cursorSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL),
 					cursorFastSpeedLevel = ClampCursorSpeedLevel(prior?.cursorFastSpeedLevel ?? SaveFile.DEFAULT_CURSOR_SPEED_LEVEL),
-					rumbleEnabled = prior?.rumbleEnabled ?? true,
+					rumbleLevel = ClampRumbleLevel(prior?.rumbleLevel ?? SaveFile.DEFAULT_RUMBLE_LEVEL),
 				runMapSeed = 0,
 				items = new List<SaveItem>(),
 				lastLocation = string.Empty,
@@ -755,6 +757,11 @@ namespace ChurchSuffering.ECS.Data.Save
 		}
 
 		private static int ClampAudioVolumeLevel(int value)
+		{
+			return Math.Clamp(value, 0, 100);
+		}
+
+		private static int ClampRumbleLevel(int value)
 		{
 			return Math.Clamp(value, 0, 100);
 		}

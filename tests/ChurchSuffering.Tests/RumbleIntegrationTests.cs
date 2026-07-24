@@ -77,10 +77,10 @@ public sealed class RumbleIntegrationTests
 	{
 		EventManager.Clear();
 		SaveCache.DeleteSaveFilesIfPresent();
-		SaveCache.SetRumbleEnabled(true);
+		SaveCache.SetRumbleLevel(100);
 		var entityManager = new EntityManager();
 		var source = new MixedRumbleFakeInputSource();
-		_ = new ControllerRumbleSystem(entityManager, source);
+		_ = new ControllerRumbleSystem(entityManager, source, SaveCache.GetRumbleLevel());
 		EventManager.Publish(new PlayerInputEvent
 		{
 			Frame = default(PlayerInputFrame) with
@@ -96,9 +96,9 @@ public sealed class RumbleIntegrationTests
 		Assert.Contains(source.VibrationCalls, call =>
 			call.High > 0f && call.LeftTrigger > 0f && call.RightTrigger > 0f);
 
-		SaveCache.SetRumbleEnabled(false);
+		SaveCache.SetRumbleLevel(0);
 		Assert.Equal((0f, 0f, 0f, 0f), source.VibrationCalls[^1]);
-		SaveCache.SetRumbleEnabled(true);
+		SaveCache.SetRumbleLevel(100);
 		EventManager.Clear();
 	}
 

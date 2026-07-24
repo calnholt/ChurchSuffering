@@ -17,7 +17,8 @@ namespace ChurchSuffering.ECS.Components
 		MusicVolume,
 		SfxVolume,
 		CursorSpeed,
-		CursorFastSpeed
+		CursorFastSpeed,
+		RumbleLevel
 	}
 
 	public class PauseMenuOverlay : IComponent
@@ -40,13 +41,5 @@ namespace ChurchSuffering.ECS.Components
 		public Rectangle TrackBounds { get; set; }
 		public Rectangle FillBounds { get; set; }
 		public Rectangle KnobBounds { get; set; }
-	}
-
-	public class PauseMenuToggle : IComponent
-	{
-		public Entity Owner { get; set; }
-		public string Label { get; set; } = string.Empty;
-		public Rectangle RowBounds { get; set; }
-		public Rectangle ToggleBounds { get; set; }
 	}
 }

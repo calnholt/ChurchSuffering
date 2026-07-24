@@ -150,7 +150,7 @@ public class MedalCounterTests
 			climb.resources = new ClimbResourceSave { red = 1, white = 1, black = 1 };
 			climb.pendingEncounterReward = new ClimbEncounterRewardSave
 			{
-				resources = new ClimbResourceSave { red = 0, white = 0, black = 0 },
+				resources = new ClimbResourceSave { red = 1, white = 0, black = 0 },
 			};
 			SaveCache.SaveClimbState(climb);
 
@@ -168,6 +168,19 @@ public class MedalCounterTests
 			Assert.Equal(1, SaveCache.GetClimbState().resources.white);
 			Assert.Equal(1, SaveCache.GetClimbState().resources.black);
 
+			var animations = new List<ClimbResourceAcquisitionAnimationRequested>();
+			EventManager.Subscribe<ClimbResourceAcquisitionAnimationRequested>(evt => animations.Add(evt));
+			EventManager.Subscribe<ShowQuestRewardOverlay>(evt =>
+			{
+				var state = new QuestRewardOverlayState
+				{
+					IsEncounterReward = evt.IsEncounterReward,
+					ClimbResources = RewardModalDisplaySystem.ResolveClimbResourcesForPresentation(evt),
+					DismissScene = evt.DismissScene,
+				};
+				RewardModalDisplaySystem.PublishClimbResourceAcquisitionIfNeeded(state);
+			});
+
 			var thirdEncounterReward = new ShowQuestRewardOverlay
 			{
 				IsEncounterReward = true,
@@ -182,9 +195,14 @@ public class MedalCounterTests
 			Assert.Equal(2, thirdEncounterReward.ClimbResources.red);
 			Assert.Equal(1, thirdEncounterReward.ClimbResources.white);
 			Assert.Equal(1, thirdEncounterReward.ClimbResources.black);
-			Assert.Equal(1, SaveCache.GetClimbState().pendingEncounterReward.resources.red);
+			Assert.Equal(2, SaveCache.GetClimbState().pendingEncounterReward.resources.red);
 			Assert.Equal(1, SaveCache.GetClimbState().pendingEncounterReward.resources.white);
 			Assert.Equal(1, SaveCache.GetClimbState().pendingEncounterReward.resources.black);
+			var animation = Assert.Single(animations);
+			Assert.Equal(2, animation.Resources.red);
+			Assert.Equal(1, animation.Resources.white);
+			Assert.Equal(1, animation.Resources.black);
+			Assert.True(animation.DelayClimbTurnoverUntilComplete);
 
 			EventManager.Publish(new ShowQuestRewardOverlay { IsEncounterReward = false });
 			Assert.Equal(0, medal.CurrentCount);

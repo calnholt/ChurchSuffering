@@ -452,8 +452,6 @@ public sealed class EncounterDisplaySystem : Core.System
 	public float PortraitParallaxMultiplierX { get; set; } = 0.01f;
 	[DebugEditable(DisplayName = "Portrait Parallax Multiplier Y", Step = 0.01f, Min = 0f, Max = 0.25f)]
 	public float PortraitParallaxMultiplierY { get; set; } = 0.01f;
-	[DebugEditable(DisplayName = "Portrait Parallax Max Offset", Step = 1f, Min = 0f, Max = 200f)]
-	public float PortraitParallaxMaxOffset { get; set; } = 150f;
 	[DebugEditable(DisplayName = "Portrait Parallax Smooth Time", Step = 0.01f, Min = 0f, Max = 0.5f)]
 	public float PortraitParallaxSmoothTime { get; set; }
 	[DebugEditable(DisplayName = "Portrait Parallax Zoom", Step = 0.01f, Min = 0.5f, Max = 1.5f)]
@@ -475,8 +473,7 @@ public sealed class EncounterDisplaySystem : Core.System
 			_cursorPosition,
 			_hasCursorPosition,
 			PortraitParallaxMultiplierX,
-			PortraitParallaxMultiplierY,
-			PortraitParallaxMaxOffset);
+			PortraitParallaxMultiplierY);
 		float dt = Math.Max(0f, (float)(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d));
 		float smooth = Math.Max(0f, PortraitParallaxSmoothTime);
 		float alpha = smooth <= 0f ? 1f : 1f - MathF.Exp(-dt / smooth);
@@ -510,14 +507,13 @@ public sealed class EncounterDisplaySystem : Core.System
 		ClimbV2Draw.Border(_batch, _pixel, rect, Color.Black * (0.4f * alpha));
 	}
 
-	internal static Vector2 ComputePortraitParallaxTarget(Vector2 cursor, bool hasCursor, float multiplierX, float multiplierY, float maxOffset)
+	internal static Vector2 ComputePortraitParallaxTarget(Vector2 cursor, bool hasCursor, float multiplierX, float multiplierY)
 	{
 		if (!hasCursor) return Vector2.Zero;
 		var center = new Vector2(Game1.VirtualWidth / 2f, Game1.VirtualHeight / 2f);
-		var target = new Vector2((center.X - cursor.X) * multiplierX, (center.Y - cursor.Y) * multiplierY);
-		float max = Math.Max(0f, maxOffset);
-		float length = target.Length();
-		return length <= max || length <= 0f ? target : target * (max / length);
+		return new Vector2(
+			(center.X - cursor.X) * multiplierX,
+			(center.Y - cursor.Y) * multiplierY);
 	}
 
 	public void Shutdown() => EventManager.Unsubscribe(_cursorHandler);

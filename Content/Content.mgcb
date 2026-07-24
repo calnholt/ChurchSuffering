@@ -3084,6 +3084,11 @@
 /processor:SoundEffectProcessor
 /build:SFX/climb-widget-leave.wav
 
+#begin SFX/climb-whoosh.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/climb-whoosh.wav
+
 #begin SFX/open-inventory.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor

@@ -78,7 +78,7 @@ use an `@2x` filename suffix, and cannot be combined with `--verify` or
 | `assigned-block-rail` | Assigned blocker rail | Card/equipment density, hover, entry impact, and return presentation samples |
 | `enemy-defeat-burst` | Enemy defeat pixel burst | Assembled portrait pixels, peak jitter buildup, and released explosion |
 | `guardian-angel` | Guardian Angel battle companion | Idle, speech, and reactive flight gesture samples |
-| `pause-menu` | Pause menu | Persisted rumble toggle in enabled and disabled states |
+| `pause-menu` | Pause menu | Persisted rumble intensity slider at 50% and 0% |
 | `hotkey-hints` | Shared hotkey glyph renderer | Keyboard, Xbox, and PlayStation hint treatments and placement |
 | `battle-phase-transition` | Battle phase transition | Entry, hold, and exit samples across phase title treatments |
 | `achievement-overview` | Achievement scene | Mixed discovery states, collection meter, and claim action |
@@ -263,15 +263,15 @@ Approved images are stored under `tests/VisualBaselines/guardian-angel/`.
 
 ## `pause-menu`
 
-Renders the production pause rail with the persisted rumble toggle enabled or disabled.
+Renders the production pause rail with the persisted rumble intensity slider at default (50%) and off (0%).
 
 ```bash
-dotnet run -- snapshot pause-menu rumble-on --verify
-dotnet run -- snapshot pause-menu rumble-off --verify
+dotnet run -- snapshot pause-menu rumble-50 --verify
+dotnet run -- snapshot pause-menu rumble-0 --verify
 ./scripts/verify-pause-menu-snapshots.sh
 ```
 
-Approved images are `rumble-on.png` and `rumble-off.png` under `tests/VisualBaselines/pause-menu/`.
+Approved images are `rumble-50.png` and `rumble-0.png` under `tests/VisualBaselines/pause-menu/`.
 
 ---
 

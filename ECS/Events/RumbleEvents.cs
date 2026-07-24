@@ -11,7 +11,7 @@ namespace ChurchSuffering.ECS.Events
 
 	public sealed class RumbleSettingsChangedEvent
 	{
-		public bool Enabled { get; init; }
+		public int Level { get; init; }
 	}
 
 	public sealed class RumbleGroupCleared

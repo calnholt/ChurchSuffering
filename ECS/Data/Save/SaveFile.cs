@@ -9,8 +9,9 @@ namespace ChurchSuffering.ECS.Data.Save
 {
 	public class SaveFile
 	{
-		public const int CURRENT_VERSION = 27;
+		public const int CURRENT_VERSION = 28;
 		public const int DEFAULT_AUDIO_VOLUME_LEVEL = 50;
+		public const int DEFAULT_RUMBLE_LEVEL = 50;
 		public const int DEFAULT_CURSOR_SPEED_LEVEL = 0;
 		public const int MIN_CURSOR_SPEED_LEVEL = -50;
 		public const int MAX_CURSOR_SPEED_LEVEL = 50;
@@ -22,7 +23,7 @@ namespace ChurchSuffering.ECS.Data.Save
 		public int sfxVolumeLevel { get; set; } = DEFAULT_AUDIO_VOLUME_LEVEL;
 		public int cursorSpeedLevel { get; set; } = DEFAULT_CURSOR_SPEED_LEVEL;
 		public int cursorFastSpeedLevel { get; set; } = DEFAULT_CURSOR_SPEED_LEVEL;
-		public bool rumbleEnabled { get; set; } = true;
+		public int rumbleLevel { get; set; } = DEFAULT_RUMBLE_LEVEL;
 		public int runMapSeed { get; set; }
 		public List<SaveItem> items { get; set; } = new List<SaveItem>();
 		public string lastLocation { get; set; } = string.Empty;

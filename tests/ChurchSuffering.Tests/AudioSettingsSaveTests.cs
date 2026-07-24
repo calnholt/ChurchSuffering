@@ -13,7 +13,7 @@ public class AudioSettingsSaveTests
 
 		Assert.Equal(SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL, SaveCache.GetMusicVolumeLevel());
 		Assert.Equal(SaveFile.DEFAULT_AUDIO_VOLUME_LEVEL, SaveCache.GetSfxVolumeLevel());
-		Assert.True(SaveCache.GetRumbleEnabled());
+		Assert.Equal(SaveFile.DEFAULT_RUMBLE_LEVEL, SaveCache.GetRumbleLevel());
 	}
 
 	[Fact]
@@ -59,17 +59,29 @@ public class AudioSettingsSaveTests
 	}
 
 	[Fact]
-	public void Rumble_setting_persists_and_survives_run_lifecycle_resets()
+	public void Rumble_level_persists_and_survives_run_lifecycle_resets()
 	{
 		SaveCache.DeleteSaveFilesIfPresent();
-		SaveCache.SetRumbleEnabled(false);
+		SaveCache.SetRumbleLevel(0);
 		SaveCache.Reload();
-		Assert.False(SaveCache.GetRumbleEnabled());
+		Assert.Equal(0, SaveCache.GetRumbleLevel());
 
 		SaveCache.StartNewRun();
-		Assert.False(SaveCache.GetRumbleEnabled());
+		Assert.Equal(0, SaveCache.GetRumbleLevel());
 
 		RunLifecycleService.EndCurrentRun();
-		Assert.False(SaveCache.GetRumbleEnabled());
+		Assert.Equal(0, SaveCache.GetRumbleLevel());
+	}
+
+	[Fact]
+	public void Rumble_level_setters_clamp_to_valid_range()
+	{
+		SaveCache.DeleteSaveFilesIfPresent();
+
+		SaveCache.SetRumbleLevel(-10);
+		Assert.Equal(0, SaveCache.GetRumbleLevel());
+
+		SaveCache.SetRumbleLevel(150);
+		Assert.Equal(100, SaveCache.GetRumbleLevel());
 	}
 }

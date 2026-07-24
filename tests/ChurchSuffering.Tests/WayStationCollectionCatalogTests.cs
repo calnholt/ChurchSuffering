@@ -319,7 +319,7 @@ public class WayStationCollectionCatalogTests
 		public void PlayRumblePattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default) { }
 		public void ClearRumbleGroup(RumbleGroup group) { }
 		public void ClearAllRumble() { }
-		public void SetRumbleEnabled(bool enabled) { }
+		public void SetRumbleLevel(int level) { }
 		public void TickRumble(float deltaSeconds) { }
 	}
 }

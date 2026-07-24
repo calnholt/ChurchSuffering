@@ -15,7 +15,7 @@ namespace ChurchSuffering.ECS.Input
         void PlayRumblePattern(RumblePattern pattern, RumbleGroup group = RumbleGroup.Default);
         void ClearRumbleGroup(RumbleGroup group);
 		void ClearAllRumble();
-		void SetRumbleEnabled(bool enabled);
+		void SetRumbleLevel(int level);
         void TickRumble(float deltaSeconds);
     }
 }
