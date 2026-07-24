@@ -415,6 +415,7 @@ public class Game1 : Game
         }
         // Allocate render targets
         AllocateRenderTargets();
+        cardRenderPipeline.WarmUp(_sceneRt, _imageAssets.GetPixel(Color.White));
 
         _snapshotHost = DisplaySnapshotHost.TryCreate(_snapshotOptions, this, GraphicsDevice, Content);
         _snapshotHost?.OnGameReady(_world, sceneEntity, _spriteBatch);

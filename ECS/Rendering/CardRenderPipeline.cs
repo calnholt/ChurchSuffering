@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 using ChurchSuffering.Diagnostics;
 using ChurchSuffering.ECS.Components;
@@ -48,8 +49,58 @@ internal static class CardOverlayPassCatalog
     }
 }
 
+internal sealed class CardShaderWarmupRecipe
+{
+    private readonly Action<Entity> _configureCard;
+
+    public CardShaderWarmupRecipe(string passName, Action<Entity> configureCard)
+    {
+        PassName = passName ?? throw new ArgumentNullException(nameof(passName));
+        _configureCard = configureCard ?? throw new ArgumentNullException(nameof(configureCard));
+    }
+
+    public string PassName { get; }
+
+    public Entity CreateCard(int entityId)
+    {
+        var card = new Entity(entityId)
+        {
+            Name = $"CardShaderWarmup.{PassName}",
+        };
+        _configureCard(card);
+        return card;
+    }
+
+    internal static void AddComponent<T>(Entity card, T component)
+        where T : class, IComponent
+    {
+        component.Owner = card;
+        card.AddComponent(component);
+    }
+}
+
+internal static class CardShaderWarmupCatalog
+{
+    public static IReadOnlyList<CardShaderWarmupRecipe> Recipes { get; } =
+    [
+        new("Brittle", card => CardShaderWarmupRecipe.AddComponent(card, new Brittle())),
+        new("Frozen", card => CardShaderWarmupRecipe.AddComponent(card, new Frozen())),
+        new("Thorned", card => CardShaderWarmupRecipe.AddComponent(card, new Thorned())),
+        new("Scorched", card => CardShaderWarmupRecipe.AddComponent(card, new Scorched())),
+        new("Cursed", card => CardShaderWarmupRecipe.AddComponent(card, new Cursed())),
+        new("Poison", card => CardShaderWarmupRecipe.AddComponent(card, new Poisoned())),
+        new("CardSheen", card => CardShaderWarmupRecipe.AddComponent(card, new CardSheen
+        {
+            IsActive = true,
+            HasActivationTime = true,
+        })),
+    ];
+}
+
 internal sealed class CardRenderPipeline
 {
+    private const float WarmupCardScale = 0.85f;
+
     private readonly EntityManager _entityManager;
     private readonly GraphicsDevice _graphicsDevice;
     private readonly SpriteBatch _spriteBatch;
@@ -75,6 +126,77 @@ internal sealed class CardRenderPipeline
 
     internal IReadOnlyList<ICardOverlayPass> Passes => _passes;
 
+    internal void WarmUp(RenderTarget2D sceneTarget, Texture2D sourceTexture)
+    {
+        if (!ShaderRuntimeOptions.ShadersEnabled) return;
+        if (sceneTarget == null) throw new ArgumentNullException(nameof(sceneTarget));
+        if (sourceTexture == null) throw new ArgumentNullException(nameof(sourceTexture));
+
+        RenderTargetBinding[] originalTargets = _graphicsDevice.GetRenderTargets();
+        var originalState = SpriteBatchRenderTargetCompositor.CaptureState(_graphicsDevice);
+        var timer = Stopwatch.StartNew();
+        int warmedPasses = 0;
+        Vector2 position = new(Game1.VirtualWidth * 0.5f, Game1.VirtualHeight * 0.5f);
+
+        try
+        {
+            for (int i = 0; i < CardShaderWarmupCatalog.Recipes.Count; i++)
+            {
+                CardShaderWarmupRecipe recipe = CardShaderWarmupCatalog.Recipes[i];
+                Entity card = recipe.CreateCard(-1 - i);
+                long appliedBefore = CardShaderPipelineDiagnostics.PassesApplied;
+
+                try
+                {
+                    _graphicsDevice.SetRenderTarget(sceneTarget);
+                    _graphicsDevice.Clear(Color.Transparent);
+                    _spriteBatch.Begin(
+                        SpriteSortMode.Immediate,
+                        BlendState.AlphaBlend,
+                        SamplerState.AnisotropicClamp,
+                        DepthStencilState.None,
+                        RasterizerState.CullNone,
+                        null,
+                        Game1.Display.SpriteBatchTransform);
+
+                    Render(
+                        new CardRenderRequest(card, position, WarmupCardScale, 0f),
+                        () => DrawWarmupCard(sourceTexture, card, position),
+                        null);
+                    _spriteBatch.End();
+
+                    if (CardShaderPipelineDiagnostics.PassesApplied > appliedBefore)
+                    {
+                        warmedPasses++;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    try { _spriteBatch.End(); } catch { }
+                    LoggingService.Append("CardRenderPipeline.WarmUpPass", new JsonObject
+                    {
+                        ["pass"] = recipe.PassName,
+                        ["exception"] = exception.Message,
+                    });
+                }
+            }
+        }
+        finally
+        {
+            timer.Stop();
+            _graphicsDevice.Textures[0] = null;
+            SpriteBatchRenderTargetCompositor.RestoreRenderTargets(_graphicsDevice, originalTargets);
+            RestoreDeviceState(originalState);
+            CardShaderPipelineDiagnostics.Reset();
+            LoggingService.Append("CardRenderPipeline.WarmUp", new JsonObject
+            {
+                ["configuredPasses"] = CardShaderWarmupCatalog.Recipes.Count,
+                ["warmedPasses"] = warmedPasses,
+                ["elapsedMs"] = timer.Elapsed.TotalMilliseconds,
+            });
+        }
+    }
+
     public void Update(GameTime gameTime)
     {
         foreach (ICardOverlayPass pass in _passes)
@@ -89,6 +211,26 @@ internal sealed class CardRenderPipeline
         {
             pass.Reset();
         }
+    }
+
+    private void DrawWarmupCard(Texture2D sourceTexture, Entity card, Vector2 position)
+    {
+        Rectangle bounds = CardGeometryService.GetVisualGeometry(
+            _entityManager,
+            card,
+            position,
+            WarmupCardScale,
+            0f).Bounds;
+        _spriteBatch.Draw(sourceTexture, bounds, Color.White);
+    }
+
+    private void RestoreDeviceState(SpriteBatchRenderTargetCompositor.SpriteBatchState state)
+    {
+        _graphicsDevice.BlendState = state.BlendState;
+        _graphicsDevice.SamplerStates[0] = state.SamplerState;
+        _graphicsDevice.DepthStencilState = state.DepthStencilState;
+        _graphicsDevice.RasterizerState = state.RasterizerState;
+        _graphicsDevice.ScissorRectangle = state.ScissorRectangle;
     }
 
     internal void SetSnapshotTime<TPass>(float timeSeconds)

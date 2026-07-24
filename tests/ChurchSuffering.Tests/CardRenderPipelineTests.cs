@@ -25,6 +25,28 @@ public sealed class CardRenderPipelineTests
     }
 
     [Fact]
+    public void Warmup_catalog_covers_each_canonical_pass_with_renderable_state()
+    {
+        ShaderRuntimeOptions.ConfigureFromArgs(Array.Empty<string>());
+        var entityManager = new EntityManager();
+        ICardOverlayPass[] passes = CardOverlayPassCatalog.Create(entityManager, null);
+
+        Assert.Equal(
+            passes.Select(pass => pass.Name),
+            CardShaderWarmupCatalog.Recipes.Select(recipe => recipe.PassName));
+
+        for (int i = 0; i < CardShaderWarmupCatalog.Recipes.Count; i++)
+        {
+            CardShaderWarmupRecipe recipe = CardShaderWarmupCatalog.Recipes[i];
+            Entity card = recipe.CreateCard(-1 - i);
+
+            Assert.Equal(
+                [recipe.PassName],
+                passes.Where(pass => pass.AppliesTo(card)).Select(pass => pass.Name));
+        }
+    }
+
+    [Fact]
     public void Catalog_filters_passes_by_card_components_and_keeps_sheen_last()
     {
         ShaderRuntimeOptions.ConfigureFromArgs(Array.Empty<string>());

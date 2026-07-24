@@ -2751,6 +2751,12 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/CircularMask.fx
 
+#begin Shaders/TutorialFocus.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/TutorialFocus.fx
+
 #begin Shaders/AchievementBackground.fx
 /importer:EffectImporter
 /processor:EffectProcessor

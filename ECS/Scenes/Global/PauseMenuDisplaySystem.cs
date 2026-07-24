@@ -30,6 +30,7 @@ namespace ChurchSuffering.ECS.Systems
 		private const string RumbleToggleName = "PauseMenu_RumbleToggle";
 
 		private readonly SpriteBatch _spriteBatch;
+		private readonly GraphicsDevice _graphicsDevice;
 		private readonly SpriteFont _titleFont = FontSingleton.TitleFont;
 		private readonly SpriteFont _bodyFont = FontSingleton.ChakraPetchFont;
 		private readonly Texture2D _pixel;
@@ -52,6 +53,9 @@ namespace ChurchSuffering.ECS.Systems
 		private static readonly Color MutedWhite = new Color(200, 192, 184);
 		private static readonly Color RailAccent = new Color(255, 77, 98);
 		private static readonly Color RailAccentGlow = new Color(255, 55, 80);
+		private static readonly Color RailAccentChannel = new Color(22, 4, 10);
+		private static readonly Color RailAccentEdge = new Color(112, 18, 39);
+		private static readonly Color RailAccentHighlight = new Color(255, 174, 183);
 		private static readonly Color ButtonFill = new Color(30, 30, 30);
 		private static readonly Color ButtonFillHover = new Color(42, 42, 42);
 		private static readonly Color ButtonBorder = new Color(255, 255, 255) * 0.5f;
@@ -92,6 +96,15 @@ namespace ChurchSuffering.ECS.Systems
 
 		[DebugEditable(DisplayName = "Accent Top Bottom", Step = 1, Min = 0, Max = 300)]
 		public int AccentTopBottom { get; set; } = 80;
+
+		[DebugEditable(DisplayName = "Accent Glow Width", Step = 1, Min = 1, Max = 80)]
+		public int AccentGlowWidth { get; set; } = 21;
+
+		[DebugEditable(DisplayName = "Accent Channel Width", Step = 1, Min = 1, Max = 40)]
+		public int AccentChannelWidth { get; set; } = 9;
+
+		[DebugEditable(DisplayName = "Accent Node Size", Step = 1, Min = 3, Max = 40)]
+		public int AccentNodeSize { get; set; } = 13;
 
 		[DebugEditable(DisplayName = "Title Scale", Step = 0.01f, Min = 0.05f, Max = 1.5f)]
 		public float TitleScale { get; set; } = 0.41f;
@@ -159,6 +172,7 @@ namespace ChurchSuffering.ECS.Systems
 		public PauseMenuDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
 			: base(entityManager)
 		{
+			_graphicsDevice = graphicsDevice;
 			_spriteBatch = spriteBatch;
 			_pixel = new Texture2D(graphicsDevice, 1, 1);
 			_pixel.SetData(new[] { Color.White });
@@ -489,15 +503,15 @@ namespace ChurchSuffering.ECS.Systems
 			var context = _blockerEntity?.GetComponent<InputContext>();
 			if (context != null) context.IsActive = !hidden;
 
-			bool showCursorSettings = !hidden && IsGamepadInputActive();
-			var layout = ComputeLayout(showCursorSettings);
+			bool showGamepadSettings = !hidden && IsGamepadInputActive();
+			var layout = ComputeLayout(showGamepadSettings);
 
 			SetUiActive(_blockerEntity, !hidden, new Rectangle(0, 0, Game1.VirtualWidth, Game1.VirtualHeight));
 			SetUiActive(_musicSliderEntity, !hidden, _musicSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
 			SetUiActive(_sfxSliderEntity, !hidden, _sfxSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
-			SetUiActive(_cursorSliderEntity, showCursorSettings, _cursorSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
-			SetUiActive(_cursorFastSliderEntity, showCursorSettings, _cursorFastSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
-			SetUiActive(_rumbleToggleEntity, !hidden, _rumbleToggleEntity?.GetComponent<PauseMenuToggle>()?.RowBounds ?? Rectangle.Empty);
+			SetUiActive(_cursorSliderEntity, showGamepadSettings, _cursorSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
+			SetUiActive(_cursorFastSliderEntity, showGamepadSettings, _cursorFastSliderEntity?.GetComponent<PauseMenuSlider>()?.RowBounds ?? Rectangle.Empty);
+			SetUiActive(_rumbleToggleEntity, showGamepadSettings, _rumbleToggleEntity?.GetComponent<PauseMenuToggle>()?.RowBounds ?? Rectangle.Empty);
 
 			bool showAbandon = !hidden
 				&& SaveCache.IsRunActive()
@@ -524,8 +538,8 @@ namespace ChurchSuffering.ECS.Systems
 
 		private void UpdateEntityLayout(PauseMenuOverlay overlay)
 		{
-			bool showCursorSettings = IsGamepadInputActive();
-			var layout = ComputeLayout(showCursorSettings);
+			bool showGamepadSettings = IsGamepadInputActive();
+			var layout = ComputeLayout(showGamepadSettings);
 			int railX = CalculateRailX(overlay);
 			layout = layout.Offset(railX, 0);
 
@@ -585,8 +599,8 @@ namespace ChurchSuffering.ECS.Systems
 			var overlay = _rootEntity?.GetComponent<PauseMenuOverlay>();
 			if (overlay == null || overlay.Phase == PauseMenuPhase.Hidden || overlay.Progress01 <= 0f) return;
 
-			bool showCursorSettings = IsGamepadInputActive();
-			var layout = ComputeLayout(showCursorSettings);
+			bool showGamepadSettings = IsGamepadInputActive();
+			var layout = ComputeLayout(showGamepadSettings);
 			int railX = CalculateRailX(overlay);
 			float alpha = EaseOut(MathHelper.Clamp(overlay.Progress01, 0f, 1f));
 			var drawLayout = layout.Offset(railX, 0);
@@ -647,9 +661,73 @@ namespace ChurchSuffering.ECS.Systems
 		private void DrawAccent(Rectangle accent, float alpha)
 		{
 			if (accent.Width <= 0 || accent.Height <= 0) return;
-			_spriteBatch.Draw(_pixel, new Rectangle(accent.X - 8, accent.Y, accent.Width + 16, accent.Height), RailAccentGlow * (0.16f * alpha));
-			_spriteBatch.Draw(_pixel, new Rectangle(accent.X - 3, accent.Y, accent.Width + 6, accent.Height), RailAccentGlow * (0.25f * alpha));
-			_spriteBatch.Draw(_pixel, accent, RailAccent * alpha);
+
+			int centerX = accent.Center.X;
+			int coreWidth = Math.Max(1, accent.Width);
+			int channelWidth = Math.Max(coreWidth + 2, AccentChannelWidth);
+			int glowWidth = Math.Max(channelWidth, AccentGlowWidth);
+			var glow = CenteredVerticalBand(centerX, accent.Y, glowWidth, accent.Height);
+			var innerGlow = CenteredVerticalBand(centerX, accent.Y, Math.Max(channelWidth + 2, (glowWidth + channelWidth) / 2), accent.Height);
+			var channel = CenteredVerticalBand(centerX, accent.Y, channelWidth, accent.Height);
+			var core = CenteredVerticalBand(centerX, accent.Y, coreWidth, accent.Height);
+
+			// Layer a recessed arcane conduit over the edge of the pause rail.
+			_spriteBatch.Draw(_pixel, glow, RailAccentGlow * (0.07f * alpha));
+			_spriteBatch.Draw(_pixel, innerGlow, RailAccentGlow * (0.13f * alpha));
+			_spriteBatch.Draw(_pixel, channel, RailAccentChannel * (0.96f * alpha));
+			_spriteBatch.Draw(_pixel, new Rectangle(channel.X, channel.Y, 1, channel.Height), RailAccentEdge * (0.72f * alpha));
+			_spriteBatch.Draw(_pixel, new Rectangle(channel.Right - 1, channel.Y, 1, channel.Height), RailAccentEdge * (0.72f * alpha));
+			_spriteBatch.Draw(_pixel, core, RailAccent * alpha);
+			_spriteBatch.Draw(_pixel, new Rectangle(centerX, accent.Y, 1, accent.Height), RailAccentHighlight * (0.72f * alpha));
+
+			DrawAccentNode(new Vector2(centerX, accent.Top), alpha);
+			DrawAccentNode(new Vector2(centerX, accent.Center.Y), alpha);
+			DrawAccentNode(new Vector2(centerX, accent.Bottom), alpha);
+		}
+
+		private void DrawAccentNode(Vector2 center, float alpha)
+		{
+			int nodeSize = Math.Max(3, AccentNodeSize);
+			int glowSize = nodeSize + 12;
+			int frameSize = nodeSize + 4;
+			int coreSize = Math.Max(3, nodeSize / 3);
+			int armWidth = Math.Max(AccentChannelWidth + 8, nodeSize + 8);
+
+			_spriteBatch.Draw(
+				_pixel,
+				center,
+				null,
+				RailAccentEdge * (0.52f * alpha),
+				0f,
+				new Vector2(0.5f),
+				new Vector2(armWidth, 1),
+				SpriteEffects.None,
+				0f);
+			DrawDiamond(center, glowSize, RailAccentGlow * (0.12f * alpha));
+			DrawDiamond(center, frameSize, RailAccentChannel * (0.98f * alpha));
+			DrawDiamond(center, nodeSize, RailAccent * alpha);
+			DrawDiamond(center, coreSize, RailAccentHighlight * (0.9f * alpha));
+		}
+
+		private void DrawDiamond(Vector2 center, int size, Color color)
+		{
+			Texture2D diamond = PrimitiveTextureFactory.GetDiamondTexture(_graphicsDevice, Math.Max(1, size));
+			_spriteBatch.Draw(
+				diamond,
+				center,
+				null,
+				color,
+				0f,
+				new Vector2(diamond.Width / 2f, diamond.Height / 2f),
+				1f,
+				SpriteEffects.None,
+				0f);
+		}
+
+		private static Rectangle CenteredVerticalBand(int centerX, int y, int width, int height)
+		{
+			width = Math.Max(1, width);
+			return new Rectangle(centerX - width / 2, y, width, height);
 		}
 
 		private void DrawHeader(PauseMenuLayout layout, float alpha)
@@ -735,12 +813,12 @@ namespace ChurchSuffering.ECS.Systems
 			return PlayerInputService.GetFrame(EntityManager).Device == PlayerInputDevice.Gamepad;
 		}
 
-		private PauseMenuLayout ComputeLayout(bool showCursorSettings)
+		private PauseMenuLayout ComputeLayout(bool showGamepadSettings)
 		{
 			int buttonY = Game1.VirtualHeight - ButtonBottom - ButtonHeight;
 			int contentX = RailPadLeft;
-			// When cursor settings are hidden, place rumble under SFX with Music→SFX spacing.
-			int rumbleRowY = showCursorSettings
+			// When gamepad-only settings are hidden, rumble layout is unused (toggle is inactive).
+			int rumbleRowY = showGamepadSettings
 				? RumbleRowY
 				: SfxRowY + (CursorRowY - SfxRowY);
 

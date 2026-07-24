@@ -12,6 +12,7 @@ using ChurchSuffering.ECS.Rendering;
 using ChurchSuffering.ECS.Utils;
 using ChurchSuffering.ECS.Singletons;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using ChurchSuffering.ECS.Data.Locations;
 
@@ -22,15 +23,19 @@ namespace ChurchSuffering.ECS.Systems
     {
         private readonly GraphicsDevice _graphicsDevice;
         private readonly SpriteBatch _spriteBatch;
+        private readonly ContentManager _content;
         private readonly ImageAssetService _imageAssets;
         private readonly SpriteFont _font;
         private readonly TutorialManager _tutorialManager;
         private readonly TutorialOverlay _overlay;
 
+        private TutorialFocusOverlay _focusOverlay;
         private Texture2D _pixel;
         private Texture2D _bubbleTexture;
         private Texture2D _angelTexture;
         private int _bubbleTexW, _bubbleTexH;
+        private bool _focusEffectLoadAttempted;
+        private float _focusTime;
 
         private bool _isActive = false;
         private TutorialDefinition _currentTutorial = null;
@@ -47,6 +52,42 @@ namespace ChurchSuffering.ECS.Systems
 
         [DebugEditable(DisplayName = "Cutout Padding", Step = 2, Min = 0, Max = 50)]
         public int CutoutPadding { get; set; } = 8;
+
+        [DebugEditable(DisplayName = "Cutout Corner Radius", Step = 1, Min = 0, Max = 80)]
+        public float CutoutCornerRadius { get; set; } = 18f;
+
+        [DebugEditable(DisplayName = "Cutout Feather", Step = 1, Min = 0, Max = 80)]
+        public float CutoutFeather { get; set; } = 20f;
+
+        [DebugEditable(DisplayName = "Rim Width", Step = 1, Min = 0, Max = 80)]
+        public float RimWidth { get; set; } = 14f;
+
+        [DebugEditable(DisplayName = "Rim Alpha", Step = 0.01f, Min = 0f, Max = 1f)]
+        public float RimAlpha { get; set; } = 0.16f;
+
+        [DebugEditable(DisplayName = "Rim Red", Step = 0.01f, Min = 0f, Max = 1f)]
+        public float RimRed { get; set; } = 0.78f;
+
+        [DebugEditable(DisplayName = "Rim Green", Step = 0.01f, Min = 0f, Max = 1f)]
+        public float RimGreen { get; set; } = 0.62f;
+
+        [DebugEditable(DisplayName = "Rim Blue", Step = 0.01f, Min = 0f, Max = 1f)]
+        public float RimBlue { get; set; } = 0.36f;
+
+        [DebugEditable(DisplayName = "Grain Strength", Step = 0.01f, Min = 0f, Max = 0.3f)]
+        public float GrainStrength { get; set; } = 0.05f;
+
+        [DebugEditable(DisplayName = "Grain Scale", Step = 0.001f, Min = 0.001f, Max = 0.2f)]
+        public float GrainScale { get; set; } = 0.04f;
+
+        [DebugEditable(DisplayName = "Grain Drift Speed", Step = 0.1f, Min = 0f, Max = 20f)]
+        public float GrainDriftSpeed { get; set; } = 2f;
+
+        [DebugEditable(DisplayName = "Breath Speed", Step = 0.01f, Min = 0f, Max = 1f)]
+        public float BreathSpeed { get; set; } = 0.15f;
+
+        [DebugEditable(DisplayName = "Breath Amount", Step = 0.01f, Min = 0f, Max = 0.5f)]
+        public float BreathAmount { get; set; } = 0.12f;
 
         // Bubble settings
         [DebugEditable(DisplayName = "Bubble Padding X", Step = 1, Min = 0, Max = 50)]
@@ -92,11 +133,12 @@ namespace ChurchSuffering.ECS.Systems
         public int ZOrder { get; set; } = 50000;
 
         public TutorialDisplaySystem(EntityManager entityManager, GraphicsDevice graphicsDevice, 
-            SpriteBatch spriteBatch, ImageAssetService imageAssets, TutorialManager tutorialManager)
+            SpriteBatch spriteBatch, ContentManager content, ImageAssetService imageAssets, TutorialManager tutorialManager)
             : base(entityManager)
         {
             _graphicsDevice = graphicsDevice;
             _spriteBatch = spriteBatch;
+            _content = content;
             _imageAssets = imageAssets;
             _font = FontSingleton.ChakraPetchFont;
             _tutorialManager = tutorialManager;
@@ -133,6 +175,11 @@ namespace ChurchSuffering.ECS.Systems
             // Update target bounds each frame (entities may move)
             if (_isActive && _tutorialManager != null)
             {
+                if (ShaderRuntimeOptions.ShadersEnabled)
+                {
+                    EnsureFocusOverlayLoaded();
+                    _focusTime += Math.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
+                }
                 _targetBounds = _tutorialManager.ResolveTargetBounds();
                 UpdateBubblePosition();
                 StateSingleton.IsTutorialActive = true;
@@ -153,6 +200,7 @@ namespace ChurchSuffering.ECS.Systems
         {
             _currentTutorial = evt.Tutorial;
             _isActive = true;
+            _focusTime = 0f;
 
             // Block input
             StateSingleton.IsTutorialActive = true;
@@ -201,6 +249,7 @@ namespace ChurchSuffering.ECS.Systems
         {
             _isActive = false;
             _currentTutorial = null;
+            _focusTime = 0f;
             _targetBounds.Clear();
 
             // Restore input
@@ -418,14 +467,113 @@ namespace ChurchSuffering.ECS.Systems
             if (!_isActive || _currentTutorial == null)
                 return;
 
-            // Draw overlay with cutouts
-            _overlay.Draw(_spriteBatch, Game1.VirtualWidth, Game1.VirtualHeight, _targetBounds, OverlayAlpha, CutoutPadding);
+            DrawFocusOverlay();
 
             // Draw bubble
             DrawBubble();
 
             // Draw guardian angel
             // DrawGuardianAngel();
+        }
+
+        private void DrawFocusOverlay()
+        {
+            if (!ShaderRuntimeOptions.ShadersEnabled ||
+                _focusOverlay?.IsAvailable != true ||
+                _targetBounds.Count > TutorialFocusOverlay.MaxCutouts)
+            {
+                _overlay.Draw(
+                    _spriteBatch,
+                    Game1.VirtualWidth,
+                    Game1.VirtualHeight,
+                    _targetBounds,
+                    OverlayAlpha,
+                    CutoutPadding);
+                return;
+            }
+
+            _focusOverlay.Cutouts = _targetBounds;
+            _focusOverlay.Time = _focusTime;
+            _focusOverlay.CutoutPadding = Math.Max(0f, CutoutPadding);
+            _focusOverlay.CutoutCornerRadius = Math.Clamp(CutoutCornerRadius, 0f, 80f);
+            _focusOverlay.CutoutFeather = Math.Clamp(CutoutFeather, 0f, 80f);
+            _focusOverlay.OverlayAlpha = Math.Clamp(OverlayAlpha, 0, 255) / 255f;
+            _focusOverlay.RimWidth = Math.Clamp(RimWidth, 0f, 80f);
+            _focusOverlay.RimAlpha = Math.Clamp(RimAlpha, 0f, 1f);
+            _focusOverlay.RimColor = new Vector3(
+                Math.Clamp(RimRed, 0f, 1f),
+                Math.Clamp(RimGreen, 0f, 1f),
+                Math.Clamp(RimBlue, 0f, 1f));
+            _focusOverlay.GrainStrength = Math.Clamp(GrainStrength, 0f, 0.3f);
+            _focusOverlay.GrainScale = Math.Clamp(GrainScale, 0.001f, 0.2f);
+            _focusOverlay.GrainDriftSpeed = Math.Clamp(GrainDriftSpeed, 0f, 20f);
+            _focusOverlay.BreathSpeed = Math.Clamp(BreathSpeed, 0f, 1f);
+            _focusOverlay.BreathAmount = Math.Clamp(BreathAmount, 0f, 0.5f);
+
+            _spriteBatch.End();
+            BlendState savedBlend = _graphicsDevice.BlendState;
+            SamplerState savedSampler = _graphicsDevice.SamplerStates[0];
+            DepthStencilState savedDepth = _graphicsDevice.DepthStencilState;
+            RasterizerState savedRasterizer = _graphicsDevice.RasterizerState;
+            Rectangle savedScissor = _graphicsDevice.ScissorRectangle;
+            bool focusBatchStarted = false;
+            try
+            {
+                _focusOverlay.Begin(_spriteBatch);
+                focusBatchStarted = true;
+                _focusOverlay.Draw(_spriteBatch);
+                _focusOverlay.End(_spriteBatch);
+                focusBatchStarted = false;
+            }
+            finally
+            {
+                if (focusBatchStarted)
+                {
+                    try
+                    {
+                        _focusOverlay.End(_spriteBatch);
+                    }
+                    catch
+                    {
+                        // Preserve the original rendering exception after restoring state.
+                    }
+                }
+
+                _graphicsDevice.ScissorRectangle = savedScissor;
+                _spriteBatch.Begin(
+                    SpriteSortMode.Deferred,
+                    savedBlend,
+                    savedSampler,
+                    savedDepth,
+                    savedRasterizer,
+                    null,
+                    Game1.Display.SpriteBatchTransform);
+            }
+        }
+
+        private bool EnsureFocusOverlayLoaded()
+        {
+            if (_focusEffectLoadAttempted)
+                return _focusOverlay?.IsAvailable == true;
+
+            _focusEffectLoadAttempted = true;
+            try
+            {
+                Effect effect = _content.Load<Effect>("Shaders/TutorialFocus");
+                _focusOverlay = new TutorialFocusOverlay(_graphicsDevice, effect);
+            }
+            catch (Exception exception)
+            {
+                LoggingService.Append(
+                    "TutorialDisplaySystem.EnsureFocusOverlayLoaded",
+                    new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["error"] = "Failed to load shader",
+                        ["exception"] = exception.Message
+                    });
+            }
+
+            return _focusOverlay?.IsAvailable == true;
         }
 
         private void DrawBubble()

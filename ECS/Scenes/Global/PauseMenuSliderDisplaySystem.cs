@@ -22,13 +22,21 @@ namespace ChurchSuffering.ECS.Systems
 		private readonly Texture2D _pixel;
 
 		private static readonly Color LabelColor = new Color(200, 192, 184);
-		private static readonly Color ValueColor = new Color(196, 30, 58);
-		private static readonly Color TrackColor = new Color(255, 255, 255) * 0.12f;
-		private static readonly Color FillStartColor = new Color(160, 0, 0);
-		private static readonly Color FillEndColor = new Color(196, 30, 58);
-		private static readonly Color KnobFillColor = Color.White;
+		private static readonly Color ValueColor = new Color(238, 56, 86);
+		private static readonly Color TrackShadowColor = Color.Black;
+		private static readonly Color TrackFrameColor = new Color(12, 7, 9);
+		private static readonly Color TrackBorderColor = new Color(126, 86, 96);
+		private static readonly Color TrackColor = new Color(255, 255, 255);
+		private static readonly Color TrackTickColor = new Color(218, 202, 198);
+		private static readonly Color FillGlowColor = new Color(214, 31, 65);
+		private static readonly Color FillStartColor = new Color(126, 8, 31);
+		private static readonly Color FillEndColor = new Color(246, 49, 82);
+		private static readonly Color FillHighlightColor = new Color(255, 159, 171);
+		private static readonly Color KnobFrameColor = new Color(18, 5, 10);
+		private static readonly Color KnobFillColor = new Color(240, 236, 230);
+		private static readonly Color KnobCoreColor = new Color(255, 77, 98);
 		private static readonly Color KnobBorderColor = new Color(196, 30, 58);
-		private static readonly Color KnobGlowColor = new Color(196, 30, 58);
+		private static readonly Color KnobGlowColor = new Color(225, 35, 70);
 
 		[DebugEditable(DisplayName = "Label Scale", Step = 0.01f, Min = 0.02f, Max = 1f)]
 		public float LabelScale { get; set; } = 0.09f;
@@ -38,6 +46,21 @@ namespace ChurchSuffering.ECS.Systems
 
 		[DebugEditable(DisplayName = "Header To Track Gap", Step = 1, Min = 0, Max = 80)]
 		public int HeaderToTrackGap { get; set; } = 14;
+
+		[DebugEditable(DisplayName = "Track Frame Height", Step = 1, Min = 3, Max = 40)]
+		public int TrackFrameHeight { get; set; } = 11;
+
+		[DebugEditable(DisplayName = "Track Border", Step = 1, Min = 0, Max = 8)]
+		public int TrackBorder { get; set; } = 1;
+
+		[DebugEditable(DisplayName = "Track Tick Height", Step = 1, Min = 1, Max = 40)]
+		public int TrackTickHeight { get; set; } = 13;
+
+		[DebugEditable(DisplayName = "Track Tick Width", Step = 1, Min = 1, Max = 8)]
+		public int TrackTickWidth { get; set; } = 1;
+
+		[DebugEditable(DisplayName = "Fill Glow Height", Step = 1, Min = 1, Max = 40)]
+		public int FillGlowHeight { get; set; } = 13;
 
 		[DebugEditable(DisplayName = "Knob Size", Step = 1, Min = 4, Max = 80)]
 		public int KnobSize { get; set; } = 30;
@@ -131,9 +154,8 @@ namespace ChurchSuffering.ECS.Systems
 			_spriteBatch.DrawString(_font, value, valuePos, ValueColor, 0f, Vector2.Zero, ValueScale, SpriteEffects.None, 0f);
 
 			var track = slider.TrackBounds;
-			_spriteBatch.Draw(_pixel, track, TrackColor);
-
-			DrawHorizontalGradient(slider.FillBounds, FillStartColor, FillEndColor, 24);
+			DrawTrack(track);
+			DrawFill(slider.FillBounds);
 
 			bool active = ui.IsHovered || slider.IsDragging;
 			float scale = active ? HoverKnobScale : 1f;
@@ -150,51 +172,97 @@ namespace ChurchSuffering.ECS.Systems
 			return $"{slider.Value}%";
 		}
 
+		private void DrawTrack(Rectangle track)
+		{
+			if (track.Width <= 0 || track.Height <= 0) return;
+
+			int centerY = track.Center.Y;
+			int frameHeight = Math.Max(track.Height, TrackFrameHeight);
+			var shadow = CenteredHorizontalBand(track.X - 3, track.Width + 6, centerY + 2, frameHeight);
+			var frame = CenteredHorizontalBand(track.X - 2, track.Width + 4, centerY, frameHeight);
+
+			_spriteBatch.Draw(_pixel, shadow, TrackShadowColor * 0.7f);
+			_spriteBatch.Draw(_pixel, frame, TrackFrameColor * 0.98f);
+			DrawBorder(frame, TrackBorderColor * 0.42f, TrackBorder);
+			_spriteBatch.Draw(_pixel, track, TrackColor * 0.08f);
+
+			int tickHeight = Math.Max(1, TrackTickHeight);
+			int tickWidth = Math.Max(1, TrackTickWidth);
+			for (int i = 0; i <= 4; i++)
+			{
+				int x = track.X + (int)MathF.Round(track.Width * (i / 4f));
+				var tick = new Rectangle(x - tickWidth / 2, centerY - tickHeight / 2, tickWidth, tickHeight);
+				_spriteBatch.Draw(_pixel, tick, TrackTickColor * 0.18f);
+			}
+		}
+
+		private void DrawFill(Rectangle fill)
+		{
+			if (fill.Width <= 0 || fill.Height <= 0) return;
+
+			int centerY = fill.Center.Y;
+			int glowHeight = Math.Max(fill.Height, FillGlowHeight);
+			var glow = CenteredHorizontalBand(fill.X, fill.Width, centerY, glowHeight);
+			_spriteBatch.Draw(_pixel, glow, FillGlowColor * 0.18f);
+			DrawHorizontalGradient(fill, FillStartColor, FillEndColor, 24);
+			_spriteBatch.Draw(
+				_pixel,
+				new Rectangle(fill.X, fill.Y, fill.Width, 1),
+				FillHighlightColor * 0.72f);
+		}
+
 		private void DrawKnob(Rectangle knob, float scale)
 		{
-			int outerRadius = Math.Max(1, KnobSize / 2);
-			int innerRadius = Math.Max(1, outerRadius - Math.Max(0, KnobBorder));
 			var center = new Vector2(knob.X + knob.Width / 2f, knob.Y + knob.Height / 2f);
+			int knobSize = Math.Max(4, KnobSize);
+			int border = Math.Max(0, KnobBorder);
+			int innerSize = Math.Max(3, knobSize - border * 2);
+			int coreSize = Math.Max(3, innerSize / 3);
 
 			if (GlowAlpha > 0f)
 			{
-				int glowRadius = Math.Max(outerRadius + GlowSizeAdd / 2, outerRadius);
-				var glow = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, glowRadius);
-				_spriteBatch.Draw(
-					glow,
-					center,
-					null,
-					KnobGlowColor * GlowAlpha,
-					0f,
-					new Vector2(glow.Width / 2f, glow.Height / 2f),
-					scale,
-					SpriteEffects.None,
-					0f);
+				int broadGlowSize = knobSize + Math.Max(0, GlowSizeAdd);
+				int closeGlowSize = knobSize + Math.Max(0, GlowSizeAdd / 2);
+				DrawDiamond(center, broadGlowSize, KnobGlowColor * (GlowAlpha * 0.12f), scale);
+				DrawDiamond(center, closeGlowSize, KnobGlowColor * (GlowAlpha * 0.24f), scale);
 			}
 
-			var outer = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, outerRadius);
-			_spriteBatch.Draw(
-				outer,
-				center,
-				null,
-				KnobBorderColor,
-				0f,
-				new Vector2(outer.Width / 2f, outer.Height / 2f),
-				scale,
-				SpriteEffects.None,
-				0f);
+			DrawDiamond(center, knobSize + 4, KnobFrameColor, scale);
+			DrawDiamond(center, knobSize, KnobBorderColor, scale);
+			DrawDiamond(center, innerSize, KnobFillColor, scale);
+			DrawDiamond(center, coreSize, KnobCoreColor, scale);
+		}
 
-			var inner = PrimitiveTextureFactory.GetAntiAliasedCircle(_graphicsDevice, innerRadius);
+		private void DrawDiamond(Vector2 center, int size, Color color, float scale)
+		{
+			Texture2D diamond = PrimitiveTextureFactory.GetDiamondTexture(_graphicsDevice, Math.Max(1, size));
 			_spriteBatch.Draw(
-				inner,
+				diamond,
 				center,
 				null,
-				KnobFillColor,
+				color,
 				0f,
-				new Vector2(inner.Width / 2f, inner.Height / 2f),
+				new Vector2(diamond.Width / 2f, diamond.Height / 2f),
 				scale,
 				SpriteEffects.None,
 				0f);
+		}
+
+		private static Rectangle CenteredHorizontalBand(int x, int width, int centerY, int height)
+		{
+			width = Math.Max(1, width);
+			height = Math.Max(1, height);
+			return new Rectangle(x, centerY - height / 2, width, height);
+		}
+
+		private void DrawBorder(Rectangle rect, Color color, int thickness)
+		{
+			if (thickness <= 0 || rect.Width <= 0 || rect.Height <= 0) return;
+			thickness = Math.Min(thickness, Math.Min(rect.Width, rect.Height));
+			_spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color);
+			_spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color);
+			_spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color);
+			_spriteBatch.Draw(_pixel, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color);
 		}
 
 		private void DrawHorizontalGradient(Rectangle rect, Color left, Color right, int steps)
