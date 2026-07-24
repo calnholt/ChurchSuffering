@@ -3178,6 +3178,11 @@
 /processor:SoundEffectProcessor
 /build:SFX/achievement-reveal.wav
 
+#begin SFX/booster-pack-charge.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/booster-pack-charge.wav
+
 #begin Enemies/Hex_Bailiff.png
 /importer:TextureImporter
 /processor:TextureProcessor

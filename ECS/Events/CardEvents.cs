@@ -566,6 +566,7 @@ namespace ChurchSuffering.ECS.Events
 		ClimbPointsTotal = 46,
 		GameOver = 47,
 		AchievementReveal = 48,
+		BoosterPackCharge = 49,
     }
 
     /// <summary>

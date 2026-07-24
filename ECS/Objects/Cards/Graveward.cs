@@ -19,9 +19,9 @@ namespace ChurchSuffering.ECS.Objects.Cards
             CardId = CardIds.Graveward.ToKey();
             Name = "Graveward";
             Target = "Enemy";
-            Damage = 6;
+            Damage = 7;
             Block = 3;
-            IsFreeAction = true;
+            Cost = ["Any"];
             VisualEffectRecipe = PlayerAttackEffect();
             RefreshText();
 

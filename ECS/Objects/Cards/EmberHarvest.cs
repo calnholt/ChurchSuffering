@@ -23,6 +23,7 @@ namespace ChurchSuffering.ECS.Objects.Cards
             Cost = ["Any"];
             Text = $"If a scorched card was discarded to play this, gain {GetMightGained(IsUpgraded)} might.";
             VisualEffectRecipe = PlayerAttackEffect();
+            IsFreeAction = true;
             Damage = 7;
             Block = 2;
 

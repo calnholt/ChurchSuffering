@@ -925,6 +925,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		{
 			case BoosterPackOpeningMilestoneKind.ChargeStarted:
 				SpawnParticles(state, milestone.Seconds, ChargeParticleCount, ParticleGroup.Charge);
+				EventManager.Publish(new PlaySfxEvent { Track = SfxTrack.BoosterPackCharge, Volume = 0.5f });
 				break;
 			case BoosterPackOpeningMilestoneKind.ChargePulse:
 				SpawnParticles(state, milestone.Seconds, ChargeRepeatParticleCount, ParticleGroup.Charge);
