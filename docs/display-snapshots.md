@@ -669,11 +669,15 @@ dotnet run -- snapshot narrative-event-modal --event icebound_tithe --options 2
 
 ## `waystation`
 
-Renders the settled fullscreen Penance V2 modal. Sword, Dagger, and Hammer are unlocked through Penance XII; Hammer/Penance XII is selected. Pending rewards and dialogue are suppressed, animation state is pinned, and the cursor does not hover a control.
+Renders the Waystation hub in two variants. `incense` keeps the hub unobscured so the
+procedural smoke, POIs, and dialogue layer can be inspected together. `penance-12`
+renders the settled fullscreen Penance V2 modal with Sword, Dagger, and Hammer
+unlocked through Penance XII and Hammer/Penance XII selected.
 
 ### Commands
 
 ```bash
+dotnet run -- snapshot waystation incense
 dotnet run -- snapshot waystation penance-12
 ./scripts/verify-waystation-snapshots.sh
 ```
@@ -682,7 +686,8 @@ This feature fixture is a plain, non-baseline capture. Inspect the generated PNG
 
 ### Output file
 
-`debug/snapshots/waystation/penance-12.png`
+- `debug/snapshots/waystation/incense.png`
+- `debug/snapshots/waystation/penance-12.png`
 
 ---
 

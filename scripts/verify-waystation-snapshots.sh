@@ -6,4 +6,6 @@ if [[ $# -ne 0 ]]; then
 	exit 2
 fi
 
-dotnet run --no-build -- snapshot waystation penance-12
+for variant in incense penance-12; do
+	dotnet run --no-build -- snapshot waystation "$variant"
+done

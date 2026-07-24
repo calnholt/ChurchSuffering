@@ -3,7 +3,7 @@
 float4x4 MatrixTransform;
 float2 ViewportSize;
 float Time;
-float Opacity = 0.45;
+float Opacity = 0.65;
 
 float SmokeScale = 3.2;
 float WarpStrength = 2.6;
@@ -124,7 +124,14 @@ float SmokeField(float2 p, float t)
     return Fbm(p + max(WarpStrength, 0.0) * q);
 }
 
-float3 RenderIncense(float2 fragCoord)
+struct IncenseSample
+{
+    float3 SmokeColor;
+    float3 MoteEmission;
+    float Density;
+};
+
+IncenseSample RenderIncense(float2 fragCoord)
 {
     float2 viewport = max(ViewportSize, float2(1.0, 1.0));
     float2 uv = fragCoord / viewport;
@@ -147,7 +154,7 @@ float3 RenderIncense(float2 fragCoord)
     float smokeHigh = max(SmokeLow, SmokeHigh);
     density = SmoothStep01(smokeLow, smokeHigh, density);
 
-    float3 col = lerp(GloomColor, SmokeColor, density);
+    float3 smokeColor = lerp(GloomColor, SmokeColor, density);
 
     float moteScale = max(MoteScale, 1.0);
     float2 mcoord = p * moteScale;
@@ -169,28 +176,39 @@ float3 RenderIncense(float2 fragCoord)
     float flash = 1.0 - flashDepth * (0.5 + 0.5 * sin(t * frate + fphase));
     mote *= flash;
 
-    col += GlintColor * mote * max(MoteAmount, 0.0) * (0.25 + density);
+    float3 moteColor = GlintColor * mote * max(MoteAmount, 0.0) * (0.25 + density);
 
     float2 vv = uv - 0.5;
     float vig = 1.0 - max(VignetteAmount, 0.0) * dot(vv, vv) * 2.5;
-    col *= saturate(vig);
+    smokeColor *= saturate(vig);
+    moteColor *= saturate(vig);
 
-    col *= max(Exposure, 0.0);
-    col = col / (1.0 + col);
+    float exposure = max(Exposure, 0.0);
+    float3 smokeTone = smokeColor * exposure;
+    smokeTone = smokeTone / (1.0 + smokeTone);
+    float3 combinedTone = (smokeColor + moteColor) * exposure;
+    combinedTone = combinedTone / (1.0 + combinedTone);
+    float3 moteEmission = max(combinedTone - smokeTone, 0.0);
 
     float g = Hash21(floor(fragCoord) + frac(t * 7.13) * 300.0) - 0.5;
-    col += g * max(GrainAmount, 0.0);
+    smokeTone += g * max(GrainAmount, 0.0);
 
-    return saturate(col);
+    IncenseSample sample;
+    sample.SmokeColor = saturate(smokeTone);
+    sample.MoteEmission = moteEmission;
+    sample.Density = density;
+    return sample;
 }
 
 float4 SpritePixelShader(VSOutput input) : COLOR0
 {
     float2 viewport = max(ViewportSize, float2(1.0, 1.0));
     float2 uv = float2(input.TexCoord.x, 1.0 - input.TexCoord.y);
-    float3 col = RenderIncense(uv * viewport);
-    float alpha = saturate(Opacity) * input.Color.a;
-    return float4(col * alpha, alpha);
+    IncenseSample sample = RenderIncense(uv * viewport);
+    float opacity = saturate(Opacity) * input.Color.a;
+    float alpha = opacity * sample.Density;
+    float3 color = sample.SmokeColor * alpha + sample.MoteEmission * opacity;
+    return float4(saturate(color), alpha);
 }
 
 technique SpriteDrawing

@@ -79,12 +79,24 @@ namespace ChurchSuffering.Diagnostics.Snapshots.Fixtures
 			ctx.World.AddSystem(_footer);
 
 			EventManager.Publish(new LoadSceneEvent { Scene = SceneId.WayStation, PreviousScene = SceneId.Snapshot });
-			EventManager.Publish(new OpenWayStationClimbSettingsModalEvent());
-			PinSettled(ctx);
+			if (_variant == WayStationSnapshotVariant.Penance12)
+			{
+				EventManager.Publish(new OpenWayStationClimbSettingsModalEvent());
+				PinSettled(ctx);
+			}
 		}
 
 		public void Draw(DisplaySnapshotContext ctx)
 		{
+			if (_variant == WayStationSnapshotVariant.Incense)
+			{
+				_background.Draw();
+				_incense.Draw();
+				_poi.Draw();
+				_dialogue.Draw();
+				return;
+			}
+
 			PinSettled(ctx);
 			_backdrop.DrawUnderlay(() =>
 			{

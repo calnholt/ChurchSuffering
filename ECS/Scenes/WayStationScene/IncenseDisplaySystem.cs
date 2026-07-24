@@ -24,8 +24,8 @@ namespace ChurchSuffering.ECS.Systems
         private bool _wasActive;
         private float _timeSeconds;
 
-        [DebugEditable(DisplayName = "Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
-        public float Opacity { get; set; } = 0f;
+        [DebugEditable(DisplayName = "Smoke Opacity", Step = 0.01f, Min = 0f, Max = 1f)]
+        public float Opacity { get; set; } = 1f;
 
         [DebugEditable(DisplayName = "Time Scale", Step = 0.01f, Min = 0f, Max = 5f)]
         public float TimeScale { get; set; } = 1f;
@@ -43,13 +43,13 @@ namespace ChurchSuffering.ECS.Systems
         public float SmokeHigh { get; set; } = 0.85f;
 
         [DebugEditable(DisplayName = "Depth Parallax", Step = 0.01f, Min = 0f, Max = 2f)]
-        public float DepthParallax { get; set; } = 0.55f;
+        public float DepthParallax { get; set; } = 0f;
 
         [DebugEditable(DisplayName = "Rise Speed", Step = 0.001f, Min = -0.5f, Max = 0.5f)]
         public float RiseSpeed { get; set; } = 0.055f;
 
         [DebugEditable(DisplayName = "Churn Speed", Step = 0.001f, Min = -0.5f, Max = 0.5f)]
-        public float ChurnSpeed { get; set; } = 0.040f;
+        public float ChurnSpeed { get; set; } = 0.07f;
 
         [DebugEditable(DisplayName = "Drift X", Step = 0.001f, Min = -0.5f, Max = 0.5f)]
         public float DriftX { get; set; } = 0.010f;

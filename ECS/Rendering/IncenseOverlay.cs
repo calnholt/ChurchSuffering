@@ -11,7 +11,7 @@ public class IncenseOverlay
     public bool IsAvailable => _effect != null;
 
     public float Time { get; set; }
-    public float Opacity { get; set; } = 0.45f;
+    public float Opacity { get; set; } = 0.65f;
     public float SmokeScale { get; set; } = 3.2f;
     public float WarpStrength { get; set; } = 2.6f;
     public float SmokeLow { get; set; } = 0.30f;
