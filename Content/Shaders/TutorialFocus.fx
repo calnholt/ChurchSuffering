@@ -7,6 +7,7 @@ float Time;
 
 static const int MAX_CUTOUTS = 16;
 float4 CutoutRects[MAX_CUTOUTS]; // center xy, half-size zw in logical pixels
+float CutoutRotations[MAX_CUTOUTS];
 int CutoutCount = 0;
 
 float CutoutPadding = 8.0;
@@ -77,11 +78,17 @@ float ValueNoise(float2 p)
         local.y);
 }
 
-float RoundedRectangleDistance(float2 positionPx, float4 packedRect)
+float RoundedRectangleDistance(float2 positionPx, float4 packedRect, float rotation)
 {
     float2 halfSize = max(packedRect.zw + max(CutoutPadding, 0.0), float2(1.0, 1.0));
     float radius = min(max(CutoutCornerRadius, 0.0), min(halfSize.x, halfSize.y));
-    float2 q = abs(positionPx - packedRect.xy) - (halfSize - radius);
+    float2 delta = positionPx - packedRect.xy;
+    float cosine = cos(rotation);
+    float sine = sin(rotation);
+    float2 local = float2(
+        delta.x * cosine + delta.y * sine,
+        -delta.x * sine + delta.y * cosine);
+    float2 q = abs(local) - (halfSize - radius);
     return length(max(q, float2(0.0, 0.0))) + min(max(q.x, q.y), 0.0) - radius;
 }
 
@@ -95,7 +102,9 @@ float4 SpritePixelShader(VSOutput input) : COLOR0
     {
         if (i < CutoutCount)
         {
-            nearestDistance = min(nearestDistance, RoundedRectangleDistance(screenPx, CutoutRects[i]));
+            nearestDistance = min(
+                nearestDistance,
+                RoundedRectangleDistance(screenPx, CutoutRects[i], CutoutRotations[i]));
         }
     }
 

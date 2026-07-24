@@ -10,6 +10,7 @@ using ChurchSuffering.ECS.Data.Tutorials;
 using ChurchSuffering.ECS.Objects.Cards;
 using ChurchSuffering.ECS.Objects.Equipment;
 using ChurchSuffering.ECS.Factories;
+using ChurchSuffering.ECS.Rendering;
 using Microsoft.Xna.Framework;
 using ChurchSuffering.ECS.Data.Locations;
 
@@ -332,15 +333,11 @@ namespace ChurchSuffering.ECS.Systems
             _lastProcessedPhase = SubPhase.StartBattle;
         }
 
-        /// <summary>
-        /// Resolves target entity bounds for the active tutorial.
-        /// Returns a list of rectangles for multi-target tutorials.
-        /// </summary>
-        public List<Rectangle> ResolveTargetBounds()
+        public List<TutorialTargetGeometry> ResolveTargets()
         {
-            var bounds = new List<Rectangle>();
+            var targets = new List<TutorialTargetGeometry>();
             if (_activeTutorial == null)
-                return bounds;
+                return targets;
 
             var targetIds = new List<string>();
             if (_activeTutorial.targetIds != null && _activeTutorial.targetIds.Count > 0)
@@ -354,55 +351,73 @@ namespace ChurchSuffering.ECS.Systems
 
             foreach (var targetId in targetIds)
             {
-                var rect = ResolveSingleTargetBounds(_activeTutorial.targetType, targetId);
-                if (rect.Width > 0 && rect.Height > 0)
+                var target = ResolveSingleTarget(_activeTutorial.targetType, targetId);
+                if (!target.IsEmpty)
                 {
-                    bounds.Add(rect);
+                    targets.Add(target);
                 }
             }
 
-            return bounds;
+            return targets;
         }
 
-        private Rectangle ResolveSingleTargetBounds(string targetType, string targetId)
+        public List<Rectangle> ResolveTargetBounds()
+        {
+            return ResolveTargets()
+                .Select(target => target.AxisAlignedBounds)
+                .ToList();
+        }
+
+        private TutorialTargetGeometry ResolveSingleTarget(string targetType, string targetId)
         {
             switch (targetType)
             {
                 case "entity_name":
-                    return GetEntityBounds(targetId);
+                    return GetEntityTarget(targetId);
                 case "component_hand":
-                    return GetFirstHandCardBounds();
+                    return TutorialTargetGeometry.AxisAligned(GetFirstHandCardBounds());
                 case "component_any":
-                    return GetFirstComponentBounds(targetId);
+                    return GetFirstComponentTarget(targetId);
                 case "ui_region":
-                    return GetUIRegionBounds(targetId);
+                    return GetUIRegionTarget(targetId);
                 case "card_with_cost":
-                    return GetCardWithCostBounds();
+                    return GetCardWithCostTarget();
                 case "equipment":
-                    return GetEquipmentBounds();
+                    return GetEquipmentTarget();
                 default:
-                    return Rectangle.Empty;
+                    return default;
             }
         }
 
         internal Rectangle GetEntityBounds(string entityName)
         {
+            return GetEntityTarget(entityName).AxisAlignedBounds;
+        }
+
+        internal TutorialTargetGeometry GetEntityTarget(string entityName)
+        {
             var entity = EntityManager.GetEntity(entityName);
             if (entity == null)
-                return Rectangle.Empty;
+                return default;
 
             var ui = entity.GetComponent<UIElement>();
             if (ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
-                return TransformResolverService.ResolveUIBounds(EntityManager, entity, ui);
+            {
+                return new TutorialTargetGeometry(
+                    TransformResolverService.ResolveUIBounds(EntityManager, entity, ui),
+                    entity.GetComponent<Transform>()?.Rotation ?? 0f);
+            }
 
             var transform = entity.GetComponent<Transform>();
             if (transform != null)
             {
                 // Fallback to transform position with default size
-                return new Rectangle((int)transform.Position.X - 50, (int)transform.Position.Y - 50, 100, 100);
+                return new TutorialTargetGeometry(
+                    new Rectangle((int)transform.Position.X - 50, (int)transform.Position.Y - 50, 100, 100),
+                    transform.Rotation);
             }
 
-            return Rectangle.Empty;
+            return default;
         }
 
         private Rectangle GetFirstHandCardBounds()
@@ -423,7 +438,7 @@ namespace ChurchSuffering.ECS.Systems
             return Rectangle.Empty;
         }
 
-        private Rectangle GetFirstComponentBounds(string componentTypeName)
+        private TutorialTargetGeometry GetFirstComponentTarget(string componentTypeName)
         {
             // Map component type names to actual component types
             Entity entity = null;
@@ -438,32 +453,19 @@ namespace ChurchSuffering.ECS.Systems
                     entity = deck?.Hand?.FirstOrDefault();
                     break;
                 default:
-                    return Rectangle.Empty;
+                    return default;
             }
 
-            if (entity == null)
-                return Rectangle.Empty;
-
-            var ui = entity.GetComponent<UIElement>();
-            if (ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
-                return ui.Bounds;
-
-            var transform = entity.GetComponent<Transform>();
-            if (transform != null)
-            {
-                return new Rectangle((int)transform.Position.X - 50, (int)transform.Position.Y - 50, 100, 100);
-            }
-
-            return Rectangle.Empty;
+            return ResolveEntityTarget(entity);
         }
 
-        private Rectangle GetEquipmentBounds()
+        private TutorialTargetGeometry GetEquipmentTarget()
         {
             var player = EntityManager.GetEntitiesWithComponent<Player>().FirstOrDefault();
             if (player == null)
             {
                 LoggingService.Append("TutorialManager.GetEquipmentBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "player not found" });
-                return Rectangle.Empty;
+                return default;
             }
 
             foreach (var equipmentEntity in EntityManager.GetEntitiesWithComponent<EquippedEquipment>()
@@ -475,13 +477,13 @@ namespace ChurchSuffering.ECS.Systems
                 if ((zone?.Zone ?? EquipmentZoneType.Default) != EquipmentZoneType.Default)
                     continue;
 
-                var bounds = ResolveEntityUIWorldBounds(equipmentEntity);
-                if (bounds.Width > 0 && bounds.Height > 0)
-                    return bounds;
+                var target = ResolveEntityTarget(equipmentEntity);
+                if (!target.IsEmpty)
+                    return target;
             }
 
             LoggingService.Append("TutorialManager.GetEquipmentBounds", new System.Text.Json.Nodes.JsonObject { ["message"] = "bounds not found" });
-            return Rectangle.Empty;
+            return default;
         }
 
         private Rectangle GetMedalBounds()
@@ -518,11 +520,18 @@ namespace ChurchSuffering.ECS.Systems
 
         private Rectangle ResolveEntityUIWorldBounds(Entity entity)
         {
+            return ResolveEntityTarget(entity).AxisAlignedBounds;
+        }
+
+        private TutorialTargetGeometry ResolveEntityTarget(Entity entity)
+        {
             var ui = entity?.GetComponent<UIElement>();
             if (ui == null || ui.Bounds.Width <= 0 || ui.Bounds.Height <= 0)
-                return Rectangle.Empty;
+                return default;
 
-            return TransformResolverService.ResolveUIBounds(EntityManager, entity, ui);
+            return new TutorialTargetGeometry(
+                TransformResolverService.ResolveUIBounds(EntityManager, entity, ui),
+                entity.GetComponent<Transform>()?.Rotation ?? 0f);
         }
 
         private static int EquipmentSlotOrder(EquipmentSlot slot)
@@ -536,14 +545,33 @@ namespace ChurchSuffering.ECS.Systems
                 _ => 4,
             };
         }
+        internal TutorialTargetGeometry GetUIRegionTarget(string regionId)
+        {
+            return regionId switch
+            {
+                "first_black_card" => GetFirstCardTargetByColor(CardData.CardColor.Black),
+                "first_red_card" => GetFirstCardTargetByColor(CardData.CardColor.Red),
+                "first_white_card" => GetFirstCardTargetByColor(CardData.CardColor.White),
+                "reckoning" => GetCardTarget("reckoning"),
+                "litany_of_wrath" => GetCardTarget("litany_of_wrath"),
+                "smite_damage" => GetCardTarget("smite"),
+                _ => TutorialTargetGeometry.AxisAligned(GetUIRegionBounds(regionId)),
+            };
+        }
+
+        private TutorialTargetGeometry GetCardTarget(string cardId)
+        {
+            var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
+            var card = deck?.Hand?.FirstOrDefault(entity =>
+                string.Equals(entity.GetComponent<CardData>()?.Card?.CardId, cardId, StringComparison.OrdinalIgnoreCase));
+            return ResolveEntityTarget(card);
+        }
+
         private Rectangle GetUIRegionBounds(string regionId)
         {
             Rectangle CardBounds(string cardId)
             {
-                var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
-                var card = deck?.Hand?.FirstOrDefault(entity =>
-                    string.Equals(entity.GetComponent<CardData>()?.Card?.CardId, cardId, StringComparison.OrdinalIgnoreCase));
-                return card?.GetComponent<UIElement>()?.Bounds ?? Rectangle.Empty;
+                return GetCardTarget(cardId).AxisAlignedBounds;
             }
 
             Rectangle Union(params Rectangle[] rectangles)
@@ -557,17 +585,15 @@ namespace ChurchSuffering.ECS.Systems
                 case "player_hand":
                     var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
                     return UnionBounds(deck?.Hand
-                        .Select(card => card.GetComponent<UIElement>()?.Bounds ?? Rectangle.Empty)
+                        .Select(card => ResolveEntityTarget(card).AxisAlignedBounds)
                         ?? Enumerable.Empty<Rectangle>());
 
-                case "enemy_attack_display":
-                    return new Rectangle(Game1.VirtualWidth / 4, Game1.VirtualHeight / 4, Game1.VirtualWidth / 2, 150);
                 case "first_black_card":
-                    return GetFirstCardBoundsByColor(CardData.CardColor.Black);
+                    return GetFirstCardTargetByColor(CardData.CardColor.Black).AxisAlignedBounds;
                 case "first_red_card":
-                    return GetFirstCardBoundsByColor(CardData.CardColor.Red);
+                    return GetFirstCardTargetByColor(CardData.CardColor.Red).AxisAlignedBounds;
                 case "first_white_card":
-                    return GetFirstCardBoundsByColor(CardData.CardColor.White);
+                    return GetFirstCardTargetByColor(CardData.CardColor.White).AxisAlignedBounds;
                 case "reckoning":
                     return CardBounds("reckoning");
                 case "litany_of_wrath":
@@ -606,27 +632,27 @@ namespace ChurchSuffering.ECS.Systems
             return new Rectangle(left, top, right - left, bottom - top);
         }
 
-        private Rectangle GetFirstCardBoundsByColor(CardData.CardColor color)
+        private TutorialTargetGeometry GetFirstCardTargetByColor(CardData.CardColor color)
         {
             var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
-            if (deck?.Hand == null) return Rectangle.Empty;
+            if (deck?.Hand == null) return default;
 
             foreach (var card in deck.Hand)
             {
                 var cardData = card.GetComponent<CardData>();
                 var ui = card.GetComponent<UIElement>();
                 if (cardData?.Color == color && ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
-                    return ui.Bounds;
+                    return ResolveEntityTarget(card);
             }
-            return Rectangle.Empty;
+            return default;
         }
 
-        private Rectangle GetCardWithCostBounds()
+        private TutorialTargetGeometry GetCardWithCostTarget()
         {
             var deckEntity = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault();
             var deck = deckEntity?.GetComponent<Deck>();
             if (deck == null || deck.Hand == null || deck.Hand.Count == 0)
-                return Rectangle.Empty;
+                return default;
 
             foreach (var card in deck.Hand)
             {
@@ -638,12 +664,12 @@ namespace ChurchSuffering.ECS.Systems
                     var ui = card.GetComponent<UIElement>();
                     if (ui != null && ui.Bounds.Width > 0 && ui.Bounds.Height > 0)
                     {
-                        return new Rectangle(ui.Bounds.X, ui.Bounds.Y, ui.Bounds.Width, ui.Bounds.Height);
+                        return ResolveEntityTarget(card);
                     }
 
                 }
             }
-            return Rectangle.Empty;
+            return default;
         }
     }
 }

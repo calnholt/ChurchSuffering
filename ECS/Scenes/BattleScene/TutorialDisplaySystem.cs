@@ -39,12 +39,15 @@ namespace ChurchSuffering.ECS.Systems
 
         private bool _isActive = false;
         private TutorialDefinition _currentTutorial = null;
+        private List<TutorialTargetGeometry> _targets = new List<TutorialTargetGeometry>();
         private List<Rectangle> _targetBounds = new List<Rectangle>();
         private string _wrappedText = string.Empty;
         private Rectangle _bubbleRect;
 
         private const string ContinueEntityName = "TutorialContinueButton";
         private const string TutorialContextEntityName = "TutorialInputContext";
+        internal const string InputContextId = "overlay.tutorial";
+        internal const int InputContextPriority = 900;
 
         // Overlay settings
         [DebugEditable(DisplayName = "Overlay Alpha (0-255)", Step = 5, Min = 0, Max = 255)]
@@ -180,7 +183,7 @@ namespace ChurchSuffering.ECS.Systems
                     EnsureFocusOverlayLoaded();
                     _focusTime += Math.Max(0f, (float)gameTime.ElapsedGameTime.TotalSeconds);
                 }
-                _targetBounds = _tutorialManager.ResolveTargetBounds();
+                ResolveTargets();
                 UpdateBubblePosition();
                 StateSingleton.IsTutorialActive = true;
             }
@@ -207,7 +210,7 @@ namespace ChurchSuffering.ECS.Systems
             SetTutorialContextActive(true);
 
             // Resolve target bounds
-            _targetBounds = _tutorialManager.ResolveTargetBounds();
+            ResolveTargets();
 
             // Prepare bubble text
             PrepareText();
@@ -226,6 +229,7 @@ namespace ChurchSuffering.ECS.Systems
             // Clean up current tutorial state but don't fully deactivate
             // (next tutorial will start immediately if queue has more)
             _currentTutorial = null;
+            _targets.Clear();
             _targetBounds.Clear();
             DestroyContinueButton();
             SetTutorialContextActive(false);
@@ -250,6 +254,7 @@ namespace ChurchSuffering.ECS.Systems
             _isActive = false;
             _currentTutorial = null;
             _focusTime = 0f;
+            _targets.Clear();
             _targetBounds.Clear();
 
             // Restore input
@@ -261,6 +266,14 @@ namespace ChurchSuffering.ECS.Systems
             DestroyContinueButton();
 
             LoggingService.Append("TutorialDisplaySystem.OnAllTutorialsCompleted", new System.Text.Json.Nodes.JsonObject { ["message"] = "cleaned up" });
+        }
+
+        private void ResolveTargets()
+        {
+            _targets = _tutorialManager.ResolveTargets();
+            _targetBounds = _targets
+                .Select(target => target.AxisAlignedBounds)
+                .ToList();
         }
 
         private void PrepareText()
@@ -392,7 +405,7 @@ namespace ChurchSuffering.ECS.Systems
             InputContextService.EnsureMember(
                 EntityManager,
                 entity,
-                "overlay.tutorial");
+                InputContextId);
 
             LoggingService.Append("TutorialDisplaySystem.CreateContinueButton", new System.Text.Json.Nodes.JsonObject { ["message"] = "created continue button" });
         }
@@ -457,8 +470,8 @@ namespace ChurchSuffering.ECS.Systems
             InputContextService.EnsureContext(
                 EntityManager,
                 contextEntity,
-                "overlay.tutorial",
-                900,
+                InputContextId,
+                InputContextPriority,
                 active);
         }
 
@@ -480,7 +493,7 @@ namespace ChurchSuffering.ECS.Systems
         {
             if (!ShaderRuntimeOptions.ShadersEnabled ||
                 _focusOverlay?.IsAvailable != true ||
-                _targetBounds.Count > TutorialFocusOverlay.MaxCutouts)
+                _targets.Count > TutorialFocusOverlay.MaxCutouts)
             {
                 _overlay.Draw(
                     _spriteBatch,
@@ -492,7 +505,7 @@ namespace ChurchSuffering.ECS.Systems
                 return;
             }
 
-            _focusOverlay.Cutouts = _targetBounds;
+            _focusOverlay.Cutouts = _targets;
             _focusOverlay.Time = _focusTime;
             _focusOverlay.CutoutPadding = Math.Max(0f, CutoutPadding);
             _focusOverlay.CutoutCornerRadius = Math.Clamp(CutoutCornerRadius, 0f, 80f);

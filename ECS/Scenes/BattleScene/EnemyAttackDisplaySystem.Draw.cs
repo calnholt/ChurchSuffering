@@ -126,7 +126,7 @@ namespace ChurchSuffering.ECS.Systems
 				return anchor;
 			}
 
-			anchor = EntityManager.CreateEntity("EnemyAttackBannerAnchor");
+			anchor = EntityManager.CreateEntity(EnemyAttackBannerAnchor.EntityName);
 			EntityManager.AddComponent(anchor, new EnemyAttackBannerAnchor());
 			EntityManager.AddComponent(anchor, new EnemyAttackBannerPresentation());
 			EntityManager.AddComponent(anchor, new Transform());

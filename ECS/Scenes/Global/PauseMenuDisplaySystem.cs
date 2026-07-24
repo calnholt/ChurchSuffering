@@ -18,7 +18,8 @@ namespace ChurchSuffering.ECS.Systems
 	[DebugTab("Pause Menu")]
 	public class PauseMenuDisplaySystem : Core.System
 	{
-		private const string ContextId = "overlay.pause";
+		internal const string ContextId = "overlay.pause";
+		internal const int InputContextPriority = 1000;
 		private const string RootName = "PauseMenu_Overlay";
 		private const string BlockerName = "PauseMenu_Blocker";
 		private const string AbandonName = "PauseMenu_AbandonButton";
@@ -351,7 +352,12 @@ namespace ChurchSuffering.ECS.Systems
 					ShowHoverHighlight = false,
 					IsHidden = true,
 				});
-				InputContextService.EnsureContext(EntityManager, _blockerEntity, ContextId, 900, false);
+				InputContextService.EnsureContext(
+					EntityManager,
+					_blockerEntity,
+					ContextId,
+					InputContextPriority,
+					false);
 				EnsureDontDestroy(_blockerEntity);
 			}
 
@@ -431,6 +437,15 @@ namespace ChurchSuffering.ECS.Systems
 				InputContextService.EnsureMember(EntityManager, _skipTutorialButtonEntity, ContextId);
 				EnsureDontDestroy(_skipTutorialButtonEntity);
 			}
+
+			EnsureTutorialInteractionPermitted(_blockerEntity);
+			EnsureTutorialInteractionPermitted(_musicSliderEntity);
+			EnsureTutorialInteractionPermitted(_sfxSliderEntity);
+			EnsureTutorialInteractionPermitted(_cursorSliderEntity);
+			EnsureTutorialInteractionPermitted(_cursorFastSliderEntity);
+			EnsureTutorialInteractionPermitted(_rumbleToggleEntity);
+			EnsureTutorialInteractionPermitted(_abandonButtonEntity);
+			EnsureTutorialInteractionPermitted(_skipTutorialButtonEntity);
 		}
 
 		private Entity EnsureSliderEntity(Entity current, string name, string label, PauseMenuSliderSetting setting, int value)
@@ -473,6 +488,14 @@ namespace ChurchSuffering.ECS.Systems
 			if (entity.GetComponent<DontDestroyOnLoad>() == null)
 			{
 				EntityManager.AddComponent(entity, new DontDestroyOnLoad());
+			}
+		}
+
+		private void EnsureTutorialInteractionPermitted(Entity entity)
+		{
+			if (entity != null && entity.GetComponent<TutorialInteractionPermitted>() == null)
+			{
+				EntityManager.AddComponent(entity, new TutorialInteractionPermitted());
 			}
 		}
 

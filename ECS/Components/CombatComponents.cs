@@ -85,6 +85,8 @@ namespace ChurchSuffering.ECS.Components
 	/// </summary>
 	public class EnemyAttackBannerAnchor : IComponent
 	{
+		public const string EntityName = "EnemyAttackBannerAnchor";
+
 		public Entity Owner { get; set; }
 	}
 

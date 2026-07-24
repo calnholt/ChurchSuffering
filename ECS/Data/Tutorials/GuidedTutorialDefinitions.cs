@@ -47,7 +47,7 @@ namespace ChurchSuffering.ECS.Data.Tutorials
 		[
 			new() { key = "teach_win", text = "Reduce the enemy's HP to zero to win the battle.", targetType = "entity_name", targetId = "Enemy", bubbleOrientation = "bottom" },
 			new() { key = "teach_loss", text = "If your HP reaches zero, you lose.", targetType = "entity_name", targetId = "UI_PlayerHudHealth", bubbleOrientation = "right" },
-			new() { key = "teach_enemy_attack", text = "Attacks show their DAMAGE value. Block incoming damage by assigning cards.", targetType = "ui_region", targetId = "enemy_attack_display", bubbleOrientation = "top" },
+			new() { key = "teach_enemy_attack", text = "Attacks show their DAMAGE value. Block incoming damage by assigning cards.", targetType = "entity_name", targetId = EnemyAttackBannerAnchor.EntityName, bubbleOrientation = "top" },
 			new() { key = "teach_black_block", text = "Black cards receive one additional BLOCK.", targetType = "ui_region", targetId = "first_black_card", bubbleOrientation = "top" },
 			new() { key = "teach_weapon", text = "Your weapon can be played once each turn.", targetType = "entity_name", targetId = "Weapon", bubbleOrientation = "top" },
 			new() { key = "teach_red_courage", text = "Blocking with a red card grants 1 courage.", targetType = "ui_region", targetId = "first_red_card", bubbleOrientation = "top" },

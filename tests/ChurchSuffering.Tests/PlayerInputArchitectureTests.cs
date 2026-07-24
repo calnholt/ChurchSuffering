@@ -6,6 +6,7 @@ using ChurchSuffering.ECS.Components;
 using ChurchSuffering.ECS.Core;
 using ChurchSuffering.ECS.Events;
 using ChurchSuffering.ECS.Input;
+using ChurchSuffering.ECS.Singletons;
 using ChurchSuffering.ECS.Systems;
 using Microsoft.Xna.Framework;
 using Xunit;
@@ -580,6 +581,89 @@ public class PlayerInputArchitectureTests
 
         Assert.Same(gameplayControl, state.CursorTarget.Entity);
         EventManager.Clear();
+    }
+
+    [Fact]
+    public void Pause_context_accepts_clicks_above_active_tutorial_and_restores_tutorial_after_close()
+    {
+        EventManager.Clear();
+        StateSingleton.IsTutorialActive = true;
+        try
+        {
+            var entityManager = CreateSceneEntityManager();
+            Entity tutorialRoot = entityManager.CreateEntity("TutorialRoot");
+            entityManager.AddComponent(tutorialRoot, new InputContext
+            {
+                Id = TutorialDisplaySystem.InputContextId,
+                Priority = TutorialDisplaySystem.InputContextPriority,
+                IsActive = true,
+            });
+            Entity tutorialButton = CreateUi(
+                entityManager,
+                "TutorialButton",
+                100,
+                new Rectangle(0, 0, 100, 100));
+            entityManager.AddComponent(tutorialButton, new InputContextMember
+            {
+                ContextId = TutorialDisplaySystem.InputContextId,
+            });
+            entityManager.AddComponent(tutorialButton, new TutorialInteractionPermitted());
+
+            Entity pauseRoot = entityManager.CreateEntity("PauseRoot");
+            var pauseContext = new InputContext
+            {
+                Id = PauseMenuDisplaySystem.ContextId,
+                Priority = PauseMenuDisplaySystem.InputContextPriority,
+                IsActive = true,
+            };
+            entityManager.AddComponent(pauseRoot, pauseContext);
+            Entity pauseButton = CreateUi(
+                entityManager,
+                "PauseButton",
+                200,
+                new Rectangle(0, 0, 100, 100));
+            entityManager.AddComponent(pauseButton, new InputContextMember
+            {
+                ContextId = PauseMenuDisplaySystem.ContextId,
+            });
+            entityManager.AddComponent(pauseButton, new TutorialInteractionPermitted());
+
+            var input = new PlayerInputSystem(
+                entityManager,
+                new FakeInputSource(
+                    Frame(
+                        sequence: 1,
+                        pointer: new Vector2(50, 50),
+                        down: PlayerInputFrame.Mask(PlayerButton.Primary),
+                        pressed: PlayerInputFrame.Mask(PlayerButton.Primary)),
+                    Frame(
+                        sequence: 2,
+                        pointer: new Vector2(50, 50),
+                        down: PlayerInputFrame.Mask(PlayerButton.Primary),
+                        pressed: PlayerInputFrame.Mask(PlayerButton.Primary))));
+            var interaction = new UIInteractionSystem(entityManager);
+
+            input.Update(new GameTime());
+            interaction.Update(new GameTime());
+
+            Assert.Equal(PauseMenuDisplaySystem.ContextId, InputContextResolver.ResolveCommandContext(entityManager));
+            Assert.True(pauseButton.GetComponent<UIElement>().IsClicked);
+            Assert.False(tutorialButton.GetComponent<UIElement>().IsClicked);
+
+            pauseContext.IsActive = false;
+            pauseButton.GetComponent<UIElement>().IsInteractable = false;
+            pauseButton.GetComponent<UIElement>().IsHidden = true;
+            input.Update(new GameTime());
+            interaction.Update(new GameTime());
+
+            Assert.Equal(TutorialDisplaySystem.InputContextId, InputContextResolver.ResolveCommandContext(entityManager));
+            Assert.True(tutorialButton.GetComponent<UIElement>().IsClicked);
+        }
+        finally
+        {
+            StateSingleton.IsTutorialActive = false;
+            EventManager.Clear();
+        }
     }
 
     [Fact]

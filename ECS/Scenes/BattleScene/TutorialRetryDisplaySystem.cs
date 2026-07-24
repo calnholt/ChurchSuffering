@@ -145,9 +145,11 @@ namespace ChurchSuffering.ECS.Systems
 				.Any(e =>
 				{
 					var c = e.GetComponent<InputContext>();
-					return c != null && c.Id == "overlay.tutorial" && c.IsActive;
+					return c != null && c.Id == TutorialDisplaySystem.InputContextId && c.IsActive;
 				});
-			string targetContext = tutorialOverlayActive ? "overlay.tutorial" : InputContextIds.Gameplay;
+			string targetContext = tutorialOverlayActive
+				? TutorialDisplaySystem.InputContextId
+				: InputContextIds.Gameplay;
 			var member = retryBtn.GetComponent<InputContextMember>();
 			if (member == null || member.ContextId != targetContext)
 			{

@@ -12,9 +12,10 @@ public sealed class TutorialFocusOverlay
     private readonly Effect _effect;
     private readonly Texture2D _whitePixel;
     private readonly Vector4[] _packedCutouts = new Vector4[MaxCutouts];
+    private readonly float[] _packedRotations = new float[MaxCutouts];
 
     public bool IsAvailable => _effect != null;
-    public IReadOnlyList<Rectangle> Cutouts { get; set; } = Array.Empty<Rectangle>();
+    public IReadOnlyList<TutorialTargetGeometry> Cutouts { get; set; } = Array.Empty<TutorialTargetGeometry>();
     public float Time { get; set; }
     public float CutoutPadding { get; set; } = 8f;
     public float CutoutCornerRadius { get; set; } = 18f;
@@ -52,20 +53,24 @@ public sealed class TutorialFocusOverlay
 
         int cutoutCount = Math.Min(Cutouts?.Count ?? 0, MaxCutouts);
         Array.Clear(_packedCutouts);
+        Array.Clear(_packedRotations);
         for (int i = 0; i < cutoutCount; i++)
         {
-            Rectangle bounds = Cutouts[i];
+            TutorialTargetGeometry target = Cutouts[i];
+            Rectangle bounds = target.Bounds;
             _packedCutouts[i] = new Vector4(
                 bounds.X + bounds.Width * 0.5f,
                 bounds.Y + bounds.Height * 0.5f,
                 Math.Max(0.5f, bounds.Width * 0.5f),
                 Math.Max(0.5f, bounds.Height * 0.5f));
+            _packedRotations[i] = target.Rotation;
         }
 
         _effect.Parameters["MatrixTransform"]?.SetValue(projection);
         _effect.Parameters["ViewportSize"]?.SetValue(new Vector2(Game1.VirtualWidth, Game1.VirtualHeight));
         _effect.Parameters["Time"]?.SetValue(Time);
         _effect.Parameters["CutoutRects"]?.SetValue(_packedCutouts);
+        _effect.Parameters["CutoutRotations"]?.SetValue(_packedRotations);
         _effect.Parameters["CutoutCount"]?.SetValue(cutoutCount);
         _effect.Parameters["CutoutPadding"]?.SetValue(CutoutPadding);
         _effect.Parameters["CutoutCornerRadius"]?.SetValue(CutoutCornerRadius);

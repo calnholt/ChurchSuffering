@@ -144,6 +144,10 @@ public class GuidedTutorialDefinitionTests
 		var loss = GuidedTutorialDefinitions.GuidedMessages.Single(msg => msg.key == "teach_loss");
 		Assert.Equal(PlayerHudLayoutSystem.HealthEntityName, loss.targetId);
 
+		var enemyAttack = GuidedTutorialDefinitions.GuidedMessages.Single(msg => msg.key == "teach_enemy_attack");
+		Assert.Equal("entity_name", enemyAttack.targetType);
+		Assert.Equal(EnemyAttackBannerAnchor.EntityName, enemyAttack.targetId);
+
 		var courageHud = GuidedTutorialDefinitions.GuidedMessages.Single(msg => msg.key == "teach_courage_hud");
 		Assert.Equal(PlayerHudLayoutSystem.CourageEntityName, courageHud.targetId);
 
@@ -215,6 +219,63 @@ public class GuidedTutorialDefinitionTests
 			Assert.Equal(
 				new Rectangle(420, 530, 300, 36),
 				tutorialManager.GetEntityBounds(PlayerHudLayoutSystem.HealthEntityName));
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Enemy_attack_tutorial_uses_banner_late_layout_bounds()
+	{
+		EventManager.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			var anchor = manager.CreateEntity(EnemyAttackBannerAnchor.EntityName);
+			manager.AddComponent(anchor, new EnemyAttackBannerAnchor());
+			manager.AddComponent(anchor, new Transform { Position = new Vector2(960, 240) });
+			manager.AddComponent(anchor, new UIElement { Bounds = new Rectangle(0, 0, 1, 1) });
+			manager.AddComponent(anchor, new EnemyAttackBannerPresentation
+			{
+				IsVisible = true,
+				LogicalWidth = 480,
+				LogicalHeight = 180,
+			});
+
+			new EnemyAttackBannerLateLayoutSystem(manager).Update(new GameTime());
+			var target = new TutorialManager(manager).GetEntityTarget(EnemyAttackBannerAnchor.EntityName);
+
+			Assert.Equal(new Rectangle(720, 240, 480, 180), target.Bounds);
+			Assert.Equal(0f, target.Rotation);
+		}
+		finally
+		{
+			EventManager.Clear();
+		}
+	}
+
+	[Fact]
+	public void Card_tutorial_target_preserves_rotation_and_exposes_axis_aligned_envelope()
+	{
+		EventManager.Clear();
+		try
+		{
+			var manager = new EntityManager();
+			var deckEntity = manager.CreateEntity("Deck");
+			var deck = new Deck();
+			manager.AddComponent(deckEntity, deck);
+			var card = EntityFactory.CreateCardFromDefinition(manager, "smite", CardData.CardColor.Black);
+			card.GetComponent<UIElement>().Bounds = new Rectangle(300, 400, 120, 180);
+			card.GetComponent<Transform>().Rotation = MathHelper.PiOver2;
+			deck.Hand.Add(card);
+
+			var tutorialManager = new TutorialManager(manager);
+			var target = tutorialManager.GetUIRegionTarget("first_black_card");
+			Assert.Equal(new Rectangle(300, 400, 120, 180), target.Bounds);
+			Assert.Equal(MathHelper.PiOver2, target.Rotation);
+			Assert.Equal(new Rectangle(270, 430, 180, 120), target.AxisAlignedBounds);
 		}
 		finally
 		{
