@@ -3234,6 +3234,11 @@
 /processor:SoundEffectProcessor
 /build:SFX/combat/bell-low-magical.wav
 
+#begin SFX/combat/choir-chord.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/choir-chord.wav
+
 #begin Enemies/Hex_Bailiff.png
 /importer:TextureImporter
 /processor:TextureProcessor

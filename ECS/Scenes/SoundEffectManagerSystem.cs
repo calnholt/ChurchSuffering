@@ -218,6 +218,7 @@ namespace ChurchSuffering.ECS.Systems
 				SfxTrack.IceSpellLayer => "SFX/combat/ice-spell-layer",
 				SfxTrack.FireSpellLayer => "SFX/combat/fire-spell-layer",
 				SfxTrack.BellLowMagical => "SFX/combat/bell-low-magical",
+				SfxTrack.ChoirChord => "SFX/combat/choir-chord",
                 _ => null
             };
 

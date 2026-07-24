@@ -297,7 +297,7 @@ public static class VisualEffectSequenceAuthoring
 			Intensity = timing.intensity,
 			ParticleMultiplier = timing.particles,
 			Palette = CardPalette(direction.Style),
-			StartSfx = attack ? SfxTrack.SwordAttack : SupportSfx(direction.Style),
+			StartSfx = ResolveCardStartSfx(id, attack, direction.Style),
 			ImpactSfx = attack ? SfxTrack.SwordImpact : SfxTrack.None,
 			StartSfxPitch = Math.Clamp(direction.TempoOffset * 1.8f, -0.3f, 0.3f),
 			ImpactRumbleProfile = attack ? WeightRumble(direction.Weight) : SupportRumble(direction.Style),
@@ -430,6 +430,12 @@ public static class VisualEffectSequenceAuthoring
 	};
 
 	private static SfxTrack SupportSfx(CardStyle style) => style == CardStyle.Guard ? SfxTrack.GainAegis : SfxTrack.Prayer;
+
+	private static SfxTrack ResolveCardStartSfx(CardId id, bool attack, CardStyle style) => id switch
+	{
+		CardId.Courageous => SfxTrack.ChoirChord,
+		_ => attack ? SfxTrack.SwordAttack : SupportSfx(style)
+	};
 
 	private static void AddUnique(List<VisualEffectModule> modules, VisualEffectModule module)
 	{
