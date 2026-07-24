@@ -587,6 +587,11 @@ namespace ChurchSuffering.ECS.Events
     {
         public SfxTrack Track { get; set; } = SfxTrack.None;
         public float Volume { get; set; } = 1.0f; // 0..1
+        /// <summary>
+        /// Authored pitch intent (-1..1). Currently ignored by SoundEffectManagerSystem:
+        /// OpenAL SoundEffectInstance.Pitch breaks MediaPlayer song rate/pitch on
+        /// DesktopGL (MonoGame #8008).
+        /// </summary>
         public float Pitch { get; set; } = 0.0f; // -1..1
         public float Pan { get; set; } = 0.0f; // -1..1
         public bool Loop { get; set; } = false;

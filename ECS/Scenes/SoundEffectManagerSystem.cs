@@ -89,7 +89,10 @@ namespace ChurchSuffering.ECS.Systems
                 // Create and configure instance
                 var instance = soundEffect.CreateInstance();
                 instance.Volume = ApplyUserVolume(evt.Volume);
-                instance.Pitch = MathHelper.Clamp(evt.Pitch, -1f, 1f);
+                // Always 0: OpenAL SoundEffectInstance.Pitch corrupts MediaPlayer song
+                // rate/pitch on DesktopGL (MonoGame #8008). PlaySfxEvent.Pitch is kept for
+                // authored intent until a safe pitch path exists.
+                instance.Pitch = 0f;
                 instance.Pan = MathHelper.Clamp(evt.Pan, -1f, 1f);
 
                 instance.Play();
@@ -112,7 +115,10 @@ namespace ChurchSuffering.ECS.Systems
             var instance = soundEffect.CreateInstance();
             instance.IsLooped = true;
             instance.Volume = ApplyUserVolume(evt.Volume);
-            instance.Pitch = MathHelper.Clamp(evt.Pitch, -1f, 1f);
+            // Always 0: OpenAL SoundEffectInstance.Pitch corrupts MediaPlayer song
+            // rate/pitch on DesktopGL (MonoGame #8008). PlaySfxEvent.Pitch is kept for
+            // authored intent until a safe pitch path exists.
+            instance.Pitch = 0f;
             instance.Pan = MathHelper.Clamp(evt.Pan, -1f, 1f);
             instance.Play();
             _loopingInstances[track] = instance;
