@@ -127,7 +127,7 @@ namespace ChurchSuffering.ECS.Systems
             var deck = EntityManager.GetEntitiesWithComponent<Deck>().FirstOrDefault()?.GetComponent<Deck>();
             if (deck?.Hand == null || !deck.Hand.Contains(card)) return;
 
-            var cardEligibility = PledgeAvailabilityService.EvaluateCard(card);
+            var cardEligibility = PledgeAvailabilityService.EvaluateCard(EntityManager, card);
             if (!cardEligibility.IsEligible)
             {
                 if (!string.IsNullOrEmpty(cardEligibility.RejectionMessage))

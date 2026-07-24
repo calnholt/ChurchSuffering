@@ -37,11 +37,11 @@ Church Suffering is a deckbuilder card game where players battle enemies using a
   - The player has not pledged during this Action phase
   - No card is already pledged
   - The hand contains an eligible card
-- Sealed cards, weapons, block cards, relics, tokens, and cards already pledged cannot be pledged; sealed cards lose one seal when used to block and are freed at zero seals
+- Sealed cards, weapons, block cards, relics, tokens, and cards already pledged cannot be pledged. Sealed cards lose one seal when used to block and are freed at zero seals
 - **Hex** temporarily covers an eligible hand card with a free 5-damage, 3-block attack. Hovering Hex previews the covered card. Playing Hex turns that card into a persistent Curse; any unplayed Hex is removed at the end of the player turn.
 - A pledged card does not count towards max hand size
 - A pledged card cannot be played during the Action phase in which it was pledged
-- A pledged card must be played as an action; it cannot block or pay another card's cost
+- A pledged card must be played as an action and cannot pay another card's cost
 - Player can end their turn at any time
 
 ### 4. Draw Phase

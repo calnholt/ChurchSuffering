@@ -98,38 +98,48 @@ public class PledgeAvailabilityServiceTests : IDisposable
     {
         var entityManager = new EntityManager();
 
-        AssertCardFailure(null, PledgeCardEligibilityFailure.MissingCard, "");
+        AssertCardFailure(entityManager, null, PledgeCardEligibilityFailure.MissingCard, "");
         AssertCardFailure(
+            entityManager,
             entityManager.CreateEntity("MissingCardData"),
             PledgeCardEligibilityFailure.MissingCardData,
             "");
 
         var pledged = CreateCard(entityManager, new CardBase());
         entityManager.AddComponent(pledged, new Pledge());
-        AssertCardFailure(pledged, PledgeCardEligibilityFailure.AlreadyPledged, "");
+        AssertCardFailure(entityManager, pledged, PledgeCardEligibilityFailure.AlreadyPledged, "");
 
         var sealedCard = CreateCard(entityManager, new CardBase());
         entityManager.AddComponent(sealedCard, new Sealed());
-        AssertCardFailure(sealedCard, PledgeCardEligibilityFailure.Sealed, "Sealed cards cannot be pledged!");
+        AssertCardFailure(
+            entityManager,
+            sealedCard,
+            PledgeCardEligibilityFailure.Sealed,
+            "Sealed cards cannot be pledged!");
 
         AssertCardFailure(
+            entityManager,
             CreateCard(entityManager, new CardBase { IsWeapon = true }),
             PledgeCardEligibilityFailure.Weapon,
             "Can't pledge weapons!");
         AssertCardFailure(
+            entityManager,
             CreateCard(entityManager, new CardBase { Type = CardType.Block }),
             PledgeCardEligibilityFailure.Block,
             "Can't pledge block cards!");
         AssertCardFailure(
+            entityManager,
             CreateCard(entityManager, new CardBase { Type = CardType.Relic }),
             PledgeCardEligibilityFailure.Relic,
             "Can't pledge relics!");
         AssertCardFailure(
+            entityManager,
             CreateCard(entityManager, new CardBase { IsToken = true }),
             PledgeCardEligibilityFailure.Token,
             "Can't pledge token cards!");
 
         Assert.True(PledgeAvailabilityService.EvaluateCard(
+            entityManager,
             CreateCard(entityManager, new CardBase())).IsEligible);
     }
 
@@ -182,11 +192,12 @@ public class PledgeAvailabilityServiceTests : IDisposable
     }
 
     private static void AssertCardFailure(
+        EntityManager entityManager,
         Entity card,
         PledgeCardEligibilityFailure expected,
         string message)
     {
-        var result = PledgeAvailabilityService.EvaluateCard(card);
+        var result = PledgeAvailabilityService.EvaluateCard(entityManager, card);
         Assert.False(result.IsEligible);
         Assert.Equal(expected, result.Failure);
         Assert.Equal(message, result.RejectionMessage);

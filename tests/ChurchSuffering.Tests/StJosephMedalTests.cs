@@ -25,6 +25,7 @@ public sealed class StJosephMedalTests : IDisposable
 		StateSingleton.IsActive = false;
 		StateSingleton.PreventClicking = false;
 		StateSingleton.IsTutorialActive = false;
+		StateSingleton.IsPledgeEnabled = true;
 	}
 
 	public void Dispose()
@@ -34,6 +35,7 @@ public sealed class StJosephMedalTests : IDisposable
 		StateSingleton.IsActive = false;
 		StateSingleton.PreventClicking = false;
 		StateSingleton.IsTutorialActive = false;
+		StateSingleton.IsPledgeEnabled = true;
 	}
 
 	[Fact]
@@ -42,13 +44,94 @@ public sealed class StJosephMedalTests : IDisposable
 		var medal = Assert.IsType<StJoseph>(MedalFactory.Create("st_joseph"));
 
 		Assert.Equal("St. Joseph", medal.Name);
-		Assert.Equal("You can block with your pledged card.", medal.Text);
+		Assert.Equal(
+			"You can block with your pledged card. You can pledge block cards.",
+			medal.Text);
 		Assert.Contains(MedalId.StJoseph, MedalFactory.GetAllMedals().Keys);
 		Assert.Equal("st_joseph", MedalId.StJoseph.ToKey());
 		Assert.True(GuardianAngelMessageService.HasMedalMessages(MedalId.StJoseph));
 		Assert.Equal(2, GuardianAngelMessageService.GetMedalMessages(MedalId.StJoseph).Count);
 		Assert.True(SaintBlurbDefinitionCache.TryGet("st_joseph", out var blurb));
 		Assert.Equal(2, blurb.bioParagraphs.Count);
+	}
+
+	[Fact]
+	public void Block_card_can_be_pledged_and_used_to_block_with_st_joseph()
+	{
+		var entityManager = BuildBlockBattle(
+			out var player,
+			out var deck,
+			out _,
+			out var plannedAttack);
+		var phase = entityManager.GetEntitiesWithComponent<PhaseState>()
+			.First()
+			.GetComponent<PhaseState>();
+		phase.Main = MainPhase.PlayerTurn;
+		phase.Sub = SubPhase.Action;
+		var blockCard = AddCard(entityManager, deck, new CardBase
+		{
+			Type = CardType.Block,
+			Block = 3,
+		});
+
+		var withoutMedal = PledgeAvailabilityService.Evaluate(entityManager);
+
+		Assert.False(withoutMedal.IsAvailable);
+		Assert.Equal(PledgeAvailabilityFailure.NoEligibleCard, withoutMedal.Failure);
+		Assert.Equal(
+			PledgeCardEligibilityFailure.Block,
+			PledgeAvailabilityService.EvaluateCard(entityManager, blockCard).Failure);
+
+		EquipMedal(entityManager, player, new StJoseph());
+		_ = new PledgeManagementSystem(entityManager);
+
+		Assert.True(PledgeAvailabilityService.IsAvailable(entityManager));
+
+		EventManager.Publish(new PledgeCardRequested { Card = blockCard });
+
+		Assert.True(blockCard.HasComponent<Pledge>());
+		phase.Main = MainPhase.EnemyTurn;
+		phase.Sub = SubPhase.Block;
+		Assert.True(EnemyBlockerEligibilityService.IsEligibleHandBlocker(
+			entityManager,
+			blockCard,
+			plannedAttack));
+	}
+
+	[Fact]
+	public void St_joseph_only_overrides_the_block_card_pledge_restriction()
+	{
+		var entityManager = new EntityManager();
+		var player = entityManager.CreateEntity("Player");
+		entityManager.AddComponent(player, new Player());
+		EquipMedal(entityManager, player, new StJoseph());
+
+		var sealedBlock = CreateCard(entityManager, new CardBase { Type = CardType.Block });
+		entityManager.AddComponent(sealedBlock, new Sealed());
+		var weaponBlock = CreateCard(entityManager, new CardBase
+		{
+			Type = CardType.Block,
+			IsWeapon = true,
+		});
+		var relic = CreateCard(entityManager, new CardBase { Type = CardType.Relic });
+		var tokenBlock = CreateCard(entityManager, new CardBase
+		{
+			Type = CardType.Block,
+			IsToken = true,
+		});
+
+		Assert.Equal(
+			PledgeCardEligibilityFailure.Sealed,
+			PledgeAvailabilityService.EvaluateCard(entityManager, sealedBlock).Failure);
+		Assert.Equal(
+			PledgeCardEligibilityFailure.Weapon,
+			PledgeAvailabilityService.EvaluateCard(entityManager, weaponBlock).Failure);
+		Assert.Equal(
+			PledgeCardEligibilityFailure.Relic,
+			PledgeAvailabilityService.EvaluateCard(entityManager, relic).Failure);
+		Assert.Equal(
+			PledgeCardEligibilityFailure.Token,
+			PledgeAvailabilityService.EvaluateCard(entityManager, tokenBlock).Failure);
 	}
 
 	[Fact]
@@ -191,16 +274,31 @@ public sealed class StJosephMedalTests : IDisposable
 
 	private static Entity AddPledgedCard(EntityManager entityManager, Deck deck)
 	{
-		var card = entityManager.CreateEntity("PledgedCard");
-		entityManager.AddComponent(card, new CardData
-		{
-			Card = new CardBase { Block = 3 },
-			Color = CardData.CardColor.White,
-		});
+		var card = AddCard(entityManager, deck, new CardBase { Block = 3 });
 		entityManager.AddComponent(card, new Pledge { Owner = card, CanPlay = false });
 		entityManager.AddComponent(card, new UIElement { IsInteractable = true });
 		entityManager.AddComponent(card, new Transform { Position = new Vector2(100f, 200f) });
+		return card;
+	}
+
+	private static Entity AddCard(
+		EntityManager entityManager,
+		Deck deck,
+		CardBase definition)
+	{
+		var card = CreateCard(entityManager, definition);
 		deck.Hand.Add(card);
+		return card;
+	}
+
+	private static Entity CreateCard(EntityManager entityManager, CardBase definition)
+	{
+		var card = entityManager.CreateEntity("Card");
+		entityManager.AddComponent(card, new CardData
+		{
+			Card = definition,
+			Color = CardData.CardColor.White,
+		});
 		return card;
 	}
 

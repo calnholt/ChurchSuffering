@@ -61,7 +61,7 @@ namespace ChurchSuffering.ECS.Services
             if (deck?.Hand == null)
                 return Unavailable(PledgeAvailabilityFailure.MissingHand);
 
-            if (!deck.Hand.Any(card => EvaluateCard(card).IsEligible))
+            if (!deck.Hand.Any(card => EvaluateCard(entityManager, card).IsEligible))
                 return Unavailable(PledgeAvailabilityFailure.NoEligibleCard);
 
             return new PledgeAvailabilityResult(true, PledgeAvailabilityFailure.None);
@@ -72,7 +72,9 @@ namespace ChurchSuffering.ECS.Services
             return Evaluate(entityManager).IsAvailable;
         }
 
-        public static PledgeCardEligibilityResult EvaluateCard(Entity card)
+        public static PledgeCardEligibilityResult EvaluateCard(
+            EntityManager entityManager,
+            Entity card)
         {
             if (card == null)
                 return Ineligible(PledgeCardEligibilityFailure.MissingCard);
@@ -90,8 +92,14 @@ namespace ChurchSuffering.ECS.Services
             if (cardData.Card.IsWeapon)
                 return Ineligible(PledgeCardEligibilityFailure.Weapon, "Can't pledge weapons!");
 
-            if (cardData.Card.Type == CardType.Block)
+            if (cardData.Card.Type == CardType.Block
+                && !PledgeCardRestrictionOverrideService.IsOverridden(
+                    entityManager,
+                    card,
+                    PledgeCardRestriction.Block))
+            {
                 return Ineligible(PledgeCardEligibilityFailure.Block, "Can't pledge block cards!");
+            }
 
             if (cardData.Card.Type == CardType.Relic)
                 return Ineligible(PledgeCardEligibilityFailure.Relic, "Can't pledge relics!");
@@ -102,9 +110,9 @@ namespace ChurchSuffering.ECS.Services
             return new PledgeCardEligibilityResult(true, PledgeCardEligibilityFailure.None, string.Empty);
         }
 
-        public static bool IsCardEligible(Entity card)
+        public static bool IsCardEligible(EntityManager entityManager, Entity card)
         {
-            return EvaluateCard(card).IsEligible;
+            return EvaluateCard(entityManager, card).IsEligible;
         }
 
         private static PledgeAvailabilityResult Unavailable(PledgeAvailabilityFailure failure)

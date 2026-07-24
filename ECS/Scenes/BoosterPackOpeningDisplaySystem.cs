@@ -1651,6 +1651,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 		if (!_lootTextures.TryGetValue(slotIndex, out var texture) || texture == null) return;
 		int box = (int)Math.Round(EquipmentIconBox * EquipmentIconScale * sample.Scale);
 		DrawSoftMask(CenteredRect(sample.Position, box + 72, box + 72), Blue * (0.20f * sample.Alpha));
+		float uniformScale = box / (float)Math.Max(texture.Width, texture.Height);
 		_spriteBatch.Draw(
 			texture,
 			sample.Position,
@@ -1658,7 +1659,7 @@ public sealed class BoosterPackOpeningDisplaySystem : Core.System
 			Color.White * sample.Alpha,
 			sample.Rotation,
 			new Vector2(texture.Width / 2f, texture.Height / 2f),
-			new Vector2(box / (float)texture.Width, box / (float)texture.Height),
+			uniformScale,
 			SpriteEffects.None,
 			0f);
 	}
