@@ -567,6 +567,15 @@ namespace ChurchSuffering.ECS.Events
 		GameOver = 47,
 		AchievementReveal = 48,
 		BoosterPackCharge = 49,
+		LightSpellCast = 50,
+		RaySpellCast = 51,
+		RaySpellImpact = 52,
+		EatenBite = 53,
+		EarthSpell = 54,
+		HealStinger = 55,
+		IceSpellLayer = 56,
+		FireSpellLayer = 57,
+		BellLowMagical = 58,
     }
 
     /// <summary>

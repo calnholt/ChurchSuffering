@@ -3189,6 +3189,51 @@
 /processor:SoundEffectProcessor
 /build:SFX/booster-pack-charge.wav
 
+#begin SFX/combat/light-spell-cast.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/light-spell-cast.wav
+
+#begin SFX/combat/ray-spell-cast.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/ray-spell-cast.wav
+
+#begin SFX/combat/ray-spell-impact.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/ray-spell-impact.wav
+
+#begin SFX/combat/eaten-bite.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/eaten-bite.wav
+
+#begin SFX/combat/earth-spell.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/earth-spell.wav
+
+#begin SFX/combat/heal-stinger.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/heal-stinger.wav
+
+#begin SFX/combat/ice-spell-layer.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/ice-spell-layer.wav
+
+#begin SFX/combat/fire-spell-layer.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/fire-spell-layer.wav
+
+#begin SFX/combat/bell-low-magical.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/build:SFX/combat/bell-low-magical.wav
+
 #begin Enemies/Hex_Bailiff.png
 /importer:TextureImporter
 /processor:TextureProcessor

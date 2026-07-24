@@ -209,6 +209,15 @@ namespace ChurchSuffering.ECS.Systems
 				SfxTrack.GameOver => "SFX/game-over",
 				SfxTrack.AchievementReveal => "SFX/achievement-reveal",
 				SfxTrack.BoosterPackCharge => "SFX/booster-pack-charge",
+				SfxTrack.LightSpellCast => "SFX/combat/light-spell-cast",
+				SfxTrack.RaySpellCast => "SFX/combat/ray-spell-cast",
+				SfxTrack.RaySpellImpact => "SFX/combat/ray-spell-impact",
+				SfxTrack.EatenBite => "SFX/combat/eaten-bite",
+				SfxTrack.EarthSpell => "SFX/combat/earth-spell",
+				SfxTrack.HealStinger => "SFX/combat/heal-stinger",
+				SfxTrack.IceSpellLayer => "SFX/combat/ice-spell-layer",
+				SfxTrack.FireSpellLayer => "SFX/combat/fire-spell-layer",
+				SfxTrack.BellLowMagical => "SFX/combat/bell-low-magical",
                 _ => null
             };
 

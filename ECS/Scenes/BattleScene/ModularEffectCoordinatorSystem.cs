@@ -130,13 +130,104 @@ namespace ChurchSuffering.ECS.Systems
 		{
 			if (active == null || active.StartSfxPublished) return;
 			active.StartSfxPublished = true;
-			if (active.Recipe.StartSfx == SfxTrack.None) return;
-			EventManager.Publish(new PlaySfxEvent
+			if (active.Recipe.StartSfx != SfxTrack.None)
 			{
-				Track = active.Recipe.StartSfx,
-				Volume = active.Recipe.StartSfxVolume,
-				Pitch = active.Recipe.StartSfxPitch
-			});
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = active.Recipe.StartSfx,
+					Volume = active.Recipe.StartSfxVolume,
+					Pitch = active.Recipe.StartSfxPitch
+				});
+			}
+
+			PublishModuleStartSfx(active);
+		}
+
+		private static void PublishModuleStartSfx(ActiveVisualEffect active)
+		{
+			if (active.Recipe.HasModule(VisualEffectModule.Beam))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.LightSpellCast,
+					Volume = 0.5f
+				});
+			}
+
+			if (active.Recipe.HasModule(VisualEffectModule.SoulSiphon))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.RaySpellCast,
+					Volume = 0.5f
+				});
+			}
+
+			if (active.Recipe.HasModule(VisualEffectModule.Halo))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.HealStinger,
+					Volume = 0.5f
+				});
+			}
+		}
+
+		private static void PublishModuleImpactSfx(ActiveVisualEffect active)
+		{
+			if (active.Recipe.HasModule(VisualEffectModule.ShadowTendrils))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.RaySpellImpact,
+					Volume = 0.5f
+				});
+			}
+
+			if (active.Recipe.HasModule(VisualEffectModule.Bite))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.EatenBite,
+					Volume = 0.5f
+				});
+			}
+
+			if (active.Recipe.HasModule(VisualEffectModule.RockBlast))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.EarthSpell,
+					Volume = 0.5f
+				});
+			}
+
+			if (active.Recipe.HasModule(VisualEffectModule.FrostBurst))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.IceSpellLayer,
+					Volume = 0.5f
+				});
+			}
+
+			if (active.Recipe.HasModule(VisualEffectModule.FlameBurst))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.FireSpellLayer,
+					Volume = 0.5f
+				});
+			}
+
+			if (active.Recipe.HasModule(VisualEffectModule.CrossBloom))
+			{
+				EventManager.Publish(new PlaySfxEvent
+				{
+					Track = SfxTrack.BellLowMagical,
+					Volume = 0.5f
+				});
+			}
 		}
 
 		private bool TryReserveCapacity(VisualEffectRequested request)
@@ -185,6 +276,11 @@ namespace ChurchSuffering.ECS.Systems
 					Volume = active.Recipe.ImpactSfxVolume,
 					Pitch = active.Recipe.ImpactSfxPitch
 				});
+			}
+
+			if (!active.SuppressImpactSfx)
+			{
+				PublishModuleImpactSfx(active);
 			}
 
 			if (active.Recipe.HasModule(VisualEffectModule.Shockwave))
